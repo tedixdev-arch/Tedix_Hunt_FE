@@ -1,0 +1,91 @@
+export const eventData = {
+  name: 'Signal: Cluj Napoca',
+  date: 'Saturday, March 15',
+  time: '2:00 PM – 5:00 PM',
+  location: 'Cluj Napoca',
+  duration: '~3 hours',
+  image: 'https://images.pexels.com/photos/1269792/pexels-photo-1269792.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
+  premise:
+    'A city signal has disappeared. Follow the checkpoints, combine every contribution, and restore it before the mission ends.',
+  checkpointCount: 4,
+  teamSize: '2–4 players',
+  safetyNote: 'Stay on public streets. Do not enter private property.',
+  objective: 'Restore the signal by completing every checkpoint.',
+  collectItems: 'Collect a letter from each checkpoint to solve the final puzzle.',
+  rules: [
+    'Solve each checkpoint challenge to earn a clue.',
+    'Work together — every teammate contributes.',
+    'Stay on public paths and watch for traffic.',
+  ],
+  teamCode: 'OTM-4827',
+  teammates: [
+    { name: 'Maya', avatar: 'M', color: 'bg-brand-600' },
+    { name: 'Liam', avatar: 'L', color: 'bg-brand-500' },
+    { name: 'Zara', avatar: 'Z', color: 'bg-reward-500' },
+  ],
+  difficultyOptions: [
+    {
+      id: 'easy' as const,
+      label: 'Easy',
+      description: 'Longer hints, more time per checkpoint.',
+      multiplier: 1,
+    },
+    {
+      id: 'medium' as const,
+      label: 'Medium',
+      description: 'Balanced hints and timing.',
+      multiplier: 1.5,
+    },
+    {
+      id: 'hard' as const,
+      label: 'Hard',
+      description: 'Minimal hints, race against the clock.',
+      multiplier: 2,
+    },
+  ],
+  challenge: {
+    title: 'Checkpoint 3 — Clock Tower',
+    question: 'I have hands but cannot hold. I have a face but cannot smile. What am I?',
+    answer: 'clock',
+    hint: 'Look up at the tower — I tell the time for everyone.',
+    successMessage: 'Correct! The clock tower confirms the next signal.',
+    points: 100,
+    clueLetter: 'L',
+  },
+  navigate: {
+    checkpoint: 'Checkpoint 3',
+    distance: '120 m',
+    clue: 'Head toward the tall tower at the north end of the square.',
+  },
+  clueReward: {
+    letter: 'L',
+    message: 'You found the letter "L". Three clues collected — one more to go.',
+    cluesSoFar: ['B', 'E', 'L'],
+    cluesTotal: 4,
+  },
+  teamProgress: {
+    checkpointsCompleted: 3,
+    cluesCollected: ['B', 'E', 'L'],
+    score: 300,
+    contributions: [
+      { name: 'Maya', contributions: 2 },
+      { name: 'Liam', contributions: 2 },
+      { name: 'Zara', contributions: 1 },
+    ],
+  },
+  finalPuzzle: {
+    letters: ['B', 'E', 'L', 'L'],
+    question:
+      'The clues point to what has rung in the old square for centuries. What is it?',
+    answer: 'bell',
+    hint: 'It hangs in the tower and announces the hour.',
+    points: 200,
+  },
+  results: {
+    baseScore: 500,
+    badgeName: 'Signal Hunter',
+    sponsor: 'Northside Coffee',
+    sponsorReward: 'Free entry to the next TedixHunt event',
+    feedbackMessage: 'You and your team restored the Cluj Napoca signal!',
+  },
+}

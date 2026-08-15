@@ -1,14 +1,24 @@
-import { useAuth } from './providers/AuthProvider';
-import { MainLayout } from '../components/layout/MainLayout';
-import { LoginScreen } from '../features/auth/LoginScreen';
-import { LandingScreen } from '../features/landing/LandingScreen';
+import { RouterProvider, createHashRouter } from 'react-router-dom';
+import { TemplateOneExperience } from '../pages/template-one/TemplateOneExperience';
+import { CreatorIntro } from '../pages/CreatorIntro';
+import { LandingPage } from '../pages/LandingPage';
 
 export function RootNavigator() {
-  const { isAuthenticated } = useAuth();
 
-  return (
-    <MainLayout subtitle={isAuthenticated ? 'Landing' : 'Sign in'}>
-      {isAuthenticated ? <LandingScreen /> : <LoginScreen />}
-    </MainLayout>
-  );
+  const router = createHashRouter([
+    {
+      path: '/',
+      element: <LandingPage />,
+    },
+    {
+      path: '/play/template-1',
+      element: <TemplateOneExperience />,
+    },
+    {
+      path: '/create',
+      element: <CreatorIntro />,
+    },
+  ]);
+
+  return <RouterProvider router={router} />;
 }
