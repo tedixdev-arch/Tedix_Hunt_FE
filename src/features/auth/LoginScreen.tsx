@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../../app/providers/AuthProvider';
-import { Button } from '../../components/ui/Button';
-import { TextField } from '../../components/ui/TextField';
+// import { Button } from '../../components/ui/Button';
+// import { TextField } from '../../components/ui/TextField';
 import './LoginScreen.css';
 
 function isValidEmail(value: string) {
@@ -12,9 +12,9 @@ export function LoginScreen() {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  // const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -26,7 +26,7 @@ export function LoginScreen() {
     if (password.length < 6) {
       nextErrors.password = 'Password must be at least 6 characters.';
     }
-    setErrors(nextErrors);
+    // setErrors(nextErrors);
     setSubmitError(null);
 
     if (Object.keys(nextErrors).length > 0) {
@@ -34,12 +34,12 @@ export function LoginScreen() {
     }
 
     try {
-      setIsSubmitting(true);
+      // setIsSubmitting(true);
       await login({ email, password });
     } catch {
       setSubmitError('Something went wrong. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      // setIsSubmitting(false);
     }
   };
 
@@ -50,27 +50,27 @@ export function LoginScreen() {
         <p className="login-screen__subtitle">Sign in to continue to Tedix Hunt.</p>
 
         <div className="login-screen__form">
-          <TextField
-            label="Email"
+          <input
+            // label="Email"
             type="email"
             placeholder="you@example.com"
             autoCapitalize="none"
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            error={errors.email}
+            // error={errors.email}
           />
-          <TextField
-            label="Password"
+          <input
+            // label="Password"
             type="password"
             placeholder="••••••••"
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            error={errors.password}
+            // error={errors.password}
           />
           {submitError ? <p className="login-screen__error">{submitError}</p> : null}
-          <Button type="submit" label="Log in" loading={isSubmitting} />
+          <button type="submit" >Log in</button>
         </div>
       </form>
     </div>

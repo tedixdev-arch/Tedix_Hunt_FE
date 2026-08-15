@@ -1,5 +1,5 @@
 import { useAuth } from '../../app/providers/AuthProvider';
-import { Button } from '../../components/ui/Button';
+// import { Button } from '../../components/ui/Button';
 import './LandingScreen.css';
 
 const highlights = [
@@ -30,7 +30,7 @@ export function LandingScreen() {
         ))}
       </div>
 
-      <Button label="Log out" onClick={logout} />
+      <button  onClick={logout} > Log out</button>
     </div>
   );
 }
