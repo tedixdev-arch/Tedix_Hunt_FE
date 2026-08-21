@@ -231,7 +231,7 @@ button:disabled { cursor: not-allowed; }
 
 /* One-screen hunt rhythm: every primary phase fits the phone viewport. */
 html,body,#root{height:100%;overflow:hidden}
-.checkpoint-page{height:100dvh;min-height:0;overflow:hidden}
+.checkpoint-page{height:100dvh;min-height:0;overflow:scroll;scrollbar-width:none}
 .checkpoint-header{height:72px;min-height:72px;padding-block:9px}
 .challenge-frame{height:calc(100dvh - 72px);overflow:hidden}
 .phase-invitation,.phase-onboarding{height:100dvh}
