@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from 'react'
 import { checkpointExercises } from '../data/templateOne'
 
-export type MissionPhase = 'invitation' | 'onboarding' | 'navigation' | 'arrival' | 'individual' | 'contribution' | 'team-waiting' | 'team-ready' | 'team-unlocked' | 'team-celebration' | 'reward' | 'complete'
+export type MissionPhase = 'invitation' | 'onboarding' | 'briefing' | 'navigation' | 'arrival' | 'individual' | 'contribution' | 'team-waiting' | 'team-ready' | 'team-unlocked' | 'team-celebration' | 'reward' | 'complete'
 export type AttemptStatus = 'active' | 'incorrect' | 'hint' | 'solution' | 'correct'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 export type MistakeStage = 'search' | 'explain' | 'resolved'
@@ -10,7 +10,7 @@ export type ScoreEvent = { id: string; checkpoint: number; label: string; points
 export type TeamChallengeRecord = { checkpoint: number; prompt: string; answer: string; resolvedWithSolution: boolean }
 export type MissionState = { phase: MissionPhase; difficulty: Difficulty | null; checkpointIndex: number; attempts: CheckpointAttempt[]; huntScore: number; scoreEvents: ScoreEvent[]; teamAnswer: string; teamIncorrect: boolean; teamSolutionUsed: boolean[]; teamRecords: TeamChallengeRecord[]; completedCheckpoints: number; completionBonusAwarded: boolean; finalPuzzleBonus: number }
 export type MissionAction =
-  | { type: 'ACCEPT_MISSION' } | { type: 'SELECT_DIFFICULTY'; difficulty: Difficulty } | { type: 'START_HUNT' } | { type: 'ARRIVE' } | { type: 'OPEN_CHECKPOINT' }
+  | { type: 'ACCEPT_MISSION' } | { type: 'SELECT_DIFFICULTY'; difficulty: Difficulty } | { type: 'START_HUNT' } | { type: 'BEGIN_ROUTE' } | { type: 'ARRIVE' } | { type: 'OPEN_CHECKPOINT' }
   | { type: 'SET_ANSWER'; key: string; value: string } | { type: 'VERIFY' } | { type: 'RETRY' }
   | { type: 'SHOW_HINT' } | { type: 'CLOSE_HINT' } | { type: 'REVEAL_SOLUTION' } | { type: 'SKIP' }
   | { type: 'CLAIM_CONTRIBUTION' } | { type: 'OPEN_TEAM_PROGRESS' } | { type: 'TEAM_CONTRIBUTIONS_READY' } | { type: 'OPEN_TEAM_CHALLENGE' }
@@ -31,7 +31,8 @@ function updateAttempt(state: MissionState, update: (attempt: CheckpointAttempt)
 
 function recordTeamChallenge(state: MissionState, resolvedWithSolution: boolean): MissionState {
   const exercise = checkpointExercises[state.checkpointIndex]
-  const record: TeamChallengeRecord = { checkpoint: exercise.checkpoint, prompt: exercise.teamPrompt, answer: exercise.teamAnswer, resolvedWithSolution }
+  const answer = exercise.teamKind === 'filter-noise' ? exercise.teamDisplay : exercise.teamAnswer
+  const record: TeamChallengeRecord = { checkpoint: exercise.checkpoint, prompt: exercise.teamPrompt, answer, resolvedWithSolution }
   return { ...state, teamRecords: [...state.teamRecords.filter(item => item.checkpoint !== exercise.checkpoint), record] }
 }
 
@@ -43,7 +44,8 @@ function reducer(state: MissionState, action: MissionAction): MissionState {
   switch (action.type) {
     case 'ACCEPT_MISSION': return state.phase === 'invitation' ? { ...state, phase: 'onboarding' } : state
     case 'SELECT_DIFFICULTY': return state.phase === 'onboarding' ? { ...state, difficulty: action.difficulty } : state
-    case 'START_HUNT': return state.phase === 'onboarding' && state.difficulty ? { ...state, phase: 'navigation' } : state
+    case 'START_HUNT': return state.phase === 'onboarding' && state.difficulty ? { ...state, phase: 'briefing' } : state
+    case 'BEGIN_ROUTE': return state.phase === 'briefing' ? { ...state, phase: 'navigation' } : state
     case 'ARRIVE':
       if (state.phase !== 'navigation') return state
       if (state.checkpointIndex === 0 && state.completedCheckpoints === 0) return { ...state, phase: 'arrival' }
@@ -126,8 +128,11 @@ function loadState(): MissionState {
   } catch { return createInitialState() }
 }
 
-export function useTemplateOneMission(startNewMission = false) {
-  const [state, dispatch] = useReducer(reducer, startNewMission ? { ...createInitialState(), phase: 'onboarding' } : loadState())
+export function useTemplateOneMission(startNewMission = false, startingDifficulty?: Difficulty) {
+  const freshState = startNewMission
+    ? { ...createInitialState(), phase: startingDifficulty ? 'briefing' as const : 'onboarding' as const, difficulty: startingDifficulty ?? null }
+    : loadState()
+  const [state, dispatch] = useReducer(reducer, freshState)
   useEffect(() => { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }, [state])
   return { state, dispatch }
 }

@@ -1,0 +1,15 @@
+import { FormEvent, ReactNode, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+
+function ParticipantShell({ children }: { children: ReactNode }) {
+  return <main className="min-h-dvh bg-[#07110f] px-5 py-5 text-white"><div className="mx-auto flex min-h-[calc(100dvh-2.5rem)] w-full max-w-md flex-col"><header className="flex min-h-11 items-center justify-between"><Link className="text-sm font-black uppercase tracking-[0.2em]" to="/">TedixHunt</Link><span className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Participants</span></header>{children}</div></main>
+}
+
+export function JoinHuntPage() {
+  const navigate=useNavigate()
+  const [code,setCode]=useState('SIGNAL26')
+  const [email,setEmail]=useState('demo@tedixhunt.demo')
+  const [error,setError]=useState('')
+  function join(event:FormEvent){event.preventDefault();if(code.trim().length<4){setError('Check the Hunt code and try again.');return}if(!email.includes('@')){setError('Enter a valid email address.');return}navigate('/participant/setup')}
+  return <ParticipantShell><section className="flex flex-1 flex-col justify-center py-8"><p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">Join your team</p><h1 className="mt-3 text-4xl font-black tracking-tight">Enter Signal: Cluj Napoca</h1><div className="mt-5 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-4"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wide text-emerald-300">Hunt found</p><p className="mt-1 font-black">Signal: Cluj Napoca</p></div><span className="text-xs font-bold text-slate-300">12 Sep · 10:00</span></div><p className="mt-2 text-sm text-slate-400">Start: Matthias Rex Statue, Cluj-Napoca</p></div><form className="mt-6 space-y-4" onSubmit={join}><label className="block text-sm font-bold" htmlFor="hunt-code">Hunt code<input autoCapitalize="characters" autoComplete="one-time-code" className="mt-2 min-h-14 w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 text-center text-lg font-black uppercase tracking-[0.18em] outline-none focus:border-emerald-300" id="hunt-code" onChange={event=>{setCode(event.target.value.toUpperCase());setError('')}} value={code}/></label><label className="block text-sm font-bold" htmlFor="participant-email">Email address<input autoComplete="email" className="mt-2 min-h-14 w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 outline-none focus:border-emerald-300" id="participant-email" onChange={event=>{setEmail(event.target.value);setError('')}} type="email" value={email}/></label>{error&&<p className="rounded-lg bg-amber-300/10 px-3 py-2 text-sm font-bold text-amber-200" role="alert">{error}</p>}<button className="min-h-16 w-full rounded-xl bg-emerald-400 px-6 font-black text-slate-950" type="submit">Join this Hunt</button></form><p className="mt-4 text-center text-xs text-slate-500">Navigation prototype only. No information is stored.</p><Link className="mt-3 min-h-11 py-3 text-center text-sm font-semibold text-slate-400" to="/">Back to home</Link></section></ParticipantShell>
+}

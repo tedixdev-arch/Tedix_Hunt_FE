@@ -1,5 +1,5 @@
 export type ExerciseKind = 'hidden-rule' | 'find-sabotage' | 'square' | 'build-key' | 'radial' | 'identify-signal' | 'shared-final-key'
-export type TeamPuzzleKind = 'missing-letter' | 'distributed-information' | 'hypothesis' | 'assemble-machine' | 'clue-synthesis' | 'consensus-transmitter' | 'shared-final-key'
+export type TeamPuzzleKind = 'scrambled-word' | 'distributed-information' | 'hypothesis' | 'assemble-machine' | 'clue-synthesis' | 'filter-noise' | 'shared-final-key'
 export type NavigationMode = 'compass' | 'map' | 'landmark' | 'decoded-route' | 'signal-strength' | 'none'
 export type MistakeSegment = { id: string; content: string; mistake?: boolean }
 export type MistakeExplanation = { id: string; text: string; correct?: boolean }
@@ -50,10 +50,10 @@ export const checkpointExercises: readonly CheckpointExercise[] = [
     prompt: 'The same rule connects every input to its output. Find the output for 3416.', answerKeys: ['x'], correctAnswers: { x: '72' },
     hint: 'Look at the digits separately. What operation turns 2 and 3 into 6?', solutionIntro: 'Multiply all the digits in each input.',
     solutionSteps: ['2 x 3 = 6', '4 x 2 x 5 = 40', '1 x 2 x 3 x 4 = 24', '3 x 4 x 1 x 6 = 72'], successText: 'You found the rule: multiply the digits.',
-    personalContribution: 'C', personalMask: '_ _ _ _ C _', publicContributions: ['Maya: U', 'Liam: L O', 'You: C', 'Zara: K'],
-    teamKind: 'missing-letter', teamPrompt: 'Complete the command.', teamDisplay: 'U _ L O C K', teamAnswer: 'UNLOCK', teamOptions: [],
+    personalContribution: 'CN', personalMask: 'YOUR LETTERS: C N', publicContributions: ['Maya: LK', 'Liam: OD', 'You: CN', 'Zara: UE'],
+    teamKind: 'scrambled-word', teamPrompt: 'Rearrange the team letters to find the command.', teamDisplay: 'LK / OD / CN / UE', teamAnswer: 'UNLOCKED', teamOptions: [],
     nextLocation: 'STONE GATE', direction: 'NW', distance: '80 m', navigationClue: 'Follow the narrow lane toward the weathered stone gateway.', navigationMode: 'compass',
-    storyStage: 'ACCESS', storyObjective: 'Find the first relay.', storyProblem: 'The statue marks the starting transmitter. It can reveal the route to the first relay at Stone Gate.', storyPlan: 'Solve the number pattern to reveal your part of its access command.', teamInstruction: 'Combine all four parts and enter the command that unlocks the route.', storyRisk: 'Without the command, the relay network stays hidden.', storySuccess: 'Route unlocked. Move to the Stone Gate relay.',
+    storyStage: 'ACCESS', storyObjective: 'Find the first relay.', storyProblem: 'Restore this transmitter to unlock the route to Stone Gate.', storyPlan: 'Solve the number pattern to reveal your share of the access-command letters.', teamInstruction: 'Use every scrambled letter once to reconstruct the command that unlocks the route.', storyRisk: 'Without the command, the relay network stays hidden.', storySuccess: 'Route unlocked. Move to the Stone Gate relay.',
   },
   {
     id: 'find-sabotage', kind: 'find-sabotage', checkpoint: 2, location: 'STONE GATE', title: 'Find the mistake', label: 'Corrupted transmission',
@@ -63,10 +63,10 @@ export const checkpointExercises: readonly CheckpointExercise[] = [
     mistakeSegments: [{ id: 'step-1', content: '3(2x - 5) = 27' }, { id: 'step-2', content: '6x - 15 = 27' }, { id: 'step-3', content: '6x = 12', mistake: true }, { id: 'step-4', content: 'x = 2' }],
     mistakeExplanations: [{ id: 'move-term', text: '15 was subtracted again instead of added to both sides.', correct: true }, { id: 'expand', text: 'The brackets were expanded incorrectly.' }, { id: 'divide', text: 'Both sides were divided by the wrong number.' }],
     correctedExpression: '6x = 42, then x = 7',
-    personalContribution: 'Opposite the fountain', personalMask: 'YOUR FACT: OPPOSITE THE FOUNTAIN', publicContributions: ['Maya: The tower is not north.', 'Liam: The fountain is east of the gate.', 'You: The target is opposite the fountain.', 'Zara: We are standing at the gate.'],
-    teamKind: 'distributed-information', teamPrompt: 'Where did the true trace go?', teamDisplay: 'Combine four location facts', teamAnswer: 'WEST', teamOptions: ['WEST', 'NORTH', 'EAST'],
+    personalContribution: 'The trace ends at the Clock Tower', personalMask: 'YOUR FACT: THE TRACE ENDS AT THE CLOCK TOWER', publicContributions: ['Maya: The Clock Tower is opposite the fountain.', 'Liam: The fountain is east of Stone Gate.', 'You: The repaired trace ends at the Clock Tower.', 'Zara: The team is at Stone Gate.'],
+    teamKind: 'distributed-information', teamPrompt: 'Which direction leads to the Clock Tower?', teamDisplay: 'Find the route from Stone Gate', teamAnswer: 'WEST', teamOptions: ['WEST', 'NORTH', 'EAST'],
     nextLocation: 'CLOCK TOWER', direction: 'W', distance: '120 m', navigationClue: 'Find the clock face shown in the recovered visual fragment.', navigationMode: 'landmark',
-    storyStage: 'TRACE', storyObjective: 'Repair the route relay.', storyProblem: 'Stone Gate controls the city routes, but someone fed it a false direction.', storyPlan: 'Find the first incorrect algebra step to recover one true location fact.', teamInstruction: 'Combine the four facts and choose where the real signal went.', storyRisk: 'The false route sends the team away from the signal.', storySuccess: 'Route relay repaired. The signal reached the Clock Tower receiver.',
+    storyStage: 'TRACE', storyObjective: 'Find the real route to the Clock Tower!', storyProblem: 'Stone Gate controls the city routes, but someone replaced the route to the Clock Tower with a false direction.', storyPlan: 'Find the first incorrect algebra step to recover one true route fact.', teamInstruction: 'Combine the four facts and choose the direction from Stone Gate to the Clock Tower.', storyRisk: 'The false route sends the team away from the receiver.', storySuccess: 'Trace confirmed. The signal reached the Clock Tower receiver.',
   },
   {
     id: 'square', kind: 'square', checkpoint: 3, location: 'CLOCK TOWER', title: 'Complete the square', label: 'Square pattern',
@@ -93,20 +93,20 @@ export const checkpointExercises: readonly CheckpointExercise[] = [
     prompt: 'Compare the completed opposite endpoints, then find the missing value.', answerKeys: ['x'], correctAnswers: { x: '15' },
     hint: 'Compare the sums of the numbers at opposite ends of each straight line.', solutionIntro: 'Opposite endpoints have the same total.',
     solutionSteps: ['6 + 20 = 26 and 17 + 9 = 26.', 'x + 11 must equal 26.', '26 - 11 = 15.'], successText: '15 + 11 = 17 + 9 = 6 + 20.',
-    personalContribution: 'Contains PH', personalMask: '_ _ P H _ _', publicContributions: ['Maya: Six letters', 'Liam: Begins with C', 'You: Contains PH', 'Zara: Hides a message'],
-    teamKind: 'clue-synthesis', teamPrompt: 'Identify the term that satisfies every clue.', teamDisplay: '6 letters / C... / ...PH... / hidden message', teamAnswer: 'CIPHER', teamOptions: ['CIPHER', 'CIRCLE', 'COPPER'],
+    personalContribution: 'how it can', personalMask: 'YOUR FRAGMENT: HOW IT CAN', publicContributions: ['Maya: I protect a message', 'Liam: by changing', 'You: how it can', 'Zara: be read. What am I?'],
+    teamKind: 'clue-synthesis', teamPrompt: 'Solve the team riddle.', teamDisplay: 'C _ _ H _ _', teamAnswer: 'CIPHER', teamOptions: [],
     nextLocation: 'NORTH PASSAGE', direction: 'NNW', distance: '140 m', navigationClue: 'Find the covered passage beyond the old shopfronts.', navigationMode: 'compass',
-    storyStage: 'DECODE', storyObjective: 'Open the encrypted channel.', storyProblem: 'Lantern Lane carries the relay message, but the channel is protected by a cipher.', storyPlan: 'Solve the radial pattern to reveal one clue about the cipher.', teamInstruction: 'Combine all four clues and name the six-letter cipher.', storyRisk: 'Without the cipher, the signal trail ends here.', storySuccess: 'Channel opened. The message points to the router in North Passage.',
+    storyStage: 'DECODE', storyObjective: 'Open the encrypted channel.', storyProblem: 'Lantern Lane carries the relay message, but the channel is protected by a cipher.', storyPlan: 'Solve the radial pattern to reveal your part of a team riddle.', teamInstruction: 'Read the four fragments in order. Use the letter pattern to solve the riddle.', storyRisk: 'Without the cipher, the signal trail ends here.', storySuccess: 'Channel opened. The message points to the router in North Passage.',
   },
   {
     id: 'identify-signal', kind: 'identify-signal', checkpoint: 6, location: 'NORTH PASSAGE', title: 'Identify the signal', label: 'Frequency verification',
     prompt: 'Only the prime frequency can carry the restored signal.', answerKeys: ['x'], correctAnswers: { x: '29' },
     hint: 'A prime number has exactly two positive divisors.', solutionIntro: '29 is the only prime frequency.',
     solutionSteps: ['24 is divisible by 2 and 3.', '35 is divisible by 5 and 7.', '29 is prime.'], successText: 'Frequency 29 verified. The final channel is safe.',
-    personalContribution: 'Channel 29 is safe', personalMask: 'YOUR FINDING: CHANNEL 29 IS SAFE', publicContributions: ['Maya: The source is west.', 'Liam: The wall channel is active.', 'You: Channel 29 is safe.', 'Zara: Holds the transmitter.'],
-    teamKind: 'consensus-transmitter', teamPrompt: 'What should Zara transmit?', teamDisplay: 'One decision / one transmitter', teamAnswer: 'RESTORE AT CITY WALL', teamOptions: ['RESTORE AT CITY WALL', 'RETURN TO THE FOUNTAIN', 'SHUT DOWN CHANNEL 29'],
+    personalContribution: 'EAST / EAST', personalMask: 'YOUR SIGNAL: EAST / EAST', publicContributions: ['Maya: NORTH / SOUTH', 'Liam: CITY WALL', 'You: EAST / EAST', 'Zara: WEST'],
+    teamKind: 'filter-noise', teamPrompt: 'Select the real signals.', teamDisplay: 'CITY WALL / WEST', teamAnswer: 'LIAM|ZARA', teamOptions: [],
     nextLocation: 'FINISHPOINT / CITY WALL', direction: 'W', distance: '110 m', navigationClue: 'Follow the strengthening signal west until the city wall fills your view.', navigationMode: 'signal-strength',
-    storyStage: 'LOCATE', storyObjective: 'Route the signal to the source.', storyProblem: 'North Passage is the final router. Only one frequency reaches the City Wall transmitter.', storyPlan: 'Identify the prime frequency to reveal the safe channel.', teamInstruction: 'Use all four findings and choose the message Zara should transmit.', storyRisk: 'The wrong channel sends the signal away from its source.', storySuccess: 'Safe channel confirmed. The source is the City Wall transmitter.',
+    storyStage: 'LOCATE', storyObjective: 'Route the signal to the source.', storyProblem: 'North Passage is the final router. False signals are hiding the route to the transmitter.', storyPlan: 'Identify the prime frequency to recover your signal fragment.', teamInstruction: 'Tap the signals you trust. Leave contradictory or repeated signals unselected.', storyRisk: 'The wrong route sends the team away from the transmitter.', storySuccess: 'Route confirmed. The City Wall transmitter is west.',
   },
   {
     id: 'shared-final-key', kind: 'shared-final-key', checkpoint: 7, location: 'FINISHPOINT / CITY WALL', title: 'Complete the prime sequence', label: 'Final frequency lock',
