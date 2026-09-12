@@ -9,6 +9,16 @@ architecture. Includes a mock-auth login flow and a landing page as a starting p
 - `npm run build` - type-check and build for production (outputs to `dist/`, includes the PWA
   service worker and manifest).
 - `npm run preview` - serve the production build locally.
+- `npm test` - verify the API client and session behavior.
+
+## API foundation (step 7.4)
+
+`src/shared/api` provides the client for the PostgreSQL-backed BE authentication
+contract. It keeps access tokens in memory and uses the HTTP-only refresh cookie.
+Set public `VITE_API_BASE_URL` at build time (default `/api`). No database credentials
+belong in FE. The visible screens still use mockup behavior until step 7.5 wires
+in real login. See [API usage and limitations](docs/step-7.4-task.md) and the
+[pending server database handoff](docs/server-database-handoff.md).
 
 ## Architecture
 
