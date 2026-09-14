@@ -30,16 +30,12 @@ First action: confirm why the deployed website differs from the current frontend
 
 ## 1. Project reference
 
-- [Mockup / UX reference: tedixhunt_student](https://github.com/tedixdev-arch/tedixhunt_student)
-
-- [Frontend repository: Tedix_Hunt_FE](https://github.com/tedixdev-arch/Tedix_Hunt_FE)
-
-- [Backend repository: Tedix_Hunt_BE](https://github.com/tedixdev-arch/Tedix_Hunt_BE)
-
-- [Frontend website](https://tedixhunt.anainfo.ai/)
-
-- [Backend API documentation](https://tedixhuntbe.anainfo.ai/api/docs/)
-
+- Mockup / UX reference: [https://github.com/tedixdev-arch/tedixhunt_student](https://github.com/tedixdev-arch/tedixhunt_student)
+- Frontend repository: [https://github.com/tedixdev-arch/Tedix_Hunt_FE](https://github.com/tedixdev-arch/Tedix_Hunt_FE)
+- Backend repository: [https://github.com/tedixdev-arch/Tedix_Hunt_BE](https://github.com/tedixdev-arch/Tedix_Hunt_BE)
+- Frontend website: [https://tedixhunt.anainfo.ai/](https://tedixhunt.anainfo.ai/)
+- Backend service: [https://tedixhuntbe.anainfo.ai/](https://tedixhuntbe.anainfo.ai/)
+- Backend API documentation: [https://tedixhuntbe.anainfo.ai/api/docs/](https://tedixhuntbe.anainfo.ai/api/docs/)
 - Target stack: React + TypeScript frontend; Node.js + TypeScript + Express backend; PostgreSQL database; REST/JSON over HTTPS.
 
 ## 2. Core UX premise
