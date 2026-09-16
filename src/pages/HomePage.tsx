@@ -49,7 +49,7 @@ export function HomePage() {
             Real places. Shared missions.
           </div>
           <h1 className="home-title max-w-3xl text-[clamp(3.25rem,13vw,7rem)] font-black leading-[0.88] tracking-[-0.055em]">
-            Your city is waiting.
+            Yours city is waiting.
           </h1>
           <p className="home-copy mt-6 max-w-xl text-lg leading-7 text-slate-300 sm:text-xl sm:leading-8">
             Explore real places, solve challenges, and complete a mission with your team.
