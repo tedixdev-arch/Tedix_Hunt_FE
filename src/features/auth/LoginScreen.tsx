@@ -9,7 +9,7 @@ function isValidEmail(value: string) {
 }
 
 export function LoginScreen() {
-  const { login } = useAuth();
+  const { loginParticipant } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   // const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -35,7 +35,7 @@ export function LoginScreen() {
 
     try {
       // setIsSubmitting(true);
-      await login({ email, password });
+      await loginParticipant({ email, password });
     } catch {
       setSubmitError('Something went wrong. Please try again.');
     } finally {

@@ -1,4 +1,5 @@
 import { createHashRouter, Navigate } from 'react-router-dom'
+import { useAuth } from '../app/providers/AuthProvider'
 import { TemplateOneExperience } from '../pages/template-one/TemplateOneExperience'
 import { CreatorStudioPage, CreatorTemplateEditorPage } from '../pages/CreatorStudio'
 import { HomePage } from '../pages/HomePage'
@@ -12,6 +13,20 @@ import { CustomHuntEditorPage } from '../pages/CustomHuntEditor'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTemplateReviewPage } from '../pages/AdminConsole'
 import { AdminVerificationPage, ProfessionalSignInPage } from '../pages/ProfessionalAccess'
+import type { ReactNode } from 'react'
+import { canAccessCreator, canAccessParticipant } from '../features/auth/access'
+
+function RequireAuthFlow({ children, entry, canAccess }: { children: ReactNode; entry: string; canAccess: typeof canAccessCreator }) {
+  const { user, isBootstrapping } = useAuth()
+  if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
+  return canAccess(user) ? children : <Navigate replace to={entry} />
+}
+
+function CreatorEntry() {
+  const { user, isBootstrapping } = useAuth()
+  if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
+  return canAccessCreator(user) ? <Navigate replace to="/creator" /> : <ProfessionalSignInPage type="creator" />
+}
 
 export const router = createHashRouter([
   {
@@ -44,7 +59,7 @@ export const router = createHashRouter([
   },
   {
     path: '/participant/setup',
-    element: <ParticipantReadinessPage />,
+    element: <RequireAuthFlow canAccess={canAccessParticipant} entry="/join"><ParticipantReadinessPage /></RequireAuthFlow>,
   },
   {
     path: '/play/template-1',
@@ -92,15 +107,15 @@ export const router = createHashRouter([
   },
   {
     path: '/creator/sign-in',
-    element: <ProfessionalSignInPage type="creator" />,
+    element: <CreatorEntry />,
   },
   {
     path: '/creator',
-    element: <CreatorStudioPage />,
+    element: <RequireAuthFlow canAccess={canAccessCreator} entry="/creator/sign-in"><CreatorStudioPage /></RequireAuthFlow>,
   },
   {
     path: '/create',
-    element: <CreatorTemplateEditorPage />,
+    element: <RequireAuthFlow canAccess={canAccessCreator} entry="/creator/sign-in"><CreatorTemplateEditorPage /></RequireAuthFlow>,
   },
   {
     path: '/admin/sign-in',
@@ -147,4 +162,3 @@ export const router = createHashRouter([
     element: <AdminSectionPage section="audit" />,
   },
 ])
-
