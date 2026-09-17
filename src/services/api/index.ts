@@ -5,9 +5,11 @@ export type {
   ApiErrorResponse,
   AuthResponse,
   AuthTokens,
+  GuestAuthResponse,
   GuestSessionInput,
   LoginInput,
   PublicUser,
+  RefreshResponse,
   RegisterInput,
 } from './auth.ts';
 export { LocalSessionStore, sessionStore } from './session.ts';

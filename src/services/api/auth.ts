@@ -1,18 +1,32 @@
 import { ApiError, apiClient, type ApiClient } from './client.ts';
-import { sessionStore, type SessionStore, type SessionTokens } from './session.ts';
+import { sessionStore, type SessionStore } from './session.ts';
 
 export interface PublicUser {
   id: string;
-  email?: string;
-  displayName?: string;
-  accountType?: 'creator' | 'participant' | 'guest';
+  email: string | null;
+  name: string;
+  role: string;
+  isGuest: boolean;
+  tedixUserId: string | null;
+  createdAt: string;
 }
 
-export interface AuthTokens extends SessionTokens {}
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
 
-export interface AuthResponse extends AuthTokens {
+export interface AuthResponse {
   user: PublicUser;
+  tokens: AuthTokens;
 }
+
+export interface GuestAuthResponse {
+  user: PublicUser;
+  tokens: Pick<AuthTokens, 'accessToken'>;
+}
+
+export type RefreshResponse = AuthTokens;
 
 export interface ApiErrorResponse {
   message?: string;
@@ -23,7 +37,7 @@ export interface ApiErrorResponse {
 export interface RegisterInput {
   email: string;
   password: string;
-  displayName: string;
+  name: string;
 }
 
 export interface LoginInput {
@@ -32,7 +46,7 @@ export interface LoginInput {
 }
 
 export interface GuestSessionInput {
-  displayName?: string;
+  name?: string;
 }
 
 export class AuthApi {
@@ -49,7 +63,7 @@ export class AuthApi {
 
   private async authenticate(path: string, input: unknown): Promise<AuthResponse> {
     const response = await this.client.post<AuthResponse>(path, input, { authenticated: false });
-    this.session.saveSession({ accessToken: response.accessToken, refreshToken: response.refreshToken });
+    this.session.saveSession(response.tokens);
     return response;
   }
 
@@ -69,18 +83,18 @@ export class AuthApi {
     return this.authenticate('/api/auth/participant/login', input);
   }
 
-  async createGuestSession(input: GuestSessionInput = {}): Promise<AuthResponse> {
-    const response = await this.client.post<AuthResponse>('/api/auth/guest', input, { authenticated: false });
+  async createGuestSession(input: GuestSessionInput = {}): Promise<GuestAuthResponse> {
+    const response = await this.client.post<GuestAuthResponse>('/api/auth/guest', input, { authenticated: false });
     // Guests are intentionally non-refreshable.
-    this.session.saveSession({ accessToken: response.accessToken });
+    this.session.saveSession({ accessToken: response.tokens.accessToken });
     return response;
   }
 
-  async refresh(): Promise<AuthResponse> {
+  async refresh(): Promise<RefreshResponse> {
     const refreshToken = this.session.getRefreshToken();
     if (!refreshToken) throw new ApiError('No refresh session is available.', 401, 'unauthorized');
     try {
-      const response = await this.client.post<AuthResponse>('/api/auth/refresh', { refreshToken }, {
+      const response = await this.client.post<RefreshResponse>('/api/auth/refresh', { refreshToken }, {
         authenticated: false, retryOnUnauthorized: false,
       });
       this.session.saveSession({
@@ -96,8 +110,12 @@ export class AuthApi {
 
   async logout(): Promise<void> {
     const refreshToken = this.session.getRefreshToken();
+    if (!refreshToken) {
+      this.session.clearSession();
+      return;
+    }
     try {
-      await this.client.post<void>('/api/auth/logout', refreshToken ? { refreshToken } : {}, {
+      await this.client.post<void>('/api/auth/logout', { refreshToken }, {
         retryOnUnauthorized: false,
       });
     } finally {

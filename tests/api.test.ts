@@ -22,6 +22,19 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+function user(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'user-1',
+    email: 'user@example.test',
+    name: 'Test User',
+    role: 'participant',
+    isGuest: false,
+    tedixUserId: null,
+    createdAt: '2026-09-17T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
 function mockClient(responses: Response[], session = new MemorySession()) {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const fetcher: typeof fetch = async (url, init) => {
@@ -59,23 +72,45 @@ test('Authorization is omitted without an access token', async () => {
 });
 
 test('successful login stores registered-session tokens', async () => {
-  const payload = { user: { id: '1' }, accessToken: 'a', refreshToken: 'r' };
+  const payload = { user: user({ role: 'creator' }), tokens: { accessToken: 'a', refreshToken: 'r' } };
   const { client, session } = mockClient([json(payload)]);
   assert.deepEqual(await new AuthApi(client, session).loginCreator({ email: 'a@b.test', password: 'password' }), payload);
   assert.deepEqual(session.tokens, { accessToken: 'a', refreshToken: 'r' });
 });
 
-test('guest session stores only its access token', async () => {
-  const payload = { user: { id: 'guest' }, accessToken: 'guest-a', refreshToken: 'must-not-store' };
+test('participant login stores nested response tokens', async () => {
+  const payload = { user: user(), tokens: { accessToken: 'participant-a', refreshToken: 'participant-r' } };
   const { client, session } = mockClient([json(payload)]);
-  await new AuthApi(client, session).createGuestSession({ displayName: 'Guest' });
+  await new AuthApi(client, session).loginParticipant({ email: 'participant@example.test', password: 'password' });
+  assert.deepEqual(session.tokens, { accessToken: 'participant-a', refreshToken: 'participant-r' });
+});
+
+test('guest session stores only its access token', async () => {
+  const payload = {
+    user: user({ id: 'guest', email: null, name: 'Guest', role: 'guest', isGuest: true }),
+    tokens: { accessToken: 'guest-a' },
+  };
+  const { client, session } = mockClient([json(payload)]);
+  await new AuthApi(client, session).createGuestSession({ name: 'Guest' });
   assert.deepEqual(session.tokens, { accessToken: 'guest-a' });
+});
+
+test('registration sends name using the backend field name', async () => {
+  const payload = { user: user({ role: 'creator' }), tokens: { accessToken: 'a', refreshToken: 'r' } };
+  const { client, session, calls } = mockClient([json(payload)]);
+  await new AuthApi(client, session).registerCreator({
+    email: 'creator@example.test', password: 'password', name: 'Creator Name',
+  });
+  assert.deepEqual(JSON.parse(String(calls[0].init?.body)), {
+    email: 'creator@example.test', password: 'password', name: 'Creator Name',
+  });
+  assert.equal('displayName' in JSON.parse(String(calls[0].init?.body)), false);
 });
 
 test('explicit refresh updates stored tokens', async () => {
   const session = new MemorySession();
   session.tokens = { accessToken: 'old-a', refreshToken: 'old-r' };
-  const payload = { user: { id: '1' }, accessToken: 'new-a', refreshToken: 'new-r' };
+  const payload = { accessToken: 'new-a', refreshToken: 'new-r' };
   const { client } = mockClient([json(payload)], session);
   await new AuthApi(client, session).refresh();
   assert.deepEqual(session.tokens, { accessToken: 'new-a', refreshToken: 'new-r' });
@@ -123,8 +158,17 @@ test('logout clears local session even when the backend rejects it', async () =>
   assert.equal(session.tokens, null);
 });
 
+test('guest logout clears locally without calling the backend', async () => {
+  const session = new MemorySession();
+  session.tokens = { accessToken: 'guest-a' };
+  const { client, calls } = mockClient([], session);
+  await new AuthApi(client, session).logout();
+  assert.equal(session.tokens, null);
+  assert.equal(calls.length, 0);
+});
+
 test('/me returns current-user data', async () => {
-  const user = { id: '7', email: 'participant@example.test', accountType: 'participant' };
-  const { client, session } = mockClient([json(user)]);
-  assert.deepEqual(await new AuthApi(client, session).me(), user);
+  const currentUser = user({ id: '7' });
+  const { client, session } = mockClient([json(currentUser)]);
+  assert.deepEqual(await new AuthApi(client, session).me(), currentUser);
 });
