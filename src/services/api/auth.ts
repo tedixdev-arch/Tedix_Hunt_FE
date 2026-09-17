@@ -1,10 +1,14 @@
 import { ApiError, apiClient, type ApiClient } from './client.ts';
 import { sessionStore, type SessionStore } from './session.ts';
 
+export type GlobalRole = 'participant' | 'organizer' | 'creator' | 'admin';
+
 export interface PublicUser {
   id: string;
   email: string | null;
   name: string;
+  /** `roles` is authoritative for capabilities; `role` is transitional compatibility/display data. */
+  roles: GlobalRole[];
   role: string;
   isGuest: boolean;
   tedixUserId: string | null;
