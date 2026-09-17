@@ -30,7 +30,7 @@ export function LandingScreen() {
         ))}
       </div>
 
-      <button  onClick={logout} > Log out</button>
+      <button onClick={() => void logout()} > Log out</button>
     </div>
   );
 }

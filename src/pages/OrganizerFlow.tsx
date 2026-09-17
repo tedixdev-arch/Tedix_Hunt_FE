@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { HuntStatus, organizerHunts } from '../data/platformPrototype'
+import { useAuth } from '../app/providers/AuthProvider'
 
 const statusLabels: Record<HuntStatus, string> = {
   ready: 'Ready to start',
@@ -45,11 +46,14 @@ function HuntActionMenu({ huntId, status }: { huntId: string; status: HuntStatus
 }
 
 export function OrganizerHeader({ showProfile = false }: { showProfile?: boolean }) {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const signOut = async () => { await logout(); navigate('/creator/sign-in', { replace: true }) }
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
         <Link className="text-sm font-black uppercase tracking-[0.2em] text-slate-950" to="/">TedixHunt</Link>
-        {showProfile ? <div className="flex items-center gap-3"><span className="hidden text-sm text-slate-500 sm:block">Cluj Youth Centre</span><span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800">OC</span></div> : <Link className="text-sm font-bold text-slate-500 hover:text-slate-900" to="/">Back to home</Link>}
+        {showProfile ? <div className="flex items-center gap-3"><span className="hidden text-sm text-slate-500 sm:block">{user?.name ?? 'Cluj Youth Centre'}</span>{user ? <button className="min-h-10 rounded-lg px-3 text-sm font-bold text-slate-600 hover:bg-slate-100" onClick={() => void signOut()} type="button">Log out</button> : <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800">OC</span>}</div> : <Link className="text-sm font-bold text-slate-500 hover:text-slate-900" to="/">Back to home</Link>}
       </div>
     </header>
   )

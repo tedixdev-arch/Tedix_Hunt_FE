@@ -4,6 +4,7 @@ import { AuthApi } from '../src/services/api/auth.ts';
 import { ApiClient, ApiError } from '../src/services/api/client.ts';
 import { buildApiUrl } from '../src/services/api/config.ts';
 import type { SessionStore, SessionTokens } from '../src/services/api/session.ts';
+import { authErrorMessage } from '../src/features/auth/errors.ts';
 
 class MemorySession implements SessionStore {
   tokens: SessionTokens | null = null;
@@ -171,4 +172,27 @@ test('/me returns current-user data', async () => {
   const currentUser = user({ id: '7' });
   const { client, session } = mockClient([json(currentUser)]);
   assert.deepEqual(await new AuthApi(client, session).me(), currentUser);
+});
+
+test('valid existing session bootstraps the current user', async () => {
+  const session = new MemorySession();
+  session.tokens = { accessToken: 'existing', refreshToken: 'refresh' };
+  const currentUser = user({ id: 'returning' });
+  const { client } = mockClient([json(currentUser)], session);
+  assert.deepEqual(await new AuthApi(client, session).bootstrapSession(), currentUser);
+  assert.deepEqual(session.tokens, { accessToken: 'existing', refreshToken: 'refresh' });
+});
+
+test('unrecoverable existing session is cleared during bootstrap', async () => {
+  const session = new MemorySession();
+  session.tokens = { accessToken: 'expired' };
+  const { client } = mockClient([json({}, 401)], session);
+  assert.equal(await new AuthApi(client, session).bootstrapSession(), null);
+  assert.equal(session.tokens, null);
+});
+
+test('auth errors are presented as short safe form feedback', () => {
+  assert.equal(authErrorMessage(new ApiError('internal credential detail', 401, 'unauthorized')), 'Email or password is incorrect.');
+  assert.equal(authErrorMessage(new ApiError('database constraint', 409, 'conflict'), 'register'), 'An account with this email already exists.');
+  assert.equal(authErrorMessage(new ApiError('fetch failed', null, 'network')), 'Service unavailable. Please try again.');
 });
