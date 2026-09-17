@@ -14,17 +14,18 @@ import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTemplateReviewPage } from '../pages/AdminConsole'
 import { AdminVerificationPage, ProfessionalSignInPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
+import { canAccessCreator, canAccessParticipant } from '../features/auth/access'
 
-function RequireSession({ children, entry }: { children: ReactNode; entry: string }) {
-  const { isAuthenticated, isBootstrapping } = useAuth()
+function RequireAuthFlow({ children, entry, canAccess }: { children: ReactNode; entry: string; canAccess: typeof canAccessCreator }) {
+  const { user, isBootstrapping } = useAuth()
   if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
-  return isAuthenticated ? children : <Navigate replace to={entry} />
+  return canAccess(user) ? children : <Navigate replace to={entry} />
 }
 
 function CreatorEntry() {
-  const { isAuthenticated, isBootstrapping } = useAuth()
+  const { user, isBootstrapping } = useAuth()
   if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
-  return isAuthenticated ? <Navigate replace to="/creator" /> : <ProfessionalSignInPage type="creator" />
+  return canAccessCreator(user) ? <Navigate replace to="/creator" /> : <ProfessionalSignInPage type="creator" />
 }
 
 export const router = createHashRouter([
@@ -58,7 +59,7 @@ export const router = createHashRouter([
   },
   {
     path: '/participant/setup',
-    element: <RequireSession entry="/join"><ParticipantReadinessPage /></RequireSession>,
+    element: <RequireAuthFlow canAccess={canAccessParticipant} entry="/join"><ParticipantReadinessPage /></RequireAuthFlow>,
   },
   {
     path: '/play/template-1',
@@ -110,11 +111,11 @@ export const router = createHashRouter([
   },
   {
     path: '/creator',
-    element: <RequireSession entry="/creator/sign-in"><CreatorStudioPage /></RequireSession>,
+    element: <RequireAuthFlow canAccess={canAccessCreator} entry="/creator/sign-in"><CreatorStudioPage /></RequireAuthFlow>,
   },
   {
     path: '/create',
-    element: <RequireSession entry="/creator/sign-in"><CreatorTemplateEditorPage /></RequireSession>,
+    element: <RequireAuthFlow canAccess={canAccessCreator} entry="/creator/sign-in"><CreatorTemplateEditorPage /></RequireAuthFlow>,
   },
   {
     path: '/admin/sign-in',
