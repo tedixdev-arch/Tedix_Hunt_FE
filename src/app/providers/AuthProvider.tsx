@@ -9,7 +9,6 @@ type AuthContextValue = {
   registerParticipant: (input: RegisterInput) => Promise<PublicUser>
   createGuestSession: (input?: GuestSessionInput) => Promise<PublicUser>
   loginCreator: (input: LoginInput) => Promise<PublicUser>
-  registerCreator: (input: RegisterInput) => Promise<PublicUser>
   logout: () => Promise<void>
 }
 
@@ -34,10 +33,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const registerParticipant = useCallback((input: RegisterInput) => authenticate(authApi.registerParticipant(input)), [authenticate])
   const createGuestSession = useCallback((input: GuestSessionInput = {}) => authenticate(authApi.createGuestSession(input)), [authenticate])
   const loginCreator = useCallback((input: LoginInput) => authenticate(authApi.loginCreator(input)), [authenticate])
-  const registerCreator = useCallback((input: RegisterInput) => authenticate(authApi.registerCreator(input)), [authenticate])
   const logout = useCallback(async () => { try { await authApi.logout() } finally { setUser(null) } }, [])
 
-  const value = useMemo(() => ({ user, isAuthenticated: user !== null, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, registerCreator, logout }), [user, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, registerCreator, logout])
+  const value = useMemo(() => ({ user, isAuthenticated: user !== null, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, logout }), [user, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, logout])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
