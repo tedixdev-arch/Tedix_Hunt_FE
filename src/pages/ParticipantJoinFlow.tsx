@@ -1,6 +1,7 @@
 import { FormEvent, ReactNode, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
+import { canAccessParticipant } from '../features/auth/access'
 import { authErrorMessage } from '../features/auth/errors'
 
 function ParticipantShell({ children }: { children: ReactNode }) {
@@ -21,7 +22,7 @@ export function JoinHuntPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const submitting = useRef(false)
 
-  if (!isBootstrapping && user) return <Navigate replace to="/participant/setup" />
+  if (!isBootstrapping && canAccessParticipant(user)) return <Navigate replace to="/participant/setup" />
 
   async function join(event: FormEvent) {
     event.preventDefault()

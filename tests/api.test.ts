@@ -5,7 +5,7 @@ import { ApiClient, ApiError } from '../src/services/api/client.ts';
 import { buildApiUrl } from '../src/services/api/config.ts';
 import type { SessionStore, SessionTokens } from '../src/services/api/session.ts';
 import { authErrorMessage } from '../src/features/auth/errors.ts';
-import { canAccessCreator, canAccessParticipant } from '../src/features/auth/access.ts';
+import { canAccessCreator, canAccessParticipant, hasAnyRole, hasRole } from '../src/features/auth/access.ts';
 
 class MemorySession implements SessionStore {
   tokens: SessionTokens | null = null;
@@ -30,6 +30,7 @@ function user(overrides: Record<string, unknown> = {}) {
     email: 'user@example.test',
     name: 'Test User',
     role: 'participant',
+    roles: ['participant'],
     isGuest: false,
     tedixUserId: null,
     createdAt: '2026-09-17T00:00:00.000Z',
@@ -198,20 +199,42 @@ test('auth errors are presented as short safe form feedback', () => {
   assert.equal(authErrorMessage(new ApiError('fetch failed', null, 'network')), 'Service unavailable. Please try again.');
 });
 
-test('creator session can enter Creator Studio', () => {
-  assert.equal(canAccessCreator(user({ role: 'creator' })), true);
-});
-
-test('participant and guest sessions cannot enter or redirect into Creator Studio', () => {
+test('participant-only user cannot access creator routes', () => {
   assert.equal(canAccessCreator(user()), false);
-  assert.equal(canAccessCreator(user({ role: 'guest', isGuest: true })), false);
 });
 
-test('participant and guest sessions can enter participant setup', () => {
-  assert.equal(canAccessParticipant(user()), true);
-  assert.equal(canAccessParticipant(user({ role: 'guest', isGuest: true })), true);
+test('creator-only user can access creator routes but not participant routes', () => {
+  const creator = user({ role: 'creator', roles: ['creator'] });
+  assert.equal(canAccessCreator(creator), true);
+  assert.equal(canAccessParticipant(creator), false);
 });
 
-test('creator session cannot be treated as a participant session', () => {
-  assert.equal(canAccessParticipant(user({ role: 'creator' })), false);
+test('participant and creator multi-role user can access both flows', () => {
+  const multiRoleUser = user({ roles: ['participant', 'creator'] });
+  assert.equal(canAccessCreator(multiRoleUser), true);
+  assert.equal(canAccessParticipant(multiRoleUser), true);
+  assert.equal(hasAnyRole(multiRoleUser, ['admin', 'creator']), true);
+});
+
+test('legacy creator role does not grant creator access without the capability', () => {
+  assert.equal(canAccessCreator(user({ role: 'creator', roles: ['participant'] })), false);
+});
+
+test('legacy participant role does not block creator access with the capability', () => {
+  assert.equal(canAccessCreator(user({ role: 'participant', roles: ['participant', 'creator'] })), true);
+});
+
+test('guest participant retains participant access without gaining creator access', () => {
+  const guest = user({ id: 'guest', role: 'guest', roles: [], isGuest: true });
+  assert.equal(canAccessParticipant(guest), true);
+  assert.equal(canAccessCreator(guest), false);
+});
+
+test('missing or empty roles fail safely for privileged capability checks', () => {
+  const missingRoles = user({ role: 'creator', roles: undefined });
+  const emptyRoles = user({ role: 'creator', roles: [] });
+  assert.equal(canAccessCreator(missingRoles), false);
+  assert.equal(canAccessCreator(emptyRoles), false);
+  assert.equal(hasRole(missingRoles, 'creator'), false);
+  assert.equal(hasAnyRole(emptyRoles, ['creator', 'admin']), false);
 });
