@@ -12,6 +12,10 @@ export function canAccessCreator(user: PublicUser | null) {
   return hasRole(user, 'creator')
 }
 
+export function canAccessOrganizer(user: PublicUser | null) {
+  return hasRole(user, 'organizer')
+}
+
 export function canAccessParticipant(user: PublicUser | null) {
   return user !== null && (hasRole(user, 'participant') || user.isGuest)
 }

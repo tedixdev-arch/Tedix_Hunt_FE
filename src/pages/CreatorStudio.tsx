@@ -8,7 +8,7 @@ const checkpointFeatures = new Set(['personal', 'team', 'navigation'])
 const formats = ['Single choice · up to 3 options', 'Multiple choice · up to 3 options', 'True / False', 'Match the pairs · up to 3 pairs']
 
 function Shell({ children }: { children: ReactNode }) {
-  return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader showProfile /><div className="mx-auto max-w-6xl px-4 py-7 sm:px-8 sm:py-10">{children}</div></main>
+  return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader logoutTo="/creator/sign-in" showProfile /><div className="mx-auto max-w-6xl px-4 py-7 sm:px-8 sm:py-10">{children}</div></main>
 }
 
 function Progress({ done, total }: { done: number; total: number }) {

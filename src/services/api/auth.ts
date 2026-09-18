@@ -79,6 +79,11 @@ export class AuthApi {
     return this.authenticate('/api/auth/creator/login', input);
   }
 
+  /** Organizers use the existing professional-account login endpoint. */
+  loginOrganizer(input: LoginInput): Promise<AuthResponse> {
+    return this.loginCreator(input);
+  }
+
   registerParticipant(input: RegisterInput): Promise<AuthResponse> {
     return this.authenticate('/api/auth/participant/register', input);
   }
