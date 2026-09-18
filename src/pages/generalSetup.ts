@@ -7,6 +7,20 @@ export interface GeneralSetupSettings {
   checkpointOrder: string; mission: string; theme: string;
 }
 
+export interface GeneralSetupProgress {
+  activeSection: number;
+  completedSections: Set<number>;
+}
+
+export function generalSetupProgressFromNavigationState(state: unknown): GeneralSetupProgress {
+  const resumeAfterDetails = Boolean(state && typeof state === 'object'
+    && (state as { resumeGeneralSection?: unknown }).resumeGeneralSection === 1);
+  return {
+    activeSection: resumeAfterDetails ? 1 : 0,
+    completedSections: new Set(resumeAfterDetails ? [0] : []),
+  };
+}
+
 export const newHuntDefaults: GeneralSetupSettings = {
   name: 'Signal: Cluj Napoca', date: '2026-09-12', time: '10:00', timezone: 'Europe/Bucharest',
   country: 'Romania', county: 'Cluj', location: 'Cluj Napoca', language: 'English',

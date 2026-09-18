@@ -18,7 +18,6 @@ export interface Hunt {
   status: HuntStatus;
   createdAt: string;
   updatedAt: string;
-  huntRoles: HuntRole[];
   country: string | null;
   region: string | null;
   city: string | null;
@@ -30,7 +29,9 @@ export interface Hunt {
   contactName: string | null;
 }
 
-export type HuntListItem = Hunt;
+export interface HuntListItem extends Hunt {
+  huntRoles: HuntRole[];
+}
 
 export interface CreateDraftInput { organizationId: string; name: string }
 export type UpdateDraftInput = Partial<Pick<Hunt,
@@ -63,8 +64,8 @@ export class HuntsApi {
     return this.client.patch<Hunt>(`/api/hunts/${encodeURIComponent(id)}`, input);
   }
 
-  private transition(id: string, action: HuntLifecycleAction): Promise<Omit<HuntListItem, 'huntRoles'>> {
-    return this.client.post<Omit<HuntListItem, 'huntRoles'>>(`/api/hunts/${encodeURIComponent(id)}/${action}`);
+  private transition(id: string, action: HuntLifecycleAction): Promise<Hunt> {
+    return this.client.post<Hunt>(`/api/hunts/${encodeURIComponent(id)}/${action}`);
   }
 
   publish(id: string) { return this.transition(id, 'publish'); }

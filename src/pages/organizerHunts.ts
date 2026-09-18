@@ -1,4 +1,4 @@
-import type { HuntLifecycleAction, HuntListItem, HuntStatus } from '../services/api/hunts.ts';
+import type { Hunt, HuntLifecycleAction, HuntListItem, HuntStatus } from '../services/api/hunts.ts';
 
 export const statusLabels: Record<HuntStatus, string> = {
   draft: 'Draft',
@@ -29,7 +29,7 @@ export function huntSummary(hunts: HuntListItem[]) {
   };
 }
 
-export function mergeLifecycleResult(current: HuntListItem, updated: Omit<HuntListItem, 'huntRoles'>): HuntListItem {
+export function mergeLifecycleResult(current: HuntListItem, updated: Hunt): HuntListItem {
   return { ...updated, huntRoles: current.huntRoles };
 }
 

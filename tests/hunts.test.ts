@@ -4,7 +4,7 @@ import { HuntsApi, type HuntListItem, type HuntStatus } from '../src/services/ap
 import { ApiClient } from '../src/services/api/client.ts';
 import type { SessionStore } from '../src/services/api/session.ts';
 import { canContinueSetup, huntSummary, lifecycleActions, mergeLifecycleResult, statusLabels } from '../src/pages/organizerHunts.ts';
-import { capacityInput, huntDetailsInput, newHuntDefaults, settingsFromHunt } from '../src/pages/generalSetup.ts';
+import { capacityInput, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, settingsFromHunt } from '../src/pages/generalSetup.ts';
 
 const session: SessionStore = {
   getAccessToken: () => 'access-token',
@@ -35,11 +35,16 @@ function hunt(status: HuntStatus, huntRoles: HuntListItem['huntRoles'] = ['organ
   };
 }
 
+function detailHunt(status: HuntStatus) {
+  const { huntRoles: _huntRoles, ...detail } = hunt(status);
+  return detail;
+}
+
 function apiWithCalls() {
   const calls: Array<{ url: string; method: string }> = [];
   const fetcher: typeof fetch = async (input, init) => {
     calls.push({ url: String(input), method: init?.method ?? 'GET' });
-    return new Response(JSON.stringify(hunt('published')), { headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(detailHunt('published')), { headers: { 'Content-Type': 'application/json' } });
   };
   return { api: new HuntsApi(new ApiClient('https://api.example.test', session, fetcher)), calls };
 }
@@ -59,7 +64,7 @@ test('draft API methods use POST, GET, and PATCH with encoded Hunt routes', asyn
   const calls: Array<{ url: string; method: string; body?: string }> = [];
   const fetcher: typeof fetch = async (input, init) => {
     calls.push({ url: String(input), method: init?.method ?? 'GET', body: init?.body?.toString() });
-    return new Response(JSON.stringify(hunt('draft')), { headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(detailHunt('draft')), { headers: { 'Content-Type': 'application/json' } });
   };
   const api = new HuntsApi(new ApiClient('https://api.example.test', session, fetcher));
   await api.createDraft({ organizationId: 'org-1', name: 'My Hunt' });
@@ -92,6 +97,16 @@ test('General Setup converts numeric strings and sends only D1 section fields', 
   assert.deepEqual(Object.keys(details).sort(), ['city', 'contactName', 'country', 'durationMinutes', 'name', 'region', 'startDate', 'startTime', 'timezone'].sort());
   assert.deepEqual(capacity, { capacity: 31 });
   assert.throws(() => capacityInput({ ...newHuntDefaults, participants: '0' }), /at least 1/);
+});
+
+test('new-Hunt navigation state resumes at General 2 with General 1 complete', () => {
+  const resumed = generalSetupProgressFromNavigationState({ resumeGeneralSection: 1 });
+  assert.equal(resumed.activeSection, 1);
+  assert.deepEqual([...resumed.completedSections], [0]);
+
+  const reopened = generalSetupProgressFromNavigationState(null);
+  assert.equal(reopened.activeSection, 0);
+  assert.deepEqual([...reopened.completedSections], []);
 });
 
 test('lifecycle methods POST to their matching Hunt endpoints', async () => {

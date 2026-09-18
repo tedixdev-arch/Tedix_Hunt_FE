@@ -1,10 +1,10 @@
 import { MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { organizerFeatures, signalCheckpointNames, type OrganizerTemplate } from '../data/organizerTemplates'
 import { leaderboardPhysicalInventory, specialPhysicalInventory, virtualRewardCategories } from '../data/rewardInventory'
 import { OrganizerHeader } from './OrganizerFlow'
 import { ApiError, huntsApi, organizationsApi, type Hunt, type Organization } from '../services/api'
-import { capacityInput, huntDetailsInput, newHuntDefaults, settingsFromHunt, type GeneralSetupSettings } from './generalSetup'
+import { capacityInput, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, settingsFromHunt, type GeneralSetupProgress, type GeneralSetupSettings } from './generalSetup'
 
 const controlClass = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold outline-none focus:border-emerald-500'
 
@@ -73,13 +73,14 @@ const templatesByTheme: Record<string,string[]> = {
   'Scary Theme (Halloween)': ['Signal: Cluj Napoca'],
 }
 
-function GeneralSetup({ independent, initialSettings, organizations, selectedOrganizationId, onOrganizationChange, onComplete, onFormatChange, onTeamSizeChange, onSave }: {
+function GeneralSetup({ independent, initialSettings, initialProgress, organizations, selectedOrganizationId, onOrganizationChange, onComplete, onFormatChange, onTeamSizeChange, onSave }: {
   independent: boolean; initialSettings: GeneralSetupSettings; organizations: Organization[]; selectedOrganizationId: string;
+  initialProgress: GeneralSetupProgress;
   onOrganizationChange: (id: string) => void; onComplete: () => void; onFormatChange: (format: string) => void;
   onTeamSizeChange: (size: number) => void; onSave: (section: number, settings: GeneralSetupSettings) => Promise<GeneralSetupSettings>;
 }) {
-  const [active, setActive] = useState(0)
-  const [completed, setCompleted] = useState<Set<number>>(new Set())
+  const [active, setActive] = useState(initialProgress.activeSection)
+  const [completed, setCompleted] = useState<Set<number>>(() => new Set(initialProgress.completedSections))
   const [collapsed, setCollapsed] = useState(false)
   const [settings, setSettings] = useState(initialSettings)
   const [saving, setSaving] = useState(false)
@@ -219,7 +220,9 @@ export function CustomHuntEditorPage() {
   const [searchParams] = useSearchParams()
   const { huntId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const independent = searchParams.get('mode') === 'independent'
+  const [generalProgress, setGeneralProgress] = useState(() => generalSetupProgressFromNavigationState(location.state))
   const [persistedHunt, setPersistedHunt] = useState<Hunt | null>(null)
   const [initialSettings, setInitialSettings] = useState(newHuntDefaults)
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -274,6 +277,11 @@ export function CustomHuntEditorPage() {
 
   useEffect(() => { void loadDraft() }, [loadDraft])
   useEffect(() => {
+    if (generalSetupProgressFromNavigationState(location.state).activeSection === 1) {
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null })
+    }
+  }, [location.pathname, location.search, location.state, navigate])
+  useEffect(() => {
     if (huntId || independent) return
     let active = true
     setIsLoadingOrganizations(true)
@@ -305,7 +313,11 @@ export function CustomHuntEditorPage() {
         setPersistedHunt(updated)
         const synchronized = settingsFromHunt(updated, settings)
         setInitialSettings(synchronized)
-        if (!huntId) navigate(`/organizer/hunts/${updated.id}/setup`, { replace: true })
+        if (!huntId) {
+          const nextProgress = generalSetupProgressFromNavigationState({ resumeGeneralSection: 1 })
+          setGeneralProgress(nextProgress)
+          navigate(`/organizer/hunts/${updated.id}/setup`, { replace: true, state: { resumeGeneralSection: 1 } })
+        }
         return synchronized
       }
       if (section === 1) {
@@ -367,7 +379,7 @@ export function CustomHuntEditorPage() {
         {!independent && !huntId && isLoadingOrganizations && <p className="mt-5 text-sm font-semibold text-slate-500" role="status">Loading your organizations…</p>}
         {!independent && !huntId && !isLoadingOrganizations && !organizationLoadFailed && organizations.length === 0 && <p className="mt-5 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700" role="alert">You need access to an organization before a Hunt draft can be created.</p>}
         {!independent && !huntId && organizationLoadFailed && <p className="mt-5 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700" role="alert">We couldn\'t load your organizations. Refresh the page to try again.</p>}
-        <GeneralSetup independent={independent} initialSettings={initialSettings} organizations={organizations} selectedOrganizationId={selectedOrganizationId} onOrganizationChange={setSelectedOrganizationId} onComplete={() => setGeneralComplete(true)} onFormatChange={changeFormat} onSave={saveGeneralSection} onTeamSizeChange={setTeamSize} />
+        <GeneralSetup independent={independent} initialProgress={generalProgress} initialSettings={initialSettings} organizations={organizations} selectedOrganizationId={selectedOrganizationId} onOrganizationChange={setSelectedOrganizationId} onComplete={() => setGeneralComplete(true)} onFormatChange={changeFormat} onSave={saveGeneralSection} onTeamSizeChange={setTeamSize} />
 
         <section className="mt-8" aria-labelledby="features-title">
           <div className="flex flex-wrap items-end justify-between gap-4">
