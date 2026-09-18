@@ -1,48 +1,25 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { HuntStatus, organizerHunts } from '../data/platformPrototype'
 import { useAuth } from '../app/providers/AuthProvider'
-
-const statusLabels: Record<HuntStatus, string> = {
-  ready: 'Ready to start',
-  countdown: 'Countdown',
-  'in-progress': 'In progress',
-  delayed: 'Delayed',
-  paused: 'Paused',
-  cancelled: 'Cancelled',
-  completed: 'Completed',
-}
+import { huntsApi, type HuntLifecycleAction, type HuntListItem, type HuntStatus } from '../services/api'
+import { huntSummary, lifecycleActions, mergeLifecycleResult, statusLabels } from './organizerHunts'
 
 const statusStyles: Record<HuntStatus, string> = {
-  ready: 'bg-emerald-100 text-emerald-800',
-  countdown: 'bg-sky-100 text-sky-800',
-  'in-progress': 'bg-emerald-500 text-white',
-  delayed: 'bg-amber-100 text-amber-800',
+  draft: 'bg-slate-100 text-slate-700',
+  published: 'bg-emerald-100 text-emerald-800',
+  active: 'bg-emerald-500 text-white',
   paused: 'bg-violet-100 text-violet-800',
   cancelled: 'bg-slate-200 text-slate-600',
-  completed: 'bg-teal-100 text-teal-800',
+  finished: 'bg-teal-100 text-teal-800',
 }
 
-function HuntActionMenu({ huntId, status }: { huntId: string; status: HuntStatus }) {
-  const actions = [
-    { label: 'View details', action: 'details' },
-    { label: 'Duplicate hunt', action: 'duplicate' },
-    ...(status === 'paused'
-      ? [{ label: 'Resume hunt', action: 'resume' }]
-      : status !== 'cancelled' && status !== 'completed'
-        ? [{ label: 'Pause hunt', action: 'pause' }]
-        : []),
-    ...(status !== 'cancelled' && status !== 'completed' ? [{ label: 'Cancel hunt', action: 'cancel' }] : []),
-  ]
+const actionLabels: Record<HuntLifecycleAction, string> = {
+  publish: 'Publish', start: 'Start', pause: 'Pause', resume: 'Resume', cancel: 'Cancel', finish: 'Finish',
+}
 
-  return (
-    <details className="relative">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-lg border border-slate-300 px-3 text-sm font-bold hover:border-emerald-500 hover:text-emerald-700">More actions ▾</summary>
-      <div className="absolute right-0 top-full z-10 mt-2 min-w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
-        {actions.map((item) => <Link className={`block px-4 py-3 text-sm font-bold hover:bg-slate-50 ${item.action === 'cancel' ? 'text-rose-700' : 'text-slate-700'}`} key={item.action} to={`/organizer/hunts/${huntId}?action=${item.action}`}>{item.label}</Link>)}
-      </div>
-    </details>
-  )
+function formatUpdatedAt(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Updated recently' : `Updated ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date)}`
 }
 
 export function OrganizerHeader({ showProfile = false }: { showProfile?: boolean }) {
@@ -108,8 +85,44 @@ export function IndependentOrganizerPage() {
 }
 
 export function OrganizerHuntsPage() {
-  const activeCount = organizerHunts.filter((hunt) => hunt.status === 'in-progress').length
-  const needsAttention = organizerHunts.filter((hunt) => ['delayed', 'paused'].includes(hunt.status)).length
+  const [hunts, setHunts] = useState<HuntListItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [pendingHuntIds, setPendingHuntIds] = useState<Set<string>>(() => new Set())
+  const [actionErrors, setActionErrors] = useState<Record<string, string>>({})
+  const pendingRef = useRef(new Set<string>())
+
+  const loadHunts = useCallback(async () => {
+    setIsLoading(true)
+    setLoadError(false)
+    try {
+      setHunts(await huntsApi.listHunts())
+    } catch {
+      setLoadError(true)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { void loadHunts() }, [loadHunts])
+
+  async function runAction(hunt: HuntListItem, action: HuntLifecycleAction) {
+    if (pendingRef.current.has(hunt.id)) return
+    pendingRef.current.add(hunt.id)
+    setPendingHuntIds(new Set(pendingRef.current))
+    setActionErrors((errors) => { const next = { ...errors }; delete next[hunt.id]; return next })
+    try {
+      const updated = await huntsApi[action](hunt.id)
+      setHunts((current) => current.map((item) => item.id === hunt.id ? mergeLifecycleResult(item, updated) : item))
+    } catch {
+      setActionErrors((errors) => ({ ...errors, [hunt.id]: 'We couldn\'t update this Hunt. Please try again.' }))
+    } finally {
+      pendingRef.current.delete(hunt.id)
+      setPendingHuntIds(new Set(pendingRef.current))
+    }
+  }
+
+  const summary = huntSummary(hunts)
 
   return (
     <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950">
@@ -121,20 +134,29 @@ export function OrganizerHuntsPage() {
         </div>
 
         <section className="mt-7 grid grid-cols-2 gap-3 sm:max-w-lg" aria-label="Hunt summary">
-          <div className="rounded-xl border border-slate-200 bg-white p-4"><span className="text-sm text-slate-500">Active now</span><strong className="mt-1 block text-3xl">{activeCount}</strong></div>
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4"><span className="text-sm text-amber-800">Needs attention</span><strong className="mt-1 block text-3xl text-amber-900">{needsAttention}</strong></div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4"><span className="text-sm text-slate-500">Active now</span><strong className="mt-1 block text-3xl">{summary.active}</strong></div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4"><span className="text-sm text-amber-800">Needs attention</span><strong className="mt-1 block text-3xl text-amber-900">{summary.needsAttention}</strong></div>
         </section>
 
         <section className="mt-8" aria-labelledby="hunt-list-title">
-          <div className="flex items-center justify-between"><h2 className="text-xl font-black" id="hunt-list-title">All hunts</h2><span className="text-sm text-slate-500">{organizerHunts.length} hunts</span></div>
+          <div className="flex items-center justify-between"><h2 className="text-xl font-black" id="hunt-list-title">All hunts</h2><span className="text-sm text-slate-500">{isLoading ? 'Loading…' : `${hunts.length} ${hunts.length === 1 ? 'hunt' : 'hunts'}`}</span></div>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            {organizerHunts.map((hunt) => (
-              <article className={`rounded-xl border bg-white p-4 shadow-sm ${hunt.status === 'in-progress' ? 'border-emerald-400' : hunt.status === 'delayed' || hunt.status === 'paused' ? 'border-amber-300' : 'border-slate-200'}`} key={hunt.id}>
+            {isLoading && <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600" role="status">Loading your Hunts…</div>}
+            {!isLoading && loadError && <div className="rounded-xl border border-rose-200 bg-white p-6"><p className="font-bold text-slate-800" role="alert">We couldn't load your Hunts.</p><button className="mt-4 min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-bold hover:border-emerald-500 hover:text-emerald-700" onClick={() => void loadHunts()} type="button">Retry</button></div>}
+            {!isLoading && !loadError && hunts.length === 0 && <div className="rounded-xl border border-slate-200 bg-white p-6"><p className="font-black text-slate-800">No Hunts yet.</p><p className="mt-1 text-sm text-slate-500">Set up a Hunt when you're ready to get started.</p></div>}
+            {!isLoading && !loadError && hunts.map((hunt) => (
+              <article className={`rounded-xl border bg-white p-4 shadow-sm ${hunt.status === 'active' ? 'border-emerald-400' : hunt.status === 'paused' ? 'border-amber-300' : 'border-slate-200'}`} key={hunt.id}>
                 <div className="flex items-start justify-between gap-3">
-                  <div><div className="flex items-center gap-2"><h3 className="font-black">{hunt.name}</h3><Link aria-label={`Edit ${hunt.name}`} className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-emerald-50 hover:text-emerald-700" title={`Edit ${hunt.name}`} to={`/organizer/hunts/${hunt.id}?action=edit`}><svg aria-hidden="true" fill="none" height="17" viewBox="0 0 24 24" width="17"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/><path d="m13.5 6.5 4 4" stroke="currentColor" strokeWidth="2"/></svg></Link></div><p className="mt-1 text-sm text-slate-500">Signal: Cluj Napoca · Cluj Napoca</p></div>
+                  <div><h3 className="font-black">{hunt.name}</h3><p className="mt-1 text-sm text-slate-500">{formatUpdatedAt(hunt.updatedAt)}</p></div>
                   <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${statusStyles[hunt.status]}`}>{statusLabels[hunt.status]}</span>
                 </div>
-                <div className="mt-4 border-t border-slate-100 pt-4"><span className="text-xs font-semibold text-slate-400">12 Sep · 10:00</span><div className="mt-3 flex flex-wrap items-center justify-end gap-2"><Link className="min-h-11 rounded-lg bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700" to={`/organizer/hunts/${hunt.id}`}>{hunt.primaryAction} →</Link><HuntActionMenu huntId={hunt.id} status={hunt.status} /></div></div>
+                <div className="mt-4 border-t border-slate-100 pt-4">
+                  {actionErrors[hunt.id] && <p className="mb-3 text-sm font-semibold text-rose-700" role="alert">{actionErrors[hunt.id]}</p>}
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Link className="min-h-11 rounded-lg bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700" to={`/organizer/hunts/${hunt.id}`}>View details →</Link>
+                    {lifecycleActions(hunt).map((action) => <button className={`min-h-11 rounded-lg border px-4 text-sm font-bold disabled:cursor-wait disabled:opacity-50 ${action === 'cancel' ? 'border-rose-200 text-rose-700 hover:bg-rose-50' : 'border-slate-300 text-slate-700 hover:border-emerald-500 hover:text-emerald-700'}`} disabled={pendingHuntIds.has(hunt.id)} key={action} onClick={() => void runAction(hunt, action)} type="button">{pendingHuntIds.has(hunt.id) ? 'Updating…' : actionLabels[action]}</button>)}
+                  </div>
+                </div>
               </article>
             ))}
           </div>
