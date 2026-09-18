@@ -1,4 +1,5 @@
 import type { Hunt, UpdateDraftInput } from '../services/api/hunts.ts';
+import type { HuntTemplateMetadata } from '../services/api/huntTemplates.ts';
 
 export interface GeneralSetupSettings {
   name: string; date: string; time: string; timezone: string; country: string; county: string;
@@ -36,6 +37,7 @@ export function settingsFromHunt(hunt: Hunt, local: GeneralSetupSettings = newHu
     date: hunt.startDate ?? '', time: hunt.startTime?.slice(0, 5) ?? '', timezone: hunt.timezone ?? 'Europe/Bucharest',
     duration: hunt.durationMinutes?.toString() ?? '', participants: hunt.capacity?.toString() ?? '',
     contact: hunt.contactName ?? '',
+    ...(hunt.templateSnapshot && { mission: hunt.templateSnapshot.displayName, theme: hunt.templateSnapshot.theme }),
   };
 }
 
@@ -55,4 +57,13 @@ export function huntDetailsInput(settings: GeneralSetupSettings): UpdateDraftInp
 
 export function capacityInput(settings: GeneralSetupSettings): UpdateDraftInput {
   return { capacity: positiveInteger(settings.participants, 'Participants') };
+}
+
+/** Applies catalog display metadata without coupling a Hunt's organizer-defined name to its template. */
+export function settingsWithTemplate(settings: GeneralSetupSettings, template: HuntTemplateMetadata): GeneralSetupSettings {
+  return { ...settings, mission: template.displayName, theme: template.theme };
+}
+
+export function templateInput(templateKey: string): UpdateDraftInput {
+  return { templateKey };
 }

@@ -10,6 +10,14 @@ export type HuntStatus =
 
 export type HuntRole = 'organizer' | 'supervisor';
 
+export interface HuntTemplateSnapshot {
+  key: string;
+  version: number;
+  displayName: string;
+  theme: string;
+  checkpointNames: string[];
+}
+
 export interface Hunt {
   id: string;
   organizationId: string;
@@ -27,6 +35,9 @@ export interface Hunt {
   durationMinutes: number | null;
   capacity: number | null;
   contactName: string | null;
+  templateKey: string | null;
+  templateVersion: number | null;
+  templateSnapshot: HuntTemplateSnapshot | null;
 }
 
 export interface HuntListItem extends Hunt {
@@ -36,7 +47,7 @@ export interface HuntListItem extends Hunt {
 export interface CreateDraftInput { organizationId: string; name: string }
 export type UpdateDraftInput = Partial<Pick<Hunt,
   'name' | 'country' | 'region' | 'city' | 'startDate' | 'startTime' | 'timezone' |
-  'durationMinutes' | 'capacity' | 'contactName'
+  'durationMinutes' | 'capacity' | 'contactName' | 'templateKey'
 >>;
 
 export type HuntLifecycleAction = 'publish' | 'start' | 'pause' | 'resume' | 'cancel' | 'finish';

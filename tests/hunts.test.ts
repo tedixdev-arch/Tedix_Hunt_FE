@@ -4,7 +4,7 @@ import { HuntsApi, type HuntListItem, type HuntStatus } from '../src/services/ap
 import { ApiClient } from '../src/services/api/client.ts';
 import type { SessionStore } from '../src/services/api/session.ts';
 import { canContinueSetup, huntSummary, lifecycleActions, mergeLifecycleResult, statusLabels } from '../src/pages/organizerHunts.ts';
-import { capacityInput, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, settingsFromHunt } from '../src/pages/generalSetup.ts';
+import { capacityInput, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, settingsFromHunt, settingsWithTemplate, templateInput } from '../src/pages/generalSetup.ts';
 
 const session: SessionStore = {
   getAccessToken: () => 'access-token',
@@ -32,6 +32,9 @@ function hunt(status: HuntStatus, huntRoles: HuntListItem['huntRoles'] = ['organ
     durationMinutes: null,
     capacity: null,
     contactName: null,
+    templateKey: null,
+    templateVersion: null,
+    templateSnapshot: null,
   };
 }
 
@@ -77,6 +80,20 @@ test('draft API methods use POST, GET, and PATCH with encoded Hunt routes', asyn
   ]);
 });
 
+test('updateDraft sends only templateKey for a template selection', async () => {
+  const calls: string[] = [];
+  const fetcher: typeof fetch = async (_input, init) => {
+    calls.push(String(init?.body));
+    return new Response(JSON.stringify(detailHunt('draft')), { headers: { 'Content-Type': 'application/json' } });
+  };
+  const api = new HuntsApi(new ApiClient('https://api.example.test', session, fetcher));
+  await api.updateDraft('hunt-1', templateInput('backend-template'));
+  assert.deepEqual(JSON.parse(calls[0]), { templateKey: 'backend-template' });
+  for (const excluded of ['templateVersion', 'templateSnapshot', 'theme', 'mission']) {
+    assert.equal(excluded in JSON.parse(calls[0]), false);
+  }
+});
+
 test('General Setup maps backend values and normalizes time without prototype fallbacks', () => {
   const restored = settingsFromHunt({
     ...hunt('draft'), name: 'Saved Hunt', country: null, region: null, city: 'Iași', startDate: null,
@@ -97,6 +114,25 @@ test('General Setup converts numeric strings and sends only D1 section fields', 
   assert.deepEqual(Object.keys(details).sort(), ['city', 'contactName', 'country', 'durationMinutes', 'name', 'region', 'startDate', 'startTime', 'timezone'].sort());
   assert.deepEqual(capacity, { capacity: 31 });
   assert.throws(() => capacityInput({ ...newHuntDefaults, participants: '0' }), /at least 1/);
+});
+
+test('template selection derives display metadata without overwriting the Hunt name', () => {
+  const selected = settingsWithTemplate({ ...newHuntDefaults, name: 'Organizer name' }, {
+    key: 'backend-template', version: 3, displayName: 'Backend Template', theme: 'Backend Theme',
+  });
+  assert.equal(selected.name, 'Organizer name');
+  assert.equal(selected.mission, 'Backend Template');
+  assert.equal(selected.theme, 'Backend Theme');
+  assert.deepEqual(templateInput('backend-template'), { templateKey: 'backend-template' });
+});
+
+test('saved template snapshot restores its display identity when absent from the catalog', () => {
+  const restored = settingsFromHunt({
+    ...detailHunt('draft'), templateKey: 'retired-template', templateVersion: 2,
+    templateSnapshot: { key: 'retired-template', version: 2, displayName: 'Retired Template', theme: 'Retired Theme', checkpointNames: [] },
+  });
+  assert.equal(restored.mission, 'Retired Template');
+  assert.equal(restored.theme, 'Retired Theme');
 });
 
 test('new-Hunt navigation state resumes at General 2 with General 1 complete', () => {
