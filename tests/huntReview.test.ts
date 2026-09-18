@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Hunt } from '../src/services/api/hunts.ts';
 import type { HuntOptions } from '../src/services/api/huntOptions.ts';
-import { formatDate, formatLocation, formatTime, reviewHunt, reviewOptionLabels, reviewRefreshError } from '../src/pages/huntReview.ts';
+import { formatDate, formatLocation, formatTime, parseHuntNotReady, reviewHunt, reviewOptionLabels, reviewRefreshError } from '../src/pages/huntReview.ts';
 
 const options: HuntOptions = {
   formats: [{ key: 'team', label: 'Team Hunters' }], teamSizes: [4],
@@ -87,4 +87,25 @@ test('review refresh errors are safe and status-specific', () => {
   assert.equal(reviewRefreshError({ status: 403 }), "You don't have access to review this Hunt.");
   assert.equal(reviewRefreshError({ status: 404 }), 'This Hunt could not be found.');
   assert.equal(reviewRefreshError(new Error('database secret')), "We couldn't load the latest saved Hunt.");
+});
+
+test('backend hunt_not_ready issues are safely parsed and mapped to General sections', () => {
+  const issues = parseHuntNotReady({ error: 'hunt_not_ready', issues: [
+    { section: 'general', field: 'startTime', message: 'Choose a future start time.' },
+    { section: 'options', field: 'capacity', message: 'Capacity is required.' },
+    { section: 'options', field: 'difficulty', message: 'Difficulty is required.' },
+    { section: 'template', field: 'templateSnapshot', message: 'Select the template again.' },
+  ] });
+  assert.deepEqual(issues?.map(issue => [issue.message, issue.generalSection]), [
+    ['Choose a future start time.', 1], ['Capacity is required.', 2],
+    ['Difficulty is required.', 3], ['Select the template again.', 4],
+  ]);
+});
+
+test('malformed or unrelated backend details are not exposed as readiness issues', () => {
+  assert.equal(parseHuntNotReady({ error: 'database_secret', issues: [] }), null);
+  assert.deepEqual(parseHuntNotReady({ error: 'hunt_not_ready', issues: [
+    { section: 'general', field: 'unknownInternalField', message: 'secret' },
+    { section: 'unsafe', field: 'name', message: 'unsafe' },
+  ] }), []);
 });

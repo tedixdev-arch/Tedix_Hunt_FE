@@ -5,7 +5,7 @@ import { leaderboardPhysicalInventory, specialPhysicalInventory, virtualRewardCa
 import { OrganizerHeader } from './OrganizerFlow'
 import { ApiError, huntOptionsApi, huntsApi, huntTemplatesApi, organizationsApi, type Hunt, type HuntOptions, type HuntTemplateMetadata, type HuntTemplateSnapshot, type Organization } from '../services/api'
 import { general2Input, general3Input, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, optionSupported, settingsFromHunt, settingsWithTemplate, templateInput, type GeneralSetupProgress, type GeneralSetupSettings } from './generalSetup'
-import { formatDate, formatLocation, formatTime, reviewHunt, reviewOptionLabels, reviewRefreshError, statusLabels, type GeneralSection } from './huntReview'
+import { formatDate, formatLocation, formatTime, parseHuntNotReady, reviewHunt, reviewOptionLabels, reviewRefreshError, statusLabels, type GeneralSection, type HuntReviewIssue } from './huntReview'
 
 const controlClass = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold outline-none focus:border-emerald-500'
 
@@ -273,6 +273,10 @@ export function CustomHuntEditorPage() {
   const [reviewing, setReviewing] = useState(false)
   const [reviewRefreshing, setReviewRefreshing] = useState(false)
   const [reviewRefreshFailure, setReviewRefreshFailure] = useState('')
+  const [publishing, setPublishing] = useState(false)
+  const [publishError, setPublishError] = useState('')
+  const [publishIssues, setPublishIssues] = useState<HuntReviewIssue[]>([])
+  const publishingRef = useRef(false)
   const [sharing, setSharing] = useState(false)
   const [linkMessage, setLinkMessage] = useState('')
   const [generalComplete, setGeneralComplete] = useState(false)
@@ -454,6 +458,8 @@ export function CustomHuntEditorPage() {
       const latest = await huntsApi.getHunt(id)
       setPersistedHunt(latest)
       setInitialSettings(current => settingsFromHunt(latest, current, huntOptions ?? undefined))
+      setPublishError('')
+      setPublishIssues([])
       setReviewing(true)
     } catch (error) {
       setReviewRefreshFailure(reviewRefreshError(error))
@@ -467,6 +473,38 @@ export function CustomHuntEditorPage() {
     setGeneralProgress(current => ({ activeSection: section - 1, completedSections: new Set(current.completedSections) }))
   }
 
+  async function publishHunt() {
+    if (independent || publishingRef.current || !persistedHunt || persistedHunt.status !== 'draft' || !reviewHunt(persistedHunt).ready) return
+    publishingRef.current = true
+    setPublishing(true)
+    setPublishError('')
+    setPublishIssues([])
+    try {
+      const published = await huntsApi.publish(persistedHunt.id)
+      if (published.status !== 'published') throw new Error('Unexpected publish response')
+      setPersistedHunt(published)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 422) {
+        const issues = parseHuntNotReady(error.details)
+        if (issues) {
+          setPublishError('This Hunt is no longer ready to publish.')
+          setPublishIssues(issues)
+        } else setPublishError("We couldn't publish this Hunt. Please try again.")
+      } else if (error instanceof ApiError && error.status === 409) {
+        setPublishError('This Hunt is no longer in a publishable draft state.')
+        try {
+          const latest = await huntsApi.getHunt(persistedHunt.id)
+          setPersistedHunt(latest)
+        } catch { /* Keep the safe conflict message and current saved Hunt. */ }
+      } else if (error instanceof ApiError && error.status === 403) setPublishError("You don't have access to publish this Hunt.")
+      else if (error instanceof ApiError && error.status === 404) setPublishError('This Hunt could not be found.')
+      else setPublishError("We couldn't publish this Hunt. Please try again.")
+    } finally {
+      publishingRef.current = false
+      setPublishing(false)
+    }
+  }
+
   if (isLoadingDraft) return <main className="grid min-h-dvh place-items-center bg-slate-100 text-slate-700" role="status">Loading Hunt setup…</main>
   if (loadError) return <main className="grid min-h-dvh place-items-center bg-slate-100 p-5"><div className="rounded-2xl border border-rose-200 bg-white p-6 text-center"><p className="font-bold text-rose-700" role="alert">{loadError}</p><button className="mt-4 min-h-11 rounded-lg border border-slate-300 px-4 font-bold" onClick={() => void loadDraft()} type="button">Retry</button></div></main>
 
@@ -478,7 +516,12 @@ export function CustomHuntEditorPage() {
     const review = reviewHunt(persistedHunt)
     const labels = reviewOptionLabels(persistedHunt, huntOptions)
     const snapshot = persistedHunt.templateSnapshot
-    const uniqueIssues = review.issues.filter((issue, index, issues) => issues.findIndex(candidate => candidate.message === issue.message && candidate.generalSection === issue.generalSection) === index)
+    const displayedIssues = publishIssues.length ? publishIssues : review.issues
+    const uniqueIssues = displayedIssues.filter((issue, index, issues) => issues.findIndex(candidate => candidate.message === issue.message && candidate.generalSection === issue.generalSection) === index)
+    if (persistedHunt.status === 'published') return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader showProfile/><div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Registered Hunt</p><h1 className="mt-2 text-4xl font-black">Hunt published</h1>
+      <section className="mt-7 rounded-2xl border border-emerald-300 bg-white p-5 shadow-sm sm:p-6"><h2 className="text-2xl font-black">{persistedHunt.name}</h2><dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Status</dt><dd className="font-black">Published</dd></div><div><dt className="text-slate-500">Template</dt><dd className="font-black">{snapshot?.displayName || 'Not saved'}</dd></div><div><dt className="text-slate-500">Date</dt><dd className="font-black">{formatDate(persistedHunt.startDate)} · {formatTime(persistedHunt.startTime)}</dd></div><div><dt className="text-slate-500">Location</dt><dd className="font-black">{formatLocation(persistedHunt)}</dd></div><div><dt className="text-slate-500">Participant access</dt><dd className="font-black">Not generated yet</dd></div></dl><p className="mt-6 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">Participant access will be generated in the next step.</p><div className="mt-6 flex justify-end border-t border-slate-100 pt-5"><Link className="inline-flex min-h-12 items-center rounded-xl bg-emerald-500 px-6 font-black" to="/organizer">Back to My Hunts</Link></div></section>
+    </div></main>
     return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader showProfile/><div className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
       <button className="text-sm font-bold text-slate-500" onClick={()=>setReviewing(false)} type="button">← Back to Hunt Features</button>
       <p className="mt-7 text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Block 3</p><h1 className="mt-2 text-4xl font-black">Review Hunt</h1><p className="mt-3 text-slate-600">Review the latest settings saved for this Hunt.</p>
@@ -490,8 +533,9 @@ export function CustomHuntEditorPage() {
           <section className="rounded-xl bg-slate-50 p-4"><h3 className="font-black">Pilot configuration</h3><dl className="mt-3 space-y-2 text-sm">{[['Format',labels.format],['Team size',labels.teamSize],['Access',labels.accessMode],['Difficulty',labels.difficulty],['Checkpoint order',labels.checkpointOrder]].map(([term,value])=><div key={term}><dt className="text-slate-500">{term}</dt><dd className="font-bold">{value}</dd></div>)}</dl></section>
         </div>
         <div className="mt-5 rounded-xl border border-slate-200 p-4"><p className="text-xs font-bold text-slate-500">Hunt Features</p><p className="mt-1 font-black">Prototype configuration</p><p className="mt-1 text-sm text-slate-600">Persistence comes in a later step and does not affect saved-draft readiness.</p></div>
-        {!review.ready && <section className="mt-5 rounded-xl bg-amber-50 p-4" aria-labelledby="review-issues"><h3 className="font-black text-amber-950" id="review-issues">Required settings</h3><ul className="mt-3 space-y-2">{uniqueIssues.map(issue => <li className="flex flex-wrap items-center justify-between gap-3 text-sm" key={`${issue.generalSection}-${issue.message}`}><span>{issue.message}</span><button className="rounded-lg border border-amber-300 bg-white px-3 py-2 font-black" onClick={()=>editGeneralSection(issue.generalSection)} type="button">Fix in General {issue.generalSection}</button></li>)}</ul></section>}
-        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-between"><button className="min-h-12 rounded-xl border border-slate-300 px-5 font-black" onClick={()=>setReviewing(false)} type="button">Edit Hunt</button><div className="text-right"><button className="min-h-12 rounded-xl bg-emerald-500 px-6 font-black disabled:bg-slate-300" disabled type="button">{review.ready ? 'Continue to publish' : 'Complete required settings'}</button>{review.ready && <p className="mt-2 text-xs text-slate-500">Publishing is connected in the next step.</p>}</div></div>
+        {publishError && <p className="mt-5 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700" role="alert">{publishError}</p>}
+        {uniqueIssues.length > 0 && <section className="mt-5 rounded-xl bg-amber-50 p-4" aria-labelledby="review-issues"><h3 className="font-black text-amber-950" id="review-issues">{publishIssues.length ? 'Publishing issues' : 'Required settings'}</h3><ul className="mt-3 space-y-2">{uniqueIssues.map(issue => <li className="flex flex-wrap items-center justify-between gap-3 text-sm" key={`${issue.generalSection}-${issue.field}-${issue.message}`}><span>{issue.message}</span><button className="rounded-lg border border-amber-300 bg-white px-3 py-2 font-black" onClick={()=>editGeneralSection(issue.generalSection)} type="button">Fix in General {issue.generalSection}</button></li>)}</ul></section>}
+        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-between">{persistedHunt.status === 'draft' && <button className="min-h-12 rounded-xl border border-slate-300 px-5 font-black" onClick={()=>setReviewing(false)} type="button">Edit Hunt</button>}<div className="text-right"><button className="min-h-12 rounded-xl bg-emerald-500 px-6 font-black disabled:bg-slate-300" disabled={publishing || persistedHunt.status !== 'draft' || !review.ready || publishIssues.length > 0} onClick={() => void publishHunt()} type="button">{publishing ? 'Publishing…' : persistedHunt.status !== 'draft' ? statusLabels[persistedHunt.status] : review.ready && !publishIssues.length ? 'Publish Hunt' : 'Complete required settings'}</button></div></div>
       </section>
     </div></main>
   }
