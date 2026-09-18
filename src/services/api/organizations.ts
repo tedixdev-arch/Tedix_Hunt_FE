@@ -6,7 +6,11 @@ export interface Organization {
 }
 
 export class OrganizationsApi {
-  constructor(private readonly client: ApiClient = apiClient) {}
+  private readonly client: ApiClient;
+
+  constructor(client: ApiClient = apiClient) {
+    this.client = client;
+  }
 
   listAccessible(): Promise<Organization[]> {
     return this.client.get<Organization[]>('/api/organizations');

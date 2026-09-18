@@ -2,6 +2,8 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
 import { huntsApi, type HuntLifecycleAction, type HuntListItem, type HuntStatus } from '../services/api'
+import { ApiError } from '../services/api/client'
+import { canAccessOrganizer } from '../features/auth/access'
 import { canContinueSetup, huntSummary, lifecycleActions, mergeLifecycleResult, statusLabels } from './organizerHunts'
 
 const statusStyles: Record<HuntStatus, string> = {
@@ -22,10 +24,10 @@ function formatUpdatedAt(value: string) {
   return Number.isNaN(date.getTime()) ? 'Updated recently' : `Updated ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date)}`
 }
 
-export function OrganizerHeader({ showProfile = false }: { showProfile?: boolean }) {
+export function OrganizerHeader({ showProfile = false, logoutTo = '/organizer/registered' }: { showProfile?: boolean; logoutTo?: string }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const signOut = async () => { await logout(); navigate('/creator/sign-in', { replace: true }) }
+  const signOut = async () => { try { await logout() } finally { navigate(logoutTo, { replace: true }) } }
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
@@ -42,18 +44,42 @@ export function OrganizerSignInPage() {
 
 export function RegisteredOrganizerSignInPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('demo@tedixhunt.demo')
-  const [password, setPassword] = useState('demo')
+  const { user, isBootstrapping, loginOrganizer } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitting = useRef(false)
 
-  function signIn(event: FormEvent) {
+  useEffect(() => {
+    if (!isBootstrapping && canAccessOrganizer(user)) navigate('/organizer', { replace: true })
+    else if (!isBootstrapping && user) setError('This account does not have Organizer access.')
+  }, [isBootstrapping, navigate, user])
+
+  async function signIn(event: FormEvent) {
     event.preventDefault()
-    if (!email.includes('@') || password.length < 4) {
-      setError('Enter your email and password to continue.')
-      return
+    if (submitting.current) return
+    submitting.current = true
+    setIsSubmitting(true)
+    setError('')
+    try {
+      const authenticatedUser = await loginOrganizer({ email: email.trim(), password })
+      if (!canAccessOrganizer(authenticatedUser)) {
+        setError('This account does not have Organizer access.')
+        return
+      }
+      navigate('/organizer', { replace: true })
+    } catch (caught) {
+      setError(caught instanceof ApiError && caught.kind === 'unauthorized'
+        ? 'Email or password is incorrect.'
+        : 'We couldn\'t sign you in. Please try again.')
+    } finally {
+      submitting.current = false
+      setIsSubmitting(false)
     }
-    navigate('/organizer')
   }
+
+  if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-100 text-slate-950">Loading…</main>
 
   return (
     <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950">
@@ -68,9 +94,8 @@ export function RegisteredOrganizerSignInPage() {
           <label className="mt-5 block text-sm font-bold" htmlFor="organizer-password">Password</label>
           <input id="organizer-password" type="password" autoComplete="current-password" value={password} onChange={(event) => { setPassword(event.target.value); setError('') }} className="mt-2 min-h-14 w-full rounded-xl border border-slate-300 px-4 outline-none focus:border-emerald-500" placeholder="Enter password" />
           {error && <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="alert">{error}</p>}
-          <button className="mt-5 min-h-14 w-full rounded-xl bg-emerald-500 px-5 font-black text-slate-950 hover:bg-emerald-400" type="submit">Sign in</button>
+          <button className="mt-5 min-h-14 w-full rounded-xl bg-emerald-500 px-5 font-black text-slate-950 hover:bg-emerald-400 disabled:cursor-wait disabled:opacity-60" disabled={isSubmitting} type="submit">{isSubmitting ? 'Signing in…' : 'Sign in'}</button>
         </form>
-        <p className="mt-5 text-center text-xs leading-5 text-slate-500">Navigation prototype only. No credentials are stored.</p>
       </div>
     </main>
   )

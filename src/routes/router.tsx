@@ -1,4 +1,4 @@
-import { createHashRouter, Navigate } from 'react-router-dom'
+import { createHashRouter, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
 import { TemplateOneExperience } from '../pages/template-one/TemplateOneExperience'
 import { CreatorStudioPage, CreatorTemplateEditorPage } from '../pages/CreatorStudio'
@@ -15,7 +15,7 @@ import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTemplateReviewPage } from '../pages/AdminConsole'
 import { AdminVerificationPage, ProfessionalSignInPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
-import { canAccessCreator, canAccessParticipant } from '../features/auth/access'
+import { canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
 
 function RequireAuthFlow({ children, entry, canAccess }: { children: ReactNode; entry: string; canAccess: typeof canAccessCreator }) {
   const { user, isBootstrapping } = useAuth()
@@ -27,6 +27,16 @@ function CreatorEntry() {
   const { user, isBootstrapping } = useAuth()
   if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
   return canAccessCreator(user) ? <Navigate replace to="/creator" /> : <ProfessionalSignInPage type="creator" />
+}
+
+function RequireOrganizer({ children, allowIndependent = false }: { children: ReactNode; allowIndependent?: boolean }) {
+  const { user, isBootstrapping } = useAuth()
+  const location = useLocation()
+  if (allowIndependent && new URLSearchParams(location.search).get('mode') === 'independent') return children
+  if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
+  if (!user) return <Navigate replace state={{ from: location.pathname }} to="/organizer/registered" />
+  if (!canAccessOrganizer(user)) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-black">Organizer access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Organizer access.</p></div></main>
+  return children
 }
 
 export const router = createHashRouter([
@@ -84,19 +94,19 @@ export const router = createHashRouter([
   },
   {
     path: '/organizer',
-    element: <OrganizerHuntsPage />,
+    element: <RequireOrganizer><OrganizerHuntsPage /></RequireOrganizer>,
   },
   {
     path: '/organizer/hunts/new',
-    element: <OrganizerSetupChoicePage />,
+    element: <RequireOrganizer allowIndependent><OrganizerSetupChoicePage /></RequireOrganizer>,
   },
   {
     path: '/organizer/hunts/new/setup',
-    element: <CustomHuntEditorPage />,
+    element: <RequireOrganizer allowIndependent><CustomHuntEditorPage /></RequireOrganizer>,
   },
   {
     path: '/organizer/hunts/:huntId/setup',
-    element: <CustomHuntEditorPage />,
+    element: <RequireOrganizer><CustomHuntEditorPage /></RequireOrganizer>,
   },
   {
     path: '/organizer/hunts/new/quick',
@@ -112,7 +122,7 @@ export const router = createHashRouter([
   },
   {
     path: '/organizer/hunts/:huntId',
-    element: <OrganizerMonitorPage />,
+    element: <RequireOrganizer><OrganizerMonitorPage /></RequireOrganizer>,
   },
   {
     path: '/creator/sign-in',

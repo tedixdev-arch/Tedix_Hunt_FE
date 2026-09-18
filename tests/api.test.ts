@@ -5,7 +5,8 @@ import { ApiClient, ApiError } from '../src/services/api/client.ts';
 import { buildApiUrl } from '../src/services/api/config.ts';
 import type { SessionStore, SessionTokens } from '../src/services/api/session.ts';
 import { authErrorMessage } from '../src/features/auth/errors.ts';
-import { canAccessCreator, canAccessParticipant, hasAnyRole, hasRole } from '../src/features/auth/access.ts';
+import { canAccessCreator, canAccessOrganizer, canAccessParticipant, hasAnyRole, hasRole } from '../src/features/auth/access.ts';
+import { OrganizationsApi } from '../src/services/api/organizations.ts';
 
 class MemorySession implements SessionStore {
   tokens: SessionTokens | null = null;
@@ -79,6 +80,25 @@ test('successful login stores registered-session tokens', async () => {
   const { client, session } = mockClient([json(payload)]);
   assert.deepEqual(await new AuthApi(client, session).loginCreator({ email: 'a@b.test', password: 'password' }), payload);
   assert.deepEqual(session.tokens, { accessToken: 'a', refreshToken: 'r' });
+});
+
+test('organizer login uses the dedicated organizer endpoint and stores its session', async () => {
+  const payload = { user: user({ role: 'organizer', roles: ['organizer'] }), tokens: { accessToken: 'organizer-a', refreshToken: 'organizer-r' } };
+  const { client, session, calls } = mockClient([json(payload)]);
+  assert.deepEqual(await new AuthApi(client, session).loginOrganizer({ email: 'organizer@example.test', password: 'password' }), payload);
+  assert.equal(calls[0].url, 'https://api.example.test/api/auth/organizer/login');
+  assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { email: 'organizer@example.test', password: 'password' });
+  assert.deepEqual(session.tokens, { accessToken: 'organizer-a', refreshToken: 'organizer-r' });
+});
+
+test('organization requests carry the authenticated organizer session', async () => {
+  const session = new MemorySession();
+  session.tokens = { accessToken: 'organizer-access', refreshToken: 'organizer-refresh' };
+  const organizations = [{ id: 'org-1', name: 'Test Organization' }];
+  const { client, calls } = mockClient([json(organizations)], session);
+  assert.deepEqual(await new OrganizationsApi(client).listAccessible(), organizations);
+  assert.equal(calls[0].url, 'https://api.example.test/api/organizations');
+  assert.equal(new Headers(calls[0].init?.headers).get('authorization'), 'Bearer organizer-access');
 });
 
 test('participant login stores nested response tokens', async () => {
@@ -201,6 +221,13 @@ test('auth errors are presented as short safe form feedback', () => {
 
 test('participant-only user cannot access creator routes', () => {
   assert.equal(canAccessCreator(user()), false);
+  assert.equal(canAccessOrganizer(user()), false);
+});
+
+test('only the authoritative organizer role grants organizer access', () => {
+  assert.equal(canAccessOrganizer(user({ role: 'organizer', roles: ['organizer'] })), true);
+  assert.equal(canAccessOrganizer(user({ role: 'organizer', roles: ['creator'] })), false);
+  assert.equal(canAccessOrganizer(user({ role: 'creator', roles: ['organizer'] })), true);
 });
 
 test('creator-only user can access creator routes but not participant routes', () => {
