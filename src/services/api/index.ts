@@ -18,5 +18,7 @@ export { HuntsApi, huntsApi } from './hunts.ts';
 export type { CreateDraftInput, Hunt, HuntLifecycleAction, HuntListItem, HuntRole, HuntStatus, HuntTemplateSnapshot, UpdateDraftInput } from './hunts.ts';
 export { HuntTemplatesApi, huntTemplatesApi } from './huntTemplates.ts';
 export type { HuntTemplateMetadata } from './huntTemplates.ts';
+export { HuntOptionsApi, huntOptionsApi } from './huntOptions.ts';
+export type { HuntOption, HuntOptions } from './huntOptions.ts';
 export { OrganizationsApi, organizationsApi } from './organizations.ts';
 export type { Organization } from './organizations.ts';

@@ -35,6 +35,11 @@ export interface Hunt {
   durationMinutes: number | null;
   capacity: number | null;
   contactName: string | null;
+  format: 'team' | null;
+  teamSize: number | null;
+  accessMode: 'invitation_only' | null;
+  difficulty: 'easy' | null;
+  checkpointOrder: 'recommended' | null;
   templateKey: string | null;
   templateVersion: number | null;
   templateSnapshot: HuntTemplateSnapshot | null;
@@ -47,7 +52,8 @@ export interface HuntListItem extends Hunt {
 export interface CreateDraftInput { organizationId: string; name: string }
 export type UpdateDraftInput = Partial<Pick<Hunt,
   'name' | 'country' | 'region' | 'city' | 'startDate' | 'startTime' | 'timezone' |
-  'durationMinutes' | 'capacity' | 'contactName' | 'templateKey'
+  'durationMinutes' | 'capacity' | 'contactName' | 'format' | 'teamSize' | 'accessMode' |
+  'difficulty' | 'checkpointOrder' | 'templateKey'
 >>;
 
 export type HuntLifecycleAction = 'publish' | 'start' | 'pause' | 'resume' | 'cancel' | 'finish';

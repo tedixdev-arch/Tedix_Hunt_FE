@@ -4,7 +4,15 @@ import { HuntsApi, type HuntListItem, type HuntStatus } from '../src/services/ap
 import { ApiClient } from '../src/services/api/client.ts';
 import type { SessionStore } from '../src/services/api/session.ts';
 import { canContinueSetup, huntSummary, lifecycleActions, mergeLifecycleResult, statusLabels } from '../src/pages/organizerHunts.ts';
-import { capacityInput, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, settingsFromHunt, settingsWithTemplate, templateInput } from '../src/pages/generalSetup.ts';
+import { capacityInput, general2Input, general3Input, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, optionSupported, settingsFromHunt, settingsWithTemplate, templateInput } from '../src/pages/generalSetup.ts';
+import type { HuntOptions } from '../src/services/api/huntOptions.ts';
+
+const pilotOptions: HuntOptions = {
+  formats: [{ key: 'team', label: 'Team Hunters' }], teamSizes: [4],
+  accessModes: [{ key: 'invitation_only', label: 'Invitation-only' }],
+  difficulties: [{ key: 'easy', label: 'Easy' }],
+  checkpointOrders: [{ key: 'recommended', label: 'Recommended route' }],
+};
 
 const session: SessionStore = {
   getAccessToken: () => 'access-token',
@@ -32,6 +40,11 @@ function hunt(status: HuntStatus, huntRoles: HuntListItem['huntRoles'] = ['organ
     durationMinutes: null,
     capacity: null,
     contactName: null,
+    format: null,
+    teamSize: null,
+    accessMode: null,
+    difficulty: null,
+    checkpointOrder: null,
     templateKey: null,
     templateVersion: null,
     templateSnapshot: null,
@@ -114,6 +127,49 @@ test('General Setup converts numeric strings and sends only D1 section fields', 
   assert.deepEqual(Object.keys(details).sort(), ['city', 'contactName', 'country', 'durationMinutes', 'name', 'region', 'startDate', 'startTime', 'timezone'].sort());
   assert.deepEqual(capacity, { capacity: 31 });
   assert.throws(() => capacityInput({ ...newHuntDefaults, participants: '0' }), /at least 1/);
+});
+
+test('saved pilot settings restore through backend option metadata and null values keep form defaults', () => {
+  const saved = settingsFromHunt({
+    ...detailHunt('draft'), format: 'team', teamSize: 4, accessMode: 'invitation_only',
+    difficulty: 'easy', checkpointOrder: 'recommended',
+  }, newHuntDefaults, pilotOptions);
+  assert.deepEqual({
+    format: saved.format, teamSize: saved.teamSize, access: saved.access,
+    difficulty: saved.difficulty, checkpointOrder: saved.checkpointOrder,
+  }, {
+    format: 'Team Hunters', teamSize: '4', access: 'Invitation-only',
+    difficulty: 'Easy', checkpointOrder: 'Recommended route',
+  });
+  const empty = settingsFromHunt(detailHunt('draft'), newHuntDefaults, pilotOptions);
+  assert.equal(empty.format, newHuntDefaults.format);
+  assert.equal(empty.teamSize, newHuntDefaults.teamSize);
+});
+
+test('General 2 and 3 map labels to exact backend-key payloads', () => {
+  const general2 = general2Input({ ...newHuntDefaults, participants: '31', teamSize: '4' }, pilotOptions);
+  const general3 = general3Input(newHuntDefaults, pilotOptions);
+  assert.deepEqual(general2, { capacity: 31, format: 'team', teamSize: 4, accessMode: 'invitation_only' });
+  assert.deepEqual(general3, { difficulty: 'easy', checkpointOrder: 'recommended' });
+  assert.equal(typeof general2.capacity, 'number');
+  assert.equal(typeof general2.teamSize, 'number');
+  for (const excluded of ['mission', 'theme', 'templateKey', 'Team Hunters', 'Invitation-only']) {
+    assert.equal(excluded in general2, false);
+    assert.equal(excluded in general3, false);
+  }
+});
+
+test('backend catalog support leaves future prototype choices unavailable', () => {
+  assert.equal(optionSupported(pilotOptions.formats, 'Team Hunters'), true);
+  assert.equal(optionSupported(pilotOptions.formats, 'Single Hunters'), false);
+  assert.equal(pilotOptions.teamSizes.includes(5), false);
+  for (const label of ['Open to everyone', 'Medium', 'Advanced', 'User set', 'Short route']) {
+    assert.equal([
+      ...pilotOptions.accessModes, ...pilotOptions.difficulties, ...pilotOptions.checkpointOrders,
+    ].some(option => option.label === label), false);
+  }
+  assert.throws(() => general2Input({ ...newHuntDefaults, teamSize: '5' }, pilotOptions), /not available/);
+  assert.throws(() => general3Input({ ...newHuntDefaults, difficulty: 'Medium' }, pilotOptions), /not available/);
 });
 
 test('template selection derives display metadata without overwriting the Hunt name', () => {
