@@ -1,5 +1,6 @@
 import type { Hunt, UpdateDraftInput } from '../services/api/hunts.ts';
 import type { HuntTemplateMetadata } from '../services/api/huntTemplates.ts';
+import type { HuntOption, HuntOptions } from '../services/api/huntOptions.ts';
 
 export interface GeneralSetupSettings {
   name: string; date: string; time: string; timezone: string; country: string; county: string;
@@ -30,13 +31,22 @@ export const newHuntDefaults: GeneralSetupSettings = {
   mission: 'Signal: Cluj Napoca', theme: 'Smart Theme (Signal)',
 };
 
-export function settingsFromHunt(hunt: Hunt, local: GeneralSetupSettings = newHuntDefaults): GeneralSetupSettings {
+function labelFor(options: HuntOption[] | undefined, key: string | null, fallback: string): string {
+  return key ? options?.find(option => option.key === key)?.label ?? fallback : fallback;
+}
+
+export function settingsFromHunt(hunt: Hunt, local: GeneralSetupSettings = newHuntDefaults, options?: HuntOptions): GeneralSetupSettings {
   return {
     ...local,
     name: hunt.name ?? '', country: hunt.country ?? '', county: hunt.region ?? '', location: hunt.city ?? '',
     date: hunt.startDate ?? '', time: hunt.startTime?.slice(0, 5) ?? '', timezone: hunt.timezone ?? 'Europe/Bucharest',
     duration: hunt.durationMinutes?.toString() ?? '', participants: hunt.capacity?.toString() ?? '',
     contact: hunt.contactName ?? '',
+    format: labelFor(options?.formats, hunt.format, local.format),
+    teamSize: hunt.teamSize?.toString() ?? local.teamSize,
+    access: labelFor(options?.accessModes, hunt.accessMode, local.access),
+    difficulty: labelFor(options?.difficulties, hunt.difficulty, local.difficulty),
+    checkpointOrder: labelFor(options?.checkpointOrders, hunt.checkpointOrder, local.checkpointOrder),
     ...(hunt.templateSnapshot && { mission: hunt.templateSnapshot.displayName, theme: hunt.templateSnapshot.theme }),
   };
 }
@@ -57,6 +67,34 @@ export function huntDetailsInput(settings: GeneralSetupSettings): UpdateDraftInp
 
 export function capacityInput(settings: GeneralSetupSettings): UpdateDraftInput {
   return { capacity: positiveInteger(settings.participants, 'Participants') };
+}
+
+function keyFor(options: HuntOption[], label: string, field: string): string {
+  const option = options.find(candidate => candidate.label === label);
+  if (!option) throw new Error(`${field} is not available in the current pilot.`);
+  return option.key;
+}
+
+export function general2Input(settings: GeneralSetupSettings, options: HuntOptions): UpdateDraftInput {
+  const teamSize = positiveInteger(settings.teamSize, 'Team size');
+  if (!options.teamSizes.includes(teamSize)) throw new Error('Team size is not available in the current pilot.');
+  return {
+    capacity: positiveInteger(settings.participants, 'Participants'),
+    format: keyFor(options.formats, settings.format, 'Hunt format') as Hunt['format'],
+    teamSize,
+    accessMode: keyFor(options.accessModes, settings.access, 'Hunt access') as Hunt['accessMode'],
+  };
+}
+
+export function general3Input(settings: GeneralSetupSettings, options: HuntOptions): UpdateDraftInput {
+  return {
+    difficulty: keyFor(options.difficulties, settings.difficulty, 'Difficulty') as Hunt['difficulty'],
+    checkpointOrder: keyFor(options.checkpointOrders, settings.checkpointOrder, 'Checkpoint order') as Hunt['checkpointOrder'],
+  };
+}
+
+export function optionSupported(options: HuntOption[], label: string): boolean {
+  return options.some(option => option.label === label);
 }
 
 /** Applies catalog display metadata without coupling a Hunt's organizer-defined name to its template. */

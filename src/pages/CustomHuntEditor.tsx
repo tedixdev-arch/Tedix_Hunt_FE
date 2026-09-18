@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { organizerFeatures, signalCheckpointNames, type OrganizerTemplate } from '../data/organizerTemplates'
 import { leaderboardPhysicalInventory, specialPhysicalInventory, virtualRewardCategories } from '../data/rewardInventory'
 import { OrganizerHeader } from './OrganizerFlow'
-import { ApiError, huntsApi, huntTemplatesApi, organizationsApi, type Hunt, type HuntTemplateMetadata, type HuntTemplateSnapshot, type Organization } from '../services/api'
-import { capacityInput, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, settingsFromHunt, settingsWithTemplate, templateInput, type GeneralSetupProgress, type GeneralSetupSettings } from './generalSetup'
+import { ApiError, huntOptionsApi, huntsApi, huntTemplatesApi, organizationsApi, type Hunt, type HuntOptions, type HuntTemplateMetadata, type HuntTemplateSnapshot, type Organization } from '../services/api'
+import { general2Input, general3Input, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, optionSupported, settingsFromHunt, settingsWithTemplate, templateInput, type GeneralSetupProgress, type GeneralSetupSettings } from './generalSetup'
 
 const controlClass = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold outline-none focus:border-emerald-500'
 
@@ -73,11 +73,12 @@ const templatesByTheme: Record<string,string[]> = {
   'Scary Theme (Halloween)': ['Signal: Cluj Napoca'],
 }
 
-function GeneralSetup({ independent, initialSettings, initialProgress, organizations, selectedOrganizationId, templates, templatesLoading, templatesError, savedTemplateKey, savedTemplateSnapshot, onRetryTemplates, onOrganizationChange, onComplete, onFormatChange, onTeamSizeChange, onSave }: {
+function GeneralSetup({ independent, initialSettings, initialProgress, organizations, selectedOrganizationId, templates, templatesLoading, templatesError, huntOptions, optionsLoading, optionsError, savedTemplateKey, savedTemplateSnapshot, onRetryTemplates, onRetryOptions, onOrganizationChange, onComplete, onFormatChange, onTeamSizeChange, onSave }: {
   independent: boolean; initialSettings: GeneralSetupSettings; organizations: Organization[]; selectedOrganizationId: string;
   initialProgress: GeneralSetupProgress;
   onOrganizationChange: (id: string) => void; onComplete: () => void; onFormatChange: (format: string) => void;
   templates: HuntTemplateMetadata[]; templatesLoading: boolean; templatesError: boolean; onRetryTemplates: () => void;
+  huntOptions: HuntOptions | null; optionsLoading: boolean; optionsError: boolean; onRetryOptions: () => void;
   savedTemplateKey: string | null; savedTemplateSnapshot: HuntTemplateSnapshot | null;
   onTeamSizeChange: (size: number) => void; onSave: (section: number, settings: GeneralSetupSettings, templateKey: string | null) => Promise<GeneralSetupSettings>;
 }) {
@@ -96,6 +97,7 @@ function GeneralSetup({ independent, initialSettings, initialProgress, organizat
 
   const selectedTemplate = templates.find(template => template.key === selectedTemplateKey)
   const missingSavedTemplate = !independent && Boolean(savedTemplateKey && savedTemplateSnapshot && !templates.some(template => template.key === savedTemplateKey))
+  const supported = (kind: 'formats' | 'accessModes' | 'difficulties' | 'checkpointOrders', label: string) => independent || Boolean(huntOptions && optionSupported(huntOptions[kind], label))
 
   function selectTemplate(key: string) {
     setSelectedTemplateKey(key)
@@ -148,8 +150,10 @@ function GeneralSetup({ independent, initialSettings, initialProgress, organizat
           <p className="text-xs font-black uppercase tracking-wide text-emerald-700">General {active + 1} of 4</p><h3 className="mt-2 text-xl font-black">{generalSteps[active]}</h3>
           <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_240px]"><div className="grid gap-4 sm:grid-cols-2">
             {active === 0 && <>{!independent && organizations.length > 1 && <label className="text-sm font-bold sm:col-span-2">Organization<select className={controlClass} value={selectedOrganizationId} onChange={event => onOrganizationChange(event.target.value)}>{organizations.map(organization => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select></label>}<label className="text-sm font-bold sm:col-span-2">Hunt name<input className={controlClass} value={settings.name} onChange={e => setSettings({...settings,name:e.target.value})} /></label>{[['country','Country',['Romania','United Kingdom']],['county','County / region',['Cluj','Bucharest']],['location','City',['Cluj Napoca']],['language','Language',['English','Romanian']]].map(([key,label,options])=><label className="text-sm font-bold" key={key as string}>{label as string}<select className={controlClass} value={settings[key as keyof typeof settings]} onChange={e=>setSettings({...settings,[key as string]:e.target.value})}>{(options as string[]).map(option=><option key={option}>{option}</option>)}{settings[key as keyof typeof settings] && !(options as string[]).includes(settings[key as keyof typeof settings]) && <option>{settings[key as keyof typeof settings]}</option>}</select></label>)}<label className="text-sm font-bold">Hunt date<input className={controlClass} value={settings.date} onChange={e => setSettings({...settings,date:e.target.value})} type="date" /></label><label className="text-sm font-bold">Start time<input className={controlClass} value={settings.time} onChange={e => setSettings({...settings,time:e.target.value})} type="time" /></label><label className="text-sm font-bold">Duration (minutes)<input className={controlClass} value={settings.duration} onChange={e => setSettings({...settings,duration:e.target.value})} min="1" type="number" /></label><label className="text-sm font-bold">Local contact<input className={controlClass} value={settings.contact} onChange={e => setSettings({...settings,contact:e.target.value})} /></label></>}
-            {active === 1 && <><label className="text-sm font-bold">Hunt format<select className={controlClass} value={settings.format} onChange={e=>{setSettings({...settings,format:e.target.value});onFormatChange(e.target.value)}}><option>Team Hunters</option><option>Single Hunters</option></select></label><label className="text-sm font-bold">Participants<input className={controlClass} value={settings.participants} onChange={e => setSettings({...settings,participants:e.target.value})} min="1" type="number" /></label><label className="text-sm font-bold">Team size<input className={`${controlClass} disabled:bg-slate-100 disabled:text-slate-400`} disabled={settings.format==='Single Hunters'} value={settings.teamSize} onChange={e => {setSettings({...settings,teamSize:e.target.value});onTeamSizeChange(Math.max(1,Number(e.target.value)||1))}} min="2" type="number" /></label><label className="text-sm font-bold">Hunt access<select className={controlClass} value={settings.access} onChange={e => setSettings({...settings,access:e.target.value})}><option>Invitation-only</option><option>Open to everyone</option></select></label><div className={`sm:col-span-2 rounded-xl p-4 ${settings.format==='Single Hunters'?'bg-slate-100 text-slate-400':'bg-emerald-50 text-emerald-900'}`}><strong>Team challenges</strong><p className="mt-1 text-sm">{settings.format==='Single Hunters'?'Disabled for Single Hunters.':'Enabled for Team Hunters.'}</p></div></>}
-            {active === 2 && <>{[['difficulty','Difficulty',['Easy','Medium','Advanced','User set']],['checkpointOrder','Checkpoint order',['Recommended route','Short route']]].map(([key, label, options]) => <label className="text-sm font-bold" key={key as string}>{label as string}<select className={`${controlClass} disabled:bg-slate-100 disabled:text-slate-500`} disabled={independent&&key==='checkpointOrder'} value={settings[key as keyof typeof settings]} onChange={e => setSettings({...settings,[key as string]:e.target.value})}>{(options as string[]).map(option => <option key={option}>{option}</option>)}</select>{independent&&key==='checkpointOrder'&&<span className="mt-2 block text-xs font-normal text-slate-500">Fixed by the Creator-verified route.</span>}</label>)}</>}
+            {(active === 1 || active === 2) && !independent && optionsLoading && <p className="sm:col-span-2 text-sm font-semibold text-slate-500" role="status">Loading supported Hunt options…</p>}
+            {(active === 1 || active === 2) && !independent && optionsError && <div className="sm:col-span-2 rounded-xl bg-rose-50 p-4"><p className="text-sm font-semibold text-rose-700" role="alert">We couldn't load the supported Hunt options.</p><button className="mt-3 min-h-10 rounded-lg border border-slate-300 bg-white px-4 text-sm font-black" onClick={onRetryOptions} type="button">Retry</button></div>}
+            {active === 1 && (independent || huntOptions) && <><label className="text-sm font-bold">Hunt format<select className={controlClass} value={settings.format} onChange={e=>{setSettings({...settings,format:e.target.value});onFormatChange(e.target.value)}}>{['Team Hunters','Single Hunters'].map(option => <option disabled={!supported('formats', option)} key={option} value={option}>{option}{!supported('formats', option) ? ' · Not available in the current pilot' : ''}</option>)}</select></label><label className="text-sm font-bold">Participants<input className={controlClass} value={settings.participants} onChange={e => setSettings({...settings,participants:e.target.value})} min="1" type="number" /></label><label className="text-sm font-bold">Team size<input className={`${controlClass} disabled:bg-slate-100 disabled:text-slate-500`} disabled={!independent || settings.format==='Single Hunters'} readOnly={!independent} value={settings.teamSize} onChange={e => {setSettings({...settings,teamSize:e.target.value});onTeamSizeChange(Math.max(1,Number(e.target.value)||1))}} min="2" type="number" />{!independent && <span className="mt-2 block text-xs font-normal text-slate-500">Current pilot: teams of {huntOptions?.teamSizes.join(', ')}</span>}</label><label className="text-sm font-bold">Hunt access<select className={controlClass} value={settings.access} onChange={e => setSettings({...settings,access:e.target.value})}>{['Invitation-only','Open to everyone'].map(option => <option disabled={!supported('accessModes', option)} key={option} value={option}>{option}{!supported('accessModes', option) ? ' · Not available in the current pilot' : ''}</option>)}</select></label><div className={`sm:col-span-2 rounded-xl p-4 ${settings.format==='Single Hunters'?'bg-slate-100 text-slate-400':'bg-emerald-50 text-emerald-900'}`}><strong>Team challenges</strong><p className="mt-1 text-sm">{settings.format==='Single Hunters'?'Disabled for Single Hunters.':'Enabled for Team Hunters.'}</p></div></>}
+            {active === 2 && (independent || huntOptions) && <>{[['difficulty','Difficulty',['Easy','Medium','Advanced','User set'],'difficulties'],['checkpointOrder','Checkpoint order',['Recommended route','Short route'],'checkpointOrders']].map(([key, label, choices, kind]) => <label className="text-sm font-bold" key={key as string}>{label as string}<select className={`${controlClass} disabled:bg-slate-100 disabled:text-slate-500`} disabled={independent&&key==='checkpointOrder'} value={settings[key as keyof typeof settings]} onChange={e => setSettings({...settings,[key as string]:e.target.value})}>{(choices as string[]).map(option => <option disabled={!supported(kind as 'difficulties' | 'checkpointOrders', option)} key={option} value={option}>{option}{!supported(kind as 'difficulties' | 'checkpointOrders', option) ? ' · Not available in the current pilot' : ''}</option>)}</select>{independent&&key==='checkpointOrder'&&<span className="mt-2 block text-xs font-normal text-slate-500">Fixed by the Creator-verified route.</span>}</label>)}</>}
             {active === 3 && (independent ? <><label className="text-sm font-bold">Hunt theme<select className={controlClass} value={settings.theme} onChange={e=>{const theme=e.target.value;const mission=templatesByTheme[theme][0];setSettings({...settings,theme,mission})}}>{Object.keys(templatesByTheme).map(theme=><option key={theme}>{theme}</option>)}</select></label><label className="text-sm font-bold">Hunt template<select className={controlClass} value={settings.mission} onChange={e=>setSettings({...settings,mission:e.target.value})}>{templatesByTheme[settings.theme].map(mission=><option key={mission}>{mission}</option>)}</select></label></> : <>
               {templatesLoading && <p className="sm:col-span-2 text-sm font-semibold text-slate-500" role="status">Loading Hunt templates…</p>}
               {templatesError && <div className="sm:col-span-2 rounded-xl bg-rose-50 p-4"><p className="text-sm font-semibold text-rose-700" role="alert">We couldn't load Hunt templates.</p><button className="mt-3 min-h-10 rounded-lg border border-slate-300 bg-white px-4 text-sm font-black" onClick={onRetryTemplates} type="button">Retry</button></div>}
@@ -159,7 +163,7 @@ function GeneralSetup({ independent, initialSettings, initialProgress, organizat
             {active === 3 && <div className="sm:col-span-2 rounded-xl bg-slate-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-slate-400">Template includes</p><p className="mt-2 text-sm text-slate-700">Approved challenges, checkpoint navigation and the final mission.</p><div className="mt-4 border-t border-slate-200 pt-4"><p className="text-xs font-black uppercase tracking-wide text-slate-400">Hunt mission</p><p className="mt-2 text-sm font-bold text-slate-800">Restore six linked relay points, trace the signal to its source and restart the final transmitter together.</p></div></div>}
           </div><aside className="rounded-xl bg-[#061812] p-4 text-white"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">Setup preview</p><h4 className="mt-3 font-black">{generalSteps[active]}</h4><p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-200">{setupPreview}</p></aside></div>
           {saveError && <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700" role="alert">{saveError}</p>}
-          <div className="mt-6 flex justify-between border-t border-slate-100 pt-5"><button className="min-h-12 rounded-xl border border-slate-300 px-5 font-black disabled:opacity-40" disabled={active === 0 || saving} onClick={() => setActive(active - 1)} type="button">Previous</button><button className="min-h-12 rounded-xl bg-emerald-500 px-6 font-black disabled:cursor-wait disabled:opacity-60" disabled={saving} onClick={() => void saveGeneral()} type="button">{saving ? 'Saving…' : active === 3 ? 'Complete General Setup' : 'Save & continue'}</button></div>
+          <div className="mt-6 flex justify-between border-t border-slate-100 pt-5"><button className="min-h-12 rounded-xl border border-slate-300 px-5 font-black disabled:opacity-40" disabled={active === 0 || saving} onClick={() => setActive(active - 1)} type="button">Previous</button><button className="min-h-12 rounded-xl bg-emerald-500 px-6 font-black disabled:cursor-wait disabled:opacity-60" disabled={saving || (!independent && (active === 1 || active === 2) && !huntOptions)} onClick={() => void saveGeneral()} type="button">{saving ? 'Saving…' : active === 3 ? 'Complete General Setup' : 'Save & continue'}</button></div>
         </article>
       </div>
     </section>
@@ -252,6 +256,9 @@ export function CustomHuntEditorPage() {
   const [huntTemplates, setHuntTemplates] = useState<HuntTemplateMetadata[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(!independent)
   const [templatesError, setTemplatesError] = useState(false)
+  const [huntOptions, setHuntOptions] = useState<HuntOptions | null>(null)
+  const [optionsLoading, setOptionsLoading] = useState(!independent)
+  const [optionsError, setOptionsError] = useState(false)
   const [isLoadingDraft, setIsLoadingDraft] = useState(Boolean(huntId))
   const [loadError, setLoadError] = useState('')
   const [active, setActive] = useState(0)
@@ -308,6 +315,18 @@ export function CustomHuntEditorPage() {
     finally { setTemplatesLoading(false) }
   }, [independent])
   useEffect(() => { void loadTemplates() }, [loadTemplates])
+  const loadHuntOptions = useCallback(async () => {
+    if (independent) return
+    setOptionsLoading(true)
+    setOptionsError(false)
+    try { setHuntOptions(await huntOptionsApi.listHuntOptions()) }
+    catch { setHuntOptions(null); setOptionsError(true) }
+    finally { setOptionsLoading(false) }
+  }, [independent])
+  useEffect(() => { void loadHuntOptions() }, [loadHuntOptions])
+  useEffect(() => {
+    if (persistedHunt && huntOptions) setInitialSettings(current => settingsFromHunt(persistedHunt, current, huntOptions))
+  }, [persistedHunt, huntOptions])
   useEffect(() => {
     if (generalSetupProgressFromNavigationState(location.state).activeSection === 1) {
       navigate(`${location.pathname}${location.search}`, { replace: true, state: null })
@@ -354,9 +373,19 @@ export function CustomHuntEditorPage() {
       }
       if (section === 1) {
         if (!current) throw new Error('Save Hunt details before participants.')
-        const updated = await huntsApi.updateDraft(current.id, capacityInput(settings))
+        if (!huntOptions) throw new Error('We couldn\'t load the supported Hunt options.')
+        const updated = await huntsApi.updateDraft(current.id, general2Input(settings, huntOptions))
         setPersistedHunt(updated)
-        const synchronized = settingsFromHunt(updated, settings)
+        const synchronized = settingsFromHunt(updated, settings, huntOptions)
+        setInitialSettings(synchronized)
+        return synchronized
+      }
+      if (section === 2) {
+        if (!current) throw new Error('Save Hunt details before experience defaults.')
+        if (!huntOptions) throw new Error('We couldn\'t load the supported Hunt options.')
+        const updated = await huntsApi.updateDraft(current.id, general3Input(settings, huntOptions))
+        setPersistedHunt(updated)
+        const synchronized = settingsFromHunt(updated, settings, huntOptions)
         setInitialSettings(synchronized)
         return synchronized
       }
@@ -375,7 +404,7 @@ export function CustomHuntEditorPage() {
       return settings
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) throw new Error('This Hunt is no longer editable as a draft.')
-      if (error instanceof ApiError && error.status === 403) throw new Error('You don\'t have access to update this Hunt template.')
+      if (error instanceof ApiError && error.status === 403) throw new Error('You don\'t have access to update this Hunt.')
       if (error instanceof Error && !(error instanceof ApiError)) throw error
       if (section === 3) throw new Error('We couldn\'t save the Hunt template.')
       throw new Error('We couldn\'t save this section. Please try again.')
@@ -425,7 +454,7 @@ export function CustomHuntEditorPage() {
         {!independent && !huntId && isLoadingOrganizations && <p className="mt-5 text-sm font-semibold text-slate-500" role="status">Loading your organizations…</p>}
         {!independent && !huntId && !isLoadingOrganizations && !organizationLoadFailed && organizations.length === 0 && <p className="mt-5 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700" role="alert">You need access to an organization before a Hunt draft can be created.</p>}
         {!independent && !huntId && organizationLoadFailed && <p className="mt-5 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700" role="alert">We couldn\'t load your organizations. Refresh the page to try again.</p>}
-        <GeneralSetup independent={independent} initialProgress={generalProgress} initialSettings={initialSettings} organizations={organizations} selectedOrganizationId={selectedOrganizationId} templates={huntTemplates} templatesLoading={templatesLoading} templatesError={templatesError} savedTemplateKey={persistedHunt?.templateKey ?? null} savedTemplateSnapshot={persistedHunt?.templateSnapshot ?? null} onRetryTemplates={() => void loadTemplates()} onOrganizationChange={setSelectedOrganizationId} onComplete={() => setGeneralComplete(true)} onFormatChange={changeFormat} onSave={saveGeneralSection} onTeamSizeChange={setTeamSize} />
+        <GeneralSetup independent={independent} initialProgress={generalProgress} initialSettings={initialSettings} organizations={organizations} selectedOrganizationId={selectedOrganizationId} templates={huntTemplates} templatesLoading={templatesLoading} templatesError={templatesError} huntOptions={huntOptions} optionsLoading={optionsLoading} optionsError={optionsError} savedTemplateKey={persistedHunt?.templateKey ?? null} savedTemplateSnapshot={persistedHunt?.templateSnapshot ?? null} onRetryTemplates={() => void loadTemplates()} onRetryOptions={() => void loadHuntOptions()} onOrganizationChange={setSelectedOrganizationId} onComplete={() => setGeneralComplete(true)} onFormatChange={changeFormat} onSave={saveGeneralSection} onTeamSizeChange={setTeamSize} />
 
         <section className="mt-8" aria-labelledby="features-title">
           <div className="flex flex-wrap items-end justify-between gap-4">
