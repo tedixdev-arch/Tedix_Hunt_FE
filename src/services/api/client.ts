@@ -92,6 +92,10 @@ export class ApiClient {
     return this.request<T>(path, { ...options, method: 'PATCH', body });
   }
 
+  delete<T = void>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+    return this.request<T>(path, { ...options, method: 'DELETE' });
+  }
+
   private async send<T>(path: string, options: ApiRequestOptions, hasRetried: boolean): Promise<T> {
     const { body, authenticated = true, retryOnUnauthorized = true, headers, ...init } = options;
     const requestHeaders = new Headers(headers);
