@@ -6,6 +6,7 @@ import { OrganizerHeader } from './OrganizerFlow'
 import { ApiError, huntOptionsApi, huntsApi, huntTemplatesApi, organizationsApi, type Hunt, type HuntOptions, type HuntTemplateMetadata, type HuntTemplateSnapshot, type Organization } from '../services/api'
 import { general2Input, general3Input, generalSetupProgressFromNavigationState, huntDetailsInput, newHuntDefaults, optionSupported, settingsFromHunt, settingsWithTemplate, templateInput, type GeneralSetupProgress, type GeneralSetupSettings } from './generalSetup'
 import { formatDate, formatLocation, formatTime, parseHuntNotReady, reviewHunt, reviewOptionLabels, reviewRefreshError, statusLabels, type GeneralSection, type HuntReviewIssue } from './huntReview'
+import { accessCreationError, copyParticipantLink, participantLink, shareParticipantLink } from './participantAccess'
 
 const controlClass = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold outline-none focus:border-emerald-500'
 
@@ -277,6 +278,9 @@ export function CustomHuntEditorPage() {
   const [publishError, setPublishError] = useState('')
   const [publishIssues, setPublishIssues] = useState<HuntReviewIssue[]>([])
   const publishingRef = useRef(false)
+  const [creatingAccess, setCreatingAccess] = useState(false)
+  const creatingAccessRef = useRef(false)
+  const [accessError, setAccessError] = useState('')
   const [sharing, setSharing] = useState(false)
   const [linkMessage, setLinkMessage] = useState('')
   const [generalComplete, setGeneralComplete] = useState(false)
@@ -505,6 +509,31 @@ export function CustomHuntEditorPage() {
     }
   }
 
+  async function createParticipantAccess() {
+    if (creatingAccessRef.current || !persistedHunt || persistedHunt.accessCode) return
+    creatingAccessRef.current = true
+    setCreatingAccess(true)
+    setAccessError('')
+    setLinkMessage('')
+    try {
+      const access = await huntsApi.createOrGetAccess(persistedHunt.id)
+      setPersistedHunt(current => current ? { ...current, accessCode: access.code } : current)
+    } catch (error) {
+      setAccessError(accessCreationError(error))
+    } finally {
+      creatingAccessRef.current = false
+      setCreatingAccess(false)
+    }
+  }
+
+  async function copyRegisteredLink(link: string) {
+    setLinkMessage(await copyParticipantLink(link, navigator.clipboard))
+  }
+
+  async function shareRegisteredLink(link: string, name: string) {
+    setLinkMessage(await shareParticipantLink(link, name, navigator.share?.bind(navigator), navigator.clipboard))
+  }
+
   if (isLoadingDraft) return <main className="grid min-h-dvh place-items-center bg-slate-100 text-slate-700" role="status">Loading Hunt setup…</main>
   if (loadError) return <main className="grid min-h-dvh place-items-center bg-slate-100 p-5"><div className="rounded-2xl border border-rose-200 bg-white p-6 text-center"><p className="font-bold text-rose-700" role="alert">{loadError}</p><button className="mt-4 min-h-11 rounded-lg border border-slate-300 px-4 font-bold" onClick={() => void loadDraft()} type="button">Retry</button></div></main>
 
@@ -518,10 +547,15 @@ export function CustomHuntEditorPage() {
     const snapshot = persistedHunt.templateSnapshot
     const displayedIssues = publishIssues.length ? publishIssues : review.issues
     const uniqueIssues = displayedIssues.filter((issue, index, issues) => issues.findIndex(candidate => candidate.message === issue.message && candidate.generalSection === issue.generalSection) === index)
-    if (persistedHunt.status === 'published') return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader showProfile/><div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
+    if (persistedHunt.status === 'published') {
+      const link = persistedHunt.accessCode ? participantLink(window.location.origin, persistedHunt.accessCode) : ''
+      return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader showProfile/><div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Registered Hunt</p><h1 className="mt-2 text-4xl font-black">Hunt published</h1>
-      <section className="mt-7 rounded-2xl border border-emerald-300 bg-white p-5 shadow-sm sm:p-6"><h2 className="text-2xl font-black">{persistedHunt.name}</h2><dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Status</dt><dd className="font-black">Published</dd></div><div><dt className="text-slate-500">Template</dt><dd className="font-black">{snapshot?.displayName || 'Not saved'}</dd></div><div><dt className="text-slate-500">Date</dt><dd className="font-black">{formatDate(persistedHunt.startDate)} · {formatTime(persistedHunt.startTime)}</dd></div><div><dt className="text-slate-500">Location</dt><dd className="font-black">{formatLocation(persistedHunt)}</dd></div><div><dt className="text-slate-500">Participant access</dt><dd className="font-black">Not generated yet</dd></div></dl><p className="mt-6 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">Participant access will be generated in the next step.</p><div className="mt-6 flex justify-end border-t border-slate-100 pt-5"><Link className="inline-flex min-h-12 items-center rounded-xl bg-emerald-500 px-6 font-black" to="/organizer">Back to My Hunts</Link></div></section>
+      <section className="mt-7 rounded-2xl border border-emerald-300 bg-white p-5 shadow-sm sm:p-6"><h2 className="text-2xl font-black">{persistedHunt.name}</h2><dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Status</dt><dd className="font-black">Published</dd></div><div><dt className="text-slate-500">Template</dt><dd className="font-black">{snapshot?.displayName || 'Not saved'}</dd></div><div><dt className="text-slate-500">Date</dt><dd className="font-black">{formatDate(persistedHunt.startDate)} · {formatTime(persistedHunt.startTime)}</dd></div><div><dt className="text-slate-500">Location</dt><dd className="font-black">{formatLocation(persistedHunt)}</dd></div></dl>
+        <div className="mt-6 rounded-xl bg-slate-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-emerald-700">Participant access</p>{persistedHunt.accessCode ? <div className="mt-4"><p className="text-sm font-bold text-slate-600">Hunt code</p><p className="mt-1 text-2xl font-black tracking-[0.18em]">{persistedHunt.accessCode}</p><label className="mt-4 block text-sm font-bold">Participant link<input aria-label="Hunt invitation link" className={controlClass} readOnly value={link}/></label><div className="mt-4 flex flex-col gap-2 sm:flex-row"><button className="min-h-12 flex-1 rounded-xl border border-emerald-400 bg-white px-4 font-black" onClick={() => void copyRegisteredLink(link)} type="button">Copy link</button><button className="min-h-12 flex-1 rounded-xl bg-slate-950 px-4 font-black text-white" onClick={() => void shareRegisteredLink(link, persistedHunt.name)} type="button">Share</button></div><p className="mt-3 text-xs text-slate-500">QR code can be added later.</p>{linkMessage && <p className="mt-3 text-sm font-bold text-emerald-800" role="status">{linkMessage}</p>}</div> : <button className="mt-4 min-h-12 rounded-xl bg-emerald-500 px-5 font-black disabled:bg-slate-300" disabled={creatingAccess} onClick={() => void createParticipantAccess()} type="button">{creatingAccess ? 'Creating participant access…' : 'Create participant access'}</button>}{accessError && <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-semibold text-rose-700" role="alert">{accessError}</p>}</div>
+        <div className="mt-6 flex justify-end border-t border-slate-100 pt-5"><Link className="inline-flex min-h-12 items-center rounded-xl bg-emerald-500 px-6 font-black" to="/organizer">Back to My Hunts</Link></div></section>
     </div></main>
+    }
     return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader showProfile/><div className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
       <button className="text-sm font-bold text-slate-500" onClick={()=>setReviewing(false)} type="button">← Back to Hunt Features</button>
       <p className="mt-7 text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Block 3</p><h1 className="mt-2 text-4xl font-black">Review Hunt</h1><p className="mt-3 text-slate-600">Review the latest settings saved for this Hunt.</p>

@@ -13,7 +13,7 @@ const options: HuntOptions = {
 
 function completeHunt(): Hunt {
   return {
-    id: 'hunt-1', organizationId: 'org-1', createdByUserId: 'user-1', name: 'Saved city quest', status: 'draft',
+    id: 'hunt-1', organizationId: 'org-1', createdByUserId: 'user-1', name: 'Saved city quest', status: 'draft', accessCode: null,
     createdAt: '2026-09-01T10:00:00Z', updatedAt: '2026-09-18T10:00:00Z', country: 'Romania', region: 'Cluj', city: 'Cluj-Napoca',
     startDate: '2026-10-12', startTime: '10:30:00', timezone: 'Europe/Bucharest', durationMinutes: 90, capacity: 24,
     contactName: 'Ana Pop', format: 'team', teamSize: 4, accessMode: 'invitation_only', difficulty: 'easy', checkpointOrder: 'recommended',

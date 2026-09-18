@@ -1,4 +1,4 @@
-import { createHashRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
 import { TemplateOneExperience } from '../pages/template-one/TemplateOneExperience'
 import { CreatorStudioPage, CreatorTemplateEditorPage } from '../pages/CreatorStudio'
@@ -6,6 +6,7 @@ import { HomePage } from '../pages/HomePage'
 import { DiscoveryIntroPage, PassportPreviewPage } from '../pages/DiscoveryFlow'
 import { CompetitionMiniHunt } from '../pages/CompetitionMiniHunt'
 import { JoinHuntPage } from '../pages/ParticipantJoinFlow'
+import { PublicHuntAccessPage } from '../pages/PublicHuntAccessPage'
 import { ParticipantReadinessPage } from '../pages/ParticipantReadinessPage'
 import { IndependentOrganizerPage, OrganizerHuntsPage, OrganizerSignInPage, RegisteredOrganizerSignInPage } from '../pages/OrganizerFlow'
 import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
@@ -28,7 +29,7 @@ function CreatorEntry() {
   return canAccessCreator(user) ? <Navigate replace to="/creator" /> : <ProfessionalSignInPage type="creator" />
 }
 
-export const router = createHashRouter([
+export const router = createBrowserRouter([
   {
     path: '/',
     element: <HomePage />,
@@ -48,6 +49,10 @@ export const router = createHashRouter([
   {
     path: '/join',
     element: <JoinHuntPage />,
+  },
+  {
+    path: '/join/:code',
+    element: <PublicHuntAccessPage />,
   },
   {
     path: '/hunt/signal-cluj',
