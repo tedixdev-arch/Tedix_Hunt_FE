@@ -82,11 +82,11 @@ test('successful login stores registered-session tokens', async () => {
   assert.deepEqual(session.tokens, { accessToken: 'a', refreshToken: 'r' });
 });
 
-test('organizer login uses the real professional login and stores its session', async () => {
+test('organizer login uses the dedicated organizer endpoint and stores its session', async () => {
   const payload = { user: user({ role: 'organizer', roles: ['organizer'] }), tokens: { accessToken: 'organizer-a', refreshToken: 'organizer-r' } };
   const { client, session, calls } = mockClient([json(payload)]);
   assert.deepEqual(await new AuthApi(client, session).loginOrganizer({ email: 'organizer@example.test', password: 'password' }), payload);
-  assert.equal(calls[0].url, 'https://api.example.test/api/auth/creator/login');
+  assert.equal(calls[0].url, 'https://api.example.test/api/auth/organizer/login');
   assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { email: 'organizer@example.test', password: 'password' });
   assert.deepEqual(session.tokens, { accessToken: 'organizer-a', refreshToken: 'organizer-r' });
 });
