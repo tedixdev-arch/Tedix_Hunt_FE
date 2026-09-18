@@ -15,7 +15,9 @@ export type {
 export { LocalSessionStore, sessionStore } from './session.ts';
 export type { SessionStore, SessionTokens } from './session.ts';
 export { HuntsApi, huntsApi } from './hunts.ts';
-export type { CreateDraftInput, Hunt, HuntLifecycleAction, HuntListItem, HuntRole, HuntStatus, HuntTemplateSnapshot, UpdateDraftInput } from './hunts.ts';
+export type { CreateDraftInput, Hunt, HuntAccess, HuntLifecycleAction, HuntListItem, HuntRole, HuntStatus, HuntTemplateSnapshot, UpdateDraftInput } from './hunts.ts';
+export { HuntAccessApi, huntAccessApi } from './huntAccess.ts';
+export type { HuntAccessResolution } from './huntAccess.ts';
 export { HuntTemplatesApi, huntTemplatesApi } from './huntTemplates.ts';
 export type { HuntTemplateMetadata } from './huntTemplates.ts';
 export { HuntOptionsApi, huntOptionsApi } from './huntOptions.ts';

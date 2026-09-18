@@ -6,6 +6,7 @@ import { HomePage } from '../pages/HomePage'
 import { DiscoveryIntroPage, PassportPreviewPage } from '../pages/DiscoveryFlow'
 import { CompetitionMiniHunt } from '../pages/CompetitionMiniHunt'
 import { JoinHuntPage } from '../pages/ParticipantJoinFlow'
+import { PublicHuntAccessPage } from '../pages/PublicHuntAccessPage'
 import { ParticipantReadinessPage } from '../pages/ParticipantReadinessPage'
 import { IndependentOrganizerPage, OrganizerHuntsPage, OrganizerSignInPage, RegisteredOrganizerSignInPage } from '../pages/OrganizerFlow'
 import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
@@ -48,6 +49,10 @@ export const router = createHashRouter([
   {
     path: '/join',
     element: <JoinHuntPage />,
+  },
+  {
+    path: '/join/:code',
+    element: <PublicHuntAccessPage />,
   },
   {
     path: '/hunt/signal-cluj',

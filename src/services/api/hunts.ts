@@ -24,6 +24,7 @@ export interface Hunt {
   createdByUserId: string;
   name: string;
   status: HuntStatus;
+  accessCode: string | null;
   createdAt: string;
   updatedAt: string;
   country: string | null;
@@ -43,6 +44,11 @@ export interface Hunt {
   templateKey: string | null;
   templateVersion: number | null;
   templateSnapshot: HuntTemplateSnapshot | null;
+}
+
+export interface HuntAccess {
+  huntId: string;
+  code: string;
 }
 
 export interface HuntListItem extends Hunt {
@@ -79,6 +85,10 @@ export class HuntsApi {
 
   updateDraft(id: string, input: UpdateDraftInput): Promise<Hunt> {
     return this.client.patch<Hunt>(`/api/hunts/${encodeURIComponent(id)}`, input);
+  }
+
+  createOrGetAccess(id: string): Promise<HuntAccess> {
+    return this.client.post<HuntAccess>(`/api/hunts/${encodeURIComponent(id)}/access`);
   }
 
   private transition(id: string, action: HuntLifecycleAction): Promise<Hunt> {

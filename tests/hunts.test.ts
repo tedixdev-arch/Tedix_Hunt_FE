@@ -28,6 +28,7 @@ function hunt(status: HuntStatus, huntRoles: HuntListItem['huntRoles'] = ['organ
     createdByUserId: 'user-1',
     name: `${status} Hunt`,
     status,
+    accessCode: null,
     createdAt: '2026-09-01T10:00:00.000Z',
     updatedAt: '2026-09-17T12:30:00.000Z',
     huntRoles,
