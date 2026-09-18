@@ -93,6 +93,13 @@ test('draft API methods use POST, GET, and PATCH with encoded Hunt routes', asyn
   ]);
 });
 
+test('publish sends one POST to the encoded Hunt publish endpoint', async () => {
+  const { api, calls } = apiWithCalls();
+  const published = await api.publish('hunt /1');
+  assert.equal(published.status, 'published');
+  assert.deepEqual(calls, [{ url: 'https://api.example.test/api/hunts/hunt%20%2F1/publish', method: 'POST' }]);
+});
+
 test('updateDraft sends only templateKey for a template selection', async () => {
   const calls: string[] = [];
   const fetcher: typeof fetch = async (_input, init) => {

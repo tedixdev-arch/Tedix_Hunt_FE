@@ -15,6 +15,40 @@ export interface HuntReviewResult {
   issues: HuntReviewIssue[];
 }
 
+export interface PublishReadinessIssue {
+  section: 'general' | 'template' | 'options';
+  field: string;
+  message: string;
+}
+
+export interface HuntNotReadyResponse {
+  error: 'hunt_not_ready';
+  issues: PublishReadinessIssue[];
+}
+
+const generalSectionByField: Record<string, GeneralSection> = {
+  name: 1, country: 1, city: 1, startDate: 1, startTime: 1, timezone: 1, durationMinutes: 1, contactName: 1,
+  capacity: 2, format: 2, teamSize: 2, accessMode: 2,
+  difficulty: 3, checkpointOrder: 3,
+  templateKey: 4, templateVersion: 4, templateSnapshot: 4,
+};
+
+export function parseHuntNotReady(details: unknown): HuntReviewIssue[] | null {
+  if (!details || typeof details !== 'object') return null;
+  const response = details as { error?: unknown; issues?: unknown };
+  if (response.error !== 'hunt_not_ready' || !Array.isArray(response.issues)) return null;
+  const issues: HuntReviewIssue[] = [];
+  for (const value of response.issues) {
+    if (!value || typeof value !== 'object') continue;
+    const issue = value as { section?: unknown; field?: unknown; message?: unknown };
+    if (!['general', 'template', 'options'].includes(String(issue.section)) || typeof issue.field !== 'string' || typeof issue.message !== 'string') continue;
+    const generalSection = generalSectionByField[issue.field];
+    if (!generalSection || !issue.message.trim()) continue;
+    issues.push({ section: issue.section as PublishReadinessIssue['section'], field: issue.field, message: issue.message, generalSection });
+  }
+  return issues;
+}
+
 const required: Array<[keyof Hunt, GeneralSection, HuntReviewIssue['section'], string]> = [
   ['name', 1, 'general', 'Add a Hunt name'],
   ['country', 1, 'general', 'Add a country'],
