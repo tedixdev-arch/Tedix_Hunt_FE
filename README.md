@@ -1,7 +1,7 @@
 # Tedix Hunt FE
 
 A React + TypeScript Progressive Web App, built with Vite and organized around a feature-based
-architecture. Includes a mock-auth login flow and a landing page as a starting point.
+architecture. Includes role-specific authentication flows and a landing page.
 
 ## Scripts
 
