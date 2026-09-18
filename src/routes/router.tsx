@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createHashRouter, Navigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
 import { TemplateOneExperience } from '../pages/template-one/TemplateOneExperience'
 import { CreatorStudioPage, CreatorTemplateEditorPage } from '../pages/CreatorStudio'
@@ -29,7 +29,7 @@ function CreatorEntry() {
   return canAccessCreator(user) ? <Navigate replace to="/creator" /> : <ProfessionalSignInPage type="creator" />
 }
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: '/',
     element: <HomePage />,

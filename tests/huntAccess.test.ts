@@ -36,7 +36,7 @@ test('public resolver encodes the code and never authenticates', async () => {
 });
 
 test('participant link uses its supplied current origin and encodes the backend code', () => {
-  assert.equal(participantLink('https://current.example', 'A B/C'), 'https://current.example/join/A%20B%2FC');
+  assert.equal(participantLink('https://current.example', 'A B/C'), 'https://current.example/#/join/A%20B%2FC');
   assert.equal(participantLink('https://current.example', '7KPM4XQ2').includes('tedixhunt.app'), false);
   assert.equal(participantLink('https://current.example', '7KPM4XQ2').includes('tedixhunt-fe-dev.anainfo.ai'), false);
 });

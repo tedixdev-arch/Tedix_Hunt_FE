@@ -10,7 +10,7 @@ export const accessStatusLabels: Partial<Record<HuntStatus, string>> = {
 };
 
 export function participantLink(origin: string, code: string) {
-  return `${origin}/join/${encodeURIComponent(code)}`;
+  return `${origin}/#/join/${encodeURIComponent(code)}`;
 }
 
 export function accessCreationError(error: unknown) {
