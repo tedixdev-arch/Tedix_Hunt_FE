@@ -14,3 +14,5 @@ export type {
 } from './auth.ts';
 export { LocalSessionStore, sessionStore } from './session.ts';
 export type { SessionStore, SessionTokens } from './session.ts';
+export { HuntsApi, huntsApi } from './hunts.ts';
+export type { HuntLifecycleAction, HuntListItem, HuntRole, HuntStatus } from './hunts.ts';
