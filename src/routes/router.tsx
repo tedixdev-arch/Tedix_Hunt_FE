@@ -90,6 +90,10 @@ export const router = createHashRouter([
     element: <CustomHuntEditorPage />,
   },
   {
+    path: '/organizer/hunts/:huntId/setup',
+    element: <CustomHuntEditorPage />,
+  },
+  {
     path: '/organizer/hunts/new/quick',
     element: <Navigate replace to="/organizer/hunts/new/setup" />,
   },

@@ -32,3 +32,7 @@ export function huntSummary(hunts: HuntListItem[]) {
 export function mergeLifecycleResult(current: HuntListItem, updated: Omit<HuntListItem, 'huntRoles'>): HuntListItem {
   return { ...updated, huntRoles: current.huntRoles };
 }
+
+export function canContinueSetup(hunt: HuntListItem): boolean {
+  return hunt.status === 'draft' && hunt.huntRoles.includes('organizer');
+}

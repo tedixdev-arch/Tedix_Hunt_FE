@@ -10,7 +10,7 @@ export type HuntStatus =
 
 export type HuntRole = 'organizer' | 'supervisor';
 
-export interface HuntListItem {
+export interface Hunt {
   id: string;
   organizationId: string;
   createdByUserId: string;
@@ -19,7 +19,24 @@ export interface HuntListItem {
   createdAt: string;
   updatedAt: string;
   huntRoles: HuntRole[];
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  startDate: string | null;
+  startTime: string | null;
+  timezone: string | null;
+  durationMinutes: number | null;
+  capacity: number | null;
+  contactName: string | null;
 }
+
+export type HuntListItem = Hunt;
+
+export interface CreateDraftInput { organizationId: string; name: string }
+export type UpdateDraftInput = Partial<Pick<Hunt,
+  'name' | 'country' | 'region' | 'city' | 'startDate' | 'startTime' | 'timezone' |
+  'durationMinutes' | 'capacity' | 'contactName'
+>>;
 
 export type HuntLifecycleAction = 'publish' | 'start' | 'pause' | 'resume' | 'cancel' | 'finish';
 
@@ -32,6 +49,18 @@ export class HuntsApi {
 
   listHunts(): Promise<HuntListItem[]> {
     return this.client.get<HuntListItem[]>('/api/hunts');
+  }
+
+  createDraft(input: CreateDraftInput): Promise<Hunt> {
+    return this.client.post<Hunt>('/api/hunts', input);
+  }
+
+  getHunt(id: string): Promise<Hunt> {
+    return this.client.get<Hunt>(`/api/hunts/${encodeURIComponent(id)}`);
+  }
+
+  updateDraft(id: string, input: UpdateDraftInput): Promise<Hunt> {
+    return this.client.patch<Hunt>(`/api/hunts/${encodeURIComponent(id)}`, input);
   }
 
   private transition(id: string, action: HuntLifecycleAction): Promise<Omit<HuntListItem, 'huntRoles'>> {

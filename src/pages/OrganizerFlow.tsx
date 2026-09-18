@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
 import { huntsApi, type HuntLifecycleAction, type HuntListItem, type HuntStatus } from '../services/api'
-import { huntSummary, lifecycleActions, mergeLifecycleResult, statusLabels } from './organizerHunts'
+import { canContinueSetup, huntSummary, lifecycleActions, mergeLifecycleResult, statusLabels } from './organizerHunts'
 
 const statusStyles: Record<HuntStatus, string> = {
   draft: 'bg-slate-100 text-slate-700',
@@ -153,6 +153,7 @@ export function OrganizerHuntsPage() {
                 <div className="mt-4 border-t border-slate-100 pt-4">
                   {actionErrors[hunt.id] && <p className="mb-3 text-sm font-semibold text-rose-700" role="alert">{actionErrors[hunt.id]}</p>}
                   <div className="flex flex-wrap items-center justify-end gap-2">
+                    {canContinueSetup(hunt) && <Link className="min-h-11 rounded-lg border border-emerald-500 px-4 py-3 text-sm font-bold text-emerald-800 hover:bg-emerald-50" to={`/organizer/hunts/${hunt.id}/setup`}>Continue setup</Link>}
                     <Link className="min-h-11 rounded-lg bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700" to={`/organizer/hunts/${hunt.id}`}>View details →</Link>
                     {lifecycleActions(hunt).map((action) => <button className={`min-h-11 rounded-lg border px-4 text-sm font-bold disabled:cursor-wait disabled:opacity-50 ${action === 'cancel' ? 'border-rose-200 text-rose-700 hover:bg-rose-50' : 'border-slate-300 text-slate-700 hover:border-emerald-500 hover:text-emerald-700'}`} disabled={pendingHuntIds.has(hunt.id)} key={action} onClick={() => void runAction(hunt, action)} type="button">{pendingHuntIds.has(hunt.id) ? 'Updating…' : actionLabels[action]}</button>)}
                   </div>
