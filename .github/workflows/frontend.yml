@@ -23,6 +23,7 @@ jobs:
       - run: npm run build
         env:
           VITE_API_BASE_URL: https://tedixhunt-be-dev.anainfo.ai
+          VITE_BUILD_SHA: ${{ github.sha }}
       - run: npm test
 
   deploy-dev:
@@ -41,9 +42,12 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Generate deployment version marker
+        run: printf '{"commit":"%s"}\n' "$GITHUB_SHA" > public/version.json
       - run: npm run build
         env:
           VITE_API_BASE_URL: https://tedixhunt-be-dev.anainfo.ai
+          VITE_BUILD_SHA: ${{ github.sha }}
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
