@@ -35,6 +35,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+        // version.json is a network-only deployment marker and must never be
+        // satisfied from a service worker's precache.
+        globIgnores: ['**/version.json'],
+        cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
       },
     }),
