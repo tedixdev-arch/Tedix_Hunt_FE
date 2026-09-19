@@ -59,6 +59,22 @@ jobs:
           rsync -az --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
             ./dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+      - name: Verify deployed dev build
+        run: |
+          remote_version="$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "test -f '$DEPLOY_PATH/version.json' && cat '$DEPLOY_PATH/version.json'")"
+          printf '%s\n' "$remote_version"
+
+          remote_commit="$(printf '%s' "$remote_version" | node -e \
+            "let input = ''; process.stdin.on('data', chunk => input += chunk); process.stdin.on('end', () => { const commit = JSON.parse(input).commit; if (typeof commit !== 'string') process.exit(1); process.stdout.write(commit); });")"
+          test "$remote_commit" = "$GITHUB_SHA"
+          echo "Verified deployed commit: $remote_commit"
+
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "grep -R -F -q -- 'organizer/apply' '$DEPLOY_PATH/assets'"
+          echo "Verified route marker: organizer/apply"
 
   deploy-production:
     needs: test
