@@ -75,6 +75,77 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "grep -R -F -q -- 'organizer/apply' '$DEPLOY_PATH/assets'"
           echo "Verified route marker: organizer/apply"
+      - name: Verify public dev website
+        env:
+          PUBLIC_DEV_URL: https://tedixhunt-fe-dev.anainfo.ai
+        run: |
+          set -euo pipefail
+
+          echo "Expected commit: $GITHUB_SHA"
+
+          public_version_file="$(mktemp)"
+          if ! curl --fail --silent --show-error \
+            --retry 5 \
+            --retry-delay 2 \
+            --retry-all-errors \
+            -H 'Cache-Control: no-cache' \
+            -o "$public_version_file" \
+            "$PUBLIC_DEV_URL/version.json"; then
+            echo "::error::Public version marker missing or stale."
+            exit 1
+          fi
+
+          if ! public_commit="$(node -e \
+            "const fs = require('fs'); const version = JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); if (typeof version.commit !== 'string') process.exit(1); process.stdout.write(version.commit);" \
+            "$public_version_file")"; then
+            echo "::error::Public version marker missing or stale."
+            exit 1
+          fi
+
+          echo "Public version.json commit: $public_commit"
+          if [ "$public_commit" != "$GITHUB_SHA" ]; then
+            echo "::error::Public version marker missing or stale."
+            exit 1
+          fi
+
+          public_index_file="$(mktemp)"
+          public_bundle_file="$(mktemp)"
+          if ! curl --fail --silent --show-error \
+            --retry 5 \
+            --retry-delay 2 \
+            --retry-all-errors \
+            -H 'Cache-Control: no-cache' \
+            -o "$public_index_file" \
+            "$PUBLIC_DEV_URL/"; then
+            echo "::error::Public site is serving a stale frontend bundle."
+            exit 1
+          fi
+
+          if ! public_js_asset="$(node -e \
+            "const fs = require('fs'); const html = fs.readFileSync(process.argv[1], 'utf8'); const match = html.match(/<script\\b[^>]*\\bsrc=[\"']([^\"']*\\/assets\\/index-[^\"']+\\.js(?:\\?[^\"']*)?)[\"']/i); if (!match) process.exit(1); process.stdout.write(match[1]);" \
+            "$public_index_file")"; then
+            echo "::error::Public site is serving a stale frontend bundle."
+            exit 1
+          fi
+
+          public_js_url="$(node -e \
+            "process.stdout.write(new URL(process.argv[1], process.argv[2] + '/').href)" \
+            "$public_js_asset" "$PUBLIC_DEV_URL")"
+          echo "Public JS asset: $public_js_asset"
+
+          if ! curl --fail --silent --show-error \
+            --retry 5 \
+            --retry-delay 2 \
+            --retry-all-errors \
+            -H 'Cache-Control: no-cache' \
+            -o "$public_bundle_file" \
+            "$public_js_url" || \
+            ! grep -F -q -- 'organizer/apply' "$public_bundle_file"; then
+            echo "::error::Public site is serving a stale frontend bundle."
+            exit 1
+          fi
+
+          echo "Verified public route marker: organizer/apply"
 
   deploy-production:
     needs: test
