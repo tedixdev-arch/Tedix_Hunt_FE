@@ -9,6 +9,7 @@ import { JoinHuntPage } from '../pages/ParticipantJoinFlow'
 import { PublicHuntAccessPage } from '../pages/PublicHuntAccessPage'
 import { ParticipantReadinessPage } from '../pages/ParticipantReadinessPage'
 import { IndependentOrganizerPage, OrganizerHuntsPage, OrganizerSignInPage, RegisteredOrganizerSignInPage } from '../pages/OrganizerFlow'
+import { RegisteredOrganizerApplicationPage } from '../pages/RegisteredOrganizerApplicationPage'
 import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
 import { CustomHuntEditorPage } from '../pages/CustomHuntEditor'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
@@ -87,6 +88,10 @@ export const router = createHashRouter([
   {
     path: '/organizer/registered',
     element: <RegisteredOrganizerSignInPage />,
+  },
+  {
+    path: '/organizer/apply',
+    element: <RegisteredOrganizerApplicationPage />,
   },
   {
     path: '/organizer/independent',
