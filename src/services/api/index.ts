@@ -24,5 +24,7 @@ export { HuntOptionsApi, huntOptionsApi } from './huntOptions.ts';
 export type { HuntOption, HuntOptions } from './huntOptions.ts';
 export { OrganizationsApi, organizationsApi } from './organizations.ts';
 export type { Organization } from './organizations.ts';
+export { OrganizerApplicationsApi, organizerApplicationsApi } from './organizerApplications.ts';
+export type { OrganizerApplication, OrganizerApplicationInput, OrganizationType } from './organizerApplications.ts';
 export { HuntRewardsApi, RewardOptionsApi, huntRewardsApi, rewardOptionsApi, rewardSaveError } from './rewards.ts';
 export type { HuntRewards, LeaderboardReward, LeaderboardRewardInput, RewardDetails, RewardKind, RewardOption, RewardOptions, RewardProvider, SpecialAward, SpecialAwardDefinition, SpecialAwardInput, VirtualRewardCategory } from './rewards.ts';
