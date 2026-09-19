@@ -75,7 +75,7 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_API_BASE_URL: http://77.42.79.192
+          VITE_API_BASE_URL: https://tedixhunt-be-prod.anainfo.ai
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
