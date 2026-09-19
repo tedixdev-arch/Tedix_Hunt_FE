@@ -7,13 +7,15 @@ test('buildSha falls back to development outside a Vite build', () => {
   assert.equal(buildSha, 'development')
 })
 
-test('CI generates a full-SHA version marker and passes the SHA to both dev builds', async () => {
+test('CI generates the version marker only for deployment and passes the SHA to both dev builds', async () => {
   const workflow = await readFile(new URL('../.github/workflows/frontend.yml', import.meta.url), 'utf8')
   const testJob = workflow.match(/  test:\n([\s\S]*?)\n  deploy-dev:/)?.[1] ?? ''
   const deployDevJob = workflow.match(/  deploy-dev:\n([\s\S]*?)\n  deploy-production:/)?.[1] ?? ''
 
+  assert.doesNotMatch(testJob, /public\/version\.json/)
+  assert.match(deployDevJob, /printf '\{"commit":"%s"\}\\n' "\$GITHUB_SHA" > public\/version\.json/)
+
   for (const job of [testJob, deployDevJob]) {
-    assert.match(job, /printf '\{"commit":"%s"\}\\n' "\$GITHUB_SHA" > public\/version\.json/)
     assert.match(job, /VITE_BUILD_SHA: \$\{\{ github\.sha \}\}/)
     assert.match(job, /VITE_API_BASE_URL: https:\/\/tedixhunt-be-dev\.anainfo\.ai/)
   }
