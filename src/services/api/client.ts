@@ -69,7 +69,7 @@ export class ApiClient {
   constructor(
     baseUrl = API_BASE_URL,
     session: SessionStore = new LocalSessionStore(),
-    fetcher: typeof fetch = fetch,
+    fetcher: typeof fetch = (input, init) => fetch(input, init),
   ) {
     this.baseUrl = baseUrl;
     this.session = session;
