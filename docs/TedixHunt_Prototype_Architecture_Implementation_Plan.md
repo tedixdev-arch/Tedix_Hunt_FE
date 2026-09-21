@@ -1,414 +1,1280 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 1.4 | Updated 17 September 2026. Build a working prototype from the approved mockup, using the frontend, backend and PostgreSQL work already started by the dev team.
+Version 2.0 | Updated 21 September 2026
 
-## Standard implementation workflow
+This document replaces Version 1.4 with a plan based on the current mockup, frontend, backend and merged implementation work.
 
-```text
-ChatGPT Web
-   ↓
-Create exact prompt for ONE plan step
-   ↓
-Codex Web
-   ↓
-Implement + test
-   ↓
-Create PR in GitHub
-   ↓
-ChatGPT Web
-   ↓
-Review PR
-   ↓
-You merge PR
-   ↓
-GitHub Actions
-   ↓
-Deploy Backend
-   ↓
-Run new DB migrations (if any)
-   ↓
-Restart API
-   ↓
-Verify result
-   ↓
-NEXT STEP
-```
+The implementation strategy is:
 
-For a step with no database change, the migration step is skipped. Database schema changes must be recorded as migrations in the backend repository before they are applied to PostgreSQL.
+Existing approved mockup
+→ define the real domain model
+→ persist it in PostgreSQL
+→ secure it through the backend
+→ connect the existing frontend screen
+→ verify the deployed flow
 
-## Summary of the steps we will take
+The frontend is not being rebuilt. Existing useful mockup screens remain the UX reference and are progressively connected to real backend behavior.
 
-We will connect the existing screens to real login and saved Hunt data, one small step at a time.
+---
 
-- 1. Confirm the deployed website, backend and database work together.
-- 2. Prepare backups and record database changes.
-- 3. Finish backend login and connect the frontend to it.
-- 4. Set participant, organizer, creator and admin permissions.
-- 5. Create and save a Hunt with a working invitation code.
-- 6. Let participants join real teams and prepare to start.
-- 7. Make one checkpoint work with saved answers, scores and progress.
-- 8. Extend it to the full Signal mission and final results.
-- 9. Complete organizer monitoring and help before outdoor testing.
-- 10. Test with a small group, fix problems, then add the remaining features.
+## 1. Status legend
 
-First action: confirm why the deployed website differs from the current frontend code, and verify the backend database connection.
+- ✅ Complete — implemented across the required FE/BE/DB scope for the current prototype.
+- 🟡 Partial — important pieces are real, but the end-to-end flow is not complete.
+- 🟠 Backend complete / FE pending — backend behavior exists but the frontend is not connected.
+- 🟣 FE mock exists / backend pending — the experience exists visually, but persistence/business logic is still simulated.
+- ⬜ Not started — no meaningful implementation yet.
+- ⚠ Deferred operational item — important, but not the immediate product-development blocker.
 
-## 1. Project reference
+A phase is complete only when its intended flow works through the deployed application, not merely because a table or screen exists.
 
-- Mockup / UX reference: [https://github.com/tedixdev-arch/tedixhunt_student](https://github.com/tedixdev-arch/tedixhunt_student)
-- Frontend repository (React + TypeScript): [https://github.com/tedixdev-arch/Tedix_Hunt_FE](https://github.com/tedixdev-arch/Tedix_Hunt_FE)
-- Frontend development website: [https://tedixhunt-fe-dev.anainfo.ai/](https://tedixhunt-fe-dev.anainfo.ai/)
-- Backend repository (Node.js + TypeScript + Express): [https://github.com/tedixdev-arch/Tedix_Hunt_BE](https://github.com/tedixdev-arch/Tedix_Hunt_BE)
-- Backend development API / Swagger: [https://tedixhunt-be-dev.anainfo.ai/api/docs/#/](https://tedixhunt-be-dev.anainfo.ai/api/docs/#/)
-- PostgreSQL administration (pgAdmin): [https://tedixhunt-be-dev.anainfo.ai/pgadmin4/browser/](https://tedixhunt-be-dev.anainfo.ai/pgadmin4/browser/)
-- Target stack: React + TypeScript frontend; Node.js + TypeScript + Express backend; PostgreSQL database; REST/JSON over HTTPS.
+---
 
-## 2. Core UX premise
+## 2. Project reference
 
-TedixHunt is primarily a mobile experience for Participants.
+- Mockup / UX: https://github.com/tedixdev-arch/tedixhunt_student
+- Frontend repo: https://github.com/tedixdev-arch/Tedix_Hunt_FE
+- Frontend dev: https://tedixhunt-fe-dev.anainfo.ai/
+- Backend repo: https://github.com/tedixdev-arch/Tedix_Hunt_BE
+- Backend Swagger: https://tedixhunt-be-dev.anainfo.ai/api/docs/#/
+- PostgreSQL admin: https://tedixhunt-be-dev.anainfo.ai/pgadmin4/browser/
 
-- Participant: mobile-first. Fast, low-friction, one-hand use, large tap targets, short forms, persistent progress and resilient network behavior.
-- Organizer: primarily desktop-first. Configuration, dashboards, tables and live monitoring; still responsive for smaller screens.
-- Creator: primarily desktop-first. Structured template creation, validation, preview and submission workflows.
-- Admin: desktop-first. Data-dense administration, filtering, permissions, auditability and safe destructive actions.
+Target stack:
 
-Responsive does not mean identical. Participant screens should be designed from the phone upward; back-office screens should be designed from desktop workflows downward.
+- React + TypeScript
+- Node.js + TypeScript + Express
+- PostgreSQL
+- REST/JSON over HTTPS
 
-## 3. Architectural baseline and governing principle
+The frontend never connects directly to PostgreSQL.
 
-The mockup remains the functional and UX specification, but the current FE and BE repositories are now the technical starting point.
+---
 
-We will keep the existing screens and useful code. Each step will replace one simulated feature with a working feature.
+## 3. Product architecture
 
-Governing principle:
+TedixHunt is one platform with four connected experiences:
 
-Preserve the approved experience. Add real login, saved data and backend permission checks in small steps. Keep the code simple and explain important rules with short comments.
+Admin governs and approves
+↓
+Creator builds reusable Hunt templates
+↓
+Organizer configures and publishes a Hunt
+↓
+Participant joins and plays
 
-### Current FE baseline
+The target supply chain is:
 
-The FE already has a structured React + TypeScript application with folders such as:
+Creator creates template
+→ Admin reviews and approves
+→ Organizer selects approved version
+→ Hunt stores an immutable template snapshot
+→ Organizer configures and publishes
+→ Participant joins and plays
+→ backend records progress, scoring and results
+→ Organizer/Admin monitor
+→ Passport/history/achievements preserve long-term value
 
-- src/app
-- src/components
-- src/features
-- src/pages
-- src/routes
-- src/shared
-- src/types
-- src/data
+This dependency chain drives implementation order.
 
-Most mockup screens are already copied into the FE. The active application starts in src/main.tsx and uses src/routes/router.tsx. Connect new work there; the older App.tsx shell is not the active entry point.
+---
 
-### Current BE baseline
+## 4. UX premise
 
-The current backend already contains:
+- Participant: mobile-first.
+- Organizer: primarily desktop-first, still responsive.
+- Creator: desktop-first.
+- Admin: desktop-first.
 
-- Express / TypeScript API structure
-- PostgreSQL models and SQL queries
-- JWT authentication: the backend creates and checks signed login tokens
-- User, RefreshToken and Organization models backed by PostgreSQL
-- authentication and organization routes
-- Swagger/OpenAPI support
+Participant UX should prioritize fast interaction, large tap targets, reconnect/recovery and low interaction depth.
 
-The backend now uses PostgreSQL for both users and organizations. The earlier plan described an older state and must not be used as proof that every foundation step is complete.
+Back-office UX should prioritize dense information, filtering, validation, auditability and safe privileged actions.
 
-The current backend path is:
+---
 
-```text
-Node.js / Express
-      |
-      +-- Login and JWT token checks
-      |
-      +-- PostgreSQL
-            - users
-            - organizations
-            - organization_members
-            - refresh_tokens
-```
+## 5. Runtime architecture
 
-Do not repeat the MongoDB migration. Current BE main no longer uses Mongoose; continue from the existing PostgreSQL models.
+### 5.1 Current development topology
 
-## 4. Target technical architecture
+Browser
+→ https://tedixhunt-fe-dev.anainfo.ai
+→ HTTPS + CORS
+→ https://tedixhunt-be-dev.anainfo.ai
+→ PostgreSQL
 
-```text
-Participant phone / Organizer desktop
-                  |
-         Tedix Hunt frontend
-                  |
-             HTTPS API
-                  |
-         Tedix Hunt backend
-                  |
-             PostgreSQL
-```
+Frontend runtime configuration:
 
-The frontend must never connect directly to PostgreSQL.
+VITE_API_BASE_URL=https://tedixhunt-be-dev.anainfo.ai
 
-The intended runtime path is:
+Backend runtime configuration:
 
-```text
-Browser -> FE -> BE API -> PostgreSQL
-```
+WEB_ORIGIN=https://tedixhunt-fe-dev.anainfo.ai
 
-Codex and pgAdmin can connect separately for authorized database work. This connection does not replace the website-to-backend connection.
+This direct FE→BE cross-origin model remains the development architecture for the prototype.
 
-## 5. Core architecture principles
+### 5.2 Intended production direction
+
+Preferred production layout:
+
+https://tedixhunt.com/
+- / serves React
+- /api/* is reverse-proxied by nginx to the Node API
+- Node API talks to PostgreSQL
+
+The browser would call relative /api paths. This normally removes the FE↔BE cross-origin requirement.
+
+Do not introduce a separate API Gateway/BFF unless future scale or architecture actually requires it.
+
+---
+
+## 6. Core architecture principles
 
 ### PostgreSQL is authoritative
 
-All new TedixHunt functionality must use PostgreSQL. Do not create new Mongo/Mongoose dependencies.
-
-Keep the existing PostgreSQL users and organizations. Add the Hunt tables through recorded database migrations.
+All new runtime state uses PostgreSQL. Do not introduce MongoDB/Mongoose for new functionality.
 
 ### One identity, multiple roles
 
-Authentication identifies a User, not a permanently separate CreatorUser, ParticipantUser, OrganizerUser or AdminUser.
+One User may hold several platform capabilities:
 
-A single user may later hold one or more capabilities/roles, for example:
+- participant
+- organizer
+- creator
+- admin
 
-```text
-User
- |- Participant
- |- Organizer
- |- Creator
- `- Admin
-```
+user_roles is authoritative. users.role is transitional compatibility data only.
 
-Supervisor remains contextual to a competition/Hunt unless later product requirements prove otherwise.
+### Contextual Hunt roles remain separate
+
+Organizer/Supervisor responsibilities for one Hunt belong to hunt_roles, not global user roles.
 
 ### Security is backend-enforced
 
-Hiding controls in the frontend is UX only. Every protected action must be authorized by the backend.
+Frontend guards and hidden buttons are UX only. Protected actions are authorized by the backend.
+
+### Preserve the mockup deliberately
+
+Do not rewrite screens that already express the approved experience. Replace simulated behavior one feature at a time.
 
 ### Real persistence
 
-No fake login, hard-coded user state, fake scoring or local-only Hunt state in production-like flows.
+No production-like path should depend on fake login, local-only Hunt state, fake scoring, simulated teammates or browser-only results.
 
-### Existing structure is preserved deliberately
+### Immutable published context
 
-Do not delete or refactor existing FE/BE structure merely because it predates this plan. First determine whether it is useful, transitional or obsolete.
+A Hunt keeps the exact approved template version/content it was created from. Later template edits must not change an already published or active Hunt.
 
 ### Small vertical slices
 
-Each change should be small enough for one focused review, followed by tests and a check on the deployed prototype.
+Each change should be narrowly scoped, reviewable, tested, deployable and verifiable.
+
+---
+
+## 7. Current PostgreSQL baseline
+
+Tracked migrations currently reach:
+
+- 001_baseline
+- 002_user_roles
+- 003_core_hunt_records
+- 004_hunt_general_setup
+- 005_hunt_template_selection
+- 006_hunt_pilot_options
+- 007_hunt_access_code
+- 008_hunt_rewards
+- 009_organizer_applications
+- 010_organizer_approval
+
+Current important tables include:
+
+- users
+- user_roles
+- organizations
+- organization_members
+- organizer_applications
+- hunts
+- hunt_participants
+- teams
+- team_members
+- hunt_roles
+- hunt_leaderboard_rewards
+- hunt_special_awards
+- refresh_tokens
+
+Major future data areas still missing:
+
+- creator templates
+- template versions
+- template checkpoints/challenges
+- template route points
+- template safety verification
+- template submission/review history
+- participant enrollment workflow state
+- team readiness/start gate
+- checkpoint attempts
+- answers
+- hints
+- solutions
+- progress
+- score events
+- help/PANIC incidents
+- leaderboard/final results
+- award winners
+- Passport/history
+- achievements
+- physical reward inventory
+- custom Hunt requests
+- audit events
+- platform settings
+- notifications
+
+---
+
+## 8. Current FE baseline
+
+The FE preserves most mockup routes and screens while progressively adding real behavior.
+
+Already-real frontend foundations include:
+
+- shared API client
+- token/session handling
+- refresh/retry
+- AuthProvider
+- participant auth
+- creator auth
+- organizer auth
+- role-based guards
+- organizations API
+- Hunt API
+- Hunt template metadata API
+- Hunt options API
+- reward configuration API
+- organizer application form
+- Hunt access-code resolution
+- Hunt draft create/reopen/edit
+- publish flow
+
+The active application uses src/main.tsx and src/routes/router.tsx.
+
+---
+
+## 9. Current BE baseline
+
+Current main backend domains:
+
+- /api/auth
+- /api/organizer-applications
+- /api/organizations
+- /api/hunt-templates
+- /api/hunt-options
+- /api/hunt-access
+- /api/reward-options
+- /api/hunts/:id/rewards
+- /api/hunts
 
-### No speculative redesign
+This is a strong foundation, but Creator template persistence, participant runtime, live operations and long-term systems remain to be built.
 
-Codex should implement the requested step only and must not refactor unrelated areas unless explicitly instructed.
+---
 
-### Stable contracts
+# 10. Implementation roadmap
 
-Frontend and backend communicate through explicit API contracts and predictable error shapes.
+## Phase A — Platform foundation
 
-### Mobile performance matters
+Status: 🟡 Mostly complete
 
-Participant flows should minimize payloads, blocking requests, complex forms and interaction depth.
+### A1. Deployment topology and verification
+Status: ✅ Complete enough for prototype
 
-## 6. Current status and prerequisites
+Done:
+- FE/BE development URLs established
+- GitHub Actions deployment
+- FE version/public bundle verification
+- BE readiness endpoint
+- direct FE→BE CORS architecture confirmed
 
-### What is already in place
+Remaining:
+- ⚠ formal rollback/release notes
+- ⚠ documented server inventory
+- ⚠ final backup/restore verification
 
-- Frontend: most mockup screens are already in the FE repository. Keep their design and connect their actions to real data.
-- Backend: the dev team has implemented PostgreSQL users and organizations, password checks and JWT login tokens. Improve this existing foundation.
-- Database: tedix_hunt is reachable and contains users, organizations, organization_members and refresh_tokens. Hunts, teams and gameplay are not stored yet.
+### A2. PostgreSQL migration foundation
+Status: ✅ Complete
 
-### What still needs to be completed
+- migration runner/history
+- ordered migrations
+- drift checking
+- DB readiness
+- clean shutdown
 
-- Database changes are not tracked as migrations. Add a repeatable change history, database readiness checks and clean connection shutdown.
-- Backend login needs fixes to token handling, Tedix identity proof, sign-out and input validation. Frontend login and gameplay are still simulated.
-- The previous frontend API/session PR was closed without merging. Review it for useful parts, but adapt them to the current backend.
+### A3. User normalization and compatibility
+Status: ✅ Complete
 
-### What we must confirm before building further
+- email normalization
+- duplicate handling
+- public serializer
+- legacy role compatibility
 
-- Deployment: explain why the live website shows a different starting screen from current FE code. Confirm the deployed backend uses the intended database and updated credentials.
-- Recovery: confirm a working backup and restore process, and use a separate database for tests.
-- First pilot: agree the Hunt content, team size, difficulty, scoring, participant login/recovery, arrival checks and help contact.
+### A4. Core authentication
+Status: ✅ Complete
 
-Proposed first pilot: Signal Cluj Napoca, four-person teams and one difficulty level. These remain suggestions until agreed. The steps below explain how we will implement the plan.
+- JWT access
+- opaque refresh tokens
+- rotation
+- logout
+- guest sessions
+- participant login/register
+- creator login
+- organizer login
+- admin login
 
-## 7. Implementation roadmap
+### A5. Frontend API/session layer
+Status: ✅ Complete
 
-Work through the phases below in small reviewed changes. Step codes belong to phases: A1 means the first step in Phase A. They are not chapter numbers.
+### A6. Existing real login flows
+Status: 🟡 Partial
 
-First prove one checkpoint with real participants, saved progress and backend scoring. Then extend it to the full Hunt. Start monitoring and help once enrollment works; finish them before an outdoor pilot. Rewards and advanced features follow the core pilot.
+Complete:
+- participant
+- creator
+- organizer
 
-### Phase A - Foundation and real login
+Pending:
+- real Admin FE login
+- real Admin route protection
 
-- A1. Confirm the deployed setup. Identify the running FE and BE versions, confirm the database target and credentials, and check that the website can call the backend. Finish with a recorded working setup and a clear deployment process.
-- A2. Complete the PostgreSQL foundation. Keep the four existing tables. Add tracked migrations, verify backup/recovery, check database readiness and close connections cleanly. Verify changes on a separate database before applying them to the prototype.
-- A3. Validate existing user accounts. Keep current user IDs, passwords and organization relationships. Add clear input checks and safe email-duplicate handling; check existing records before changing email uniqueness rules.
-- A4. Complete backend authentication. Keep JWT access tokens. Correct unverified Tedix-ID login, distinguish access from refresh tokens, make refresh reliable, and add logout. Agree browser session handling and test valid, expired and invalid credentials.
-- A5. Build the frontend API connection. Add one small shared API client and connect the authentication provider to the active application entry point. Handle loading, errors and session expiry consistently; reuse suitable parts of the closed PR.
-- A6. Connect real login screens. Replace simulated sign-in with backend calls. Verify that a user can log in, reload an allowed screen, renew an expired session and log out on the deployed website.
+---
 
-Phase A is complete when real login works from the deployed website through the backend to PostgreSQL.
+## Phase B — Identity, organizations and authorization
 
-### Phase B - Identity and permissions
+Status: 🟡 Mostly complete
 
-- B1. Define user roles. Attach participant, organizer, creator and admin capabilities to the existing user identity. Define how professional roles are assigned; users must not grant themselves privileged access.
-- B2. Enforce access rules. Protect the relevant screens and backend actions. Check organization ownership, Hunt membership and role permissions; verify that one user cannot read or change another organizer's protected data.
+### B1. Multi-role identity
+Status: ✅ Complete
 
-Phase B is complete when each role can perform its allowed actions and forbidden requests are rejected by the backend.
+### B2. Backend role authorization
+Status: ✅ Complete
 
-### Phase C - Organizations and Hunt foundation
+### B3. Frontend role guards
+Status: 🟡 Partial
 
-- C1. Reuse organizations and membership. Extend the existing PostgreSQL organization model only where needed. Define who may create a Hunt for an organization and verify owner/member access without repeating the database migration.
-- C2. Add the core Hunt records. Create the tables needed for Hunts, participants, teams and Hunt-specific roles. Link them to existing user and organization IDs, with rules preventing duplicate enrollment and cross-Hunt membership.
-- C3. Build Hunt lifecycle APIs. Add backend operations to create, read and update drafts, then publish, start, pause, resume, cancel and finish a Hunt. Define valid state changes and reject actions that are not allowed.
-- C4. Connect the organizer Hunt list. Replace sample Hunts with API data. The organizer should see their own saved Hunts, correct status and permitted next actions, including clear empty and error states.
+Real:
+- participant
+- organizer
+- creator
 
-Phase C is complete when Hunt records and state changes persist and are restricted to the correct organizer.
+Pending:
+- admin
 
-### Phase D - Organizer setup
+### B4. Organizations and membership
+Status: ✅ Complete for current prototype
 
-- D1. Save general setup. Connect the existing setup form to the Hunt draft. Save name, location, schedule/timezone, duration, capacity and contact details; reopening the draft must restore the saved values.
-- D2. Select the Hunt template. Start with the agreed Signal template. Save a template version or content snapshot with the Hunt so later template edits cannot change a published or active game.
-- D3. Save supported Hunt features. Persist the checkpoint order, format, difficulty and other options agreed for the pilot. Show unsupported options as unavailable rather than saving settings that have no effect.
-- D4. Configure rewards after the core pilot. Keep the existing reward design in the roadmap. When this step is scheduled, save reward descriptions, eligibility and quantities, and preserve the existing distinction between Hunt types.
-- D5. Review the Hunt. Show a summary using the saved draft, not sample values. Highlight missing or invalid settings and let the organizer return to the relevant setup section.
-- D6. Publish the Hunt. Connect the final Create Hunt action to the publish operation from C3. Validate required settings, prevent duplicate creation on retries, and show a confirmation with the saved Hunt details.
-- D7. Generate and share access. Create a unique Hunt code and working invitation link. Let the organizer copy them; verify that another device opens the correct Hunt. Automated email sending is a later addition.
+### B5. Hunt-context roles
+Status: ✅ Structural foundation complete
 
-The core Phase D flow is complete when an organizer can save, reopen, review and publish a Hunt with a working invitation. Reward configuration may follow the pilot.
+Organizer and Supervisor exist structurally. Supervisor assignment/use is still pending.
 
-### Phase E - Participant runtime
+---
 
-- E1. Open a Hunt by link or code. Resolve the invitation through the backend and display the correct Hunt preview. Show clear messages for unknown codes, closed enrollment or cancelled Hunts.
-- E2. Enroll the participant. Use the agreed account or guest flow to save the participant's identity and Hunt membership. Repeated joins must return the existing enrollment; capacity limits and session recovery must work.
-- E3. Create the team lobby and start gate. Save team assignments, difficulty and readiness where applicable. Show real teammates and shared start status; participants enter gameplay only when the backend permits the Hunt to start.
-- E4. Implement one checkpoint model. Store the first Signal checkpoint's prompt, private answer rules, contribution and next-stage information. Define personal and team progress before copying the pattern to later checkpoints.
-- E5. Connect checkpoint interaction. Reuse the mission screens for answering, hints, personal contributions and the team challenge. Replace simulated teammates and timed readiness with actual participant actions and shared backend state.
-- E6. Validate answers in the backend. Submit answers for checking and return the permitted outcome. Keep correct answers and unreleased solutions out of participant downloads; enforce retry, hint and reveal rules.
-- E7. Calculate scores in the backend. Agree individual versus team points, penalties and bonuses before implementation. Record score changes with a reason and prevent repeated requests or simultaneous team answers from awarding points twice.
-- E8. Save and restore progress. Persist checkpoint state, assistance use and completion. Reloading or reconnecting must restore confirmed progress; failed requests must show an honest retry state rather than pretend success.
-- E9. Complete the full mission. After one checkpoint works across independent participant sessions, extend the flow to all seven Signal stages and FinishPoint. Save completion once and make the final result available to the results screens.
+## Phase C — Hunt domain foundation
 
-Phase E is complete when real participants finish the full mission, recover saved progress and receive consistent backend-calculated results.
+Status: ✅ Complete for current setup scope
 
-### Phase F - Live operations and results
+### C1. Core Hunt records
+Status: ✅ Complete
 
-- F1. Share current Hunt state. Make participants and organizers read the same start, pause, resume, cancellation and completion state. Begin with simple periodic updates and refresh after actions; do not introduce complex live infrastructure without need.
-- F2. Connect the organizer monitor. Replace sample teams, scores and progress with authorized API data. Connect lifecycle controls from C3 and display when information was last updated or the connection was lost.
-- F3. Implement persistent help and PANIC. Save the help request and show whether it was received, acknowledged or resolved. Let the organizer respond, support optional location with permission, and show a fallback contact when delivery fails.
-- F4. Assign supervisors when needed. Allow the organizer to assign a supervisor to a specific Hunt with limited actions. Confirm which controls they need and prevent access to unrelated Hunts or organization administration.
-- F5. Show the leaderboard. Build rankings from saved scores using the agreed tie and visibility rules. Every participant and organizer should see consistent standings appropriate to their permissions.
-- F6. Show final results. Display saved completion, participant/team scores and the final ranking. Results must remain stable after refresh and must not depend on browser-only calculations.
-- F7. Add special awards after basic results. Define each award's rule and eligibility, then calculate it from saved activity. Do not present sample awards as earned results or create a second scoring system.
+### C2. Hunt lifecycle
+Status: ✅ Complete
 
-Start F1-F3 as soon as enrollment and Hunt state exist. Complete monitoring and help before outdoor testing; basic final results are required for the pilot.
+Supported states:
+- draft
+- published
+- active
+- paused
+- cancelled
+- finished
 
-### Phase G - Long term systems and governance
+### C3. Organizer Hunt list
+Status: ✅ Complete
 
-- G1. Build the Hunt Passport. Show a signed-in participant's completed Hunts and earned records from saved results. Keep sample/demo history separate from real participation.
-- G2. Build mission history. Let participants revisit completed missions and permitted discoveries. Reuse the stored progress and results, with clear rules about when solutions become visible.
-- G3. Add achievements. Define a small set of achievement conditions based on recorded participation. Award each achievement once and show why it was earned.
-- G4. Manage organizer rewards. Implement the agreed organizer reward rules and assignment flow. Link awards to saved Hunt results and distinguish configured rewards from rewards actually granted.
-- G5. Track physical prizes. Save prize stock, reservations and fulfillment status. Prevent assigning more items than are available and define who may adjust inventory.
-- G6. Connect Creator Studio. Save template drafts from the existing creator screens. Support editing, validation and preview without changing templates already used by active Hunts.
-- G7. Submit templates for review. Let a creator submit a specific draft version and see its review status. Preserve the submitted version and any requested changes.
-- G8. Implement admin approval. Let authorized admins approve, reject or request changes with a reason. Only approved versions should become available for organizer selection.
-- G9. Connect the Admin Console. Replace mock administration data with permission-protected functions for users, templates, Hunts and alerts. Record important administrative changes and add controls only as their backend behavior is ready.
+### C4. Publish-readiness authority
+Status: ✅ Complete
 
-Implement Phase G in prioritized small steps after the first complete Hunt is reliable; it remains part of the roadmap.
+Backend validates persisted configuration before publication.
 
-### Pilot check
+---
 
-Run one organizer and independent participant sessions through create, join, start, play, help and results on the intended phones. Record problems and resolve blockers before expanding the feature set.
+## Phase D — Organizer Hunt setup
 
-## 8. First milestone - Real login
+Status: ✅ Complete
 
-Phase A completion: a real user opens the deployed website, signs in through the backend, accesses an allowed screen, stays identified after reload, and signs out. No part of this path is simulated.
+### D1. General Setup
+Status: ✅ Complete
 
-```text
-Open website -> Sign in -> Backend checks account
-             -> Allowed screen -> Reload -> Sign out
-```
+### D2. Template selection + snapshot
+Status: ✅ Complete
 
-Phase A is not complete until it is validated on the real deployed FE/BE environment.
+### D3. Supported pilot options
+Status: ✅ Complete
 
-## 9. Frontend migration principle
+### D4. Rewards configuration
+Status: ✅ Complete
 
-The FE already contains useful mock data and prototype behavior under src/data and related components.
+Persisted:
+- leaderboard rewards
+- predefined Special Awards
+- provider
+- physical/virtual distinction
+- quantities
 
-Do not remove all mock data at once.
+Rewards are optional for publish readiness.
 
-For each feature:
+### D5. Review
+Status: ✅ Complete
 
-```text
-Existing screen -> Working API -> Saved PostgreSQL data
-                -> Connect screen -> Test deployed result
-```
+### D6. Publish
+Status: ✅ Complete
 
-This lets the prototype remain visually usable while simulated behavior is progressively replaced with real behavior.
+### D7. Access code/link
+Status: ✅ Complete
 
-## 10. Backend development principle
+Important boundary:
 
-Keep the existing Express, PostgreSQL and JWT foundation. Improve the parts that need repair without replacing the whole backend.
+Phase D completes Hunt configuration/publication, not the full Organizer product.
 
-For every database-backed feature:
+Still pending:
+- live monitor
+- supervisors
+- PANIC/help
+- custom Hunt requests
+- live operational controls
+- final results/reward awarding
 
-```text
-Define the small change -> Record the migration
-                       -> Add API and tests
-                       -> Connect the FE
-                       -> Verify saved results
-```
+---
 
-Do not change database tables manually without recording the same change in the backend repository. Check a backup before the first migration.
+## Phase E — Professional account lifecycle
 
-## 11. Tedix account linkage
+Status: 🟡 In progress
 
-Current participant login accepts a tedixUserId without verifying proof from Tedix. That shortcut must be disabled or corrected before real use.
+This is the immediate implementation phase.
 
-Tedix account linking remains planned. A supplied user ID alone must not grant access.
+### E1. Registered Organizer application
+Status: ✅ Complete
 
-Add verified Tedix sign-in later around the same PostgreSQL user account. Do not create a second identity system.
+### E2. Organizer login
+Status: ✅ Complete
 
-For the first Hunt, agree a normal participant login or a recoverable guest session. The current guest token lasts one hour, shorter than the mock setup duration of 90 minutes.
+### E3. Organizer approval backend
+Status: ✅ Complete
 
-## 12. Development / review workflow
+Admin approval transaction:
+- reuses or creates User
+- grants Organizer role
+- creates Organization
+- adds membership
+- creates one-time activation token
 
-1. Define the next small step and its completion check.
-2. Review the latest code and existing work before making changes.
-3. Confirm any product decision needed for this step.
-4. Prepare a short implementation task using the existing structure.
-5. Implement on a dedicated branch; use simple code and short comments for important rules.
-6. Run the relevant build and tests; review the actual changes.
-7. Correct issues and document any database migration or recovery step.
-8. Merge through the agreed team process and check the deployed result.
-9. Continue only when the step works, or record a focused correction task.
+### E4. Organizer activation backend
+Status: ✅ Complete
 
-## 13. Definition of a good implementation step
+- hashed one-time token
+- expiry
+- bcrypt password for new account
+- existing password preserved for existing user
+- existing roles preserved
 
-- Small enough to understand in one review.
-- Has explicit acceptance criteria.
-- Starts from the actual current repository state, not an assumed blank architecture.
-- Touches only the repository or repositories required for that step.
-- Includes tests where backend behavior or critical frontend logic changes.
-- Builds successfully before PR creation.
-- Can be verified on the deployed site whenever it creates visible behavior.
-- Preserves useful existing structure.
-- Removes legacy/mock behavior only when its replacement is ready.
-- Leaves the code easy for the dev team to read, with comments explaining non-obvious decisions.
+### E5. Real Admin backend login
+Status: ✅ Complete
 
-## 14. Codex prompt guardrail
+### E6. Bootstrap first Admin
+Status: ⬜ Not started
 
-Every implementation prompt should include this rule:
+No public Admin registration.
+
+Create a trusted, controlled bootstrap mechanism.
+
+### E7. Real Admin frontend login
+Status: 🟣 FE mock exists / backend ready
+
+Replace fake Continue to 2FA behavior with POST /api/auth/admin/login and a real session.
+
+For prototype, fake 2FA must not be represented as real security.
+
+### E8. Protect Admin routes
+Status: ⬜ Not started
+
+All /admin/* routes require an authenticated user with authoritative admin role.
+
+### E9. Organizer Applications Admin UI
+Status: 🟠 Backend complete / FE pending
+
+Admin needs:
+- pending list
+- detail
+- approve
+- reject
+- decision status
+
+### E10. Organizer activation frontend
+Status: 🟠 Backend complete / FE pending
+
+Public activation page:
+- token from URL
+- initial password where needed
+- confirmation
+- successful session or Organizer-login redirect
+
+### E11. Organizer onboarding verification
+Status: ⬜ Not started
+
+Verify:
+Apply → pending → Admin login → approve → account/role/org → activate → Organizer login → workspace
+
+### E12. Creator provisioning
+Status: ⬜ Not started
+
+For prototype:
+- no public Creator self-registration
+- Admin provisions/invites Creator
+
+Recommended:
+Admin → invite/create Creator → Creator activation → Creator login
+
+### E13. Creator onboarding verification
+Status: ⬜ Not started
+
+---
+
+## Phase F — Creator template system
+
+Status: 🟣 FE mock exists / backend pending
+
+Creator Studio is visually advanced but still mostly local prototype state.
+
+### F1. Template domain model
+Status: ⬜ Not started
+
+Need:
+- template identity
+- creator/owner
+- lifecycle status
+- metadata
+
+### F2. Template versioning
+Status: ⬜ Not started
+
+Suggested states:
+- draft
+- submitted
+- changes_requested
+- approved
+- rejected
+- archived
+
+Approved versions are immutable.
+
+### F3. Template Setup persistence
+Status: ⬜ Not started
+
+Persist:
+- name
+- description
+- category
+- age range
+- duration
+- language
+- participant range
+- team-size support
+- format support
+- environment/accessibility
+- equipment
+- difficulty policy
+- theme
+- mission
+- briefing
+
+### F4. Hunt Features persistence
+Status: ⬜ Not started
+
+Persist reusable defaults for:
+- personal challenge
+- team challenge
+- navigation
+- route/positions
+- final challenge
+- other approved mockup feature blocks
+
+### F5. Checkpoint/challenge model
+Status: ⬜ Not started
+
+Represent:
+- order
+- title
+- prompt
+- type
+- options
+- answer definition
+- hints
+- solution/reveal rules
+- personal/team behavior
+
+### F6. Fixed route and location model
+Status: ⬜ Not started
+
+Persist:
+- route points
+- checkpoint coordinates
+- detection radius
+- ordering
+- FinishPoint
+
+### F7. Safety verification
+Status: ⬜ Not started
+
+### F8. Answers, hints and solutions
+Status: ⬜ Not started
+
+Sensitive answer material stays backend-side where appropriate.
+
+### F9. Participant journey preview
+Status: ⬜ Not started
+
+Preview uses persisted template-version data.
+
+### F10. Template validation
+Status: ⬜ Not started
+
+Backend-authoritative readiness before submission.
+
+### F11. Submit version to Admin
+Status: ⬜ Not started
+
+Submission locks/preserves the reviewed version.
+
+### F12. Real Creator Studio list/status
+Status: ⬜ Not started
+
+Replace mock counts/list with real:
+- Drafts
+- Changes requested
+- Submitted
+- Approved
+
+---
+
+## Phase G — Admin template governance
+
+Status: 🟣 FE mock exists / backend pending
+
+### G1. Pending template review list
+Status: ⬜ Not started
+
+### G2. Review submitted version
+Status: ⬜ Not started
+
+Admin sees:
+- metadata
+- challenges
+- route
+- safety
+- preview
+- validation result
+
+### G3. Request changes
+Status: ⬜ Not started
+
+### G4. Reject template
+Status: ⬜ Not started
+
+### G5. Approve template version
+Status: ⬜ Not started
+
+### G6. DB-backed approved template catalog
+Status: ⬜ Not started
+
+Replace static backend template catalog as final authority.
+
+### G7. Organizer consumes approved template version
+Status: 🟡 Partially prepared
+
+D2 already stores version/snapshot.
+
+Future:
+- catalog comes from approved DB versions
+- Hunt snapshot remains immutable
+
+---
+
+## Phase H — Participant enrollment and team formation
+
+Status: 🟡 Structural DB foundation exists / runtime pending
+
+### H1. Resolve Hunt access code
+Status: ✅ Complete
+
+### H2. Participant enrollment
+Status: ⬜ Not started
+
+Requirements:
+- real participant/guest identity
+- save Hunt membership
+- idempotent repeated join
+- capacity enforcement
+
+### H3. Enrollment availability rules
+Status: ⬜ Not started
+
+Handle:
+- unknown code
+- closed enrollment
+- cancelled Hunt
+- finished Hunt
+- full capacity
+
+### H4. Team creation/assignment
+Status: ⬜ Not started
+
+### H5. Team lobby
+Status: ⬜ Not started
+
+### H6. Readiness
+Status: ⬜ Not started
+
+### H7. Start gate
+Status: ⬜ Not started
+
+### H8. Session recovery/reconnect
+Status: ⬜ Not started
+
+---
+
+## Phase I — Checkpoint runtime
+
+Status: 🟣 FE mock exists / backend pending
+
+Implement one complete checkpoint before scaling to the full mission.
+
+### I1. Checkpoint runtime model
+Status: ⬜ Not started
+
+### I2. Participant progress state
+Status: ⬜ Not started
+
+### I3. Answer submission
+Status: ⬜ Not started
+
+### I4. Backend validation
+Status: ⬜ Not started
+
+### I5. Hint use
+Status: ⬜ Not started
+
+### I6. Personal/team contribution
+Status: ⬜ Not started
+
+Replace simulated teammates/readiness.
+
+### I7. Score events
+Status: ⬜ Not started
+
+Use auditable score events rather than opaque browser-only totals.
+
+### I8. Idempotency
+Status: ⬜ Not started
+
+Prevent duplicate scoring on retries/double taps/concurrent team actions.
+
+### I9. Restore progress
+Status: ⬜ Not started
+
+### I10. Extend to all Signal checkpoints
+Status: ⬜ Not started
+
+Only after one checkpoint works across independent sessions.
+
+### I11. FinishPoint / final puzzle
+Status: ⬜ Not started
+
+---
+
+## Phase J — Live Hunt operations
+
+Status: 🟣 Organizer Monitor mock exists / backend pending
+
+### J1. Shared Hunt live state
+Status: ⬜ Not started
+
+Participant and Organizer read the same start/pause/resume/cancel/finish state.
+
+### J2. Real Organizer Monitor
+Status: ⬜ Not started
+
+Replace mock:
+- teams
+- scores
+- checkpoint position/progress
+- status
+
+### J3. Live lifecycle controls
+Status: ⬜ Not started
+
+### J4. Supervisor assignment
+Status: ⬜ Not started
+
+### J5. Help request
+Status: ⬜ Not started
+
+### J6. PANIC / safety incident
+Status: ⬜ Not started
+
+Persist:
+- team
+- Hunt step
+- optional location with permission
+- incident state
+
+### J7. Acknowledge/resolve
+Status: ⬜ Not started
+
+### J8. Network-loss fallback
+Status: ⬜ Not started
+
+---
+
+## Phase K — Results and rewards runtime
+
+Status: 🟡 Reward configuration complete / runtime pending
+
+### K1. Final score aggregation
+Status: ⬜ Not started
+
+### K2. Leaderboard
+Status: ⬜ Not started
+
+### K3. Final results
+Status: ⬜ Not started
+
+### K4. Special Award calculation
+Status: ⬜ Not started
+
+### K5. Reward assignment
+Status: ⬜ Not started
+
+Distinguish:
+- configured reward
+- calculated winner
+- actually granted reward
+
+### K6. Physical-prize eligibility
+Status: ⬜ Not started
+
+---
+
+## Phase L — Admin operational systems
+
+Status: 🟣 FE mock exists / mostly backend pending
+
+Implement each subsystem only when the underlying domain exists.
+
+### L1. Users & Roles
+Status: ⬜ Not started
+
+### L2. Hunt oversight
+Status: ⬜ Not started
+
+### L3. Safety Alerts
+Status: ⬜ Not started
+
+Depends on Phase J help/PANIC.
+
+### L4. Physical Reward Inventory
+Status: 🟣 FE mock exists / backend pending
+
+Need:
+- stock
+- reservation
+- hidden prize identity
+- fulfillment
+- quantity controls
+
+### L5. Platform Settings
+Status: ⬜ Not started
+
+Only true global configuration belongs here.
+
+### L6. Audit Log
+Status: ⬜ Not started
+
+Audit important privileged actions:
+- role changes
+- approvals
+- template decisions
+- inventory changes
+- safety actions
+- sensitive settings
+
+---
+
+## Phase M — Participant long-term systems
+
+Status: 🟣 FE concepts/mock exist / backend pending
+
+### M1. Hunt Passport
+Status: ⬜ Not started
+
+### M2. Mission History
+Status: ⬜ Not started
+
+### M3. Achievements
+Status: ⬜ Not started
+
+### M4. Collectibles / virtual rewards
+Status: ⬜ Not started
+
+### M5. Long-term participant profile
+Status: ⬜ Not started
+
+All long-term records derive from real completed Hunt/results data.
+
+---
+
+## Phase N — Custom Hunt request workflow
+
+Status: 🟣 FE mock exists / backend pending
+
+Mockup flow:
+
+Organizer
+→ Ask for a new Hunt
+→ Admin review
+→ Creator assignment
+→ Creator builds template
+→ Admin approves
+→ Organizer receives it
+
+Implement after Creator/Admin template lifecycle exists.
+
+### N1. Persist custom request
+Status: ⬜ Not started
+
+### N2. Admin triage
+Status: ⬜ Not started
+
+### N3. Assign Creator
+Status: ⬜ Not started
+
+### N4. Creator builds requested template
+Status: ⬜ Not started
+
+### N5. Admin review
+Status: ⬜ Not started
+
+### N6. Return approved template to Organizer
+Status: ⬜ Not started
+
+---
+
+## 11. Independent Organizer — unresolved architecture
+
+Status: ⚠ Explicitly unresolved
+
+The FE currently has prototype behavior using ?mode=independent, allowing selected setup routes to bypass normal registered Organizer flow.
+
+This must not silently become permanent production architecture.
+
+Possible future models:
+- temporary local-only Hunt
+- guest/restricted Organizer identity
+- lightweight account
+- require registration before publish
+- another approved product rule
+
+Until decided:
+- keep it isolated
+- do not expand privileges
+- do not weaken backend authorization
+
+---
+
+## 12. Creator provisioning policy
+
+For the current prototype:
+
+- no public Creator self-registration
+- Creator access is privileged
+- Admin provisions/invites Creator
+- Creator then uses normal authentication
+
+A public Creator application workflow should only be added if explicitly required later.
+
+---
+
+## 13. Admin bootstrap policy
+
+There must never be a public Register as Admin flow.
+
+The first Admin account is created through a trusted operational mechanism.
+
+After bootstrap:
+
+Trusted bootstrap
+→ First Admin
+→ approve Organizers
+→ provision Creators
+→ manage future privileged roles
+
+---
+
+## 14. Template lifecycle contract
+
+Future Creator/Admin template architecture:
+
+Template Draft
+→ Submitted Version
+→ Admin Review
+→ Approved Version
+→ Organizer selects version
+→ Hunt stores immutable snapshot
+
+Never let an edited template retroactively change a published/active Hunt.
+
+---
+
+## 15. Participant runtime implementation rule
+
+Do not implement all seven checkpoints at once.
+
+First prove one checkpoint end-to-end with:
+- multiple real participant sessions
+- saved state
+- backend answer validation
+- team contribution
+- backend scoring
+- reconnect/recovery
+- Organizer visibility
+
+Then extend the pattern.
+
+---
+
+## 16. Rewards architecture boundary
+
+Already implemented:
+
+Organizer configures possible rewards.
+
+Not yet implemented:
+
+Gameplay produces results
+→ winners calculated
+→ Special Awards calculated
+→ reward assignment
+→ physical fulfillment
+
+Reward configuration is not reward awarding.
+
+---
+
+## 17. Operational / technical debt
+
+### ⚠ Backup and restore
+
+Confirm:
+- regular PostgreSQL backup
+- tested restore
+- owner
+- retention
+
+### ⚠ Server access
+
+Preferred governance:
+- read-only SSH diagnostic access may be useful
+- dev team remains server-change checkpoint
+- infrastructure changes documented
+- GitHub remains source of truth for application code
+
+### ⚠ Legacy schema duplication
+
+Backend still contains transitional schema definitions outside migrations. Migration history remains authoritative. Avoid expanding duplicated schema ownership.
+
+### ⚠ Dependency/security maintenance
+
+Address dependency/audit issues in dedicated maintenance work, not inside unrelated product PRs.
+
+### ⚠ Real 2FA
+
+Current Admin mockup contains fake 2FA. Do not represent it as real security.
+
+For prototype:
+- remove/bypass fake 2FA cleanly
+- implement real 2FA later as a dedicated security feature if required
+
+---
+
+## 18. Standard implementation workflow
+
+ChatGPT Web / Architect
+→ define ONE implementation step
+→ exact Codex task
+→ Codex implements + tests
+→ PR
+→ Architect reviews diff/tests/acceptance criteria
+→ User merges
+→ GitHub Actions
+→ deploy
+→ run new migration if required
+→ restart/reload if required
+→ verify deployed behavior
+→ NEXT STEP
+
+User controls final merge.
+
+Never make untracked manual DB schema changes.
+
+---
+
+## 19. Definition of a good implementation step
+
+Every step should:
+
+- solve one clear product/architecture objective
+- fit current repository structure
+- preserve approved UX where practical
+- define API contract before FE wiring
+- use tracked DB migration for schema changes
+- enforce permissions in backend
+- include tests
+- avoid unrelated refactors
+- be deployable
+- have an explicit deployed verification action
+
+Codex guardrail:
 
 Implement only this step. Keep the existing structure, avoid unnecessary abstractions, and use short, readable code. Add comments for business rules, permission checks and important database behavior. Do not refactor unrelated modules.
 
-## 15. Immediate next step
+---
 
-A1 - Confirm the deployed setup is the immediate next step. Resolve the website/code mismatch and confirm the backend database connection before making feature changes.
+# 20. Recommended implementation order from current state
 
-After that:
+1. Finish Professional Account Lifecycle
+   - bootstrap first Admin
+   - real Admin FE login
+   - Admin guards
+   - Organizer approval UI
+   - Organizer activation FE
+   - Creator provisioning
 
-1. Complete A2-A4: tracked database changes, user validation and the required backend login fixes.
-2. Complete A5-A6: connect the frontend API client and real login screens to the current backend.
-3. Verify the complete deployed login path:
+2. Build Creator Template Persistence + Versioning
 
-```text
-FE -> BE -> PostgreSQL -> authenticated FE session
-```
+3. Build Admin Template Review / Approval
 
-Then add permissions and one working Hunt. Proposed first pilot: Signal Cluj Napoca, four-person teams and one difficulty level. Confirm these choices before gameplay implementation.
+4. Replace static approved-template authority with real approved DB template versions
+
+5. Verify Organizer selects a real approved Creator template
+
+6. Build Participant enrollment/team formation
+
+7. Build ONE complete checkpoint runtime
+
+8. Extend to full Signal mission
+
+9. Connect live Organizer monitoring + Help/PANIC
+
+10. Build results + reward-awarding runtime
+
+11. Add Admin operational systems as their domains become real
+
+12. Add Passport/history/achievements
+
+13. Add Custom Hunt request workflow
+
+14. Resolve Independent Organizer production architecture
+
+This order avoids building participant gameplay permanently around hard-coded Signal content.
+
+---
+
+# 21. Immediate next steps
+
+## Immediate 1 — E6 First Admin bootstrap
+
+Completion check:
+
+Admin account exists in PostgreSQL
+→ user_roles contains admin
+→ password is hashed
+→ no public Admin registration exists
+
+## Immediate 2 — E7 Real Admin FE login
+
+Connect existing Admin sign-in to POST /api/auth/admin/login.
+
+Remove fake 2FA dependency from prototype flow.
+
+## Immediate 3 — E8 Admin route protection
+
+Protect every /admin/* route.
+
+## Immediate 4 — E9 Organizer application Admin UI
+
+Use already implemented backend approval endpoints.
+
+## Immediate 5 — E10 Organizer activation FE
+
+Allow approved Organizer to complete activation and enter the real Organizer workspace.
+
+## Immediate 6 — E12 Creator provisioning
+
+Create controlled Admin→Creator provisioning.
+
+After these professional identity flows are complete, begin Phase F — Creator Template System.
+
+---
+
+# 22. Prototype success milestones
+
+## Milestone 1 — Professional platform access
+
+Admin bootstrap/login works
+→ Organizer apply/approve/activate/login works
+→ Creator provision/login works
+
+## Milestone 2 — Real content supply chain
+
+Creator creates template
+→ Admin approves version
+→ Organizer selects approved version
+→ Hunt snapshot persists
+
+## Milestone 3 — Real participant Hunt
+
+Participant joins
+→ team forms
+→ Hunt starts
+→ one checkpoint works
+→ progress/scoring persists
+
+## Milestone 4 — Complete Signal pilot
+
+Full mission
+→ live monitor
+→ Help/PANIC
+→ final results
+→ rewards
+
+## Milestone 5 — Long-term platform loop
+
+Passport
+→ history
+→ achievements
+→ repeat participation
+
+---
+
+# 23. Final governing rule
+
+Creator creates
+→ Admin governs
+→ Organizer configures
+→ Participant plays
+→ Backend records truth
+
+Every new implementation step should strengthen that chain without bypassing backend authority or replacing real persistence with frontend simulation.
