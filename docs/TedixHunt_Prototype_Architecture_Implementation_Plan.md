@@ -1,6 +1,6 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 2.1 | Updated 22 September 2026
+Version 2.2 | Updated 22 September 2026
 
 This document evolves Version 2.0 with the current professional-account implementation state and a complete Admin account lifecycle for the prototype.
 
@@ -183,6 +183,7 @@ Tracked migrations currently reach:
 - 008_hunt_rewards
 - 009_organizer_applications
 - 010_organizer_approval
+- 011_professional_activation_tokens
 
 Current important tables include:
 
@@ -199,6 +200,7 @@ Current important tables include:
 - hunt_leaderboard_rewards
 - hunt_special_awards
 - refresh_tokens
+- professional_activation_tokens
 
 Major future data areas still missing:
 
@@ -246,6 +248,9 @@ Already-real frontend foundations include:
 - role-based guards
 - Admin login connected to the real backend
 - Admin route protection merged in FE PR #28
+- Admin Account Security / own-password change
+- Admin list, provisioning and activation UI
+- grouped collapsible Admin left sidebar
 - organizations API
 - Hunt API
 - Hunt template metadata API
@@ -265,6 +270,7 @@ The active application uses src/main.tsx and src/routes/router.tsx.
 Current main backend domains:
 
 - /api/auth
+- /api/admin/users
 - /api/organizer-applications
 - /api/organizations
 - /api/hunt-templates
@@ -533,39 +539,50 @@ Merged in FE PR #28:
 - misleading `2FA verified` UI is removed
 
 ### E9. Admin account security
-Status: ⬜ Not started
+Status: ✅ Complete
 
-The first bootstrapped Admin must be able to maintain their own credentials without server intervention.
+The first bootstrapped Admin can maintain their own credentials without server intervention.
 
 #### E9.1 Change own password
+Status: ✅ Complete
 
-Recommended shared authenticated endpoint:
+Implemented shared authenticated endpoint:
 
 `POST /api/auth/change-password`
 
-Rules:
+Behavior:
 - authenticated non-guest account
-- verify current password with bcrypt
-- validate the new password policy
-- store only a new bcrypt hash
-- never return password material
-- invalidate existing refresh sessions after a successful password change
-- require a fresh login afterward
+- verifies the current password with bcrypt
+- validates the new password policy
+- stores only a new bcrypt hash
+- never returns password material
+- scoped to the current authenticated identity
 
-This should be a shared account-security capability usable later by Organizer, Creator and password-backed Participant accounts. Do not create a special `/api/admin/change-password` endpoint.
+This is a shared account-security capability and is not Admin-specific.
 
 #### E9.2 Session revocation after password change
+Status: ✅ Complete
 
-A password change must invalidate existing refresh sessions so old sessions cannot continue indefinitely.
+A successful password change:
+- revokes the user's existing refresh sessions atomically with the password update
+- does not issue replacement tokens
+- requires a fresh login afterward
 
 #### E9.3 Account-security frontend
+Status: ✅ Complete
 
-Add an Admin Account Security/Profile surface that allows the current Admin to change their own password.
+Implemented Admin Account Security UI:
+- Current password
+- New password
+- Confirm new password
+- safe validation/error handling
+- local session is cleared after success
+- redirect to Admin sign-in for fresh authentication
 
-Password management belongs to authentication/account security, not to arbitrary Users & Roles editing.
+Password management remains an authentication/account-security function, not arbitrary Users & Roles editing.
 
 ### E10. Additional Admin provisioning
-Status: ⬜ Not started
+Status: ✅ Complete
 
 Normal additional-Admin creation must move into the product. Do not use the bootstrap command as the routine Admin-management workflow.
 
@@ -580,43 +597,53 @@ Existing Admin
 → Admin login works
 
 #### E10.1 Admin list
+Status: ✅ Complete
 
-Admin can list current Admin identities and their activation/account state.
+Admin can list current Admin identities and their activation/account state through the real backend and Admin UI.
 
 #### E10.2 Grant Admin to an existing user
+Status: ✅ Complete
 
 If the normalized email already belongs to a password-backed User:
-- preserve the existing password
-- preserve all existing roles
-- add `admin` idempotently
+- existing password is preserved
+- all existing roles are preserved
+- `admin` is added idempotently
 
 #### E10.3 Invite/provision a new Admin
+Status: ✅ Complete
 
 If no User exists:
-- create a credential-less professional identity
-- assign `admin`
-- create a hashed, one-time, expiring activation token
-- never ask the inviting Admin to choose the new Admin's permanent password
+- a credential-less professional identity is created
+- `admin` is assigned authoritatively
+- a hashed, one-time, expiring activation token is created
+- plaintext activation token is returned only once for the current prototype handoff
+- the inviting Admin never chooses the new Admin's permanent password
 
 #### E10.4 New Admin activation
+Status: ✅ Complete
 
-The invited Admin follows the activation link and chooses their own password.
+The invited Admin follows the public activation link, chooses their own password and receives the normal authenticated session on success.
 
 #### E10.5 Last-Admin protection
+Status: ✅ Complete for current backend capability
 
-Backend must never allow removal/deactivation of the final active Admin.
+Backend role-removal logic protects the final active Admin using a serialized check.
 
-Also prevent accidental self-lockout when the acting Admin would remove the only remaining Admin capability.
+The platform must not allow removal/deactivation of the final active Admin or accidental self-lockout when only one active Admin capability remains.
+
+There is no Admin-removal UI yet; full role-management UI belongs to Phase L.
 
 #### E10.6 Two-Admin lifecycle verification
+Status: ✅ Complete
 
-Verify:
+Verified on the deployed development environment:
 First Admin login
 → provision second Admin
 → second Admin activation
 → second Admin login
-→ both identities retain their other roles
-→ last-Admin protection works
+→ both Admin identities appear active
+→ existing roles/credentials remain preserved by the implementation
+→ last-Admin protection remains enforced in backend logic/tests
 
 The bootstrap `--allow-additional-admin` path remains recovery/maintenance only.
 
@@ -1166,13 +1193,16 @@ There must never be a public Register as Admin flow.
 
 The first Admin account is created through a trusted operational mechanism.
 
-After bootstrap:
+Bootstrap is for the first Admin and recovery/maintenance only.
 
-Trusted bootstrap
-→ First Admin
-→ approve Organizers
-→ provision Creators
-→ manage future privileged roles
+Normal additional Admin creation is handled through the product flow:
+
+Existing Admin
+→ provision/invite Admin
+→ activation when required
+→ normal Admin login
+
+The bootstrap `--allow-additional-admin` option remains an explicit recovery/maintenance escape hatch, not the routine Admin-management workflow.
 
 ---
 
@@ -1308,8 +1338,8 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 # 20. Recommended implementation order from current state
 
 1. Finish Professional Account Lifecycle
-   - Admin own-password change and session revocation (E9)
-   - normal additional-Admin provisioning/activation (E10)
+   - ✅ Admin own-password change and session revocation (E9)
+   - ✅ normal additional-Admin provisioning/activation (E10)
    - Organizer Applications Admin UI (E11)
    - Organizer activation FE (E12)
    - verify Organizer onboarding (E13)
@@ -1349,31 +1379,26 @@ This order avoids building participant gameplay permanently around hard-coded Si
 
 # 21. Immediate next steps
 
-## Completed foundation — E6, E7 and E8
+## Completed professional Admin foundation — E6 through E10
 
-E6 First Admin bootstrap is complete.
+Complete:
+- E6 First Admin bootstrap
+- E7 Real Admin frontend login
+- E8 Admin route protection
+- E9 Admin account security
+- E10 Additional Admin provisioning/activation and two-Admin lifecycle verification
 
-E7 Real Admin FE login is complete.
+The Admin Console now uses a grouped collapsible left sidebar for desktop-first navigation.
 
-E8 Admin route protection is merged in FE PR #28.
-
-## Immediate 1 — E9 Admin account security
-
-Implement authenticated own-password change, revoke existing refresh sessions after change, and add the minimal Account Security frontend.
-
-## Immediate 2 — E10 Additional Admin provisioning
-
-Build the normal Admin→Admin provisioning/activation flow with existing-user reuse, one-time activation for new identities and last-Admin protection.
-
-## Immediate 3 — E11 Organizer Applications Admin UI
+## Immediate 1 — E11 Organizer Applications Admin UI
 
 Use the already implemented backend Organizer application/approval endpoints.
 
-## Immediate 4 — E12 + E13 Organizer activation and onboarding verification
+## Immediate 2 — E12 + E13 Organizer activation and onboarding verification
 
 Allow approved Organizers to complete activation and verify the complete application → approval → activation → login → workspace flow.
 
-## Immediate 5 — E14 + E15 + E16 Creator lifecycle
+## Immediate 3 — E14 + E15 + E16 Creator lifecycle
 
 Create controlled Admin→Creator provisioning, activation/account lifecycle and end-to-end onboarding verification.
 
@@ -1386,8 +1411,8 @@ After these professional identity flows are complete, begin Phase F — Creator 
 ## Milestone 1 — Professional platform access
 
 First Admin bootstrap/login works
-→ Admin can maintain their own password
-→ Admin can provision another Admin safely
+→ ✅ Admin can maintain their own password
+→ ✅ Admin can provision another Admin safely
 → Organizer apply/approve/activate/login works
 → Creator provision/activate/login works
 
