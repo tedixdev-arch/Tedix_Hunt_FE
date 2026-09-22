@@ -16,7 +16,7 @@ import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTemplateReviewPage } from '../pages/AdminConsole'
 import { ProfessionalSignInPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
-import { canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
+import { canAccessAdmin, canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
 
 function RequireAuthFlow({ children, entry, canAccess }: { children: ReactNode; entry: string; canAccess: typeof canAccessCreator }) {
   const { user, isBootstrapping } = useAuth()
@@ -28,6 +28,21 @@ function CreatorEntry() {
   const { user, isBootstrapping } = useAuth()
   if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
   return canAccessCreator(user) ? <Navigate replace to="/creator" /> : <ProfessionalSignInPage type="creator" />
+}
+
+function AdminEntry() {
+  const { user, isBootstrapping } = useAuth()
+  if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
+  return canAccessAdmin(user) ? <Navigate replace to="/admin" /> : <ProfessionalSignInPage type="admin" />
+}
+
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const { user, isBootstrapping } = useAuth()
+  const location = useLocation()
+  if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
+  if (!user) return <Navigate replace state={{ from: location.pathname }} to="/admin/sign-in" />
+  if (!canAccessAdmin(user)) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-black">Admin access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Admin access.</p></div></main>
+  return children
 }
 
 function RequireOrganizer({ children, allowIndependent = false }: { children: ReactNode; allowIndependent?: boolean }) {
@@ -143,7 +158,7 @@ export const router = createHashRouter([
   },
   {
     path: '/admin/sign-in',
-    element: <ProfessionalSignInPage type="admin" />,
+    element: <AdminEntry />,
   },
   {
     path: '/admin/verify',
@@ -151,38 +166,38 @@ export const router = createHashRouter([
   },
   {
     path: '/admin',
-    element: <AdminDashboardPage />,
+    element: <RequireAdmin><AdminDashboardPage /></RequireAdmin>,
   },
   {
     path: '/admin/reviews/template-1',
-    element: <AdminTemplateReviewPage />,
+    element: <RequireAdmin><AdminTemplateReviewPage /></RequireAdmin>,
   },
   {
     path: '/admin/templates',
-    element: <AdminSectionPage section="templates" />,
+    element: <RequireAdmin><AdminSectionPage section="templates" /></RequireAdmin>,
   },
   {
     path: '/admin/hunts',
-    element: <AdminSectionPage section="hunts" />,
+    element: <RequireAdmin><AdminSectionPage section="hunts" /></RequireAdmin>,
   },
   {
     path: '/admin/rewards',
-    element: <AdminRewardInventoryPage />,
+    element: <RequireAdmin><AdminRewardInventoryPage /></RequireAdmin>,
   },
   {
     path: '/admin/alerts',
-    element: <AdminSectionPage section="alerts" />,
+    element: <RequireAdmin><AdminSectionPage section="alerts" /></RequireAdmin>,
   },
   {
     path: '/admin/users',
-    element: <AdminSectionPage section="users" />,
+    element: <RequireAdmin><AdminSectionPage section="users" /></RequireAdmin>,
   },
   {
     path: '/admin/settings',
-    element: <AdminSectionPage section="settings" />,
+    element: <RequireAdmin><AdminSectionPage section="settings" /></RequireAdmin>,
   },
   {
     path: '/admin/audit',
-    element: <AdminSectionPage section="audit" />,
+    element: <RequireAdmin><AdminSectionPage section="audit" /></RequireAdmin>,
   },
 ])

@@ -16,6 +16,10 @@ export function canAccessOrganizer(user: PublicUser | null) {
   return hasRole(user, 'organizer')
 }
 
+export function canAccessAdmin(user: PublicUser | null) {
+  return hasRole(user, 'admin')
+}
+
 export function canAccessParticipant(user: PublicUser | null) {
   return user !== null && (hasRole(user, 'participant') || user.isGuest)
 }
