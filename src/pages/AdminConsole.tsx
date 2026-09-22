@@ -43,7 +43,7 @@ function NavigationIcon({name}:{name:string}) {
 }
 
 export function AdminShell({active,children}:{active:string;children:ReactNode}) {
-  const [pendingOrganizerApplications, setPendingOrganizerApplications] = useState(0)
+  const [hasPendingOrganizerApplications, setHasPendingOrganizerApplications] = useState(false)
   const [collapsed,setCollapsed] = useState(() => {
     const saved = window.localStorage.getItem(sidebarPreferenceKey)
     return saved === null ? window.matchMedia('(max-width: 767px)').matches : saved === 'true'
@@ -54,9 +54,9 @@ export function AdminShell({active,children}:{active:string;children:ReactNode})
     const loadPendingCount = async () => {
       try {
         const applications = await organizerApplicationsApi.list('pending')
-        if (active) setPendingOrganizerApplications(applications.length)
+        if (active) setHasPendingOrganizerApplications(applications.length > 0)
       } catch {
-        if (active) setPendingOrganizerApplications(0)
+        if (active) setHasPendingOrganizerApplications(false)
       }
     }
     void loadPendingCount()
@@ -75,9 +75,8 @@ export function AdminShell({active,children}:{active:string;children:ReactNode})
             {!collapsed&&<h2 className="mb-1 px-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{group.label}</h2>}
             <div className="space-y-1">{group.items.map(item=>{
               const isActive=active===item.id
-              const pendingCount = item.id === 'organizer-applications' ? pendingOrganizerApplications : 0
-              const pendingLabel = `${pendingCount} pending Organizer application${pendingCount === 1 ? '' : 's'}`
-              return <Link aria-current={isActive?'page':undefined} aria-label={collapsed?`${item.label}${pendingCount ? `, ${pendingLabel}` : ''}`:undefined} title={collapsed?item.label:undefined} className={`relative flex min-h-11 items-center rounded-lg text-sm font-bold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${collapsed?'justify-center px-2':'gap-3 px-3'} ${isActive?'bg-slate-950 text-white before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-emerald-400':'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`} key={item.id} to={item.path}><NavigationIcon name={item.icon}/>{!collapsed&&<span>{item.label}</span>}{pendingCount > 0 && <span aria-label={pendingLabel} className={`${collapsed?'absolute right-1 top-1 min-w-4 px-1 text-[10px]':'ml-auto min-w-6 px-2 text-xs'} inline-flex h-5 items-center justify-center rounded-full bg-red-600 font-black leading-none text-white`}>{pendingCount > 99 ? '99+' : pendingCount}</span>}</Link>
+              const actionRequired = item.id === 'organizer-applications' && hasPendingOrganizerApplications
+              return <Link aria-current={isActive?'page':undefined} aria-label={collapsed?`${item.label}${actionRequired ? ' — action required' : ''}`:undefined} title={collapsed?item.label:undefined} className={`relative flex min-h-11 items-center rounded-lg text-sm font-bold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${collapsed?'justify-center px-2':'gap-3 px-3'} ${isActive?'bg-slate-950 text-white before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-emerald-400':'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`} key={item.id} to={item.path}><NavigationIcon name={item.icon}/>{!collapsed&&<span>{item.label}</span>}{actionRequired && <span aria-hidden={collapsed} aria-label={collapsed?undefined:'Organizer Applications — action required'} className={`${collapsed?'absolute right-2 top-2':'ml-auto'} h-2 w-2 shrink-0 rounded-full bg-red-600`}/>}</Link>
             })}</div>
           </section>)}
         </nav>

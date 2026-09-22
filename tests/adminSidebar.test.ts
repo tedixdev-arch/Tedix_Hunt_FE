@@ -52,16 +52,18 @@ test('Admin route definitions and guards remain unchanged', async () => {
   }
 })
 
-test('Organizer Applications is the only real action-required sidebar badge', async () => {
+test('Organizer Applications is the only real action-required sidebar dot', async () => {
   const page = await consoleSource()
 
   assert.match(page, /organizerApplicationsApi\.list\('pending'\)/)
-  assert.match(page, /item\.id === 'organizer-applications' \? pendingOrganizerApplications : 0/)
-  assert.match(page, /pendingCount > 0 && <span aria-label=\{pendingLabel\}/)
-  assert.match(page, /pendingCount > 99 \? '99\+' : pendingCount/)
-  assert.match(page, /collapsed\?`\$\{item\.label\}\$\{pendingCount \? `, \$\{pendingLabel\}` : ''\}`:undefined/)
-  assert.match(page, /catch \{\s*if \(active\) setPendingOrganizerApplications\(0\)/)
-  assert.doesNotMatch(page, /item\.id === '(?:alerts|templates)' \? pending/)
+  assert.match(page, /setHasPendingOrganizerApplications\(applications\.length > 0\)/)
+  assert.match(page, /item\.id === 'organizer-applications' && hasPendingOrganizerApplications/)
+  assert.match(page, /actionRequired && <span[\s\S]{0,180}h-2 w-2[\s\S]{0,80}rounded-full bg-red-600/)
+  assert.match(page, /collapsed\?`\$\{item\.label\}\$\{actionRequired \? ' — action required' : ''\}`:undefined/)
+  assert.match(page, /aria-label=\{collapsed\?undefined:'Organizer Applications — action required'\}/)
+  assert.match(page, /catch \{\s*if \(active\) setHasPendingOrganizerApplications\(false\)/)
+  assert.doesNotMatch(page, /99\+|pendingCount|pendingLabel/)
+  assert.doesNotMatch(page, /item\.id === '(?:alerts|templates)' && hasPending/)
 })
 
 test('Organizer application decisions notify AdminShell to refresh its count', async () => {
