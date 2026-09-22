@@ -16,6 +16,7 @@ import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTemplateReviewPage } from '../pages/AdminConsole'
 import { AdminAccountSecurityPage } from '../pages/AdminAccountSecurity'
 import { AdminUsersPage } from '../pages/AdminUsers'
+import { AdminOrganizerApplicationsPage } from '../pages/AdminOrganizerApplications'
 import { AdminActivationPage } from '../pages/AdminActivation'
 import { ProfessionalSignInPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
@@ -198,6 +199,10 @@ export const router = createHashRouter([
   {
     path: '/admin/alerts',
     element: <RequireAdmin><AdminSectionPage section="alerts" /></RequireAdmin>,
+  },
+  {
+    path: '/admin/organizer-applications',
+    element: <RequireAdmin><AdminOrganizerApplicationsPage /></RequireAdmin>,
   },
   {
     path: '/admin/users',
