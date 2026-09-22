@@ -14,7 +14,7 @@ import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerS
 import { CustomHuntEditorPage } from '../pages/CustomHuntEditor'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTemplateReviewPage } from '../pages/AdminConsole'
-import { AdminVerificationPage, ProfessionalSignInPage } from '../pages/ProfessionalAccess'
+import { ProfessionalSignInPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
 import { canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
 
@@ -147,7 +147,7 @@ export const router = createHashRouter([
   },
   {
     path: '/admin/verify',
-    element: <AdminVerificationPage />,
+    element: <Navigate replace to="/admin/sign-in" />,
   },
   {
     path: '/admin',
