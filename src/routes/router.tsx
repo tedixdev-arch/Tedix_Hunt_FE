@@ -15,6 +15,8 @@ import { CustomHuntEditorPage } from '../pages/CustomHuntEditor'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTemplateReviewPage } from '../pages/AdminConsole'
 import { AdminAccountSecurityPage } from '../pages/AdminAccountSecurity'
+import { AdminUsersPage } from '../pages/AdminUsers'
+import { AdminActivationPage } from '../pages/AdminActivation'
 import { ProfessionalSignInPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
 import { canAccessAdmin, canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
@@ -162,6 +164,10 @@ export const router = createHashRouter([
     element: <AdminEntry />,
   },
   {
+    path: '/admin/activate',
+    element: <AdminActivationPage />,
+  },
+  {
     path: '/admin/verify',
     element: <Navigate replace to="/admin/sign-in" />,
   },
@@ -195,7 +201,7 @@ export const router = createHashRouter([
   },
   {
     path: '/admin/users',
-    element: <RequireAdmin><AdminSectionPage section="users" /></RequireAdmin>,
+    element: <RequireAdmin><AdminUsersPage /></RequireAdmin>,
   },
   {
     path: '/admin/settings',

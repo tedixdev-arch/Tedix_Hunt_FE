@@ -54,6 +54,11 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
+export interface ActivateAdminInput {
+  token: string;
+  password: string;
+}
+
 export interface ChangePasswordResponse {
   message: string;
 }
@@ -94,6 +99,10 @@ export class AuthApi {
 
   loginAdmin(input: LoginInput): Promise<AuthResponse> {
     return this.authenticate('/api/auth/admin/login', input);
+  }
+
+  activateAdmin(input: ActivateAdminInput): Promise<AuthResponse> {
+    return this.authenticate('/api/auth/admin/activate', input);
   }
 
   changePassword(input: ChangePasswordInput): Promise<ChangePasswordResponse> {
