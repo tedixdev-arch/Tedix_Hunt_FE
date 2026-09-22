@@ -245,7 +245,7 @@ Already-real frontend foundations include:
 - admin auth
 - role-based guards
 - Admin login connected to the real backend
-- Admin route protection implemented in FE PR #28 and pending merge
+- Admin route protection merged in FE PR #28
 - organizations API
 - Hunt API
 - Hunt template metadata API
@@ -356,17 +356,17 @@ Status: ✅ Complete
 Status: ✅ Complete
 
 ### B3. Frontend role guards
-Status: 🟡 Admin guard implemented / pending merge
+Status: ✅ Complete for current prototype
 
 Real:
 - participant
 - organizer
 - creator
+- admin
 
 Admin:
-- authoritative `user.roles` check implemented in FE PR #28
-- all current `/admin/*` routes protected by `RequireAdmin`
-- PR #28 is pending merge
+- authoritative `user.roles` check merged in FE PR #28
+- all current `/admin/*` routes are protected by `RequireAdmin`
 
 ### B4. Organizations and membership
 Status: ✅ Complete for current prototype
@@ -520,9 +520,9 @@ Implemented:
 - no fake 2FA is represented as real security
 
 ### E8. Protect Admin routes
-Status: 🟡 Implemented in FE PR #28 / pending merge
+Status: ✅ Complete
 
-Implemented in PR #28:
+Merged in FE PR #28:
 - `canAccessAdmin()` uses authoritative `user.roles`
 - authenticated Admins can enter the Admin Console
 - unauthenticated users are redirected to `/admin/sign-in`
@@ -531,9 +531,6 @@ Implemented in PR #28:
 - existing Admin sessions opening the sign-in page are redirected to `/admin`
 - Admin logout returns to Admin sign-in
 - misleading `2FA verified` UI is removed
-
-Completion condition:
-PR #28 merged and deployed verification succeeds.
 
 ### E9. Admin account security
 Status: ⬜ Not started
@@ -1311,7 +1308,6 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 # 20. Recommended implementation order from current state
 
 1. Finish Professional Account Lifecycle
-   - merge/deploy Admin guards (E8)
    - Admin own-password change and session revocation (E9)
    - normal additional-Admin provisioning/activation (E10)
    - Organizer Applications Admin UI (E11)
@@ -1353,33 +1349,31 @@ This order avoids building participant gameplay permanently around hard-coded Si
 
 # 21. Immediate next steps
 
-## Completed foundation — E6 and E7
+## Completed foundation — E6, E7 and E8
 
 E6 First Admin bootstrap is complete.
 
 E7 Real Admin FE login is complete.
 
-## Immediate 1 — Complete E8 Admin route protection
+E8 Admin route protection is merged in FE PR #28.
 
-PR #28 is implemented and CI-validated. Merge, deploy and verify that all current `/admin/*` routes require the authoritative Admin role.
-
-## Immediate 2 — E9 Admin account security
+## Immediate 1 — E9 Admin account security
 
 Implement authenticated own-password change, revoke existing refresh sessions after change, and add the minimal Account Security frontend.
 
-## Immediate 3 — E10 Additional Admin provisioning
+## Immediate 2 — E10 Additional Admin provisioning
 
 Build the normal Admin→Admin provisioning/activation flow with existing-user reuse, one-time activation for new identities and last-Admin protection.
 
-## Immediate 4 — E11 Organizer Applications Admin UI
+## Immediate 3 — E11 Organizer Applications Admin UI
 
 Use the already implemented backend Organizer application/approval endpoints.
 
-## Immediate 5 — E12 + E13 Organizer activation and onboarding verification
+## Immediate 4 — E12 + E13 Organizer activation and onboarding verification
 
 Allow approved Organizers to complete activation and verify the complete application → approval → activation → login → workspace flow.
 
-## Immediate 6 — E14 + E15 + E16 Creator lifecycle
+## Immediate 5 — E14 + E15 + E16 Creator lifecycle
 
 Create controlled Admin→Creator provisioning, activation/account lifecycle and end-to-end onboarding verification.
 
