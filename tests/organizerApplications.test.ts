@@ -46,12 +46,14 @@ test('Admin Organizer application operations use authenticated endpoints and sta
   const api = new OrganizerApplicationsApi(new ApiClient('https://api.example.test', session, fetcher))
 
   await api.list('approved')
+  await api.list('pending')
   await api.list()
   await api.approve('app/1')
   await api.reject('app/1')
 
   assert.deepEqual(calls.map(call => [call.init?.method, call.url]), [
     ['GET', 'https://api.example.test/api/organizer-applications?status=approved'],
+    ['GET', 'https://api.example.test/api/organizer-applications?status=pending'],
     ['GET', 'https://api.example.test/api/organizer-applications'],
     ['POST', 'https://api.example.test/api/organizer-applications/app%2F1/approve'],
     ['POST', 'https://api.example.test/api/organizer-applications/app%2F1/reject'],

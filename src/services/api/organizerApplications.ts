@@ -42,6 +42,13 @@ export interface OrganizerApplicationRejection {
   application: OrganizerApplication;
 }
 
+/** Signals that the Admin action queue may have changed after a review decision. */
+export const organizerApplicationsPendingChangedEvent = 'tedixhunt:organizer-applications-pending-changed';
+
+export function notifyOrganizerApplicationsPendingChanged(): void {
+  window.dispatchEvent(new Event(organizerApplicationsPendingChangedEvent));
+}
+
 export class OrganizerApplicationsApi {
   private readonly client: ApiClient;
 

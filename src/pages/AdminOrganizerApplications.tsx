@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ApiError, organizerApplicationsApi, type OrganizerApplication, type OrganizerApplicationStatus } from '../services/api'
+import { ApiError, notifyOrganizerApplicationsPendingChanged, organizerApplicationsApi, type OrganizerApplication, type OrganizerApplicationStatus } from '../services/api'
 import { AdminShell } from './AdminConsole'
 
 type ApplicationFilter = OrganizerApplicationStatus | 'all'
@@ -84,6 +84,7 @@ export function AdminOrganizerApplicationsPage() {
         const result = await organizerApplicationsApi.reject(selected.id)
         setSelected(result.application)
       }
+      notifyOrganizerApplicationsPendingChanged()
       await loadApplications(filter, true)
     } catch (error) {
       const message = organizerApplicationDecisionError(error)
