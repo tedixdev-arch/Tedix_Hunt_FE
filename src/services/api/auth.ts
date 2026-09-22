@@ -83,6 +83,10 @@ export class AuthApi {
     return this.authenticate('/api/auth/organizer/login', input);
   }
 
+  loginAdmin(input: LoginInput): Promise<AuthResponse> {
+    return this.authenticate('/api/auth/admin/login', input);
+  }
+
   registerParticipant(input: RegisterInput): Promise<AuthResponse> {
     return this.authenticate('/api/auth/participant/register', input);
   }

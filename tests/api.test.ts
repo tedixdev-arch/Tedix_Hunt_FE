@@ -91,6 +91,15 @@ test('organizer login uses the dedicated organizer endpoint and stores its sessi
   assert.deepEqual(session.tokens, { accessToken: 'organizer-a', refreshToken: 'organizer-r' });
 });
 
+test('admin login uses the dedicated admin endpoint and stores its session', async () => {
+  const payload = { user: user({ role: 'admin', roles: ['admin'] }), tokens: { accessToken: 'admin-a', refreshToken: 'admin-r' } };
+  const { client, session, calls } = mockClient([json(payload)]);
+  assert.deepEqual(await new AuthApi(client, session).loginAdmin({ email: 'admin@example.test', password: 'password' }), payload);
+  assert.equal(calls[0].url, 'https://api.example.test/api/auth/admin/login');
+  assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { email: 'admin@example.test', password: 'password' });
+  assert.deepEqual(session.tokens, { accessToken: 'admin-a', refreshToken: 'admin-r' });
+});
+
 test('organization requests carry the authenticated organizer session', async () => {
   const session = new MemorySession();
   session.tokens = { accessToken: 'organizer-access', refreshToken: 'organizer-refresh' };
