@@ -3,13 +3,16 @@ import type { GlobalRole } from './auth.ts'
 
 export type AdminActivationState = 'not_required' | 'pending' | 'expired'
 
-export interface AdminUser {
+export interface AdminIdentity {
   id: string
   email: string | null
-  name: string
+  name: string | null
   roles: GlobalRole[]
   isGuest: boolean
   createdAt: string
+}
+
+export interface AdminUser extends AdminIdentity {
   activationState: AdminActivationState
 }
 
@@ -19,7 +22,7 @@ export interface ProvisionAdminInput {
 }
 
 export interface ProvisionAdminResponse {
-  user: AdminUser
+  user: AdminIdentity
   activationRequired: boolean
   activationToken?: string
   activationExpiresAt?: string
