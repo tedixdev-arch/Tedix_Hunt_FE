@@ -14,6 +14,7 @@ import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerS
 import { CustomHuntEditorPage } from '../pages/CustomHuntEditor'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTemplateReviewPage } from '../pages/AdminConsole'
+import { AdminAccountSecurityPage } from '../pages/AdminAccountSecurity'
 import { ProfessionalSignInPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
 import { canAccessAdmin, canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
@@ -171,6 +172,10 @@ export const router = createHashRouter([
   {
     path: '/admin/reviews/template-1',
     element: <RequireAdmin><AdminTemplateReviewPage /></RequireAdmin>,
+  },
+  {
+    path: '/admin/account',
+    element: <RequireAdmin><AdminAccountSecurityPage /></RequireAdmin>,
   },
   {
     path: '/admin/templates',

@@ -100,6 +100,23 @@ test('admin login uses the dedicated admin endpoint and stores its session', asy
   assert.deepEqual(session.tokens, { accessToken: 'admin-a', refreshToken: 'admin-r' });
 });
 
+test('change password posts an authenticated request to the auth endpoint', async () => {
+  const session = new MemorySession();
+  session.tokens = { accessToken: 'admin-access', refreshToken: 'admin-refresh' };
+  const { client, calls } = mockClient([json({ message: 'Password changed successfully.' })], session);
+  const result = await new AuthApi(client, session).changePassword({
+    currentPassword: 'old-password', newPassword: 'new-password',
+  });
+
+  assert.deepEqual(result, { message: 'Password changed successfully.' });
+  assert.equal(calls[0].url, 'https://api.example.test/api/auth/change-password');
+  assert.equal(calls[0].init?.method, 'POST');
+  assert.equal(new Headers(calls[0].init?.headers).get('authorization'), 'Bearer admin-access');
+  assert.deepEqual(JSON.parse(String(calls[0].init?.body)), {
+    currentPassword: 'old-password', newPassword: 'new-password',
+  });
+});
+
 test('organization requests carry the authenticated organizer session', async () => {
   const session = new MemorySession();
   session.tokens = { accessToken: 'organizer-access', refreshToken: 'organizer-refresh' };

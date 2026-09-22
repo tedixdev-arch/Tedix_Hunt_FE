@@ -5,6 +5,8 @@ export type {
   ApiErrorResponse,
   AuthResponse,
   AuthTokens,
+  ChangePasswordInput,
+  ChangePasswordResponse,
   GuestAuthResponse,
   GuestSessionInput,
   LoginInput,
