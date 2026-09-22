@@ -8,3 +8,10 @@ export function authErrorMessage(error: unknown, action: 'login' | 'register' | 
   if (error.kind === 'bad_request') return 'Check your information and try again.'
   return 'Unable to complete your request. Please try again.'
 }
+
+export function changePasswordErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) return 'Unable to change password. Please try again.'
+  if (error.kind === 'unauthorized') return 'Current password is incorrect.'
+  if (error.kind === 'bad_request') return 'Check the password requirements and try again.'
+  return 'Unable to change password. Please try again.'
+}

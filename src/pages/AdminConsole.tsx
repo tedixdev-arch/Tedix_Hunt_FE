@@ -12,9 +12,10 @@ const sections = [
   {id:'users',label:'Users & Roles',path:'/admin/users'},
   {id:'settings',label:'Platform Settings',path:'/admin/settings'},
   {id:'audit',label:'Audit Log',path:'/admin/audit'},
+  {id:'account',label:'Account Security',path:'/admin/account'},
 ]
 
-function AdminShell({active,children}:{active:string;children:ReactNode}) {
+export function AdminShell({active,children}:{active:string;children:ReactNode}) {
   return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader logoutTo="/admin/sign-in" showProfile/><div className="mx-auto max-w-7xl px-5 py-7 sm:px-8 sm:py-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Admin Console</p><h1 className="mt-2 text-4xl font-black tracking-tight">Platform administration</h1></div></div><nav aria-label="Admin sections" className="mt-7 flex gap-2 overflow-x-auto pb-2">{sections.map(item=><Link className={`shrink-0 rounded-xl border px-4 py-3 text-sm font-black ${active===item.id?'border-slate-950 bg-slate-950 text-white':'border-slate-200 bg-white text-slate-600'}`} key={item.id} to={item.path}>{item.label}</Link>)}</nav>{children}</div></main>
 }
 

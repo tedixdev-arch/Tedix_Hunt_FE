@@ -49,6 +49,15 @@ export interface LoginInput {
   password: string;
 }
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+}
+
 export interface GuestSessionInput {
   name?: string;
 }
@@ -85,6 +94,10 @@ export class AuthApi {
 
   loginAdmin(input: LoginInput): Promise<AuthResponse> {
     return this.authenticate('/api/auth/admin/login', input);
+  }
+
+  changePassword(input: ChangePasswordInput): Promise<ChangePasswordResponse> {
+    return this.client.post<ChangePasswordResponse>('/api/auth/change-password', input);
   }
 
   registerParticipant(input: RegisterInput): Promise<AuthResponse> {

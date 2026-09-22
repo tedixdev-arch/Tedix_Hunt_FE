@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react'
-import { authApi, type GuestSessionInput, type LoginInput, type PublicUser, type RegisterInput } from '../../services/api'
+import { authApi, sessionStore, type ChangePasswordInput, type GuestSessionInput, type LoginInput, type PublicUser, type RegisterInput } from '../../services/api'
 
 type AuthContextValue = {
   user: PublicUser | null
@@ -11,6 +11,7 @@ type AuthContextValue = {
   loginCreator: (input: LoginInput) => Promise<PublicUser>
   loginOrganizer: (input: LoginInput) => Promise<PublicUser>
   loginAdmin: (input: LoginInput) => Promise<PublicUser>
+  changePassword: (input: ChangePasswordInput) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -37,9 +38,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const loginCreator = useCallback((input: LoginInput) => authenticate(authApi.loginCreator(input)), [authenticate])
   const loginOrganizer = useCallback((input: LoginInput) => authenticate(authApi.loginOrganizer(input)), [authenticate])
   const loginAdmin = useCallback((input: LoginInput) => authenticate(authApi.loginAdmin(input)), [authenticate])
+  const changePassword = useCallback(async (input: ChangePasswordInput) => {
+    await authApi.changePassword(input)
+    sessionStore.clearSession()
+    setUser(null)
+  }, [])
   const logout = useCallback(async () => { try { await authApi.logout() } finally { setUser(null) } }, [])
 
-  const value = useMemo(() => ({ user, isAuthenticated: user !== null, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, loginAdmin, logout }), [user, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, loginAdmin, logout])
+  const value = useMemo(() => ({ user, isAuthenticated: user !== null, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, loginAdmin, changePassword, logout }), [user, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, loginAdmin, changePassword, logout])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
