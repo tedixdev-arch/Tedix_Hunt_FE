@@ -1,8 +1,8 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 2.0 | Updated 21 September 2026
+Version 2.1 | Updated 22 September 2026
 
-This document replaces Version 1.4 with a plan based on the current mockup, frontend, backend and merged implementation work.
+This document evolves Version 2.0 with the current professional-account implementation state and a complete Admin account lifecycle for the prototype.
 
 The implementation strategy is:
 
@@ -242,7 +242,10 @@ Already-real frontend foundations include:
 - participant auth
 - creator auth
 - organizer auth
+- admin auth
 - role-based guards
+- Admin login connected to the real backend
+- Admin route protection merged in FE PR #28
 - organizations API
 - Hunt API
 - Hunt template metadata API
@@ -330,16 +333,15 @@ Status: ✅ Complete
 Status: ✅ Complete
 
 ### A6. Existing real login flows
-Status: 🟡 Partial
+Status: ✅ Complete
 
 Complete:
 - participant
 - creator
 - organizer
+- admin
 
-Pending:
-- real Admin FE login
-- real Admin route protection
+Admin authentication uses the real backend session flow. Fake Admin 2FA is no longer part of the active prototype login path.
 
 ---
 
@@ -354,15 +356,17 @@ Status: ✅ Complete
 Status: ✅ Complete
 
 ### B3. Frontend role guards
-Status: 🟡 Partial
+Status: ✅ Complete for current prototype
 
 Real:
 - participant
 - organizer
 - creator
-
-Pending:
 - admin
+
+Admin:
+- authoritative `user.roles` check merged in FE PR #28
+- all current `/admin/*` routes are protected by `RequireAdmin`
 
 ### B4. Organizations and membership
 Status: ✅ Complete for current prototype
@@ -485,25 +489,138 @@ Status: ✅ Complete
 Status: ✅ Complete
 
 ### E6. Bootstrap first Admin
-Status: ⬜ Not started
+Status: ✅ Complete
 
 No public Admin registration.
 
-Create a trusted, controlled bootstrap mechanism.
+Implemented trusted server-side bootstrap:
+- creates the first Admin safely against PostgreSQL
+- normalizes email
+- stores only a bcrypt password hash
+- assigns authoritative `admin` in `user_roles`
+- preserves existing user passwords and roles when promoting an existing password-backed identity
+- rejects passwordless existing identities rather than silently setting credentials
+- serializes the first-Admin safety check
+- refuses additional Admin creation by default
+- supports `--allow-additional-admin` only as an explicit recovery/maintenance escape hatch
+- supports `TEDIX_BOOTSTRAP_ADMIN_PASSWORD` so production operators do not need to place the password in normal CLI arguments
+
+The bootstrap is an operational first/recovery mechanism, not the normal product workflow for creating Admin accounts.
 
 ### E7. Real Admin frontend login
-Status: 🟣 FE mock exists / backend ready
+Status: ✅ Complete
 
-Replace fake Continue to 2FA behavior with POST /api/auth/admin/login and a real session.
-
-For prototype, fake 2FA must not be represented as real security.
+Implemented:
+- `POST /api/auth/admin/login`
+- shared access/refresh-token session handling
+- real AuthProvider Admin login
+- successful login enters `/admin`
+- fake Continue to 2FA behavior removed
+- legacy `/admin/verify` redirects to Admin sign-in
+- no fake 2FA is represented as real security
 
 ### E8. Protect Admin routes
+Status: ✅ Complete
+
+Merged in FE PR #28:
+- `canAccessAdmin()` uses authoritative `user.roles`
+- authenticated Admins can enter the Admin Console
+- unauthenticated users are redirected to `/admin/sign-in`
+- authenticated non-Admins are denied
+- all current `/admin/*` routes use the Admin guard
+- existing Admin sessions opening the sign-in page are redirected to `/admin`
+- Admin logout returns to Admin sign-in
+- misleading `2FA verified` UI is removed
+
+### E9. Admin account security
 Status: ⬜ Not started
 
-All /admin/* routes require an authenticated user with authoritative admin role.
+The first bootstrapped Admin must be able to maintain their own credentials without server intervention.
 
-### E9. Organizer Applications Admin UI
+#### E9.1 Change own password
+
+Recommended shared authenticated endpoint:
+
+`POST /api/auth/change-password`
+
+Rules:
+- authenticated non-guest account
+- verify current password with bcrypt
+- validate the new password policy
+- store only a new bcrypt hash
+- never return password material
+- invalidate existing refresh sessions after a successful password change
+- require a fresh login afterward
+
+This should be a shared account-security capability usable later by Organizer, Creator and password-backed Participant accounts. Do not create a special `/api/admin/change-password` endpoint.
+
+#### E9.2 Session revocation after password change
+
+A password change must invalidate existing refresh sessions so old sessions cannot continue indefinitely.
+
+#### E9.3 Account-security frontend
+
+Add an Admin Account Security/Profile surface that allows the current Admin to change their own password.
+
+Password management belongs to authentication/account security, not to arbitrary Users & Roles editing.
+
+### E10. Additional Admin provisioning
+Status: ⬜ Not started
+
+Normal additional-Admin creation must move into the product. Do not use the bootstrap command as the routine Admin-management workflow.
+
+Target flow:
+
+Existing Admin
+→ invite/provision Admin
+→ existing identity is reused or a new credential-less identity is created
+→ authoritative `admin` role is assigned
+→ new identity receives one-time activation when a password is required
+→ new Admin chooses their own password
+→ Admin login works
+
+#### E10.1 Admin list
+
+Admin can list current Admin identities and their activation/account state.
+
+#### E10.2 Grant Admin to an existing user
+
+If the normalized email already belongs to a password-backed User:
+- preserve the existing password
+- preserve all existing roles
+- add `admin` idempotently
+
+#### E10.3 Invite/provision a new Admin
+
+If no User exists:
+- create a credential-less professional identity
+- assign `admin`
+- create a hashed, one-time, expiring activation token
+- never ask the inviting Admin to choose the new Admin's permanent password
+
+#### E10.4 New Admin activation
+
+The invited Admin follows the activation link and chooses their own password.
+
+#### E10.5 Last-Admin protection
+
+Backend must never allow removal/deactivation of the final active Admin.
+
+Also prevent accidental self-lockout when the acting Admin would remove the only remaining Admin capability.
+
+#### E10.6 Two-Admin lifecycle verification
+
+Verify:
+First Admin login
+→ provision second Admin
+→ second Admin activation
+→ second Admin login
+→ both identities retain their other roles
+→ last-Admin protection works
+
+The bootstrap `--allow-additional-admin` path remains recovery/maintenance only.
+
+### E11. Organizer Applications Admin UI
 Status: 🟠 Backend complete / FE pending
 
 Admin needs:
@@ -513,7 +630,7 @@ Admin needs:
 - reject
 - decision status
 
-### E10. Organizer activation frontend
+### E12. Organizer activation frontend
 Status: 🟠 Backend complete / FE pending
 
 Public activation page:
@@ -522,24 +639,44 @@ Public activation page:
 - confirmation
 - successful session or Organizer-login redirect
 
-### E11. Organizer onboarding verification
+### E13. Organizer onboarding verification
 Status: ⬜ Not started
 
 Verify:
 Apply → pending → Admin login → approve → account/role/org → activate → Organizer login → workspace
 
-### E12. Creator provisioning
+### E14. Creator provisioning
 Status: ⬜ Not started
 
 For prototype:
 - no public Creator self-registration
 - Admin provisions/invites Creator
+- reuse the same professional-account principles used for Admin/Organizer identities
+- preserve existing roles and passwords for existing users
+- use one-time activation for new passwordless identities
 
 Recommended:
 Admin → invite/create Creator → Creator activation → Creator login
 
-### E13. Creator onboarding verification
+### E15. Creator activation/account lifecycle
 Status: ⬜ Not started
+
+Implement:
+- one-time expiring activation
+- Creator chooses password when the identity is new/passwordless
+- existing password-backed identity keeps its credentials
+- authoritative `creator` role is preserved alongside any other roles
+- successful activation leads to Creator login/session
+
+### E16. Creator onboarding verification
+Status: ⬜ Not started
+
+Verify:
+Admin provisions Creator
+→ activation if required
+→ Creator login
+→ authoritative Creator access
+→ Creator Studio
 
 ---
 
@@ -877,6 +1014,22 @@ Implement each subsystem only when the underlying domain exists.
 ### L1. Users & Roles
 Status: ⬜ Not started
 
+Phase E implements only the minimum professional-account administration needed to operate the prototype. Phase L expands this into the full Users & Roles system.
+
+Future L1 scope:
+- searchable user list
+- inspect authoritative role set
+- grant/remove Organizer capability
+- grant/remove Creator capability
+- grant/remove Admin capability
+- account/activation status
+- safe deactivation
+- role-history visibility
+- last-Admin protection
+- exceptional participant support
+
+Admins must not be able to view stored passwords or arbitrarily overwrite another user's password. Password changes/resets remain account-security/authentication operations.
+
 ### L2. Hunt oversight
 Status: ⬜ Not started
 
@@ -1155,12 +1308,14 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 # 20. Recommended implementation order from current state
 
 1. Finish Professional Account Lifecycle
-   - bootstrap first Admin
-   - real Admin FE login
-   - Admin guards
-   - Organizer approval UI
-   - Organizer activation FE
-   - Creator provisioning
+   - Admin own-password change and session revocation (E9)
+   - normal additional-Admin provisioning/activation (E10)
+   - Organizer Applications Admin UI (E11)
+   - Organizer activation FE (E12)
+   - verify Organizer onboarding (E13)
+   - Creator provisioning (E14)
+   - Creator activation/account lifecycle (E15)
+   - verify Creator onboarding (E16)
 
 2. Build Creator Template Persistence + Versioning
 
@@ -1194,36 +1349,33 @@ This order avoids building participant gameplay permanently around hard-coded Si
 
 # 21. Immediate next steps
 
-## Immediate 1 — E6 First Admin bootstrap
+## Completed foundation — E6, E7 and E8
 
-Completion check:
+E6 First Admin bootstrap is complete.
 
-Admin account exists in PostgreSQL
-→ user_roles contains admin
-→ password is hashed
-→ no public Admin registration exists
+E7 Real Admin FE login is complete.
 
-## Immediate 2 — E7 Real Admin FE login
+E8 Admin route protection is merged in FE PR #28.
 
-Connect existing Admin sign-in to POST /api/auth/admin/login.
+## Immediate 1 — E9 Admin account security
 
-Remove fake 2FA dependency from prototype flow.
+Implement authenticated own-password change, revoke existing refresh sessions after change, and add the minimal Account Security frontend.
 
-## Immediate 3 — E8 Admin route protection
+## Immediate 2 — E10 Additional Admin provisioning
 
-Protect every /admin/* route.
+Build the normal Admin→Admin provisioning/activation flow with existing-user reuse, one-time activation for new identities and last-Admin protection.
 
-## Immediate 4 — E9 Organizer application Admin UI
+## Immediate 3 — E11 Organizer Applications Admin UI
 
-Use already implemented backend approval endpoints.
+Use the already implemented backend Organizer application/approval endpoints.
 
-## Immediate 5 — E10 Organizer activation FE
+## Immediate 4 — E12 + E13 Organizer activation and onboarding verification
 
-Allow approved Organizer to complete activation and enter the real Organizer workspace.
+Allow approved Organizers to complete activation and verify the complete application → approval → activation → login → workspace flow.
 
-## Immediate 6 — E12 Creator provisioning
+## Immediate 5 — E14 + E15 + E16 Creator lifecycle
 
-Create controlled Admin→Creator provisioning.
+Create controlled Admin→Creator provisioning, activation/account lifecycle and end-to-end onboarding verification.
 
 After these professional identity flows are complete, begin Phase F — Creator Template System.
 
@@ -1233,9 +1385,11 @@ After these professional identity flows are complete, begin Phase F — Creator 
 
 ## Milestone 1 — Professional platform access
 
-Admin bootstrap/login works
+First Admin bootstrap/login works
+→ Admin can maintain their own password
+→ Admin can provision another Admin safely
 → Organizer apply/approve/activate/login works
-→ Creator provision/login works
+→ Creator provision/activate/login works
 
 ## Milestone 2 — Real content supply chain
 
