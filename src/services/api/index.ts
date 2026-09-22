@@ -3,6 +3,7 @@ export { ApiClient, ApiError, apiClient } from './client.ts';
 export { AuthApi, authApi } from './auth.ts';
 export type {
   ApiErrorResponse,
+  ActivateAdminInput,
   AuthResponse,
   AuthTokens,
   ChangePasswordInput,
@@ -14,6 +15,8 @@ export type {
   RefreshResponse,
   RegisterInput,
 } from './auth.ts';
+export { AdminUsersApi, adminUsersApi } from './adminUsers.ts';
+export type { AdminActivationState, AdminIdentity, AdminUser, ProvisionAdminInput, ProvisionAdminResponse } from './adminUsers.ts';
 export { LocalSessionStore, sessionStore } from './session.ts';
 export type { SessionStore, SessionTokens } from './session.ts';
 export { HuntsApi, huntsApi } from './hunts.ts';
