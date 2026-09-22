@@ -1,22 +1,67 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { OrganizerHeader } from './OrganizerFlow'
 import { leaderboardPhysicalInventory, specialPhysicalInventory } from '../data/rewardInventory'
 
-const sections = [
-  {id:'dashboard',label:'Dashboard',path:'/admin'},
-  {id:'templates',label:'Template Reviews',path:'/admin/templates'},
-  {id:'hunts',label:'Hunts',path:'/admin/hunts'},
-  {id:'rewards',label:'Reward Inventory',path:'/admin/rewards'},
-  {id:'alerts',label:'Safety Alerts',path:'/admin/alerts'},
-  {id:'users',label:'Users & Roles',path:'/admin/users'},
-  {id:'settings',label:'Platform Settings',path:'/admin/settings'},
-  {id:'audit',label:'Audit Log',path:'/admin/audit'},
-  {id:'account',label:'Account Security',path:'/admin/account'},
+const sidebarPreferenceKey = 'tedixhunt_admin_sidebar_collapsed'
+
+const navigationGroups = [
+  {label:'Dashboard',items:[{id:'dashboard',label:'Dashboard',path:'/admin',icon:'home'}]},
+  {label:'Operations',items:[
+    {id:'hunts',label:'Hunts',path:'/admin/hunts',icon:'map'},
+    {id:'alerts',label:'Safety Alerts',path:'/admin/alerts',icon:'alert'},
+  ]},
+  {label:'Content',items:[
+    {id:'templates',label:'Template Reviews',path:'/admin/templates',icon:'document'},
+    {id:'rewards',label:'Reward Inventory',path:'/admin/rewards',icon:'gift'},
+  ]},
+  {label:'People',items:[{id:'users',label:'Users & Roles',path:'/admin/users',icon:'users'}]},
+  {label:'System',items:[
+    {id:'settings',label:'Platform Settings',path:'/admin/settings',icon:'settings'},
+    {id:'audit',label:'Audit Log',path:'/admin/audit',icon:'list'},
+  ]},
+  {label:'Account',items:[{id:'account',label:'Account Security',path:'/admin/account',icon:'lock'}]},
 ]
 
+function NavigationIcon({name}:{name:string}) {
+  const paths:Record<string,ReactNode> = {
+    home:<><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10M9 20v-6h6v6"/></>,
+    map:<><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15M15 6v15"/></>,
+    alert:<><path d="M12 3 2.5 20h19Z"/><path d="M12 9v4M12 17h.01"/></>,
+    document:<><path d="M6 3h9l3 3v15H6Z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></>,
+    gift:<><path d="M3 9h18v4H3ZM5 13v8h14v-8M12 9v12"/><path d="M12 9H8.5a2.5 2.5 0 1 1 2.5-2.5ZM12 9h3.5A2.5 2.5 0 1 0 13 6.5Z"/></>,
+    users:<><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-3-3.87M16 2.13a4 4 0 0 1 0 7.75"/></>,
+    settings:<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1 1.56V21h-4v-.08a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1H3v-4h.08A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.56V3h4v.08a1.7 1.7 0 0 0 1 1.52 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1H21v4h-.08a1.7 1.7 0 0 0-1.52 1Z"/></>,
+    list:<><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></>,
+    lock:<><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
+  }
+  return <svg aria-hidden="true" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">{paths[name]}</svg>
+}
+
 export function AdminShell({active,children}:{active:string;children:ReactNode}) {
-  return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader logoutTo="/admin/sign-in" showProfile/><div className="mx-auto max-w-7xl px-5 py-7 sm:px-8 sm:py-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Admin Console</p><h1 className="mt-2 text-4xl font-black tracking-tight">Platform administration</h1></div></div><nav aria-label="Admin sections" className="mt-7 flex gap-2 overflow-x-auto pb-2">{sections.map(item=><Link className={`shrink-0 rounded-xl border px-4 py-3 text-sm font-black ${active===item.id?'border-slate-950 bg-slate-950 text-white':'border-slate-200 bg-white text-slate-600'}`} key={item.id} to={item.path}>{item.label}</Link>)}</nav>{children}</div></main>
+  const [collapsed,setCollapsed] = useState(() => {
+    const saved = window.localStorage.getItem(sidebarPreferenceKey)
+    return saved === null ? window.matchMedia('(max-width: 767px)').matches : saved === 'true'
+  })
+  useEffect(() => window.localStorage.setItem(sidebarPreferenceKey,String(collapsed)),[collapsed])
+  return <main className="flex h-dvh flex-col overflow-hidden bg-slate-100 text-slate-950">
+    <OrganizerHeader logoutTo="/admin/sign-in" showProfile/>
+    <div className="flex min-h-0 flex-1">
+      <aside className={`flex shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-200 ${collapsed?'w-[68px]':'w-60'}`}>
+        <nav aria-label="Admin sections" className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
+          {navigationGroups.map(group=><section className="mb-4" key={group.label} aria-label={group.label}>
+            {!collapsed&&<h2 className="mb-1 px-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{group.label}</h2>}
+            <div className="space-y-1">{group.items.map(item=>{
+              const isActive=active===item.id
+              return <Link aria-current={isActive?'page':undefined} aria-label={collapsed?item.label:undefined} title={collapsed?item.label:undefined} className={`relative flex min-h-11 items-center rounded-lg text-sm font-bold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${collapsed?'justify-center px-2':'gap-3 px-3'} ${isActive?'bg-slate-950 text-white before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-emerald-400':'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`} key={item.id} to={item.path}><NavigationIcon name={item.icon}/>{!collapsed&&<span>{item.label}</span>}</Link>
+            })}</div>
+          </section>)}
+        </nav>
+        <div className="border-t border-slate-200 p-2"><button aria-expanded={!collapsed} aria-label={collapsed?'Expand admin sidebar':'Collapse admin sidebar'} title={collapsed?'Expand':'Collapse'} className={`flex min-h-11 w-full items-center rounded-lg text-sm font-black text-slate-600 outline-none hover:bg-slate-100 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-emerald-500 ${collapsed?'justify-center':'gap-2 px-3'}`} onClick={()=>setCollapsed(value=>!value)} type="button"><span aria-hidden="true">{collapsed?'›':'‹'}</span>{!collapsed&&<span>Collapse</span>}<span className="sr-only">{collapsed?'Expand':'Collapse'} admin navigation</span></button></div>
+      </aside>
+      <div className="min-w-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1600px] px-5 py-7 sm:px-8 sm:py-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Admin Console</p><h1 className="mt-2 text-4xl font-black tracking-tight">Platform administration</h1></div></div>{children}</div></div>
+    </div>
+  </main>
 }
 
 export function AdminDashboardPage() {
