@@ -11,10 +11,35 @@ export interface OrganizerApplicationInput {
   phone: string | null;
 }
 
-export interface OrganizerApplication extends OrganizerApplicationInput {
+export type OrganizerApplicationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface PublicOrganizerApplication extends OrganizerApplicationInput {
   id: string;
   status: 'pending';
   createdAt: string;
+}
+
+export interface OrganizerApplication extends OrganizerApplicationInput {
+  id: string;
+  status: OrganizerApplicationStatus;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  userId: string | null;
+  organizationId: string | null;
+  activationExpiresAt: string | null;
+  activatedAt: string | null;
+}
+
+export interface OrganizerApplicationApproval {
+  application: OrganizerApplication;
+  activationToken: string;
+  activationExpiresAt: string | null;
+}
+
+export interface OrganizerApplicationRejection {
+  application: OrganizerApplication;
 }
 
 export class OrganizerApplicationsApi {
@@ -24,8 +49,21 @@ export class OrganizerApplicationsApi {
     this.client = client;
   }
 
-  create(input: OrganizerApplicationInput): Promise<OrganizerApplication> {
-    return this.client.post<OrganizerApplication>('/api/organizer-applications', input, { authenticated: false });
+  create(input: OrganizerApplicationInput): Promise<PublicOrganizerApplication> {
+    return this.client.post<PublicOrganizerApplication>('/api/organizer-applications', input, { authenticated: false });
+  }
+
+  list(status?: OrganizerApplicationStatus): Promise<OrganizerApplication[]> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.client.get<OrganizerApplication[]>(`/api/organizer-applications${query}`);
+  }
+
+  approve(id: string): Promise<OrganizerApplicationApproval> {
+    return this.client.post<OrganizerApplicationApproval>(`/api/organizer-applications/${encodeURIComponent(id)}/approve`);
+  }
+
+  reject(id: string): Promise<OrganizerApplicationRejection> {
+    return this.client.post<OrganizerApplicationRejection>(`/api/organizer-applications/${encodeURIComponent(id)}/reject`);
   }
 }
 

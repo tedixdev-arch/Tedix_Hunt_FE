@@ -30,6 +30,54 @@ test('organizer application posts canonical input publicly and maps an empty pho
   assert.equal(input.organizationType, 'school')
 })
 
+test('Admin Organizer application operations use authenticated endpoints and status queries', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  const session: SessionStore = {
+    getAccessToken: () => 'admin-access', getRefreshToken: () => null,
+    saveSession: () => {}, clearSession: () => {},
+  }
+  const fetcher: typeof fetch = async (url, init) => {
+    calls.push({ url: String(url), init })
+    const body = String(url).endsWith('/approve')
+      ? { application: {}, activationToken: 'shown-once', activationExpiresAt: null }
+      : String(url).endsWith('/reject') ? { application: {} } : []
+    return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+  const api = new OrganizerApplicationsApi(new ApiClient('https://api.example.test', session, fetcher))
+
+  await api.list('approved')
+  await api.list()
+  await api.approve('app/1')
+  await api.reject('app/1')
+
+  assert.deepEqual(calls.map(call => [call.init?.method, call.url]), [
+    ['GET', 'https://api.example.test/api/organizer-applications?status=approved'],
+    ['GET', 'https://api.example.test/api/organizer-applications'],
+    ['POST', 'https://api.example.test/api/organizer-applications/app%2F1/approve'],
+    ['POST', 'https://api.example.test/api/organizer-applications/app%2F1/reject'],
+  ])
+  for (const call of calls) assert.equal(new Headers(call.init?.headers).get('authorization'), 'Bearer admin-access')
+})
+
+test('Admin Organizer Applications route, navigation, and review safeguards are present', async () => {
+  const [page, consolePage, router] = await Promise.all([
+    readFile(new URL('../src/pages/AdminOrganizerApplications.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/AdminConsole.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/routes/router.tsx', import.meta.url), 'utf8'),
+  ])
+  assert.match(router, /path: '\/admin\/organizer-applications',[\s\S]{0,120}element: <RequireAdmin><AdminOrganizerApplicationsPage \/><\/RequireAdmin>/)
+  assert.match(consolePage, /label:'People',[\s\S]*Organizer Applications[\s\S]*Users & Roles/)
+  assert.match(page, /useState<ApplicationFilter>\('pending'\)/)
+  assert.match(page, /nextFilter === 'all' \? undefined : nextFilter/)
+  assert.match(page, /selected\.status === 'pending'/)
+  assert.match(page, /if \(!selected \|\| selected\.status !== 'pending' \|\| deciding\.current\) return/)
+  assert.match(page, /window\.confirm\('Reject this Organizer application\?'\)/)
+  assert.match(page, /This activation token is shown once\./)
+  assert.doesNotMatch(page, /localStorage|sessionStorage/)
+  assert.match(page, /selected\.activatedAt \? 'Activated' : 'Awaiting activation'/)
+  assert.match(page, /This application has already been reviewed\. Refreshing its current status\./)
+})
+
 test('required application fields reject empty values while a valid form passes', () => {
   assert.deepEqual(validateOrganizerApplication(validValues), {})
   const errors = validateOrganizerApplication({ name: ' ', email: 'invalid', organizationName: '', organizationType: '', reason: '', phone: '' })

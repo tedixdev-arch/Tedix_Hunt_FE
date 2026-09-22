@@ -15,7 +15,10 @@ const navigationGroups = [
     {id:'templates',label:'Template Reviews',path:'/admin/templates',icon:'document'},
     {id:'rewards',label:'Reward Inventory',path:'/admin/rewards',icon:'gift'},
   ]},
-  {label:'People',items:[{id:'users',label:'Users & Roles',path:'/admin/users',icon:'users'}]},
+  {label:'People',items:[
+    {id:'organizer-applications',label:'Organizer Applications',path:'/admin/organizer-applications',icon:'document'},
+    {id:'users',label:'Users & Roles',path:'/admin/users',icon:'users'},
+  ]},
   {label:'System',items:[
     {id:'settings',label:'Platform Settings',path:'/admin/settings',icon:'settings'},
     {id:'audit',label:'Audit Log',path:'/admin/audit',icon:'list'},
