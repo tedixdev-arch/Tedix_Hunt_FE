@@ -50,13 +50,13 @@ export function RegisteredOrganizerApplicationPage() {
       <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-xl items-center px-5 py-10 sm:px-8">
         <section className="w-full rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm sm:p-8" aria-live="polite">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-emerald-100 text-2xl text-emerald-800" aria-hidden="true">✓</div>
-          <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Application received</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight">Application submitted</h1>
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Application received</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">Application submitted</h1>
           <p className="mt-4 leading-7 text-slate-600">Your application is pending review. Organizer access is granted only after approval.</p>
           <p className="mt-3 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-600">We received the application for <strong className="text-slate-900">{submittedEmail}</strong>.</p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link className="flex min-h-12 flex-1 items-center justify-center rounded-xl bg-emerald-500 px-5 font-black" to="/organizer/sign-in">Back to Organizer access</Link>
-            <Link className="flex min-h-12 flex-1 items-center justify-center rounded-xl border border-slate-300 px-5 font-black" to="/">Go to home</Link>
+            <Link className="flex min-h-12 flex-1 items-center justify-center rounded-xl bg-emerald-500 px-5 font-bold" to="/organizer/sign-in">Back to Organizer access</Link>
+            <Link className="flex min-h-12 flex-1 items-center justify-center rounded-xl border border-slate-300 px-5 font-bold" to="/">Go to home</Link>
           </div>
         </section>
       </div>
@@ -67,8 +67,8 @@ export function RegisteredOrganizerApplicationPage() {
     <main className="min-h-dvh bg-slate-100 text-slate-950">
       <OrganizerHeader />
       <div className="mx-auto max-w-2xl px-5 py-10 sm:px-8">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Registered Organizer</p>
-        <h1 className="mt-3 text-4xl font-black tracking-tight">Apply as a Registered Organizer</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Registered Organizer</p>
+        <h1 className="mt-3 text-4xl font-bold tracking-tight">Apply as a Registered Organizer</h1>
         <p className="mt-4 max-w-xl leading-7 text-slate-600">Tell us about you and the organization you represent. Applications are reviewed before Organizer access is granted.</p>
         <form className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7" noValidate onSubmit={submit}>
           <div className="grid gap-x-5 sm:grid-cols-2">
@@ -80,7 +80,7 @@ export function RegisteredOrganizerApplicationPage() {
           <Field id="application-reason" label="Why do you want to organize Tedix Hunts?" error={errors.reason}><textarea id="application-reason" className={`${inputClass} min-h-28 py-3`} value={values.reason} onChange={(event) => update('reason', event.target.value)} /></Field>
           <Field id="application-phone" label="Phone" optional><input id="application-phone" autoComplete="tel" className={inputClass} type="tel" value={values.phone} onChange={(event) => update('phone', event.target.value)} /></Field>
           {formError && <p className="mt-5 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="alert">{formError}</p>}
-          <button className="mt-6 min-h-14 w-full rounded-xl bg-emerald-500 px-5 font-black hover:bg-emerald-400 disabled:cursor-wait disabled:opacity-60" disabled={isSubmitting} type="submit">{isSubmitting ? 'Submitting…' : 'Submit application'}</button>
+          <button className="mt-6 min-h-14 w-full rounded-xl bg-emerald-500 px-5 font-bold hover:bg-emerald-400 disabled:cursor-wait disabled:opacity-60" disabled={isSubmitting} type="submit">{isSubmitting ? 'Submitting…' : 'Submit application'}</button>
           <p className="mt-3 text-center text-xs leading-5 text-slate-500">Submitting an application does not create an account or grant Organizer access.</p>
         </form>
       </div>

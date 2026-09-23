@@ -45,7 +45,7 @@ export function AdminAccountSecurityPage() {
 
   return <AdminShell active="account">
     <section className="mt-6 max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-      <h2 className="text-3xl font-black">Account Security</h2>
+      <h2 className="text-3xl font-bold">Account Security</h2>
       <p className="mt-2 text-slate-600">Change your Admin password. You will need to sign in again on all devices.</p>
       <form className="mt-7" onSubmit={submit}>
         <label className="block text-sm font-bold" htmlFor="current-password">Current password</label>
@@ -56,7 +56,7 @@ export function AdminAccountSecurityPage() {
         <label className="mt-5 block text-sm font-bold" htmlFor="confirm-password">Confirm new password</label>
         <input autoComplete="new-password" className={inputClass} id="confirm-password" minLength={8} onChange={event => { setConfirmPassword(event.target.value); clearError() }} required type="password" value={confirmPassword} />
         {error && <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="alert">{error}</p>}
-        <button className="mt-6 min-h-14 w-full rounded-xl bg-emerald-500 px-5 font-black text-slate-950 disabled:cursor-wait disabled:opacity-60" disabled={isSubmitting} type="submit">{isSubmitting ? 'Changing password…' : 'Change password'}</button>
+        <button className="mt-6 min-h-14 w-full rounded-xl bg-emerald-500 px-5 font-bold text-slate-950 disabled:cursor-wait disabled:opacity-60" disabled={isSubmitting} type="submit">{isSubmitting ? 'Changing password…' : 'Change password'}</button>
       </form>
     </section>
   </AdminShell>

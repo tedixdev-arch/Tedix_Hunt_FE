@@ -12,7 +12,7 @@ export function PrototypeRoutePage({ eyebrow, title, description, next }: Protot
     <main className="min-h-dvh bg-slate-950 px-5 py-12 text-white">
       <div className="mx-auto flex min-h-[calc(100dvh-6rem)] w-full max-w-lg flex-col justify-center">
         <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-400">{eyebrow}</p>
-        <h1 className="mt-3 text-4xl font-black tracking-tight">{title}</h1>
+        <h1 className="mt-3 text-4xl font-bold tracking-tight">{title}</h1>
         <p className="mt-4 max-w-md text-base leading-7 text-slate-300">{description}</p>
         {next && (
           <Link
