@@ -1,14 +1,14 @@
 import { FormEvent, ReactNode, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
-import { canAccessAdmin, canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
+import { canAccessAdmin, canAccessCreator, canAccessOrganizer } from '../features/auth/access'
 import { authErrorMessage } from '../features/auth/errors'
 
 function AccessShell({ children }: { children: ReactNode }) {
   return <main className="min-h-dvh bg-slate-950 px-5 py-10 text-white"><div className="mx-auto flex min-h-[calc(100dvh-5rem)] w-full max-w-md flex-col justify-center"><Link className="mb-8 text-sm font-bold uppercase tracking-[0.2em]" to="/">TedixHunt</Link>{children}</div></main>
 }
 
-type WorkspaceName = 'Participant' | 'Organizer' | 'Creator' | 'Admin'
+type WorkspaceName = 'Organizer' | 'Creator' | 'Admin'
 
 export function workspaceFromPath(pathname?: string): WorkspaceName | undefined {
   if (pathname?.startsWith('/admin')) return 'Admin'
@@ -17,29 +17,31 @@ export function workspaceFromPath(pathname?: string): WorkspaceName | undefined 
   return undefined
 }
 
+const professionalWorkspaces = [
+  { label: 'Organizer' as const, description: 'Create and manage Hunts', signInTo: '/organizer/sign-in', workspaceTo: '/organizer' },
+  { label: 'Creator' as const, description: 'Build reusable Hunt templates', signInTo: '/creator/sign-in', workspaceTo: '/creator' },
+  { label: 'Admin' as const, description: 'Manage the TedixHunt platform', signInTo: '/admin/sign-in', workspaceTo: '/admin' },
+]
+
+export function LoginWorkspacePage() {
+  return <AccessShell><p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">TedixHunt workspaces</p><h1 className="mt-3 text-4xl font-bold tracking-tight">Choose your workspace</h1><nav aria-label="Professional sign-in options" className="mt-8 grid gap-3">{professionalWorkspaces.map(workspace => <Link className="flex min-h-20 items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/[0.05] px-5 py-3 transition hover:border-emerald-300 hover:bg-white/[0.08]" key={workspace.label} to={workspace.signInTo}><span><span className="block font-bold">{workspace.label}</span><span className="mt-1 block text-sm font-normal text-slate-300">{workspace.description}</span></span><span aria-hidden="true" className="text-emerald-300">→</span></Link>)}</nav></AccessShell>
+}
+
 export function WorkspaceSelectorPage() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isBootstrapping } = useAuth()
   const location = useLocation()
   const from = (location.state as { from?: unknown } | null)?.from
   const currentWorkspace = workspaceFromPath(typeof from === 'string' ? from : undefined)
-  const workspaces = [
-    { label: 'Participant' as const, description: 'Join and play Hunts', signedOutTo: '/join', signedInTo: '/join', available: canAccessParticipant(user) },
-    { label: 'Organizer' as const, description: 'Create and manage Hunts', signedOutTo: '/organizer/sign-in', signedInTo: '/organizer', available: canAccessOrganizer(user) },
-    { label: 'Creator' as const, description: 'Build reusable Hunt templates', signedOutTo: '/creator/sign-in', signedInTo: '/creator', available: canAccessCreator(user) },
-    { label: 'Admin' as const, description: 'Manage the TedixHunt platform', signedOutTo: '/admin/sign-in', signedInTo: '/admin', available: canAccessAdmin(user) },
-  ]
+  if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
+  if (!user) return <Navigate replace to="/login-workspace" />
+  const workspaces = professionalWorkspaces.filter(workspace => ({
+    Organizer: canAccessOrganizer,
+    Creator: canAccessCreator,
+    Admin: canAccessAdmin,
+  })[workspace.label](user))
 
-  return <AccessShell><p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">TedixHunt workspaces</p><h1 className="mt-3 text-4xl font-bold tracking-tight">Choose your workspace</h1><nav aria-label="Workspace options" className="mt-8 grid gap-3">{workspaces.map(workspace => {
-    const isAvailable = !isAuthenticated || workspace.available
-    const content = <><span><span className="block font-bold">{workspace.label}</span><span className="mt-1 block text-sm font-normal text-slate-300">{workspace.description}</span>{!isAvailable && <span className="mt-2 block text-xs font-semibold text-slate-400">Not available for this account</span>}</span><span className="flex shrink-0 flex-col items-end gap-2">{currentWorkspace === workspace.label && <span className="rounded-full bg-emerald-300/15 px-2 py-1 text-xs font-semibold text-emerald-200">Current</span>}{isAvailable && <span aria-hidden="true" className="text-emerald-300">→</span>}</span></>
-    return isAvailable
-      ? <Link className="flex min-h-20 items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/[0.05] px-5 py-3 transition hover:border-emerald-300 hover:bg-white/[0.08]" key={workspace.label} to={isAuthenticated ? workspace.signedInTo : workspace.signedOutTo}>{content}</Link>
-      : <div aria-disabled="true" className="flex min-h-20 cursor-not-allowed items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.025] px-5 py-3 text-slate-400" key={workspace.label}>{content}</div>
-  })}</nav></AccessShell>
+  return <AccessShell><p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">TedixHunt workspaces</p><h1 className="mt-3 text-4xl font-bold tracking-tight">Switch workspace</h1><nav aria-label="Available workspaces" className="mt-8 grid gap-3">{workspaces.map(workspace => <Link className="flex min-h-20 items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/[0.05] px-5 py-3 transition hover:border-emerald-300 hover:bg-white/[0.08]" key={workspace.label} to={workspace.workspaceTo}><span><span className="block font-bold">{workspace.label}</span><span className="mt-1 block text-sm font-normal text-slate-300">{workspace.description}</span></span><span className="flex shrink-0 flex-col items-end gap-2">{currentWorkspace === workspace.label && <span className="rounded-full bg-emerald-300/15 px-2 py-1 text-xs font-semibold text-emerald-200">Current</span>}<span aria-hidden="true" className="text-emerald-300">→</span></span></Link>)}</nav></AccessShell>
 }
-
-/** @deprecated Use WorkspaceSelectorPage at /workspaces. */
-export const ProfessionalAccessPage = WorkspaceSelectorPage
 
 export function ProfessionalSignInPage({ type }: { type: 'creator' | 'admin' }) {
   const navigate=useNavigate()
