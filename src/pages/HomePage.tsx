@@ -24,24 +24,35 @@ export function HomePage() {
       <div aria-hidden="true" className="absolute inset-0">
         <div className="absolute -right-24 -top-32 h-96 w-96 rounded-full bg-emerald-400/[0.08] blur-3xl" />
         <div className="absolute -bottom-40 -left-32 h-96 w-96 rounded-full bg-cyan-400/[0.07] blur-3xl" />
-        <svg aria-hidden="true" className="absolute inset-0 h-full w-full" viewBox="0 0 400 800" fill="none" preserveAspectRatio="none">
+        <svg aria-hidden="true" className="absolute inset-0 h-full w-full md:hidden" viewBox="0 0 400 800" fill="none" preserveAspectRatio="none">
           <defs>
-            <filter id="destination-glow" x="-250%" y="-250%" width="600%" height="600%">
-              <feGaussianBlur stdDeviation="7" />
+            <filter id="mobile-point-glow" x="-250%" y="-250%" width="600%" height="600%">
+              <feGaussianBlur stdDeviation="6" />
             </filter>
           </defs>
-          <path d="M-12 750 C40 726 78 680 126 660 C202 630 315 680 340 562 C365 448 288 360 312 272 C328 211 356 159 376 104" stroke="#4ade80" strokeWidth="2" strokeDasharray="5 10" opacity="0.3" />
+          <path d="M50 686 C72 676 88 664 104 646" stroke="#4ade80" strokeWidth="1.5" strokeDasharray="3 9" opacity="0.18" />
+          <path d="M292 386 C310 362 324 336 334 304" stroke="#4ade80" strokeWidth="1.5" strokeDasharray="3 9" opacity="0.16" />
+          <circle cx="38" cy="692" r="13" fill="#34d399" opacity="0.08" filter="url(#mobile-point-glow)" />
+          <circle cx="38" cy="692" r="5" fill="#4ade80" opacity="0.68" />
+          <circle cx="284" cy="396" r="6" fill="#07110f" stroke="#4ade80" strokeWidth="1.5" opacity="0.55" />
+          <circle cx="350" cy="112" r="18" fill="#34d399" opacity="0.13" filter="url(#mobile-point-glow)" />
+          <circle cx="350" cy="112" r="7" fill="#07110f" stroke="#6ee7b7" strokeWidth="2" opacity="0.8" />
+          <circle cx="350" cy="112" r="2.5" fill="#6ee7b7" opacity="0.85" />
+        </svg>
 
-          <circle cx="28" cy="727" r="11" fill="#34d399" opacity="0.1" />
-          <circle cx="28" cy="727" r="6" fill="#4ade80" opacity="0.8" />
-          <circle cx="28" cy="727" r="9" stroke="#6ee7b7" strokeWidth="1.5" opacity="0.35" />
-
-          <circle cx="126" cy="660" r="7" fill="#07110f" stroke="#4ade80" strokeWidth="2" opacity="0.65" />
-          <circle cx="312" cy="272" r="7" fill="#07110f" stroke="#4ade80" strokeWidth="2" opacity="0.7" />
-
-          <circle cx="376" cy="104" r="22" fill="#34d399" opacity="0.2" filter="url(#destination-glow)" />
-          <circle cx="376" cy="104" r="10" fill="#07110f" stroke="#6ee7b7" strokeWidth="2.5" opacity="0.95" />
-          <circle cx="376" cy="104" r="3" fill="#6ee7b7" opacity="0.95" />
+        <svg aria-hidden="true" className="absolute inset-0 hidden h-full w-full md:block" viewBox="0 0 1440 900" fill="none" preserveAspectRatio="none">
+          <defs>
+            <filter id="desktop-destination-glow" x="-250%" y="-250%" width="600%" height="600%">
+              <feGaussianBlur stdDeviation="12" />
+            </filter>
+          </defs>
+          <path d="M-30 700 C250 650 410 690 610 610 S980 500 1160 300 S1300 185 1370 126" stroke="#4ade80" strokeWidth="1.75" strokeDasharray="5 14" opacity="0.18" />
+          <circle cx="150" cy="670" r="6" fill="#07110f" stroke="#4ade80" strokeWidth="1.5" opacity="0.46" />
+          <circle cx="610" cy="610" r="6" fill="#07110f" stroke="#4ade80" strokeWidth="1.5" opacity="0.42" />
+          <circle cx="1160" cy="300" r="7" fill="#07110f" stroke="#4ade80" strokeWidth="1.75" opacity="0.52" />
+          <circle cx="1370" cy="126" r="34" fill="#34d399" opacity="0.2" filter="url(#desktop-destination-glow)" />
+          <circle cx="1370" cy="126" r="11" fill="#07110f" stroke="#6ee7b7" strokeWidth="2.5" opacity="0.95" />
+          <circle cx="1370" cy="126" r="3" fill="#6ee7b7" />
         </svg>
       </div>
 
@@ -55,7 +66,7 @@ export function HomePage() {
 
         <section className="home-hero flex w-full flex-col items-center self-start pt-[clamp(1rem,5vh,2.5rem)] text-center">
           <div>
-            <h1 className="home-title whitespace-nowrap text-[clamp(2.625rem,12vw,3rem)] font-extrabold leading-none tracking-[-0.045em]">
+            <h1 className="home-title whitespace-nowrap text-[2.375rem] font-extrabold leading-none tracking-[-0.045em] sm:text-5xl">
               GAME ON.
             </h1>
             <p className="home-copy mt-3 text-[17px] font-normal leading-7 text-slate-300 sm:text-lg">
