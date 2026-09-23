@@ -1,8 +1,8 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 2.3 | Updated 23 September 2026
+Version 2.4 | Updated 23 September 2026
 
-This document evolves Version 2.2 with the current professional-account implementation state, complete Admin account lifecycle, and the identity/workspace architecture for global capabilities and Hunt-contextual access.
+This document evolves Version 2.3 with the current professional-account implementation state, complete Admin account lifecycle, the identity/workspace architecture for global capabilities and Hunt-contextual access, and the separation between public professional entry and authenticated workspace switching.
 
 The implementation strategy is:
 
@@ -153,17 +153,31 @@ Participant and Supervisor are Hunt-contextual:
 
 The existing global participant role remains only as transitional compatibility data for current authentication/guards. New Hunt-context decisions must not infer Participant access from that global role.
 
-### Workspace switching
+### Entry selection and workspace switching
 
-The frontend uses /workspaces as the common context switcher.
+Public entry and authenticated switching are separate concerns.
 
-- Organizer, Creator and Admin are global workspaces/capabilities.
-- Participant and Supervisor entries are Hunt-specific contexts.
+Public/default entry:
+- `/` is Participant-first.
+- `Join a Hunt` is the single public Participant entry and leads to `/join`.
+- The homepage `Organizer · Creator · Admin →` link leads to `/login-workspace`.
+
+Public professional entry:
+- `/login-workspace` is a login/entry selector, not a context switcher.
+- It shows only Organizer, Creator and Admin.
+- It routes to the corresponding professional sign-in flows.
+- Participant and Supervisor must never appear on this public professional selector.
+- Legacy `/professional-access` redirects to `/login-workspace`.
+
+Authenticated workspace switching:
+- `/workspaces` is authenticated-only.
+- Unauthenticated access redirects to `/login-workspace`.
+- Organizer, Creator and Admin are global workspaces/capabilities and appear only when the authenticated identity actually has them.
+- Participant and Supervisor entries are Hunt-specific contexts and will be populated from authenticated Hunt-context data.
 - Switching workspace/context reuses the same authenticated session; it is navigation, not re-authentication.
-- The public homepage remains Participant-first and is the primary entry for joining a Hunt.
-- The workspace selector is for fast switching among the contexts/capabilities already available to the authenticated identity.
+- Professional headers expose an explicit `Switch Workspace: <Current> →` action leading to `/workspaces`.
 
-The frontend must not flatten contextual Hunt access into permanent global roles.
+The frontend must not flatten contextual Hunt access into permanent global roles, and it must not use `/workspaces` as a public login selector.
 
 ### Security is backend-enforced
 
@@ -269,7 +283,9 @@ Already-real frontend foundations include:
 - Admin Account Security / own-password change
 - Admin list, provisioning and activation UI
 - grouped collapsible Admin left sidebar
-- canonical /workspaces selector and shared professional workspace-switch entry (FE PR #43)
+- canonical authenticated /workspaces switcher and shared professional workspace-switch entry (FE PR #43, refined by FE PR #45)
+- public /login-workspace selector for Organizer / Creator / Admin only (FE PR #45)
+- homepage keeps Participant entry separate through Join a Hunt; professional entry links to /login-workspace
 - organizations API
 - Hunt API
 - Hunt template metadata API
@@ -385,6 +401,12 @@ Status: 🟡 Backend complete / FE contextual wiring pending
 
 Implemented foundation:
 - FE PR #43 introduced the canonical /workspaces selector and same-session workspace switching for global capabilities.
+- FE PR #45 separated public professional entry from authenticated switching:
+  - /login-workspace is the public Organizer/Creator/Admin entry selector
+  - /workspaces is authenticated-only
+  - the generic Participant card was removed from /workspaces
+  - professional headers expose Switch Workspace: <Current> →
+  - /professional-access redirects to /login-workspace
 - BE PR #35 added GET /api/me/hunt-contexts.
 - The API returns one row per Hunt with huntId, huntName, huntStatus, participant and supervisor.
 - Participant context is derived only from hunt_participants.
@@ -392,7 +414,8 @@ Implemented foundation:
 - One Hunt may expose both Participant and Supervisor access for the same User.
 
 Remaining:
-- evolve /workspaces so Organizer/Creator/Admin remain global entries while Participant/Supervisor are rendered as specific Hunt contexts
+- connect /workspaces to GET /api/me/hunt-contexts
+- render Participant/Supervisor only as specific Hunt contexts
 - add contextual navigation targets as Participant/Supervisor runtime routes mature
 
 ### B2. Backend role authorization
@@ -1382,6 +1405,8 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 
 1. Finish Identity / Workspace context integration
    - ✅ canonical /workspaces selector and same-session global switching (FE PR #43)
+   - ✅ public /login-workspace separated from authenticated /workspaces (FE PR #45)
+   - ✅ homepage Participant entry remains Join a Hunt; professional entry goes to /login-workspace
    - ✅ authenticated Hunt-context read API (BE PR #35)
    - wire Participant/Supervisor Hunt contexts into /workspaces
    - keep global participant role compatibility-only
@@ -1434,12 +1459,15 @@ Architecture now distinguishes global capabilities from Hunt-specific access.
 
 Complete:
 - FE PR #43 — /workspaces selector and same-session switching for global workspaces
+- FE PR #45 — public /login-workspace separated from authenticated /workspaces
+- FE PR #45 — homepage professional entry routes to /login-workspace while Join a Hunt remains the only public Participant entry
+- FE PR #45 — explicit Switch Workspace: <Current> → action in professional headers
 - BE PR #35 — GET /api/me/hunt-contexts authoritative contextual-access read model
 
 Next:
-- update FE /workspaces so Organizer/Creator/Admin are global entries
-- load authenticated Hunt contexts from /api/me/hunt-contexts
-- render Participant and Supervisor per specific Hunt
+- load authenticated Hunt contexts from /api/me/hunt-contexts inside /workspaces
+- keep Organizer/Creator/Admin as global capability entries
+- render Participant and Supervisor only per specific Hunt
 - never infer Hunt participation from the global participant compatibility role
 
 ## Completed professional Admin foundation — E6 through E10
