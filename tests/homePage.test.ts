@@ -7,12 +7,14 @@ const readProjectFile = (path: string) => readFile(new URL(`../${path}`, import.
 test('homepage presents the participant game entry actions', async () => {
   const home = await readProjectFile('src/pages/HomePage.tsx')
 
-  assert.match(home, /Something's about to happen\./)
+  assert.match(home, /GAME ON\./)
+  assert.doesNotMatch(home, /Something's about to happen\./)
   assert.doesNotMatch(home, /Yours city is waiting\./)
   assert.match(home, /to="\/join"[\s\S]{0,400}Join a Hunt/)
   assert.match(home, /to="\/discover"[\s\S]{0,400}Try a short Hunt/)
   assert.doesNotMatch(home, /See how it works/)
   assert.equal(home.match(/Professional access →/g)?.length, 1)
+  assert.match(home, /to="\/professional-access"[\s\S]{0,400}Professional access →/)
   assert.doesNotMatch(home, /Organizer workspace|Creator Studio|Admin sign in/)
 })
 

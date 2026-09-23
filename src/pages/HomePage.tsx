@@ -32,33 +32,33 @@ export function HomePage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_45%,#07110f_78%)]" />
       </div>
 
-      <div className="home-shell relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-5 pb-7 pt-5 sm:px-8 lg:px-12">
-        <header className="flex items-center">
+      <div className="home-shell relative mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-5 py-8 sm:px-8">
+        <header className="flex justify-center">
           <Link to="/" className="flex min-h-11 items-center gap-2 text-emerald-300" aria-label="TedixHunt home">
             <TrailMark />
             <span className="text-sm font-extrabold uppercase tracking-[0.22em] text-white">TedixHunt</span>
           </Link>
         </header>
 
-        <section className="home-hero flex flex-1 flex-col justify-center py-10 sm:max-w-2xl lg:py-16">
-          <h1 className="home-title max-w-3xl text-[clamp(3rem,13vw,7rem)] font-extrabold leading-[0.9] tracking-[-0.055em]">
-            Something's about to happen.
+        <section className="home-hero mt-8 flex w-full flex-col items-center text-center">
+          <h1 className="home-title whitespace-nowrap text-[clamp(2.625rem,12vw,3rem)] font-extrabold leading-none tracking-[-0.045em]">
+            GAME ON.
           </h1>
-          <p className="home-copy mt-6 max-w-xl text-lg leading-7 text-slate-300 sm:text-xl sm:leading-8">
+          <p className="home-copy mt-3 text-[17px] font-normal leading-7 text-slate-300 sm:text-lg">
             Explore. Solve. Keep moving.
           </p>
 
-          <div className="home-discovery mt-9 flex flex-col gap-3 sm:max-w-sm">
+          <div className="home-discovery mt-8 flex w-full max-w-sm flex-col gap-3">
             <Link
               to="/join"
-              className="group flex min-h-16 items-center justify-between rounded-xl bg-emerald-400 px-6 text-base font-bold text-slate-950 shadow-[0_18px_50px_rgba(52,211,153,0.22)] transition hover:bg-emerald-300 focus:outline-none focus:ring-4 focus:ring-emerald-300/30"
+              className="group relative flex min-h-16 items-center justify-center rounded-xl bg-emerald-400 px-14 text-base font-bold text-slate-950 shadow-[0_18px_50px_rgba(52,211,153,0.22)] transition hover:bg-emerald-300 focus:outline-none focus:ring-4 focus:ring-emerald-300/30"
             >
               <span>Join a Hunt</span>
-              <span className="transition-transform group-hover:translate-x-1"><ArrowIcon /></span>
+              <span className="absolute right-6 transition-transform group-hover:translate-x-1"><ArrowIcon /></span>
             </Link>
             <Link
               to="/discover"
-              className="flex min-h-14 items-center justify-center rounded-xl border border-emerald-300/40 bg-white/[0.04] px-6 text-sm font-bold text-emerald-100 transition hover:border-emerald-300 hover:bg-white/[0.08] focus:outline-none focus:ring-4 focus:ring-emerald-300/20"
+              className="flex min-h-14 items-center justify-center rounded-xl border border-emerald-300/40 bg-white/[0.04] px-6 text-[15px] font-semibold text-emerald-100 transition hover:border-emerald-300 hover:bg-white/[0.08] focus:outline-none focus:ring-4 focus:ring-emerald-300/20"
             >
               Try a short Hunt
             </Link>
@@ -66,8 +66,8 @@ export function HomePage() {
           </div>
         </section>
 
-        <footer className="home-footer flex justify-center border-t border-white/10 pt-3 sm:justify-start">
-          <Link className="flex min-h-11 items-center rounded px-2 text-xs font-bold text-emerald-200/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300" to="/professional-access">Professional access →</Link>
+        <footer className="home-footer mt-5 flex w-full max-w-sm justify-center border-t border-white/10 pt-2">
+          <Link className="flex min-h-11 items-center rounded px-2 text-[13px] font-semibold text-emerald-200/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300" to="/professional-access">Professional access →</Link>
         </footer>
       </div>
     </main>
