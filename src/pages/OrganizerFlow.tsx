@@ -1,10 +1,11 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
 import { huntsApi, type HuntLifecycleAction, type HuntListItem, type HuntStatus } from '../services/api'
 import { ApiError } from '../services/api/client'
 import { canAccessOrganizer } from '../features/auth/access'
 import { canContinueSetup, huntSummary, lifecycleActions, mergeLifecycleResult, statusLabels } from './organizerHunts'
+import { workspaceFromPath } from './ProfessionalAccess'
 
 const statusStyles: Record<HuntStatus, string> = {
   draft: 'bg-slate-100 text-slate-700',
@@ -27,12 +28,14 @@ function formatUpdatedAt(value: string) {
 export function OrganizerHeader({ showProfile = false, logoutTo = '/organizer/registered' }: { showProfile?: boolean; logoutTo?: string }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const currentWorkspace = workspaceFromPath(location.pathname)
   const signOut = async () => { try { await logout() } finally { navigate(logoutTo, { replace: true }) } }
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
         <Link className="text-sm font-bold uppercase tracking-[0.2em] text-slate-950" to="/">TedixHunt</Link>
-        {showProfile ? <div className="flex items-center gap-3"><span className="hidden text-sm text-slate-500 sm:block">{user?.name ?? 'Cluj Youth Centre'}</span>{user ? <button className="min-h-10 rounded-lg px-3 text-sm font-bold text-slate-600 hover:bg-slate-100" onClick={() => void signOut()} type="button">Log out</button> : <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-800">OC</span>}</div> : <Link className="text-sm font-bold text-slate-500 hover:text-slate-900" to="/">Back to home</Link>}
+        {showProfile ? <div className="flex min-w-0 items-center gap-1 sm:gap-3">{user && currentWorkspace && <Link aria-label="Switch workspace" className="min-h-10 shrink-0 rounded-lg px-2 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-50 sm:px-3 sm:text-sm" state={{ from: location.pathname }} to="/workspaces">{currentWorkspace} <span aria-hidden="true">▾</span></Link>}<span className="hidden truncate text-sm text-slate-500 sm:block">{user?.name ?? 'Cluj Youth Centre'}</span>{user ? <button className="min-h-10 shrink-0 rounded-lg px-2 text-xs font-bold text-slate-600 hover:bg-slate-100 sm:px-3 sm:text-sm" onClick={() => void signOut()} type="button">Log out</button> : <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-800">OC</span>}</div> : <Link className="text-sm font-bold text-slate-500 hover:text-slate-900" to="/">Back to home</Link>}
       </div>
     </header>
   )
