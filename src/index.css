@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Sora';
+  src: url('/fonts/sora/Sora-Variable.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
 /* Keep mobile app panels from gaining a horizontal scrollbar beside the vertical gutter. */
 main {
   overflow-x: hidden;
