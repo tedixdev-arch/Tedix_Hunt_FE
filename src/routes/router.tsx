@@ -18,7 +18,7 @@ import { AdminAccountSecurityPage } from '../pages/AdminAccountSecurity'
 import { AdminUsersPage } from '../pages/AdminUsers'
 import { AdminOrganizerApplicationsPage } from '../pages/AdminOrganizerApplications'
 import { AdminActivationPage } from '../pages/AdminActivation'
-import { ProfessionalSignInPage } from '../pages/ProfessionalAccess'
+import { ProfessionalAccessPage, ProfessionalSignInPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
 import { canAccessAdmin, canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
 
@@ -63,6 +63,10 @@ export const router = createHashRouter([
   {
     path: '/',
     element: <HomePage />,
+  },
+  {
+    path: '/professional-access',
+    element: <ProfessionalAccessPage />,
   },
   {
     path: '/discover',

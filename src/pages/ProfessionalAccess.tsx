@@ -7,6 +7,16 @@ function AccessShell({ children }: { children: ReactNode }) {
   return <main className="min-h-dvh bg-slate-950 px-5 py-10 text-white"><div className="mx-auto flex min-h-[calc(100dvh-5rem)] w-full max-w-md flex-col justify-center"><Link className="mb-8 text-sm font-bold uppercase tracking-[0.2em]" to="/">TedixHunt</Link>{children}</div></main>
 }
 
+export function ProfessionalAccessPage() {
+  const accessLinks = [
+    { label: 'Organizer', to: '/organizer/sign-in' },
+    { label: 'Creator', to: '/creator/sign-in' },
+    { label: 'Admin', to: '/admin/sign-in' },
+  ]
+
+  return <AccessShell><p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">Professional access</p><h1 className="mt-3 text-4xl font-bold tracking-tight">Choose your workspace</h1><nav aria-label="Professional sign-in options" className="mt-8 grid gap-3">{accessLinks.map(link => <Link className="flex min-h-14 items-center justify-between rounded-xl border border-white/15 bg-white/[0.05] px-5 font-bold transition hover:border-emerald-300 hover:bg-white/[0.08]" key={link.to} to={link.to}><span>{link.label}</span><span aria-hidden="true" className="text-emerald-300">→</span></Link>)}</nav></AccessShell>
+}
+
 export function ProfessionalSignInPage({ type }: { type: 'creator' | 'admin' }) {
   const navigate=useNavigate()
   const { loginAdmin, loginCreator } = useAuth()
