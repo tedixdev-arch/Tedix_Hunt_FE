@@ -4,10 +4,16 @@ import { test } from 'node:test'
 
 const readProjectFile = (path: string) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('the application loads Sora with the supported UI weights', async () => {
-  const html = await readProjectFile('index.html')
+test('the application self-hosts the Sora variable font', async () => {
+  const [html, globalCss] = await Promise.all([
+    readProjectFile('index.html'),
+    readProjectFile('src/index.css'),
+  ])
 
-  assert.match(html, /family=Sora:wght@400;500;600;700;800&amp;display=swap/)
+  assert.doesNotMatch(html, /fonts\.(?:googleapis|gstatic)\.com/)
+  assert.match(globalCss, /src:\s*url\(['"]\/fonts\/sora\/Sora-Variable\.woff2['"]\)\s*format\(['"]woff2['"]\)/)
+  assert.match(globalCss, /font-weight:\s*400 800/)
+  assert.match(globalCss, /font-display:\s*swap/)
 })
 
 test('global and Tailwind sans typography use Sora first', async () => {
