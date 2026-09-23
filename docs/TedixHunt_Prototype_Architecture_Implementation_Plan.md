@@ -1,8 +1,8 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 2.2 | Updated 22 September 2026
+Version 2.3 | Updated 23 September 2026
 
-This document evolves Version 2.0 with the current professional-account implementation state and a complete Admin account lifecycle for the prototype.
+This document evolves Version 2.2 with the current professional-account implementation state, complete Admin account lifecycle, and the identity/workspace architecture for global capabilities and Hunt-contextual access.
 
 The implementation strategy is:
 
@@ -132,20 +132,38 @@ Do not introduce a separate API Gateway/BFF unless future scale or architecture 
 
 All new runtime state uses PostgreSQL. Do not introduce MongoDB/Mongoose for new functionality.
 
-### One identity, multiple roles
+### One identity, global capabilities and Hunt contexts
 
-One User may hold several platform capabilities:
+One User identity and authenticated session may simultaneously have several platform capabilities and several Hunt-specific relationships.
 
-- participant
+Global platform capabilities are:
+
 - organizer
 - creator
 - admin
 
-user_roles is authoritative. users.role is transitional compatibility data only.
+For those capabilities, user_roles is authoritative. users.role remains transitional compatibility data only.
 
-### Contextual Hunt roles remain separate
+Participant and Supervisor are Hunt-contextual:
 
-Organizer/Supervisor responsibilities for one Hunt belong to hunt_roles, not global user roles.
+- Participant access to a Hunt is authoritative from hunt_participants.
+- Supervisor access to a Hunt is authoritative from hunt_roles with role = 'supervisor'.
+- The same User may be Participant in one Hunt, Supervisor in another, both Participant and Supervisor in the same Hunt, and also hold Organizer/Creator/Admin global capabilities.
+- Supervisor must never be inferred from Organizer capability or from Hunt ownership.
+
+The existing global participant role remains only as transitional compatibility data for current authentication/guards. New Hunt-context decisions must not infer Participant access from that global role.
+
+### Workspace switching
+
+The frontend uses /workspaces as the common context switcher.
+
+- Organizer, Creator and Admin are global workspaces/capabilities.
+- Participant and Supervisor entries are Hunt-specific contexts.
+- Switching workspace/context reuses the same authenticated session; it is navigation, not re-authentication.
+- The public homepage remains Participant-first and is the primary entry for joining a Hunt.
+- The workspace selector is for fast switching among the contexts/capabilities already available to the authenticated identity.
+
+The frontend must not flatten contextual Hunt access into permanent global roles.
 
 ### Security is backend-enforced
 
@@ -251,6 +269,7 @@ Already-real frontend foundations include:
 - Admin Account Security / own-password change
 - Admin list, provisioning and activation UI
 - grouped collapsible Admin left sidebar
+- canonical /workspaces selector and shared professional workspace-switch entry (FE PR #43)
 - organizations API
 - Hunt API
 - Hunt template metadata API
@@ -270,6 +289,7 @@ The active application uses src/main.tsx and src/routes/router.tsx.
 Current main backend domains:
 
 - /api/auth
+- /api/me/hunt-contexts
 - /api/admin/users
 - /api/organizer-applications
 - /api/organizations
@@ -356,7 +376,24 @@ Admin authentication uses the real backend session flow. Fake Admin 2FA is no lo
 Status: 🟡 Mostly complete
 
 ### B1. Multi-role identity
-Status: ✅ Complete
+Status: ✅ Complete for global capabilities
+
+Authoritative global capabilities are Organizer, Creator and Admin. The global Participant role remains compatibility-only for the current prototype and must not be used as proof of access to a specific Hunt.
+
+### B1.1 Workspace/context model
+Status: 🟡 Backend complete / FE contextual wiring pending
+
+Implemented foundation:
+- FE PR #43 introduced the canonical /workspaces selector and same-session workspace switching for global capabilities.
+- BE PR #35 added GET /api/me/hunt-contexts.
+- The API returns one row per Hunt with huntId, huntName, huntStatus, participant and supervisor.
+- Participant context is derived only from hunt_participants.
+- Supervisor context is derived only from hunt_roles(role='supervisor').
+- One Hunt may expose both Participant and Supervisor access for the same User.
+
+Remaining:
+- evolve /workspaces so Organizer/Creator/Admin remain global entries while Participant/Supervisor are rendered as specific Hunt contexts
+- add contextual navigation targets as Participant/Supervisor runtime routes mature
 
 ### B2. Backend role authorization
 Status: ✅ Complete
@@ -378,9 +415,15 @@ Admin:
 Status: ✅ Complete for current prototype
 
 ### B5. Hunt-context roles
-Status: ✅ Structural foundation complete
+Status: 🟡 Context read model complete / runtime assignment-use pending
 
-Organizer and Supervisor exist structurally. Supervisor assignment/use is still pending.
+Participant membership is represented by hunt_participants.
+
+Supervisor authority is represented by hunt_roles(role='supervisor').
+
+GET /api/me/hunt-contexts is the authenticated read model used to expose those contextual relationships to workspace switching without converting them into global roles.
+
+Supervisor assignment/use during live Hunt operations is still pending.
 
 ---
 
@@ -1337,7 +1380,13 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 
 # 20. Recommended implementation order from current state
 
-1. Finish Professional Account Lifecycle
+1. Finish Identity / Workspace context integration
+   - ✅ canonical /workspaces selector and same-session global switching (FE PR #43)
+   - ✅ authenticated Hunt-context read API (BE PR #35)
+   - wire Participant/Supervisor Hunt contexts into /workspaces
+   - keep global participant role compatibility-only
+
+2. Finish Professional Account Lifecycle
    - ✅ Admin own-password change and session revocation (E9)
    - ✅ normal additional-Admin provisioning/activation (E10)
    - Organizer Applications Admin UI (E11)
@@ -1347,37 +1396,51 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
    - Creator activation/account lifecycle (E15)
    - verify Creator onboarding (E16)
 
-2. Build Creator Template Persistence + Versioning
+3. Build Creator Template Persistence + Versioning
 
-3. Build Admin Template Review / Approval
+4. Build Admin Template Review / Approval
 
-4. Replace static approved-template authority with real approved DB template versions
+5. Replace static approved-template authority with real approved DB template versions
 
-5. Verify Organizer selects a real approved Creator template
+6. Verify Organizer selects a real approved Creator template
 
-6. Build Participant enrollment/team formation
+7. Build Participant enrollment/team formation
 
-7. Build ONE complete checkpoint runtime
+8. Build ONE complete checkpoint runtime
 
-8. Extend to full Signal mission
+9. Extend to full Signal mission
 
-9. Connect live Organizer monitoring + Help/PANIC
+10. Connect live Organizer monitoring + Help/PANIC
 
-10. Build results + reward-awarding runtime
+11. Build results + reward-awarding runtime
 
-11. Add Admin operational systems as their domains become real
+12. Add Admin operational systems as their domains become real
 
-12. Add Passport/history/achievements
+13. Add Passport/history/achievements
 
-13. Add Custom Hunt request workflow
+14. Add Custom Hunt request workflow
 
-14. Resolve Independent Organizer production architecture
+15. Resolve Independent Organizer production architecture
 
 This order avoids building participant gameplay permanently around hard-coded Signal content.
 
 ---
 
 # 21. Immediate next steps
+
+## Immediate 0 — Contextual workspace integration
+
+Architecture now distinguishes global capabilities from Hunt-specific access.
+
+Complete:
+- FE PR #43 — /workspaces selector and same-session switching for global workspaces
+- BE PR #35 — GET /api/me/hunt-contexts authoritative contextual-access read model
+
+Next:
+- update FE /workspaces so Organizer/Creator/Admin are global entries
+- load authenticated Hunt contexts from /api/me/hunt-contexts
+- render Participant and Supervisor per specific Hunt
+- never infer Hunt participation from the global participant compatibility role
 
 ## Completed professional Admin foundation — E6 through E10
 
