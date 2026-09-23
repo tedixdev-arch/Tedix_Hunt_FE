@@ -82,7 +82,7 @@ export function HomePage() {
         </section>
 
         <footer className="home-footer flex w-full max-w-sm items-end justify-center self-stretch">
-          <Link className="flex min-h-11 items-center rounded px-2 text-[13px] font-semibold text-emerald-200/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300" to="/professional-access">Professional access →</Link>
+          <Link className="flex min-h-11 items-center rounded px-2 text-[13px] font-semibold text-emerald-200/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300" to="/workspaces">Organizer · Creator · Admin →</Link>
         </footer>
       </div>
     </main>

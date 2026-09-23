@@ -13,22 +13,23 @@ test('homepage presents the participant game entry actions', async () => {
   assert.match(home, /to="\/join"[\s\S]{0,400}Join a Hunt/)
   assert.match(home, /to="\/discover"[\s\S]{0,400}Try a short Hunt/)
   assert.doesNotMatch(home, /See how it works/)
-  assert.equal(home.match(/Professional access →/g)?.length, 1)
-  assert.match(home, /to="\/professional-access"[\s\S]{0,400}Professional access →/)
+  assert.doesNotMatch(home, /Professional access →/)
+  assert.match(home, /to="\/workspaces"[\s\S]{0,400}Organizer · Creator · Admin →/)
   assert.doesNotMatch(home, /Organizer workspace|Creator Studio|Admin sign in/)
 })
 
-test('professional access keeps every existing sign-in route reachable', async () => {
+test('workspace selector keeps every existing sign-in route reachable', async () => {
   const [home, access, router] = await Promise.all([
     readProjectFile('src/pages/HomePage.tsx'),
     readProjectFile('src/pages/ProfessionalAccess.tsx'),
     readProjectFile('src/routes/router.tsx'),
   ])
 
-  assert.match(home, /to="\/professional-access"/)
-  assert.match(router, /path: '\/professional-access',[\s\S]{0,100}element: <ProfessionalAccessPage \/>/)
+  assert.match(home, /to="\/workspaces"/)
+  assert.match(router, /path: '\/workspaces',[\s\S]{0,100}element: <WorkspaceSelectorPage \/>/)
+  assert.match(router, /path: '\/professional-access',[\s\S]{0,100}element: <Navigate replace to="\/workspaces" \/>/)
   for (const route of ['/organizer/sign-in', '/creator/sign-in', '/admin/sign-in']) {
-    assert.match(access, new RegExp(`to: '${route}'`))
+    assert.match(access, new RegExp(`signedOutTo: '${route}'`))
     assert.match(router, new RegExp(`path: '${route}'`))
   }
 })
