@@ -45,7 +45,7 @@ function RequireAdmin({ children }: { children: ReactNode }) {
   const location = useLocation()
   if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
   if (!user) return <Navigate replace state={{ from: location.pathname }} to="/admin/sign-in" />
-  if (!canAccessAdmin(user)) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-black">Admin access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Admin access.</p></div></main>
+  if (!canAccessAdmin(user)) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-bold">Admin access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Admin access.</p></div></main>
   return children
 }
 
@@ -55,7 +55,7 @@ function RequireOrganizer({ children, allowIndependent = false }: { children: Re
   if (allowIndependent && new URLSearchParams(location.search).get('mode') === 'independent') return children
   if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
   if (!user) return <Navigate replace state={{ from: location.pathname }} to="/organizer/registered" />
-  if (!canAccessOrganizer(user)) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-black">Organizer access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Organizer access.</p></div></main>
+  if (!canAccessOrganizer(user)) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-bold">Organizer access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Organizer access.</p></div></main>
   return children
 }
 
