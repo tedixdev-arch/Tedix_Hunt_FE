@@ -30,32 +30,40 @@ export function HomePage() {
               <feGaussianBlur stdDeviation="7" />
             </filter>
           </defs>
-          <path d="M-18 738C54 710 59 620 118 574C176 529 231 493 264 409C297 325 319 225 421 153" stroke="#4ade80" strokeWidth="2" strokeDasharray="5 11" opacity="0.2" />
-          <circle cx="30" cy="708" r="4" fill="#4ade80" opacity="0.3" />
-          <circle cx="118" cy="574" r="6" fill="#07110f" stroke="#4ade80" strokeWidth="2" opacity="0.45" />
-          <circle cx="264" cy="409" r="6" fill="#07110f" stroke="#4ade80" strokeWidth="2" opacity="0.55" />
-          <circle cx="370" cy="190" r="18" fill="#34d399" opacity="0.16" filter="url(#destination-glow)" />
-          <circle cx="370" cy="190" r="8" fill="#07110f" stroke="#6ee7b7" strokeWidth="2.5" opacity="0.8" />
+          <path d="M-12 750 C40 726 78 680 126 660 C202 630 315 680 340 562 C365 448 288 360 312 272 C328 211 356 159 376 104" stroke="#4ade80" strokeWidth="2" strokeDasharray="5 10" opacity="0.3" />
+
+          <circle cx="28" cy="727" r="11" fill="#34d399" opacity="0.1" />
+          <circle cx="28" cy="727" r="6" fill="#4ade80" opacity="0.8" />
+          <circle cx="28" cy="727" r="9" stroke="#6ee7b7" strokeWidth="1.5" opacity="0.35" />
+
+          <circle cx="126" cy="660" r="7" fill="#07110f" stroke="#4ade80" strokeWidth="2" opacity="0.65" />
+          <circle cx="312" cy="272" r="7" fill="#07110f" stroke="#4ade80" strokeWidth="2" opacity="0.7" />
+
+          <circle cx="376" cy="104" r="22" fill="#34d399" opacity="0.2" filter="url(#destination-glow)" />
+          <circle cx="376" cy="104" r="10" fill="#07110f" stroke="#6ee7b7" strokeWidth="2.5" opacity="0.95" />
+          <circle cx="376" cy="104" r="3" fill="#6ee7b7" opacity="0.95" />
         </svg>
       </div>
 
-      <div className="home-shell relative mx-auto grid min-h-dvh w-full max-w-md grid-rows-[auto_1fr_auto] justify-items-center px-5 py-7 sm:px-8 sm:py-10">
-        <header className="flex justify-center">
+      <div className="home-shell relative mx-auto grid min-h-dvh w-full max-w-md grid-rows-[minmax(4.5rem,0.65fr)_minmax(0,3fr)_minmax(4.75rem,0.85fr)] justify-items-center px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-8 sm:pb-10 sm:pt-8">
+        <header className="flex justify-center self-start">
           <Link to="/" className="flex min-h-11 items-center gap-2 text-emerald-300" aria-label="TedixHunt home">
             <TrailMark />
             <span className="text-sm font-extrabold uppercase tracking-[0.22em] text-white">TedixHunt</span>
           </Link>
         </header>
 
-        <section className="home-hero flex w-full flex-col items-center self-center py-8 text-center">
-          <h1 className="home-title whitespace-nowrap text-[clamp(2.625rem,12vw,3rem)] font-extrabold leading-none tracking-[-0.045em]">
-            GAME ON.
-          </h1>
-          <p className="home-copy mt-3 text-[17px] font-normal leading-7 text-slate-300 sm:text-lg">
-            Explore. Solve. Keep moving.
-          </p>
+        <section className="home-hero flex w-full flex-col items-center self-start pt-[clamp(1rem,5vh,2.5rem)] text-center">
+          <div>
+            <h1 className="home-title whitespace-nowrap text-[clamp(2.625rem,12vw,3rem)] font-extrabold leading-none tracking-[-0.045em]">
+              GAME ON.
+            </h1>
+            <p className="home-copy mt-3 text-[17px] font-normal leading-7 text-slate-300 sm:text-lg">
+              Explore. Solve. Keep moving.
+            </p>
+          </div>
 
-          <div className="home-discovery mt-8 flex w-full max-w-sm flex-col gap-3">
+          <div className="home-discovery mt-[clamp(2.25rem,6vh,3.5rem)] flex w-full max-w-sm flex-col gap-3">
             <Link
               to="/join"
               className="group relative flex min-h-16 items-center justify-center rounded-xl bg-emerald-400 px-14 text-base font-bold text-slate-950 shadow-[0_18px_50px_rgba(52,211,153,0.22)] transition hover:bg-emerald-300 focus:outline-none focus:ring-4 focus:ring-emerald-300/30"
@@ -73,7 +81,7 @@ export function HomePage() {
           </div>
         </section>
 
-        <footer className="home-footer flex w-full max-w-sm justify-center">
+        <footer className="home-footer flex w-full max-w-sm items-end justify-center self-stretch">
           <Link className="flex min-h-11 items-center rounded px-2 text-[13px] font-semibold text-emerald-200/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300" to="/professional-access">Professional access →</Link>
         </footer>
       </div>
