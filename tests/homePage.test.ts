@@ -8,10 +8,12 @@ test('homepage presents the participant game entry actions', async () => {
   const home = await readProjectFile('src/pages/HomePage.tsx')
 
   assert.match(home, /GAME ON\./)
+  assert.match(home, /Explore\. Solve\. Keep moving\./)
   assert.doesNotMatch(home, /Something's about to happen\./)
   assert.doesNotMatch(home, /Yours city is waiting\./)
   assert.match(home, /to="\/join"[\s\S]{0,400}Join a Hunt/)
   assert.match(home, /to="\/discover"[\s\S]{0,400}Try a short Hunt/)
+  assert.match(home, /No account needed\./)
   assert.doesNotMatch(home, /See how it works/)
   assert.doesNotMatch(home, /Professional access →/)
   assert.match(home, /to="\/login-workspace"[\s\S]{0,400}Organizer · Creator · Admin →/)
