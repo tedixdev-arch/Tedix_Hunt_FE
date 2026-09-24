@@ -1,8 +1,8 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 2.4 | Updated 23 September 2026
+Version 2.5 | Updated 24 September 2026
 
-This document evolves Version 2.3 with the current professional-account implementation state, complete Admin account lifecycle, the identity/workspace architecture for global capabilities and Hunt-contextual access, and the separation between public professional entry and authenticated workspace switching.
+This document evolves Version 2.4 with the current professional-account implementation state, direct Admin provisioning for Organizer and Creator capabilities, generalized professional activation, and the existing identity/workspace architecture for global capabilities and Hunt-contextual access.
 
 The implementation strategy is:
 
@@ -216,6 +216,7 @@ Tracked migrations currently reach:
 - 009_organizer_applications
 - 010_organizer_approval
 - 011_professional_activation_tokens
+- 012_professional_activation_purposes
 
 Current important tables include:
 
@@ -282,6 +283,8 @@ Already-real frontend foundations include:
 - Admin route protection merged in FE PR #28
 - Admin Account Security / own-password change
 - Admin list, provisioning and activation UI
+- generalized Users & Roles UI for Admin / Organizer / Creator provisioning (FE PR #48)
+- direct Organizer and Creator activation pages (FE PR #48)
 - grouped collapsible Admin left sidebar
 - canonical authenticated /workspaces switcher and shared professional workspace-switch entry (FE PR #43, refined by FE PR #45)
 - public /login-workspace selector for Organizer / Creator / Admin only (FE PR #45)
@@ -307,6 +310,7 @@ Current main backend domains:
 - /api/auth
 - /api/me/hunt-contexts
 - /api/admin/users
+- /api/admin/users/professional
 - /api/organizer-applications
 - /api/organizations
 - /api/hunt-templates
@@ -714,14 +718,18 @@ First Admin login
 The bootstrap `--allow-additional-admin` path remains recovery/maintenance only.
 
 ### E11. Organizer Applications Admin UI
-Status: 🟠 Backend complete / FE pending
+Status: ✅ Complete
 
-Admin needs:
-- pending list
-- detail
+Implemented:
+- pending/approved/rejected/all filtering
+- application detail
 - approve
 - reject
-- decision status
+- safe already-decided handling
+- one-time activation token handoff after approval
+- pending-attention indicator in Admin navigation
+
+The Organizer Applications UI is backed by the real application/approval API.
 
 ### E12. Organizer activation frontend
 Status: 🟠 Backend complete / FE pending
@@ -739,35 +747,42 @@ Verify:
 Apply → pending → Admin login → approve → account/role/org → activate → Organizer login → workspace
 
 ### E14. Creator provisioning
-Status: ⬜ Not started
+Status: ✅ Complete
 
-For prototype:
+Implemented through BE PR #36 and FE PR #48:
 - no public Creator self-registration
-- Admin provisions/invites Creator
-- reuse the same professional-account principles used for Admin/Organizer identities
-- preserve existing roles and passwords for existing users
-- use one-time activation for new passwordless identities
+- Admin can provision/invite Creator from Users & Roles
+- existing normalized identity is reused
+- existing password and existing roles are preserved
+- authoritative `creator` capability is added in `user_roles`
+- new/passwordless identities receive a one-time activation invitation
 
-Recommended:
-Admin → invite/create Creator → Creator activation → Creator login
+The same Users & Roles surface also supports direct Organizer provisioning.
 
 ### E15. Creator activation/account lifecycle
-Status: ⬜ Not started
+Status: ✅ Complete
 
-Implement:
-- one-time expiring activation
-- Creator chooses password when the identity is new/passwordless
+Implemented:
+- one-time expiring `creator_activation` token
+- Creator chooses password for a new/passwordless identity
 - existing password-backed identity keeps its credentials
-- authoritative `creator` role is preserved alongside any other roles
-- successful activation leads to Creator login/session
+- existing roles are preserved
+- successful activation returns the normal authenticated session
+- FE public activation route: `/creator/activate`
+- successful activation enters the Creator workspace
+
+Professional activation token purposes are now:
+- `admin_activation`
+- `organizer_activation`
+- `creator_activation`
 
 ### E16. Creator onboarding verification
-Status: ⬜ Not started
+Status: 🟡 Implementation complete / deployed end-to-end verification pending
 
-Verify:
+Target verification:
 Admin provisions Creator
 → activation if required
-→ Creator login
+→ Creator session/login
 → authoritative Creator access
 → Creator Studio
 
@@ -1105,20 +1120,27 @@ Status: 🟣 FE mock exists / mostly backend pending
 Implement each subsystem only when the underlying domain exists.
 
 ### L1. Users & Roles
-Status: ⬜ Not started
+Status: 🟡 Professional-capability foundation complete / full role administration pending
 
-Phase E implements only the minimum professional-account administration needed to operate the prototype. Phase L expands this into the full Users & Roles system.
+Phase E now implements the minimum real Users & Roles surface needed to operate the prototype:
+- list/filter Admin, Organizer and Creator identities
+- direct provision/grant Admin capability
+- direct provision/grant Organizer capability
+- direct provision/grant Creator capability
+- role-specific activation/account state
+- Organizer Organization requirement
+- last-Admin protection in backend logic
+
+Participant and Supervisor are intentionally absent because they are Hunt-contextual.
 
 Future L1 scope:
-- searchable user list
-- inspect authoritative role set
-- grant/remove Organizer capability
-- grant/remove Creator capability
-- grant/remove Admin capability
-- account/activation status
+- searchable cross-role user list
+- inspect authoritative complete role set
+- remove Organizer capability
+- remove Creator capability
+- remove Admin capability
 - safe deactivation
 - role-history visibility
-- last-Admin protection
 - exceptional participant support
 
 Admins must not be able to view stored passwords or arbitrarily overwrite another user's password. Password changes/resets remain account-security/authentication operations.
@@ -1240,14 +1262,23 @@ Until decided:
 
 ---
 
-## 12. Creator provisioning policy
+## 12. Professional provisioning policy
 
 For the current prototype:
 
 - no public Creator self-registration
-- Creator access is privileged
-- Admin provisions/invites Creator
-- Creator then uses normal authentication
+- Organizer / Creator / Admin are global professional capabilities
+- Participant and Supervisor remain Hunt-contextual and are not provisioned from Users & Roles
+- Admin can directly provision Organizer and Creator
+- existing identities keep their password and existing roles
+- new/passwordless professional identities receive one-time activation rather than an Admin-chosen password
+- guest identities cannot be promoted directly
+
+Direct Organizer provisioning is different from the public Organizer application workflow:
+- it does not create an `organizer_applications` row
+- Organization name is required
+- Organization + membership are created in the same provisioning transaction
+- retrying the same owner + normalized organization name reuses the existing Organization
 
 A public Creator application workflow should only be added if explicitly required later.
 
@@ -1414,12 +1445,13 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 2. Finish Professional Account Lifecycle
    - ✅ Admin own-password change and session revocation (E9)
    - ✅ normal additional-Admin provisioning/activation (E10)
-   - Organizer Applications Admin UI (E11)
-   - Organizer activation FE (E12)
-   - verify Organizer onboarding (E13)
-   - Creator provisioning (E14)
-   - Creator activation/account lifecycle (E15)
-   - verify Creator onboarding (E16)
+   - ✅ Organizer Applications Admin UI (E11)
+   - Organizer application activation FE (E12)
+   - verify application-based Organizer onboarding (E13)
+   - ✅ direct Organizer provisioning backend + activation path (BE PR #36 / FE PR #48)
+   - ✅ Creator provisioning (E14)
+   - ✅ Creator activation/account lifecycle (E15)
+   - verify Creator onboarding end-to-end (E16)
 
 3. Build Creator Template Persistence + Versioning
 
@@ -1470,7 +1502,7 @@ Next:
 - render Participant and Supervisor only per specific Hunt
 - never infer Hunt participation from the global participant compatibility role
 
-## Completed professional Admin foundation — E6 through E10
+## Completed professional account foundation — E6 through E11, E14 and E15
 
 Complete:
 - E6 First Admin bootstrap
@@ -1478,22 +1510,35 @@ Complete:
 - E8 Admin route protection
 - E9 Admin account security
 - E10 Additional Admin provisioning/activation and two-Admin lifecycle verification
+- E11 Organizer Applications Admin UI
+- BE PR #36 — Admin direct provisioning for Organizer / Creator, migration 012 and professional activation purposes
+- FE PR #48 — Users & Roles for Admin / Organizer / Creator plus direct Organizer / Creator activation UI
+- E14 Creator provisioning
+- E15 Creator activation/account lifecycle
 
-The Admin Console now uses a grouped collapsible left sidebar for desktop-first navigation.
+The Admin Console now has one Users & Roles surface for the global professional capabilities Admin, Organizer and Creator.
 
-## Immediate 1 — E11 Organizer Applications Admin UI
+## Immediate 1 — E12 + E13 application-based Organizer activation/onboarding
 
-Use the already implemented backend Organizer application/approval endpoints.
+Complete the public activation frontend for Organizers approved through the application workflow and verify:
+Apply → pending → Admin approve → account/role/org → activate → Organizer login/session → workspace
 
-## Immediate 2 — E12 + E13 Organizer activation and onboarding verification
+This remains distinct from direct Admin-created Organizer provisioning.
 
-Allow approved Organizers to complete activation and verify the complete application → approval → activation → login → workspace flow.
+## Immediate 2 — E16 Creator onboarding verification
 
-## Immediate 3 — E14 + E15 + E16 Creator lifecycle
+Verify on the deployed environment:
+Admin provisions Creator
+→ activation if required
+→ Creator session/login
+→ authoritative Creator access
+→ Creator Studio
 
-Create controlled Admin→Creator provisioning, activation/account lifecycle and end-to-end onboarding verification.
+## Immediate 3 — Contextual workspace wiring
 
-After these professional identity flows are complete, begin Phase F — Creator Template System.
+Connect `/workspaces` to `GET /api/me/hunt-contexts` and render Participant/Supervisor only as specific Hunt contexts.
+
+After these identity/account verification steps are complete, begin Phase F — Creator Template System.
 
 ---
 
@@ -1504,7 +1549,8 @@ After these professional identity flows are complete, begin Phase F — Creator 
 First Admin bootstrap/login works
 → ✅ Admin can maintain their own password
 → ✅ Admin can provision another Admin safely
-→ Organizer apply/approve/activate/login works
+→ ✅ Admin can directly provision Organizer and Creator capabilities
+→ Organizer application/approve/activate/login works
 → Creator provision/activate/login works
 
 ## Milestone 2 — Real content supply chain
