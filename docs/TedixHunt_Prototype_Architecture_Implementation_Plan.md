@@ -1,8 +1,8 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 2.6 | Updated 24 September 2026
+Version 2.7 | Updated 24 September 2026
 
-This document evolves Version 2.5 with the target Admin user-management architecture for editing, blocking/unblocking, controlled deletion, role administration and Admin-initiated password reset, while preserving the existing professional provisioning and Hunt-context identity model.
+This document evolves Version 2.6 with the authoritative Admin hierarchy for user management: Admin may directly replace credentials for non-Admin identities, while other Admin identities remain protected from cross-Admin password changes. It preserves the existing professional provisioning and Hunt-context identity model.
 
 The implementation strategy is:
 
@@ -196,12 +196,14 @@ Admin may manage other user identities through backend-authorized actions, inclu
 
 Blocking is the normal reversible operational action and must revoke active refresh sessions.
 
-Password administration follows a reset model:
-- Admin may initiate a reset for another user
-- Admin must never be able to read the user's existing password
-- Admin should not choose or silently replace another user's permanent password
-- a one-time expiring reset link/token lets the user choose the new password
-- successful reset revokes old refresh sessions and resumes normal authentication
+Password administration follows the platform authority model:
+- Admin may directly replace the password of any non-Admin identity
+- Admin must never be able to read or recover any user's existing password or password hash
+- replacing a password stores only a new bcrypt hash and immediately revokes all refresh sessions for the target identity
+- password replacement preserves roles, Hunt contexts, account status and business records
+- a blocked identity remains blocked after its password is replaced
+- an Admin may change their own password through the normal authenticated own-password flow
+- an Admin must never replace the password of another identity that holds the authoritative Admin capability, even if that identity also holds Organizer or Creator capabilities
 
 Deletion is destructive and must preserve referential integrity and auditability. If a user owns or is referenced by protected business records, deletion must be rejected until an explicit archival/anonymization strategy exists.
 
@@ -1205,32 +1207,34 @@ Preferred data direction:
 - use a tracked migration
 - keep room for later archival states if needed without inventing them now
 
-#### L1.4 Admin-initiated password reset
+#### L1.4 Admin password authority
 Status: ⬜ Not started
 
-Admin must be able to help another user recover access, but must not know or set that user's permanent password.
+Admin is the higher platform authority for non-Admin identities and may directly replace their passwords from Users & Roles.
 
 Target flow:
 
-Admin selects Reset password
-→ backend revokes the target user's refresh sessions
-→ backend creates a one-time expiring reset token
-→ reset link is returned once for secure handoff
-→ user opens the public reset page
-→ user chooses and confirms a new password
-→ token is consumed atomically
-→ normal authentication resumes
+Admin selects Set password
+→ Admin enters and confirms a new password
+→ backend verifies the caller's authoritative Admin capability
+→ backend verifies the target identity does not hold authoritative Admin capability
+→ backend validates and bcrypt-hashes the new password
+→ backend atomically replaces the target password hash and revokes all target refresh sessions
+→ target must authenticate again using the new password
 
 Architecture rules:
-- password reset is identity-level, not role-specific
-- Admin cannot view the current password
-- Admin cannot retrieve password hashes
-- Admin cannot silently choose a new permanent password for another user
-- reset token is stored only as a secure digest
-- reset link/token is one-time and expiring
-- existing roles/capabilities are preserved
+- Admin can replace passwords for Participant, Supervisor, Organizer and Creator identities
+- Admin cannot read or recover the current password or password hash
+- Admin cannot replace the password of another identity that holds the authoritative Admin capability
+- the protection follows the identity's Admin capability, regardless of which workspace or other capabilities that identity also has
+- an Admin changes their own password only through the existing authenticated own-password flow
+- direct Admin password replacement is identity-level and does not alter roles/capabilities
+- account status is preserved; a blocked target remains blocked
+- organizations, memberships, Hunt contexts, templates, results and other business history are preserved
+- successful replacement revokes all refresh sessions for the target identity
+- no reset token or reset-link handoff is required for this Admin action
 
-For the current schema, adding a `password_reset` token purpose through a tracked migration is acceptable. Do not rename the existing activation-token table merely for cosmetic consistency unless a broader token redesign is separately approved.
+This direct password-replacement authority is distinct from any future public self-service “forgot password” recovery flow.
 
 #### L1.5 Controlled user deletion
 Status: ⬜ Not started
@@ -1253,7 +1257,7 @@ Privileged user-management actions should become audit events when the audit sub
 - profile edits
 - role grants/removals
 - block/unblock
-- password-reset initiation
+- Admin password replacement
 - delete attempts/outcomes
 
 The current prototype may implement the user-management behavior before the full audit-log UI, but the API/domain design must not make future auditability difficult.
@@ -1588,7 +1592,7 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
    - edit safe user data
    - grant/remove professional capabilities
    - block/unblock with session revocation
-   - Admin-initiated password reset
+   - direct Admin password replacement for non-Admin identities
    - dependency-safe delete
 
 13. Add remaining Admin operational systems as their domains become real
@@ -1685,7 +1689,7 @@ First Admin bootstrap/login works
 → ✅ Admin can maintain their own password
 → ✅ Admin can provision another Admin safely
 → ✅ Admin can directly provision Organizer and Creator capabilities
-→ Admin can edit/block/reset/delete users safely
+→ Admin can edit/block/manage roles/set non-Admin passwords/delete users safely
 → Organizer application/approve/activate/login works
 → Creator provision/activate/login works
 
