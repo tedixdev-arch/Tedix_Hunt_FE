@@ -5,7 +5,7 @@ import { useAuth } from '../app/providers/AuthProvider'
 type ActivationRole = 'organizer' | 'creator'
 
 const content = {
-  organizer: { label: 'Organizer', destination: '/organizer', signIn: '/organizer/registered' },
+  organizer: { label: 'Organizer', destination: '/organizer', signIn: '/organizer/sign-in' },
   creator: { label: 'Creator', destination: '/creator', signIn: '/creator/sign-in' },
 } as const
 

@@ -93,7 +93,16 @@ export function AdminUsersPage() {
         </form>
         {result && <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4" role="status">
           {!result.response.activationRequired && <><p className="font-bold text-emerald-900">{resultLabel} access granted.</p>{result.role === 'organizer' && result.response.organization && <p className="mt-2 text-sm text-emerald-950">Organization: {result.response.organization.name}</p>}</>}
-          {result.response.activationRequired && <><p className="font-bold text-emerald-900">{resultLabel} invitation created.</p><p className="mt-2 text-sm text-emerald-950">This activation link is shown once. Copy it now and share it securely.</p>{link && <><input aria-label="Activation link" className="mt-3 w-full rounded-lg border border-emerald-300 bg-white p-2 text-xs" readOnly value={link} /><button className="mt-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white" onClick={() => void navigator.clipboard?.writeText(link)} type="button">Copy link</button></>}{result.response.activationExpiresAt && <p className="mt-3 text-xs text-emerald-900">Expires: {new Date(result.response.activationExpiresAt).toLocaleString()}</p>}</>}
+          {result.response.activationRequired && <>
+            <p className="font-bold text-emerald-900">{resultLabel} invitation created.</p>
+            <p className="mt-2 text-sm text-emerald-950">This activation link is shown once. Copy it now and share it securely.</p>
+            <div className="mt-4 text-sm text-emerald-950">
+              <h3 className="font-bold">What to do next</h3>
+              <p className="mt-1">Copy this link and send it securely to the new {resultLabel}.<br />They must open it to create their password and activate their {resultLabel} access.<br />The link can be used only once and expires after 24 hours.</p>
+            </div>
+            {link && <><input aria-label="Activation link" className="mt-3 w-full rounded-lg border border-emerald-300 bg-white p-2 text-xs" readOnly value={link} /><button className="mt-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white" onClick={() => void navigator.clipboard?.writeText(link)} type="button">Copy link</button></>}
+            {result.response.activationExpiresAt && <p className="mt-3 text-xs text-emerald-900">Expires: {new Date(result.response.activationExpiresAt).toLocaleString()}</p>}
+          </>}
         </div>}
       </section>
     </div>
