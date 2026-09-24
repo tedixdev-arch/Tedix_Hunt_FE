@@ -10,7 +10,9 @@ export function provisioningErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     const code = errorCode(error)
     if (code === 'admin_activation_already_pending') return 'This Admin already has an active invitation. Use the existing activation link or wait for it to expire.'
-    if (code === 'guest_promotion_not_allowed') return 'Guest accounts cannot be promoted directly to Admin.'
+    if (code === 'organizer_activation_already_pending') return 'This Organizer already has an active invitation. Use the existing activation link or wait for it to expire.'
+    if (code === 'creator_activation_already_pending') return 'This Creator already has an active invitation. Use the existing activation link or wait for it to expire.'
+    if (code === 'guest_promotion_not_allowed') return 'Guest accounts cannot be promoted directly to a professional role.'
   }
-  return 'Unable to add this Admin. Please check the details and try again.'
+  return 'Unable to add this professional user. Please check the details and try again.'
 }
