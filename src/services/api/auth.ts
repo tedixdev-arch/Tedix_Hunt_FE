@@ -59,6 +59,8 @@ export interface ActivateAdminInput {
   password: string;
 }
 
+export type ActivateProfessionalInput = ActivateAdminInput;
+
 export interface ChangePasswordResponse {
   message: string;
 }
@@ -103,6 +105,14 @@ export class AuthApi {
 
   activateAdmin(input: ActivateAdminInput): Promise<AuthResponse> {
     return this.authenticate('/api/auth/admin/activate', input);
+  }
+
+  activateDirectOrganizer(input: ActivateProfessionalInput): Promise<AuthResponse> {
+    return this.authenticate('/api/auth/organizer/activate-direct', input);
+  }
+
+  activateCreator(input: ActivateProfessionalInput): Promise<AuthResponse> {
+    return this.authenticate('/api/auth/creator/activate', input);
   }
 
   changePassword(input: ChangePasswordInput): Promise<ChangePasswordResponse> {

@@ -18,6 +18,7 @@ import { AdminAccountSecurityPage } from '../pages/AdminAccountSecurity'
 import { AdminUsersPage } from '../pages/AdminUsers'
 import { AdminOrganizerApplicationsPage } from '../pages/AdminOrganizerApplications'
 import { AdminActivationPage } from '../pages/AdminActivation'
+import { CreatorActivationPage, DirectOrganizerActivationPage } from '../pages/ProfessionalActivation'
 import { LoginWorkspacePage, ProfessionalSignInPage, WorkspaceSelectorPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
 import { canAccessAdmin, canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
@@ -125,6 +126,10 @@ export const router = createHashRouter([
     element: <RegisteredOrganizerApplicationPage />,
   },
   {
+    path: '/organizer/activate-direct',
+    element: <DirectOrganizerActivationPage />,
+  },
+  {
     path: '/organizer/independent',
     element: <IndependentOrganizerPage />,
   },
@@ -163,6 +168,10 @@ export const router = createHashRouter([
   {
     path: '/creator/sign-in',
     element: <CreatorEntry />,
+  },
+  {
+    path: '/creator/activate',
+    element: <CreatorActivationPage />,
   },
   {
     path: '/creator',
