@@ -1,8 +1,8 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 2.5 | Updated 24 September 2026
+Version 2.6 | Updated 24 September 2026
 
-This document evolves Version 2.4 with the current professional-account implementation state, direct Admin provisioning for Organizer and Creator capabilities, generalized professional activation, and the existing identity/workspace architecture for global capabilities and Hunt-contextual access.
+This document evolves Version 2.5 with the target Admin user-management architecture for editing, blocking/unblocking, controlled deletion, role administration and Admin-initiated password reset, while preserving the existing professional provisioning and Hunt-context identity model.
 
 The implementation strategy is:
 
@@ -182,6 +182,30 @@ The frontend must not flatten contextual Hunt access into permanent global roles
 ### Security is backend-enforced
 
 Frontend guards and hidden buttons are UX only. Protected actions are authorized by the backend.
+
+### Admin user-management safety
+
+Users & Roles is not only a provisioning surface. The target Admin capability also includes controlled user administration.
+
+Admin may manage other user identities through backend-authorized actions, including:
+- edit safe account/profile fields
+- grant/remove global professional capabilities where allowed
+- block/unblock accounts
+- initiate password reset
+- delete only when deletion is dependency-safe
+
+Blocking is the normal reversible operational action and must revoke active refresh sessions.
+
+Password administration follows a reset model:
+- Admin may initiate a reset for another user
+- Admin must never be able to read the user's existing password
+- Admin should not choose or silently replace another user's permanent password
+- a one-time expiring reset link/token lets the user choose the new password
+- successful reset revokes old refresh sessions and resumes normal authentication
+
+Deletion is destructive and must preserve referential integrity and auditability. If a user owns or is referenced by protected business records, deletion must be rejected until an explicit archival/anonymization strategy exists.
+
+Last-active-Admin protection remains mandatory for role removal, blocking and deletion.
 
 ### Preserve the mockup deliberately
 
@@ -1120,9 +1144,9 @@ Status: 🟣 FE mock exists / mostly backend pending
 Implement each subsystem only when the underlying domain exists.
 
 ### L1. Users & Roles
-Status: 🟡 Professional-capability foundation complete / full role administration pending
+Status: 🟡 Professional provisioning complete / full user administration pending
 
-Phase E now implements the minimum real Users & Roles surface needed to operate the prototype:
+Phase E now implements the minimum real Users & Roles provisioning surface needed to operate the prototype:
 - list/filter Admin, Organizer and Creator identities
 - direct provision/grant Admin capability
 - direct provision/grant Organizer capability
@@ -1131,19 +1155,108 @@ Phase E now implements the minimum real Users & Roles surface needed to operate 
 - Organizer Organization requirement
 - last-Admin protection in backend logic
 
-Participant and Supervisor are intentionally absent because they are Hunt-contextual.
+Participant and Supervisor are intentionally absent from global professional provisioning because they are Hunt-contextual.
 
-Future L1 scope:
-- searchable cross-role user list
-- inspect authoritative complete role set
+The target Users & Roles administration scope is broader than provisioning.
+
+#### L1.1 View and edit user
+Status: ⬜ Not started
+
+Admin can inspect an identity and edit safe account/profile fields.
+
+Initial editable scope should be explicit and conservative, for example:
+- name
+- email only with uniqueness/normalization safeguards
+- professional organization/membership data where the domain rules permit it
+
+Do not expose password hashes, tokens or internal authentication secrets.
+
+#### L1.2 Global role/capability administration
+Status: 🟡 Grant foundation exists / removal UI pending
+
+Admin can eventually:
+- grant Organizer capability
+- grant Creator capability
+- grant Admin capability
 - remove Organizer capability
 - remove Creator capability
 - remove Admin capability
-- safe deactivation
-- role-history visibility
-- exceptional participant support
 
-Admins must not be able to view stored passwords or arbitrarily overwrite another user's password. Password changes/resets remain account-security/authentication operations.
+`user_roles` remains authoritative.
+
+Participant and Supervisor continue to use Hunt-context records rather than global role administration.
+
+Removing/blocking/deleting the last active Admin must be rejected.
+
+#### L1.3 Block / unblock account
+Status: ⬜ Not started
+
+Blocking is the primary reversible operational control.
+
+Target behavior:
+- account has an authoritative active/blocked status
+- blocked user cannot authenticate or refresh sessions
+- blocking immediately revokes existing refresh sessions
+- unblock restores eligibility to authenticate but does not recreate revoked sessions
+- historical Hunts, templates, memberships, results and audit references remain intact
+
+Preferred data direction:
+- explicit account status such as `active | blocked`
+- use a tracked migration
+- keep room for later archival states if needed without inventing them now
+
+#### L1.4 Admin-initiated password reset
+Status: ⬜ Not started
+
+Admin must be able to help another user recover access, but must not know or set that user's permanent password.
+
+Target flow:
+
+Admin selects Reset password
+→ backend revokes the target user's refresh sessions
+→ backend creates a one-time expiring reset token
+→ reset link is returned once for secure handoff
+→ user opens the public reset page
+→ user chooses and confirms a new password
+→ token is consumed atomically
+→ normal authentication resumes
+
+Architecture rules:
+- password reset is identity-level, not role-specific
+- Admin cannot view the current password
+- Admin cannot retrieve password hashes
+- Admin cannot silently choose a new permanent password for another user
+- reset token is stored only as a secure digest
+- reset link/token is one-time and expiring
+- existing roles/capabilities are preserved
+
+For the current schema, adding a `password_reset` token purpose through a tracked migration is acceptable. Do not rename the existing activation-token table merely for cosmetic consistency unless a broader token redesign is separately approved.
+
+#### L1.5 Controlled user deletion
+Status: ⬜ Not started
+
+Delete is not equivalent to block.
+
+Initial delete behavior must be conservative:
+- allow hard delete only when no protected business/audit dependencies would be damaged
+- reject deletion with a clear conflict when the identity owns or is referenced by protected records
+- do not cascade away Hunts, Organizations, templates, results, audit records or other business history merely to satisfy a user-delete request
+- preserve last-active-Admin protection
+- self-delete/block requires explicit safeguards
+
+Long-term archival/anonymization may be introduced later if business/legal requirements demand it.
+
+#### L1.6 Auditability
+Status: ⬜ Not started
+
+Privileged user-management actions should become audit events when the audit subsystem exists:
+- profile edits
+- role grants/removals
+- block/unblock
+- password-reset initiation
+- delete attempts/outcomes
+
+The current prototype may implement the user-management behavior before the full audit-log UI, but the API/domain design must not make future auditability difficult.
 
 ### L2. Hunt oversight
 Status: ⬜ Not started
@@ -1471,13 +1584,20 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 
 11. Build results + reward-awarding runtime
 
-12. Add Admin operational systems as their domains become real
+12. Complete core Admin Users & Roles administration
+   - edit safe user data
+   - grant/remove professional capabilities
+   - block/unblock with session revocation
+   - Admin-initiated password reset
+   - dependency-safe delete
 
-13. Add Passport/history/achievements
+13. Add remaining Admin operational systems as their domains become real
 
-14. Add Custom Hunt request workflow
+14. Add Passport/history/achievements
 
-15. Resolve Independent Organizer production architecture
+15. Add Custom Hunt request workflow
+
+16. Resolve Independent Organizer production architecture
 
 This order avoids building participant gameplay permanently around hard-coded Signal content.
 
@@ -1534,11 +1654,26 @@ Admin provisions Creator
 → authoritative Creator access
 → Creator Studio
 
-## Immediate 3 — Contextual workspace wiring
+## Immediate 3 — Define/implement core Users & Roles administration
+
+The professional provisioning foundation is complete, but Admin user administration is not.
+
+Next implementation direction, backend first:
+- introduce authoritative account active/blocked state
+- block/unblock with refresh-session revocation
+- define safe editable user fields
+- add controlled professional role removal
+- add Admin-initiated one-time password reset
+- add dependency-safe delete rules
+- preserve last-active-Admin protection
+
+Frontend actions should be added only after those backend contracts and safety rules are implemented.
+
+## Immediate 4 — Contextual workspace wiring
 
 Connect `/workspaces` to `GET /api/me/hunt-contexts` and render Participant/Supervisor only as specific Hunt contexts.
 
-After these identity/account verification steps are complete, begin Phase F — Creator Template System.
+After the critical identity/account administration steps are complete, continue with Phase F — Creator Template System.
 
 ---
 
@@ -1550,6 +1685,7 @@ First Admin bootstrap/login works
 → ✅ Admin can maintain their own password
 → ✅ Admin can provision another Admin safely
 → ✅ Admin can directly provision Organizer and Creator capabilities
+→ Admin can edit/block/reset/delete users safely
 → Organizer application/approve/activate/login works
 → Creator provision/activate/login works
 
