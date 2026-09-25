@@ -11,6 +11,8 @@ export interface AdminIdentity {
   roles: GlobalRole[]
   isGuest: boolean
   createdAt: string
+  isBlocked?: boolean
+  status?: 'active' | 'blocked'
 }
 
 export interface AdminUser extends AdminIdentity {
@@ -64,6 +66,28 @@ export class AdminUsersApi {
   }
   provisionProfessional(input: ProvisionProfessionalInput): Promise<ProvisionProfessionalResponse> {
     return this.client.post<ProvisionProfessionalResponse>('/api/admin/users/professional', input)
+  }
+
+  updateUser(id: string, input: { name: string | null; email: string }): Promise<ProfessionalUser> {
+    return this.client.patch<ProfessionalUser>(`/api/admin/users/${encodeURIComponent(id)}`, input)
+  }
+  grantRole(id: string, role: ProfessionalRole): Promise<ProfessionalUser> {
+    return this.client.post<ProfessionalUser>(`/api/admin/users/${encodeURIComponent(id)}/roles/${role}`)
+  }
+  removeRole(id: string, role: ProfessionalRole): Promise<ProfessionalUser> {
+    return this.client.delete<ProfessionalUser>(`/api/admin/users/${encodeURIComponent(id)}/roles/${role}`)
+  }
+  blockUser(id: string): Promise<ProfessionalUser> {
+    return this.client.post<ProfessionalUser>(`/api/admin/users/${encodeURIComponent(id)}/block`)
+  }
+  unblockUser(id: string): Promise<ProfessionalUser> {
+    return this.client.post<ProfessionalUser>(`/api/admin/users/${encodeURIComponent(id)}/unblock`)
+  }
+  setPassword(id: string, input: { newPassword: string; confirmPassword: string }): Promise<void> {
+    return this.client.put(`/api/admin/users/${encodeURIComponent(id)}/password`, input)
+  }
+  deleteUser(id: string): Promise<void> {
+    return this.client.delete(`/api/admin/users/${encodeURIComponent(id)}`)
   }
 }
 

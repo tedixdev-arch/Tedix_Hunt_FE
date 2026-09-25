@@ -151,3 +151,79 @@ test('professional activation screen validates safely and redirects by role', as
   assert.match(activation, /destination: '\/creator'/)
   assert.match(activation, /This activation link is invalid or has expired\./)
 })
+
+test('Admin user management API uses the supported backend contracts', async () => {
+  const requests: Array<{ url: string; init?: RequestInit }> = []
+  const client = new ApiClient('https://api.example.test', new MemorySession(), async (input, init) => {
+    requests.push({ url: String(input), init })
+    return new Response(init?.method === 'PUT' || init?.method === 'DELETE' ? null : JSON.stringify({ id: 'user/1', roles: [] }), { status: init?.method === 'PUT' || init?.method === 'DELETE' ? 204 : 200, headers: { 'content-type': 'application/json' } })
+  })
+  const api = new AdminUsersApi(client)
+  await api.updateUser('user/1', { name: 'Updated', email: 'updated@example.test' })
+  await api.grantRole('user/1', 'creator')
+  await api.removeRole('user/1', 'organizer')
+  await api.blockUser('user/1'); await api.unblockUser('user/1')
+  await api.setPassword('user/1', { newPassword: 'long-password', confirmPassword: 'long-password' })
+  await api.deleteUser('user/1')
+  assert.deepEqual(requests.map(({ url, init }) => [url.replace('https://api.example.test', ''), init?.method]), [
+    ['/api/admin/users/user%2F1', 'PATCH'],
+    ['/api/admin/users/user%2F1/roles/creator', 'POST'],
+    ['/api/admin/users/user%2F1/roles/organizer', 'DELETE'],
+    ['/api/admin/users/user%2F1/block', 'POST'],
+    ['/api/admin/users/user%2F1/unblock', 'POST'],
+    ['/api/admin/users/user%2F1/password', 'PUT'],
+    ['/api/admin/users/user%2F1', 'DELETE'],
+  ])
+  assert.deepEqual(JSON.parse(String(requests[0].init?.body)), { name: 'Updated', email: 'updated@example.test' })
+  assert.deepEqual(JSON.parse(String(requests[5].init?.body)), { newPassword: 'long-password', confirmPassword: 'long-password' })
+})
+
+test('Users & Roles management exposes safe actions and protects Admin identities', async () => {
+  const users = await readFile(new URL('../src/pages/AdminUsers.tsx', import.meta.url), 'utf8')
+  assert.match(users, />Manage</)
+  assert.match(users, /updateUser/)
+  assert.match(users, /grantRole/); assert.match(users, /removeRole/)
+  assert.match(users, /if \(role === 'organizer' && !held\)/)
+  assert.match(users, /Organizer provisioning uses Add professional user\./)
+  assert.match(users, /held \? `Remove \$\{roleContent\[role\]\.label\}` : `Grant \$\{roleContent\[role\]\.label\}`/)
+  assert.match(users, /blockUser/); assert.match(users, /unblockUser/)
+  assert.match(users, /Confirm block/)
+  assert.match(users, /!managed\.roles\.includes\('admin'\) && managed\.id !== currentAdmin\?\.id/)
+  assert.match(users, /Passwords do not match\./)
+  assert.match(users, /Existing sessions for this user were revoked\./)
+  assert.match(users, /managed\.id !== currentAdmin\?\.id && <button[^>]+text-red-700/)
+  assert.match(users, /Confirm delete/)
+  assert.match(users, /adminUsersApi\.deleteUser/)
+  assert.match(users, /await loadUsers\(selectedRole\)/)
+  assert.doesNotMatch(users, /Participant|Supervisor/)
+  assert.match(users, /Add professional user/)
+})
+
+test('Manage role and edit guards preserve identity invariants', async () => {
+  const users = await readFile(new URL('../src/pages/AdminUsers.tsx', import.meta.url), 'utf8')
+  assert.match(users, /const isCurrentAdmin = managed\.id === currentAdmin\?\.id; if \(isCurrentAdmin\) return <div/)
+  assert.match(users, /\{held \? 'Granted' : 'Not granted'\}/)
+  assert.doesNotMatch(users, /disabled=\{working \|\| ownAdmin\}/)
+  assert.match(users, /if \(role === 'organizer' && !held\)[\s\S]{0,300}Organizer provisioning uses Add professional user/)
+  assert.match(users, /held \? adminUsersApi\.removeRole\(managed\.id, role\) : adminUsersApi\.grantRole\(managed\.id, role\)/)
+  assert.match(users, /if \(!nextEmail\) \{ setManagementError\('Email is required\.'\)/)
+  assert.match(users, /name: nextName \|\| null, email: nextEmail/)
+  assert.doesNotMatch(users, /if \(!nextName \|\| !nextEmail\)/)
+})
+
+test('user-management backend conflicts are rendered as safe Admin messages', async () => {
+  const { adminUserManagementError } = await import('../src/features/auth/adminUserManagementErrors.ts')
+  const cases: Array<[string, string]> = [
+    ['last_active_admin', 'last active Admin'],
+    ['self_admin_removal_not_allowed', 'your own Admin capability'],
+    ['admin_password_change_not_allowed', "Another Admin's password"],
+    ['self_password_change_use_account_security', 'Account Security'],
+    ['user_has_protected_dependencies', 'protected business or history dependencies'],
+    ['self_delete_not_allowed', 'your own account'],
+    ['user_not_found', 'no longer exists'],
+    ['duplicate_email', 'email already exists'],
+    ['account_blocked', 'account is blocked'],
+  ]
+  for (const [code, expected] of cases) assert.match(adminUserManagementError(new ApiError('private database text', 409, 'conflict', { code })), new RegExp(expected, 'i'))
+  assert.doesNotMatch(adminUserManagementError(new ApiError('SQL constraint users_email_key', 409, 'conflict', {})), /SQL|constraint|users_email_key/)
+})
