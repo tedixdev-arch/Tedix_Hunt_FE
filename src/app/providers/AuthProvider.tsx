@@ -12,6 +12,7 @@ type AuthContextValue = {
   loginOrganizer: (input: LoginInput) => Promise<PublicUser>
   loginAdmin: (input: LoginInput) => Promise<PublicUser>
   activateAdmin: (input: ActivateAdminInput) => Promise<PublicUser>
+  activateOrganizerApplication: (input: ActivateAdminInput) => Promise<PublicUser>
   activateDirectOrganizer: (input: ActivateAdminInput) => Promise<PublicUser>
   activateCreator: (input: ActivateAdminInput) => Promise<PublicUser>
   changePassword: (input: ChangePasswordInput) => Promise<void>
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const loginOrganizer = useCallback((input: LoginInput) => authenticate(authApi.loginOrganizer(input)), [authenticate])
   const loginAdmin = useCallback((input: LoginInput) => authenticate(authApi.loginAdmin(input)), [authenticate])
   const activateAdmin = useCallback((input: ActivateAdminInput) => authenticate(authApi.activateAdmin(input)), [authenticate])
+  const activateOrganizerApplication = useCallback((input: ActivateAdminInput) => authenticate(authApi.activateOrganizerApplication(input)), [authenticate])
   const activateDirectOrganizer = useCallback((input: ActivateAdminInput) => authenticate(authApi.activateDirectOrganizer(input)), [authenticate])
   const activateCreator = useCallback((input: ActivateAdminInput) => authenticate(authApi.activateCreator(input)), [authenticate])
   const changePassword = useCallback(async (input: ChangePasswordInput) => {
@@ -51,7 +53,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [])
   const logout = useCallback(async () => { try { await authApi.logout() } finally { setUser(null) } }, [])
 
-  const value = useMemo(() => ({ user, isAuthenticated: user !== null, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateDirectOrganizer, activateCreator, loginAdmin, changePassword, logout }), [user, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateDirectOrganizer, activateCreator, loginAdmin, changePassword, logout])
+  const value = useMemo(() => ({ user, isAuthenticated: user !== null, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateOrganizerApplication, activateDirectOrganizer, activateCreator, loginAdmin, changePassword, logout }), [user, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateOrganizerApplication, activateDirectOrganizer, activateCreator, loginAdmin, changePassword, logout])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

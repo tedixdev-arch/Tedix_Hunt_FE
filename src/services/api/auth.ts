@@ -111,6 +111,10 @@ export class AuthApi {
     return this.authenticate('/api/auth/organizer/activate-direct', input);
   }
 
+  activateOrganizerApplication(input: ActivateProfessionalInput): Promise<AuthResponse> {
+    return this.authenticate('/api/auth/organizer/activate', input);
+  }
+
   activateCreator(input: ActivateProfessionalInput): Promise<AuthResponse> {
     return this.authenticate('/api/auth/creator/activate', input);
   }
