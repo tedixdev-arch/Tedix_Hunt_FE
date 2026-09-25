@@ -83,8 +83,8 @@ export class AdminUsersApi {
   unblockUser(id: string): Promise<ProfessionalUser> {
     return this.client.post<ProfessionalUser>(`/api/admin/users/${encodeURIComponent(id)}/unblock`)
   }
-  setPassword(id: string, password: string): Promise<void> {
-    return this.client.put(`/api/admin/users/${encodeURIComponent(id)}/password`, { password })
+  setPassword(id: string, input: { newPassword: string; confirmPassword: string }): Promise<void> {
+    return this.client.put(`/api/admin/users/${encodeURIComponent(id)}/password`, input)
   }
   deleteUser(id: string): Promise<void> {
     return this.client.delete(`/api/admin/users/${encodeURIComponent(id)}`)

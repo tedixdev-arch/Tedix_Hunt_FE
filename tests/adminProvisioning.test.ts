@@ -163,7 +163,7 @@ test('Admin user management API uses the supported backend contracts', async () 
   await api.grantRole('user/1', 'creator')
   await api.removeRole('user/1', 'organizer')
   await api.blockUser('user/1'); await api.unblockUser('user/1')
-  await api.setPassword('user/1', 'long-password')
+  await api.setPassword('user/1', { newPassword: 'long-password', confirmPassword: 'long-password' })
   await api.deleteUser('user/1')
   assert.deepEqual(requests.map(({ url, init }) => [url.replace('https://api.example.test', ''), init?.method]), [
     ['/api/admin/users/user%2F1', 'PATCH'],
@@ -175,7 +175,7 @@ test('Admin user management API uses the supported backend contracts', async () 
     ['/api/admin/users/user%2F1', 'DELETE'],
   ])
   assert.deepEqual(JSON.parse(String(requests[0].init?.body)), { name: 'Updated', email: 'updated@example.test' })
-  assert.deepEqual(JSON.parse(String(requests[5].init?.body)), { password: 'long-password' })
+  assert.deepEqual(JSON.parse(String(requests[5].init?.body)), { newPassword: 'long-password', confirmPassword: 'long-password' })
 })
 
 test('Users & Roles management exposes safe actions and protects Admin identities', async () => {

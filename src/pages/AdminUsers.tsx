@@ -105,7 +105,7 @@ export function AdminUsersPage() {
     event.preventDefault()
     if (password.length < 8) { setManagementError('Use at least 8 characters.'); return }
     if (password !== confirmPassword) { setManagementError('Passwords do not match.'); return }
-    const succeeded = await manage(() => adminUsersApi.setPassword(managed!.id, password), 'Password set. Existing sessions for this user were revoked.')
+    const succeeded = await manage(() => adminUsersApi.setPassword(managed!.id, { newPassword: password, confirmPassword }), 'Password set. Existing sessions for this user were revoked.')
     if (succeeded) { setPassword(''); setConfirmPassword('') }
   }
 
