@@ -183,6 +183,9 @@ test('Users & Roles management exposes safe actions and protects Admin identitie
   assert.match(users, />Manage</)
   assert.match(users, /updateUser/)
   assert.match(users, /grantRole/); assert.match(users, /removeRole/)
+  assert.match(users, /if \(role === 'organizer' && !held\)/)
+  assert.match(users, /Organizer provisioning uses Add professional user\./)
+  assert.match(users, /held \? `Remove \$\{roleContent\[role\]\.label\}` : `Grant \$\{roleContent\[role\]\.label\}`/)
   assert.match(users, /blockUser/); assert.match(users, /unblockUser/)
   assert.match(users, /Confirm block/)
   assert.match(users, /!managed\.roles\.includes\('admin'\) && managed\.id !== currentAdmin\?\.id/)
@@ -194,6 +197,18 @@ test('Users & Roles management exposes safe actions and protects Admin identitie
   assert.match(users, /await loadUsers\(selectedRole\)/)
   assert.doesNotMatch(users, /Participant|Supervisor/)
   assert.match(users, /Add professional user/)
+})
+
+test('Manage role and edit guards preserve identity invariants', async () => {
+  const users = await readFile(new URL('../src/pages/AdminUsers.tsx', import.meta.url), 'utf8')
+  assert.match(users, /const isCurrentAdmin = managed\.id === currentAdmin\?\.id; if \(isCurrentAdmin\) return <div/)
+  assert.match(users, /\{held \? 'Granted' : 'Not granted'\}/)
+  assert.doesNotMatch(users, /disabled=\{working \|\| ownAdmin\}/)
+  assert.match(users, /if \(role === 'organizer' && !held\)[\s\S]{0,300}Organizer provisioning uses Add professional user/)
+  assert.match(users, /held \? adminUsersApi\.removeRole\(managed\.id, role\) : adminUsersApi\.grantRole\(managed\.id, role\)/)
+  assert.match(users, /if \(!nextEmail\) \{ setManagementError\('Email is required\.'\)/)
+  assert.match(users, /name: nextName \|\| null, email: nextEmail/)
+  assert.doesNotMatch(users, /if \(!nextName \|\| !nextEmail\)/)
 })
 
 test('user-management backend conflicts are rendered as safe Admin messages', async () => {

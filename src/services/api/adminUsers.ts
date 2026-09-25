@@ -68,7 +68,7 @@ export class AdminUsersApi {
     return this.client.post<ProvisionProfessionalResponse>('/api/admin/users/professional', input)
   }
 
-  updateUser(id: string, input: { name: string; email: string }): Promise<ProfessionalUser> {
+  updateUser(id: string, input: { name: string | null; email: string }): Promise<ProfessionalUser> {
     return this.client.patch<ProfessionalUser>(`/api/admin/users/${encodeURIComponent(id)}`, input)
   }
   grantRole(id: string, role: ProfessionalRole): Promise<ProfessionalUser> {
