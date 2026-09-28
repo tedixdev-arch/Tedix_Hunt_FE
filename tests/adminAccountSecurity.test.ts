@@ -23,8 +23,8 @@ test('account security form validates passwords, prevents duplicate submits, and
 
   assert.equal((page.match(/type="password"/g) ?? []).length, 3)
   assert.match(page, /if \(submitting\.current\) return/)
-  assert.match(page, /if \(newPassword\.length < 8\)/)
   assert.match(page, /if \(confirmPassword !== newPassword\)/)
+  assert.match(page, /if \(!meetsPasswordPolicy\(newPassword\)\)/)
   assert.match(page, /disabled=\{isSubmitting\}/)
   assert.match(page, /navigate\('\/admin\/sign-in', \{ replace: true \}\)/)
   assert.doesNotMatch(page, /defaultValue=/)

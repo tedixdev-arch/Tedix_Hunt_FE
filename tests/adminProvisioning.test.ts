@@ -111,14 +111,14 @@ test('provisioning and activation screens enforce E10 safeguards', async () => {
   assert.doesNotMatch(users, /localStorage|sessionStorage/)
   assert.match(activation, /new URLSearchParams\(search\)\.get\('token'\)/)
   assert.match(activation, /if \(!token\)/)
-  assert.match(activation, /if \(password\.length < 8\)/)
   assert.match(activation, /if \(confirmPassword !== password\)/)
+  assert.match(activation, /if \(!meetsPasswordPolicy\(password\)\)/)
   assert.match(activation, /if \(submitting\.current\) return/)
   assert.equal((activation.match(/type="password"/g) ?? []).length, 2)
   assert.match(activation, /navigate\('\/admin', \{ replace: true \}\)/)
   assert.match(activation, /This activation link is invalid or has expired\./)
   assert.match(activation, /You received this link because an existing Admin granted you Admin access\./)
-  assert.match(activation, /Use at least 8 characters to activate your Admin account\./)
+  assert.match(activation, /PASSWORD_REQUIREMENT_TEXT/)
 })
 
 test('Users & Roles screen limits global capabilities and adapts its content', async () => {
@@ -140,8 +140,8 @@ test('Users & Roles screen limits global capabilities and adapts its content', a
 test('professional activation screen validates safely and redirects by role', async () => {
   const activation = await readFile(new URL('../src/pages/ProfessionalActivation.tsx', import.meta.url), 'utf8')
   assert.match(activation, /new URLSearchParams\(search\)\.get\('token'\)/)
-  assert.match(activation, /if \(password\.length < 8\)/)
   assert.match(activation, /if \(confirmPassword !== password\)/)
+  assert.match(activation, /if \(!meetsPasswordPolicy\(password\)\)/)
   assert.match(activation, /if \(submitting\.current\) return/)
   assert.match(activation, /activateDirectOrganizer/)
   assert.match(activation, /activateCreator/)

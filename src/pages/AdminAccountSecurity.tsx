@@ -2,6 +2,7 @@ import { FormEvent, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
 import { changePasswordErrorMessage } from '../features/auth/errors'
+import { meetsPasswordPolicy, PASSWORD_POLICY_MESSAGE, PASSWORD_REQUIREMENT_TEXT } from '../features/auth/passwordPolicy'
 import { AdminShell } from './AdminConsole'
 
 export function AdminAccountSecurityPage() {
@@ -17,12 +18,16 @@ export function AdminAccountSecurityPage() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (submitting.current) return
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters.')
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError('All password fields are required.')
       return
     }
     if (confirmPassword !== newPassword) {
       setError('New passwords do not match.')
+      return
+    }
+    if (!meetsPasswordPolicy(newPassword)) {
+      setError(PASSWORD_POLICY_MESSAGE)
       return
     }
 
@@ -52,7 +57,7 @@ export function AdminAccountSecurityPage() {
         <input autoComplete="current-password" className={inputClass} id="current-password" onChange={event => { setCurrentPassword(event.target.value); clearError() }} required type="password" value={currentPassword} />
         <label className="mt-5 block text-sm font-bold" htmlFor="new-password">New password</label>
         <input aria-describedby="new-password-help" autoComplete="new-password" className={inputClass} id="new-password" minLength={8} onChange={event => { setNewPassword(event.target.value); clearError() }} required type="password" value={newPassword} />
-        <p className="mt-2 text-xs text-slate-500" id="new-password-help">Use at least 8 characters.</p>
+        <p className="mt-2 text-xs text-slate-500" id="new-password-help">{PASSWORD_REQUIREMENT_TEXT}</p>
         <label className="mt-5 block text-sm font-bold" htmlFor="confirm-password">Confirm new password</label>
         <input autoComplete="new-password" className={inputClass} id="confirm-password" minLength={8} onChange={event => { setConfirmPassword(event.target.value); clearError() }} required type="password" value={confirmPassword} />
         {error && <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="alert">{error}</p>}

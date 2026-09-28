@@ -1,7 +1,9 @@
 import { ApiError } from '../../services/api/client.ts'
+import { isPasswordPolicyError, PASSWORD_POLICY_MESSAGE } from './passwordPolicy.ts'
 
 export function authErrorMessage(error: unknown, action: 'login' | 'register' | 'guest' | 'logout' = 'login') {
   if (!(error instanceof ApiError)) return 'Something went wrong. Please try again.'
+  if (isPasswordPolicyError(error)) return PASSWORD_POLICY_MESSAGE
   if (error.kind === 'network') return 'Service unavailable. Please try again.'
   if (error.kind === 'conflict') return 'An account with this email already exists.'
   if (error.kind === 'unauthorized') return action === 'logout' ? 'You have been signed out.' : 'Email or password is incorrect.'
@@ -11,6 +13,7 @@ export function authErrorMessage(error: unknown, action: 'login' | 'register' | 
 
 export function changePasswordErrorMessage(error: unknown) {
   if (!(error instanceof ApiError)) return 'Unable to change password. Please try again.'
+  if (isPasswordPolicyError(error)) return PASSWORD_POLICY_MESSAGE
   if (error.kind === 'unauthorized') return 'Current password is incorrect.'
   if (error.kind === 'bad_request') return 'Check the password requirements and try again.'
   return 'Unable to change password. Please try again.'

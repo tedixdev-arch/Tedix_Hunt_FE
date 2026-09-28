@@ -1,4 +1,5 @@
 import { ApiError } from '../../services/api/client.ts'
+import { isPasswordPolicyError, PASSWORD_POLICY_MESSAGE } from './passwordPolicy.ts'
 
 const messages: Record<string, string> = {
   last_active_admin: 'This change would remove the last active Admin and is not allowed.',
@@ -26,6 +27,7 @@ function codeFrom(error: ApiError) {
 
 export function adminUserManagementError(error: unknown) {
   if (!(error instanceof ApiError)) return 'Unable to complete this action. Please try again.'
+  if (isPasswordPolicyError(error)) return PASSWORD_POLICY_MESSAGE
   const code = codeFrom(error)
   if (code && messages[code]) return messages[code]
   if (error.status === 404) return messages.user_not_found
