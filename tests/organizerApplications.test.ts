@@ -9,6 +9,7 @@ import { toOrganizerApplicationInput, validateOrganizerApplication, type Applica
 const validValues: ApplicationFormValues = {
   name: 'Ada Lovelace', email: 'ada@example.test', organizationName: 'Code School',
   organizationType: 'school', reason: 'To help young people explore their city.', phone: '',
+  password: 'password1', confirmPassword: 'password1',
 }
 
 test('organizer application posts canonical input publicly and maps an empty phone to null', async () => {
@@ -39,7 +40,7 @@ test('Admin Organizer application operations use authenticated endpoints and sta
   const fetcher: typeof fetch = async (url, init) => {
     calls.push({ url: String(url), init })
     const body = String(url).endsWith('/approve')
-      ? { application: {}, activationToken: 'shown-once', activationExpiresAt: null }
+      ? { application: { id: 'app-1', status: 'approved' } }
       : String(url).endsWith('/reject') ? { application: {} } : []
     return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
@@ -74,16 +75,22 @@ test('Admin Organizer Applications route, navigation, and review safeguards are 
   assert.match(page, /selected\.status === 'pending'/)
   assert.match(page, /if \(!selected \|\| selected\.status !== 'pending' \|\| deciding\.current\) return/)
   assert.match(page, /window\.confirm\('Reject this Organizer application\?'\)/)
-  assert.match(page, /This activation token is shown once\./)
+  assert.match(page, /Organizer approved/)
+  assert.match(page, /value="Approved"/)
+  assert.doesNotMatch(page, /activationToken|activationExpiresAt|Copy activation token|clipboard|activation link/i)
   assert.doesNotMatch(page, /localStorage|sessionStorage/)
-  assert.match(page, /selected\.activatedAt \? 'Activated' : 'Awaiting activation'/)
   assert.match(page, /This application has already been reviewed\. Refreshing its current status\./)
 })
 
 test('required application fields reject empty values while a valid form passes', () => {
   assert.deepEqual(validateOrganizerApplication(validValues), {})
-  const errors = validateOrganizerApplication({ name: ' ', email: 'invalid', organizationName: '', organizationType: '', reason: '', phone: '' })
-  assert.deepEqual(Object.keys(errors).sort(), ['email', 'name', 'organizationName', 'organizationType', 'reason'].sort())
+  const errors = validateOrganizerApplication({ name: ' ', email: 'invalid', organizationName: '', organizationType: '', reason: '', phone: '', password: '', confirmPassword: '' })
+  assert.deepEqual(Object.keys(errors).sort(), ['confirmPassword', 'email', 'name', 'organizationName', 'organizationType', 'password', 'reason'].sort())
+})
+
+test('application passwords require eight characters and matching confirmation', () => {
+  assert.equal(validateOrganizerApplication({ ...validValues, password: 'short', confirmPassword: 'short' }).password, 'Password must be at least 8 characters.')
+  assert.equal(validateOrganizerApplication({ ...validValues, confirmPassword: 'different1' }).confirmPassword, 'Passwords do not match.')
 })
 
 test('application UI includes submission safeguards, safe outcomes, and no organizer redirect', async () => {
@@ -92,7 +99,13 @@ test('application UI includes submission safeguards, safe outcomes, and no organ
   assert.match(page, /disabled=\{isSubmitting\}/)
   assert.match(page, /Submitting…/)
   assert.match(page, /Application submitted/)
-  assert.match(page, /pending review/)
+  assert.match(page, /waiting for Admin approval/)
+  assert.match(page, /credentials are already set/)
+  assert.match(page, /once approved you can sign in normally/)
+  assert.match(page, /label="Password"/)
+  assert.match(page, /label="Confirm password"/)
+  assert.doesNotMatch(page, /activation token|create (?:a|your) password later/i)
+  assert.doesNotMatch(page, /localStorage|sessionStorage|console\./)
   assert.match(page, /Please check the application details and try again\./)
   assert.match(page, /We couldn't submit your application\. Please try again\./)
   assert.doesNotMatch(page, /navigate\(['"]\/organizer['"]/)

@@ -4,7 +4,7 @@ import { OrganizerHeader } from './OrganizerFlow'
 import { ApiError, organizerApplicationsApi, type OrganizationType } from '../services/api'
 import { toOrganizerApplicationInput, validateOrganizerApplication, type ApplicationFormErrors, type ApplicationFormValues } from './organizerApplicationForm'
 
-const initialValues: ApplicationFormValues = { name: '', email: '', organizationName: '', organizationType: '', reason: '', phone: '' }
+const initialValues: ApplicationFormValues = { name: '', email: '', organizationName: '', organizationType: '', reason: '', phone: '', password: '', confirmPassword: '' }
 const inputClass = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 px-4 outline-none focus:border-emerald-500'
 
 export function RegisteredOrganizerApplicationPage() {
@@ -34,6 +34,7 @@ export function RegisteredOrganizerApplicationPage() {
       const email = values.email.trim()
       await organizerApplicationsApi.create(toOrganizerApplicationInput(values))
       setSubmittedEmail(email)
+      setValues(initialValues)
     } catch (caught) {
       setFormError(caught instanceof ApiError && caught.status === 400
         ? 'Please check the application details and try again.'
@@ -52,7 +53,7 @@ export function RegisteredOrganizerApplicationPage() {
           <div className="grid h-12 w-12 place-items-center rounded-full bg-emerald-100 text-2xl text-emerald-800" aria-hidden="true">✓</div>
           <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Application received</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Application submitted</h1>
-          <p className="mt-4 leading-7 text-slate-600">Your application is pending review. Organizer access is granted only after approval.</p>
+          <p className="mt-4 leading-7 text-slate-600">Your application is waiting for Admin approval. Your sign-in credentials are already set, and once approved you can sign in normally.</p>
           <p className="mt-3 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-600">We received the application for <strong className="text-slate-900">{submittedEmail}</strong>.</p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link className="flex min-h-12 flex-1 items-center justify-center rounded-xl bg-emerald-500 px-5 font-bold" to="/organizer/sign-in">Back to Organizer access</Link>
@@ -79,9 +80,13 @@ export function RegisteredOrganizerApplicationPage() {
           <Field id="application-organization-type" label="Organization type" error={errors.organizationType}><select id="application-organization-type" className={`${inputClass} bg-white`} value={values.organizationType} onChange={(event) => update('organizationType', event.target.value as OrganizationType | '')}><option value="">Select a type</option><option value="school">School</option><option value="ngo">NGO</option><option value="community">Community</option><option value="other">Other</option></select></Field>
           <Field id="application-reason" label="Why do you want to organize Tedix Hunts?" error={errors.reason}><textarea id="application-reason" className={`${inputClass} min-h-28 py-3`} value={values.reason} onChange={(event) => update('reason', event.target.value)} /></Field>
           <Field id="application-phone" label="Phone" optional><input id="application-phone" autoComplete="tel" className={inputClass} type="tel" value={values.phone} onChange={(event) => update('phone', event.target.value)} /></Field>
+          <div className="grid gap-x-5 sm:grid-cols-2">
+            <Field id="application-password" label="Password" error={errors.password}><input id="application-password" autoComplete="new-password" className={inputClass} minLength={8} required type="password" value={values.password} onChange={(event) => update('password', event.target.value)} /></Field>
+            <Field id="application-confirm-password" label="Confirm password" error={errors.confirmPassword}><input id="application-confirm-password" autoComplete="new-password" className={inputClass} minLength={8} required type="password" value={values.confirmPassword} onChange={(event) => update('confirmPassword', event.target.value)} /></Field>
+          </div>
           {formError && <p className="mt-5 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="alert">{formError}</p>}
           <button className="mt-6 min-h-14 w-full rounded-xl bg-emerald-500 px-5 font-bold hover:bg-emerald-400 disabled:cursor-wait disabled:opacity-60" disabled={isSubmitting} type="submit">{isSubmitting ? 'Submitting…' : 'Submit application'}</button>
-          <p className="mt-3 text-center text-xs leading-5 text-slate-500">Submitting an application does not create an account or grant Organizer access.</p>
+          <p className="mt-3 text-center text-xs leading-5 text-slate-500">Submitting an application does not grant Organizer access until Admin approval.</p>
         </form>
       </div>
     </main>
