@@ -34,7 +34,7 @@ export { OrganizationsApi, organizationsApi } from './organizations.ts';
 export type { Organization } from './organizations.ts';
 export { OrganizerApplicationsApi, notifyOrganizerApplicationsPendingChanged, organizerApplicationsApi, organizerApplicationsPendingChangedEvent } from './organizerApplications.ts';
 export type { OrganizerApplication, OrganizerApplicationApproval, OrganizerApplicationInput, OrganizerApplicationRejection, OrganizerApplicationStatus, OrganizationType, PublicOrganizerApplication } from './organizerApplications.ts';
-export { CreatorApplicationsApi, creatorApplicationsApi } from './creatorApplications.ts';
+export { CreatorApplicationsApi, creatorApplicationsApi, creatorApplicationsPendingChangedEvent, notifyCreatorApplicationsPendingChanged } from './creatorApplications.ts';
 export type { CreatorApplication, CreatorApplicationDecision, CreatorApplicationInput, CreatorApplicationStatus } from './creatorApplications.ts';
 export { HuntRewardsApi, RewardOptionsApi, huntRewardsApi, rewardOptionsApi, rewardSaveError } from './rewards.ts';
 export type { HuntRewards, LeaderboardReward, LeaderboardRewardInput, RewardDetails, RewardKind, RewardOption, RewardOptions, RewardProvider, SpecialAward, SpecialAwardDefinition, SpecialAwardInput, VirtualRewardCategory } from './rewards.ts';

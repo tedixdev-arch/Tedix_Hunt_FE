@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { OrganizerHeader } from './OrganizerFlow'
 import { leaderboardPhysicalInventory, specialPhysicalInventory } from '../data/rewardInventory'
-import { organizerApplicationsApi, organizerApplicationsPendingChangedEvent } from '../services/api'
+import { creatorApplicationsApi, creatorApplicationsPendingChangedEvent, organizerApplicationsApi, organizerApplicationsPendingChangedEvent } from '../services/api'
 
 const sidebarPreferenceKey = 'tedixhunt_admin_sidebar_collapsed'
 
@@ -45,6 +45,7 @@ function NavigationIcon({name}:{name:string}) {
 
 export function AdminShell({active,children}:{active:string;children:ReactNode}) {
   const [hasPendingOrganizerApplications, setHasPendingOrganizerApplications] = useState(false)
+  const [hasPendingCreatorApplications, setHasPendingCreatorApplications] = useState(false)
   const [collapsed,setCollapsed] = useState(() => {
     const saved = window.localStorage.getItem(sidebarPreferenceKey)
     return saved === null ? window.matchMedia('(max-width: 767px)').matches : saved === 'true'
@@ -67,6 +68,23 @@ export function AdminShell({active,children}:{active:string;children:ReactNode})
       window.removeEventListener(organizerApplicationsPendingChangedEvent, loadPendingCount)
     }
   }, [])
+  useEffect(() => {
+    let active = true
+    const loadPendingCount = async () => {
+      try {
+        const applications = await creatorApplicationsApi.list('pending')
+        if (active) setHasPendingCreatorApplications(applications.length > 0)
+      } catch {
+        if (active) setHasPendingCreatorApplications(false)
+      }
+    }
+    void loadPendingCount()
+    window.addEventListener(creatorApplicationsPendingChangedEvent, loadPendingCount)
+    return () => {
+      active = false
+      window.removeEventListener(creatorApplicationsPendingChangedEvent, loadPendingCount)
+    }
+  }, [])
   return <main className="flex h-dvh flex-col overflow-hidden bg-slate-100 text-slate-950">
     <OrganizerHeader logoutTo="/admin/sign-in" showProfile/>
     <div className="flex min-h-0 flex-1">
@@ -76,8 +94,9 @@ export function AdminShell({active,children}:{active:string;children:ReactNode})
             {!collapsed&&<h2 className="mb-1 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{group.label}</h2>}
             <div className="space-y-1">{group.items.map(item=>{
               const isActive=active===item.id
-              const actionRequired = item.id === 'organizer-applications' && hasPendingOrganizerApplications
-              return <Link aria-current={isActive?'page':undefined} aria-label={collapsed?`${item.label}${actionRequired ? ' — action required' : ''}`:undefined} title={collapsed?item.label:undefined} className={`relative flex min-h-11 items-center rounded-lg text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${collapsed?'justify-center px-2':'gap-3 px-3'} ${isActive?'bg-slate-950 text-white before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-emerald-400':'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`} key={item.id} to={item.path}><NavigationIcon name={item.icon}/>{!collapsed&&<span>{item.label}</span>}{actionRequired && <span aria-hidden={collapsed} aria-label={collapsed?undefined:'Organizer Applications — action required'} className={`${collapsed?'absolute right-2 top-2':'ml-auto'} h-2 w-2 shrink-0 rounded-full bg-red-600`}/>}</Link>
+              const actionRequired = (item.id === 'organizer-applications' && hasPendingOrganizerApplications)
+                || (item.id === 'creator-applications' && hasPendingCreatorApplications)
+              return <Link aria-current={isActive?'page':undefined} aria-label={collapsed?`${item.label}${actionRequired ? ' — action required' : ''}`:undefined} title={collapsed?item.label:undefined} className={`relative flex min-h-11 items-center rounded-lg text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${collapsed?'justify-center px-2':'gap-3 px-3'} ${isActive?'bg-slate-950 text-white before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-emerald-400':'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`} key={item.id} to={item.path}><NavigationIcon name={item.icon}/>{!collapsed&&<span>{item.label}</span>}{actionRequired && <span aria-hidden={collapsed} aria-label={collapsed?undefined:`${item.label} — action required`} className={`${collapsed?'absolute right-2 top-2':'ml-auto'} h-2 w-2 shrink-0 rounded-full bg-red-600`}/>}</Link>
             })}</div>
           </section>)}
         </nav>

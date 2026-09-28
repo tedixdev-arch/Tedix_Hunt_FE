@@ -25,6 +25,13 @@ export interface CreatorApplicationDecision {
   application: CreatorApplication
 }
 
+/** Signals that the Admin action queue may have changed after a review decision. */
+export const creatorApplicationsPendingChangedEvent = 'tedixhunt:creator-applications-pending-changed'
+
+export function notifyCreatorApplicationsPendingChanged(): void {
+  window.dispatchEvent(new Event(creatorApplicationsPendingChangedEvent))
+}
+
 export class CreatorApplicationsApi {
   private readonly client: ApiClient
 

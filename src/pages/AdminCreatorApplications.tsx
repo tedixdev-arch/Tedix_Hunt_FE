@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { creatorDecisionErrorMessage } from '../features/auth/creatorApplicationErrors'
-import { creatorApplicationsApi, type CreatorApplication, type CreatorApplicationStatus } from '../services/api'
+import { creatorApplicationsApi, notifyCreatorApplicationsPendingChanged, type CreatorApplication, type CreatorApplicationStatus } from '../services/api'
 import { AdminShell } from './AdminConsole'
 
 type Filter = CreatorApplicationStatus | 'all'
@@ -41,6 +41,7 @@ export function AdminCreatorApplicationsPage() {
     try {
       const result = action === 'approve' ? await creatorApplicationsApi.approve(selected.id) : await creatorApplicationsApi.reject(selected.id)
       setSelected(result.application)
+      notifyCreatorApplicationsPendingChanged()
       await load(filter)
       setSelected(result.application)
       setMessage(action === 'approve' ? 'Creator approved. They can now sign in using the credentials established during application.' : 'Creator application rejected. Creator access was not granted.')
