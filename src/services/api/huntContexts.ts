@@ -9,6 +9,10 @@ export interface HuntContext {
   supervisor: boolean;
 }
 
+export interface HuntContextsResponse {
+  contexts: HuntContext[];
+}
+
 export class HuntContextsApi {
   private readonly client: ApiClient;
 
@@ -16,8 +20,10 @@ export class HuntContextsApi {
     this.client = client;
   }
 
-  list(): Promise<HuntContext[]> {
-    return this.client.get<HuntContext[]>('/api/me/hunt-contexts');
+  async list(): Promise<HuntContext[]> {
+    const response = await this.client.get<HuntContextsResponse>('/api/me/hunt-contexts');
+    if (!Array.isArray(response.contexts)) throw new Error('Invalid Hunt contexts response.');
+    return response.contexts;
   }
 }
 
