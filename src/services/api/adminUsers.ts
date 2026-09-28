@@ -21,6 +21,10 @@ export interface AdminUser extends AdminIdentity {
 
 export type ProfessionalUser = AdminUser
 
+export interface RemoveAccountResponse {
+  status: 'deleted' | 'retired'
+}
+
 export interface ProvisionAdminInput {
   email: string
   name?: string
@@ -86,8 +90,8 @@ export class AdminUsersApi {
   setPassword(id: string, input: { newPassword: string; confirmPassword: string }): Promise<void> {
     return this.client.put(`/api/admin/users/${encodeURIComponent(id)}/password`, input)
   }
-  deleteUser(id: string): Promise<void> {
-    return this.client.delete(`/api/admin/users/${encodeURIComponent(id)}`)
+  deleteUser(id: string): Promise<RemoveAccountResponse> {
+    return this.client.delete<RemoveAccountResponse>(`/api/admin/users/${encodeURIComponent(id)}`)
   }
 }
 
