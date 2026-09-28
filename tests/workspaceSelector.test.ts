@@ -37,7 +37,21 @@ test('authenticated selector redirects signed-out users and shows only available
   assert.doesNotMatch(selectorComponent, /canAccessParticipant|canAccessSupervisor/)
 })
 
-test('Hunt contexts use the authenticated me endpoint', async () => {
+test('newly approved Organizer can render the professional selector with no Hunt contexts', async () => {
+  const selector = await readProjectFile('src/pages/ProfessionalAccess.tsx')
+  const definitions = selector.slice(selector.indexOf('const professionalWorkspaces'), selector.indexOf('export function LoginWorkspacePage'))
+  const selectorComponent = selector.slice(selector.indexOf('export function WorkspaceSelectorPage'), selector.indexOf('export function ProfessionalSignInPage'))
+
+  assert.match(definitions, /label: 'Organizer'[\s\S]*workspaceTo: '\/organizer'/)
+  assert.match(definitions, /label: 'Creator'[\s\S]*workspaceTo: '\/creator'/)
+  assert.match(definitions, /label: 'Admin'[\s\S]*workspaceTo: '\/admin'/)
+  assert.doesNotMatch(definitions, /Participant|Supervisor/)
+  assert.match(selectorComponent, /Organizer: canAccessOrganizer/)
+  assert.match(selectorComponent, /useState<HuntContext\[]>\(\[\]\)/)
+  assert.match(selectorComponent, /No Hunt contexts are available yet\./)
+})
+
+test('Hunt contexts use the authenticated me endpoint and unwrap its canonical response', async () => {
   const calls: Array<{ url: string; authorization: string | null }> = []
   const session: SessionStore = {
     getAccessToken: () => 'same-session-token', getRefreshToken: () => null,
@@ -45,7 +59,7 @@ test('Hunt contexts use the authenticated me endpoint', async () => {
   }
   const fetcher: typeof fetch = async (input, init) => {
     calls.push({ url: String(input), authorization: new Headers(init?.headers).get('authorization') })
-    return new Response(JSON.stringify([]), { headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ contexts: [] }), { headers: { 'Content-Type': 'application/json' } })
   }
 
   assert.deepEqual(await new HuntContextsApi(new ApiClient('https://api.example.test', session, fetcher)).list(), [])
@@ -53,6 +67,38 @@ test('Hunt contexts use the authenticated me endpoint', async () => {
     url: 'https://api.example.test/api/me/hunt-contexts',
     authorization: 'Bearer same-session-token',
   }])
+})
+
+test('Hunt contexts reject malformed response data instead of hiding it as an empty result', async () => {
+  const session: SessionStore = {
+    getAccessToken: () => 'same-session-token', getRefreshToken: () => null,
+    saveSession: () => undefined, clearSession: () => undefined,
+  }
+  const fetcher: typeof fetch = async () => new Response(JSON.stringify([]), {
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  await assert.rejects(
+    new HuntContextsApi(new ApiClient('https://api.example.test', session, fetcher)).list(),
+    /Invalid Hunt contexts response/,
+  )
+})
+
+test('canonical Hunt context rows are available to workspace rendering', async () => {
+  const context: HuntContext = {
+    huntId: 'hunt-1', huntName: 'City Quest', huntStatus: 'active', participant: true, supervisor: false,
+  }
+  const session: SessionStore = {
+    getAccessToken: () => 'same-session-token', getRefreshToken: () => null,
+    saveSession: () => undefined, clearSession: () => undefined,
+  }
+  const fetcher: typeof fetch = async () => new Response(JSON.stringify({ contexts: [context] }), {
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  const contexts = await new HuntContextsApi(new ApiClient('https://api.example.test', session, fetcher)).list()
+  assert.deepEqual(contexts, [context])
+  assert.deepEqual(contextualWorkspaceChoices(contexts).map(choice => choice.role), ['Participant'])
 })
 
 test('context choices are derived only from each authoritative Hunt row', () => {
