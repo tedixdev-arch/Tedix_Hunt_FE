@@ -1,10 +1,10 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 2.8 | Updated 28 September 2026
+Version 2.9 | Updated 28 September 2026
 
-This document evolves Version 2.7 with the corrected professional credential lifecycle: self-registration establishes credentials before review, while Admin provisioning retains one-time activation for identities that have no credentials. It removes the obsolete Organizer-application activation-token architecture, establishes the future Creator self-registration rule and cleans up the implementation order. The authoritative Admin hierarchy for user management and the professional/Hunt-context identity model remain unchanged.
+This document evolves Version 2.8 by establishing permanent account removal and anonymization while preserving the professional credential lifecycle introduced there: self-registration establishes credentials before review, while Admin provisioning retains one-time activation for identities that have no credentials. Account lifecycle is now explicitly separate from platform-record lifecycle, and the Admin frontend follows the backend's authoritative hard-delete-or-retire decision.
 
-Revision note (2.8): corrected the professional credential lifecycle; made the self-registration/Admin-provisioning distinction explicit; removed Organizer-application activation-token handoff; defined the future Creator self-registration lifecycle; corrected E12/E13; and consolidated the implementation order and immediate next steps.
+Revision note (2.9): establishes permanent account retirement/anonymization; separates account lifecycle from platform-record lifecycle; replaces dependency-blocked deletion with an authoritative hard-delete-vs-retire outcome; records Organization owner behavior after retirement; aligns Admin FE account removal with backend authority; and preserves required provenance without preserving account access. The Version 2.8 professional credential lifecycle rules remain authoritative.
 
 The implementation strategy is:
 
@@ -197,6 +197,24 @@ Participant and Supervisor are Hunt-contextual:
 
 The existing global participant role remains only as transitional compatibility data for current authentication/guards. New Hunt-context decisions must not infer Participant access from that global role.
 
+### Account lifecycle is separate from platform-record lifecycle
+
+**Account controls access.**
+
+**Roles control capabilities.**
+
+**Hunt-context records control contextual participation/authority.**
+
+**Platform records survive account removal.**
+
+**Provenance survives where required.**
+
+`users` represents identity/account. `user_roles` represents authoritative global capabilities. `hunt_participants` and `hunt_roles` represent Hunt-context relationships and authority.
+
+Hunts, Organizations, templates, results, awards, reviewed applications and future audit records belong to / are governed by the TedixHunt platform/domain. References such as `created_by`, `reviewed_by`, `supervised_by` and owner-like fields record relationships or provenance; they do not make a domain record's lifecycle depend on the continued existence of an active account. Admin has platform authority to manage platform records independently of whether the originating identity remains an active account.
+
+When permanent account removal encounters durable platform history, the platform retains the User UUID only as required provenance and retires/anonymizes the account rather than deleting domain records or rejecting removal. The inert transitional `users.role` value is not rewritten to `participant`: retirement removes authoritative `user_roles`, creates neither Participant capability nor `hunt_participants`, and leaves Participant authority Hunt-contextual.
+
 ### Entry selection and workspace switching
 
 Public entry and authenticated switching are separate concerns.
@@ -236,7 +254,7 @@ Admin may manage other user identities through backend-authorized actions, inclu
 - grant/remove global professional capabilities where allowed
 - block/unblock accounts
 - initiate password reset
-- delete only when deletion is dependency-safe
+- request permanent account removal
 
 Blocking is the normal reversible operational action and must revoke active refresh sessions.
 
@@ -249,9 +267,11 @@ Password administration follows the platform authority model:
 - an Admin may change their own password through the normal authenticated own-password flow
 - an Admin must never replace the password of another identity that holds the authoritative Admin capability, even if that identity also holds Organizer or Creator capabilities
 
-Deletion is destructive and must preserve referential integrity and auditability. If a user owns or is referenced by protected business records, deletion must be rejected until an explicit archival/anonymization strategy exists.
+The backend transactionally chooses the successful permanent-removal outcome. An identity with no durable platform-history dependencies is hard-deleted together with disposable account/onboarding artifacts. An identity with durable platform-history dependencies is retired/anonymized: `account_status = retired`, authentication is permanently rejected, password credentials are removed, refresh sessions are revoked, activation/provisioning credentials are invalidated, authoritative `user_roles` are removed, personal account data is anonymized, and email becomes `NULL` so the original address can be reused. The User UUID and platform/domain records remain only where durable history requires them. Normal role, password, status and provisioning flows cannot revive a retired identity.
 
-Last-active-Admin protection remains mandatory for role removal, blocking and deletion.
+Both `deleted` and `retired` are successful permanent account-removal outcomes. Platform history is a reason to retire the identity, not to reject removal. Blocking remains a reversible operational suspension; retirement is permanent account removal. No restore/unretire behavior is part of this architecture.
+
+Last-active-Admin protection remains mandatory for role removal, blocking and permanent account removal.
 
 ### Preserve the mockup deliberately
 
@@ -287,6 +307,10 @@ Tracked migrations currently reach:
 - 010_organizer_approval
 - 011_professional_activation_tokens
 - 012_professional_activation_purposes
+- 013_user_account_status
+- 014_retired_account_status
+
+Migration 014 adds the retired account state. Retired identities use `NULL` email; no migration 015 is required because `users.email` was already nullable.
 
 Current important tables include:
 
@@ -354,6 +378,10 @@ Already-real frontend foundations include:
 - Admin Account Security / own-password change
 - Admin list, provisioning and activation UI
 - generalized Users & Roles UI for Admin / Organizer / Creator provisioning (FE PR #48)
+- Admin Remove account flow aligned with backend semantics (FE PR #58)
+  - backend remains authoritative for the removal outcome
+  - both `deleted` and `retired` responses are successful and display `Account removed.`
+  - FE does not expose the hard-delete-vs-retire distinction or retain the obsolete protected-history deletion blocker
 - direct Organizer and Creator activation pages (FE PR #48)
 - grouped collapsible Admin left sidebar
 - canonical authenticated /workspaces switcher and shared professional workspace-switch entry (FE PR #43, refined by FE PR #45)
@@ -389,6 +417,13 @@ Current main backend domains:
 - /api/reward-options
 - /api/hunts/:id/rewards
 - /api/hunts
+
+Implemented account-removal foundation (BE PRs #44 and #45):
+- Admin permanent account removal with a transactional backend hard-delete-vs-retire decision
+- retired-account authentication, session, credential and capability protections
+- platform-history and required User UUID provenance preservation
+- nullable retired-account email so the original address is released for reuse
+- Organization Admin fallback after an owner is retired, without replacing `owner_id`
 
 This is a strong foundation, but Creator template persistence, participant runtime, live operations and long-term systems remain to be built.
 
@@ -510,6 +545,15 @@ Admin:
 
 ### B4. Organizations and membership
 Status: ✅ Complete for current prototype
+
+Current `organizations.owner_id` participates in operational authority while the referenced owner is a normal active identity. If that identity is retired:
+- the Organization is not deleted
+- `owner_id` continues to reference the retired UUID as preserved provenance
+- the retired identity cannot authenticate and therefore has no operational authority
+- authoritative Admin capability provides the narrow platform-management fallback
+- Admin does not become or replace `owner_id` merely because the owner retired
+
+**Future architecture — Organization stewardship/ownership transfer:** the current `owner_id` mixes operational ownership with provenance. Future Organization stewardship should separate historical creator/origin attribution from current operational stewardship/ownership. The schema and transfer API are intentionally not designed in this plan.
 
 ### B5. Hunt-context roles
 Status: 🟡 Context read model complete / runtime assignment-use pending
@@ -1260,7 +1304,7 @@ Admin can:
 
 Participant and Supervisor continue to use Hunt-context records rather than global role administration.
 
-Removing/blocking/deleting the last active Admin must be rejected.
+Removing/blocking/permanently removing the last active Admin must be rejected.
 
 #### L1.3 Block / unblock account
 Status: ✅ Implemented
@@ -1268,16 +1312,16 @@ Status: ✅ Implemented
 Blocking is the primary reversible operational control.
 
 Implemented behavior:
-- account has an authoritative active/blocked status
+- account has an authoritative `active | blocked | retired` status
+- `active` is a normal account
+- `blocked` is a reversible operational suspension
+- `retired` is a permanently removed/anonymized account retained only for provenance/history
 - blocked user cannot authenticate or refresh sessions
 - blocking immediately revokes existing refresh sessions
 - unblock restores eligibility to authenticate but does not recreate revoked sessions
 - historical Hunts, templates, memberships, results and audit references remain intact
 
-Preferred data direction:
-- explicit account status such as `active | blocked`
-- use a tracked migration
-- keep room for later archival states if needed without inventing them now
+Retired identities cannot be unblocked, restored or unretired through normal account-management flows.
 
 #### L1.4 Admin password authority
 Status: ✅ Implemented
@@ -1308,19 +1352,27 @@ Architecture rules:
 
 This direct password-replacement authority is distinct from any future public self-service “forgot password” recovery flow.
 
-#### L1.5 Controlled user deletion
-Status: ✅ Implemented with dependency-safe backend rejection
+#### L1.5 Permanent account removal
+Status: ✅ Implemented
 
-Delete is not equivalent to block.
+Admin selects Remove account
+→ backend validates self-removal and last-active-Admin safety invariants
+→ backend checks durable platform references within the transaction
+→ an unused identity hard-deletes with disposable account/onboarding artifacts
+OR
+→ a history-bearing identity retires/anonymizes while retaining its UUID as required provenance
+→ platform/domain records survive without destructive cascading
+→ FE reports `Account removed.`
 
-Implemented delete behavior is conservative:
-- allow hard delete only when no protected business/audit dependencies would be damaged
-- reject deletion with a clear conflict when the identity owns or is referenced by protected records
-- do not cascade away Hunts, Organizations, templates, results, audit records or other business history merely to satisfy a user-delete request
-- preserve last-active-Admin protection
-- self-delete/block requires explicit safeguards
+The backend is authoritative and the entire decision is transactional. Both hard deletion and retirement are successful permanent-removal outcomes; the FE deliberately does not expose that implementation distinction. Platform history is a reason to **RETIRE** the identity, not a reason to reject account removal.
 
-Long-term archival/anonymization may be introduced later if business/legal requirements demand it.
+Safety rules remain:
+- an Admin cannot remove their own account through this flow
+- the last active Admin cannot be removed
+- referential integrity and platform history must be preserved
+- no account removal may destructively cascade Hunts, Organizations, templates, results, awards, reviewed applications, audit records or other platform/domain records
+
+For retirement, `users.role` remains inert transitional compatibility data and must not be rewritten to `participant`. Retirement removes authoritative `user_roles`, does not create Participant capability or `hunt_participants`, and leaves Participant authority Hunt-contextual.
 
 #### L1.6 Auditability
 Status: ⬜ Not started
@@ -1330,7 +1382,9 @@ Privileged user-management actions should become audit events when the audit sub
 - role grants/removals
 - block/unblock
 - Admin password replacement
-- delete attempts/outcomes
+- account removal request
+- hard-delete vs retirement outcome
+- privileged retirement/anonymization event
 
 The current prototype may implement the user-management behavior before the full audit-log UI, but the API/domain design must not make future auditability difficult.
 
@@ -1641,7 +1695,7 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 10. Extend to the full Signal mission.
 11. Connect live Organizer monitoring + Help/PANIC.
 12. Build results + reward-awarding runtime.
-13. Complete only genuinely outstanding Admin operations, including audit events/UI and domain-dependent oversight systems. Core user editing, capability management, block/unblock, non-Admin password replacement, dependency-safe deletion and professional provisioning are already implemented and must not be reintroduced as future work.
+13. Complete only genuinely outstanding Admin operations, including audit events/UI and domain-dependent oversight systems. Core user editing, capability management, block/unblock, non-Admin password replacement, permanent account removal and professional provisioning are already implemented foundation and must not be reintroduced as future work.
 14. Add Passport/history/achievements.
 15. Add Custom Hunt request workflow.
 16. Resolve Independent Organizer production architecture.
@@ -1665,10 +1719,13 @@ Complete:
 - BE PR #36 — Admin direct provisioning for Organizer / Creator, migration 012 and professional activation purposes
 - FE PR #48 — Users & Roles for Admin / Organizer / Creator plus direct Organizer / Creator activation UI
 - FE PR #55 — corrected self-registered Organizer credential lifecycle
+- BE PR #44 — permanent account retirement with platform-history preservation
+- BE PR #45 — retired-email, Organization-owner and legacy-role corrections
+- FE PR #58 — Admin account removal aligned with backend hard-delete-vs-retire authority
 - E14 Creator provisioning
 - E15 Creator activation/account lifecycle
 
-The Admin Console now has one Users & Roles surface for the global professional capabilities Admin, Organizer and Creator.
+The Admin Console now has one Users & Roles surface for the global professional capabilities Admin, Organizer and Creator. Permanent account removal is completed foundation: backend authority selects hard deletion or retirement, and platform history/provenance survives where required.
 
 ## Immediate 1 — E13 Organizer self-registration onboarding verification
 
@@ -1702,7 +1759,7 @@ First Admin bootstrap/login works
 → ✅ Admin can maintain their own password
 → ✅ Admin can provision another Admin safely
 → ✅ Admin can directly provision Organizer and Creator capabilities
-→ ✅ Admin can edit/block/manage roles/set non-Admin passwords/delete users safely
+→ ✅ Admin can edit/block/manage roles/set non-Admin passwords and permanently remove accounts while required platform history/provenance survives
 → Organizer application/approve/normal-login works
 → Creator provision/activate/login works
 
@@ -1739,6 +1796,8 @@ Passport
 ---
 
 # 23. Final governing rule
+
+Account controls access. Roles control capabilities. Platform records survive accounts.
 
 Creator creates
 → Admin governs
