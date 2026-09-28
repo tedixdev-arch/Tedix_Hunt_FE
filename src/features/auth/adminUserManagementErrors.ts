@@ -5,7 +5,7 @@ const messages: Record<string, string> = {
   self_admin_removal_not_allowed: 'You cannot remove your own Admin capability.',
   admin_password_change_not_allowed: "Another Admin's password cannot be changed here.",
   self_password_change_use_account_security: 'Use Account Security to change your own password.',
-  user_has_protected_dependencies: 'This user cannot be deleted because they have protected business or history dependencies.',
+  user_has_protected_dependencies: 'This user has platform activity that must be preserved, so the account cannot be permanently deleted.',
   self_delete_not_allowed: 'You cannot delete your own account.',
   user_not_found: 'This user no longer exists. Refresh the list and try again.',
   email_already_exists: 'An account with this email already exists.',
