@@ -52,16 +52,20 @@ test('Admin route definitions and guards remain unchanged', async () => {
   }
 })
 
-test('Organizer Applications is the only real action-required sidebar dot', async () => {
+test('Organizer and Creator Applications derive action-required sidebar dots from pending API data', async () => {
   const page = await consoleSource()
 
   assert.match(page, /organizerApplicationsApi\.list\('pending'\)/)
   assert.match(page, /setHasPendingOrganizerApplications\(applications\.length > 0\)/)
+  assert.match(page, /creatorApplicationsApi\.list\('pending'\)/)
+  assert.match(page, /setHasPendingCreatorApplications\(applications\.length > 0\)/)
   assert.match(page, /item\.id === 'organizer-applications' && hasPendingOrganizerApplications/)
+  assert.match(page, /item\.id === 'creator-applications' && hasPendingCreatorApplications/)
   assert.match(page, /actionRequired && <span[\s\S]{0,180}h-2 w-2[\s\S]{0,80}rounded-full bg-red-600/)
   assert.match(page, /collapsed\?`\$\{item\.label\}\$\{actionRequired \? ' — action required' : ''\}`:undefined/)
-  assert.match(page, /aria-label=\{collapsed\?undefined:'Organizer Applications — action required'\}/)
+  assert.match(page, /aria-label=\{collapsed\?undefined:`\$\{item\.label\} — action required`\}/)
   assert.match(page, /catch \{\s*if \(active\) setHasPendingOrganizerApplications\(false\)/)
+  assert.match(page, /catch \{\s*if \(active\) setHasPendingCreatorApplications\(false\)/)
   assert.doesNotMatch(page, /99\+|pendingCount|pendingLabel/)
   assert.doesNotMatch(page, /item\.id === '(?:alerts|templates)' && hasPending/)
 })
@@ -75,4 +79,18 @@ test('Organizer application decisions notify AdminShell to refresh its count', a
   assert.match(page, /addEventListener\(organizerApplicationsPendingChangedEvent, loadPendingCount\)/)
   assert.match(page, /removeEventListener\(organizerApplicationsPendingChangedEvent, loadPendingCount\)/)
   assert.match(applications, /notifyOrganizerApplicationsPendingChanged\(\)\s*await loadApplications/)
+})
+
+test('Creator application decisions notify AdminShell to refresh its pending state', async () => {
+  const [page, applications, api] = await Promise.all([
+    consoleSource(),
+    readFile(new URL('../src/pages/AdminCreatorApplications.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/services/api/creatorApplications.ts', import.meta.url), 'utf8'),
+  ])
+
+  assert.match(api, /creatorApplicationsPendingChangedEvent = 'tedixhunt:creator-applications-pending-changed'/)
+  assert.match(api, /window\.dispatchEvent\(new Event\(creatorApplicationsPendingChangedEvent\)\)/)
+  assert.match(page, /addEventListener\(creatorApplicationsPendingChangedEvent, loadPendingCount\)/)
+  assert.match(page, /removeEventListener\(creatorApplicationsPendingChangedEvent, loadPendingCount\)/)
+  assert.match(applications, /notifyCreatorApplicationsPendingChanged\(\)\s*await load\(filter\)/)
 })

@@ -17,6 +17,8 @@ import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTe
 import { AdminAccountSecurityPage } from '../pages/AdminAccountSecurity'
 import { AdminUsersPage } from '../pages/AdminUsers'
 import { AdminOrganizerApplicationsPage } from '../pages/AdminOrganizerApplications'
+import { AdminCreatorApplicationsPage } from '../pages/AdminCreatorApplications'
+import { CreatorApplicationPage } from '../pages/CreatorApplicationPage'
 import { AdminActivationPage } from '../pages/AdminActivation'
 import { CreatorActivationPage, DirectOrganizerActivationPage } from '../pages/ProfessionalActivation'
 import { LoginWorkspacePage, ProfessionalSignInPage, WorkspaceSelectorPage } from '../pages/ProfessionalAccess'
@@ -174,6 +176,10 @@ export const router = createHashRouter([
     element: <CreatorActivationPage />,
   },
   {
+    path: '/creator/apply',
+    element: <CreatorApplicationPage />,
+  },
+  {
     path: '/creator',
     element: <RequireAuthFlow canAccess={canAccessCreator} entry="/creator/sign-in"><CreatorStudioPage /></RequireAuthFlow>,
   },
@@ -224,6 +230,10 @@ export const router = createHashRouter([
   {
     path: '/admin/organizer-applications',
     element: <RequireAdmin><AdminOrganizerApplicationsPage /></RequireAdmin>,
+  },
+  {
+    path: '/admin/creator-applications',
+    element: <RequireAdmin><AdminCreatorApplicationsPage /></RequireAdmin>,
   },
   {
     path: '/admin/users',
