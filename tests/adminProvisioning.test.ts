@@ -178,6 +178,15 @@ test('Admin user management API uses the supported backend contracts', async () 
   assert.deepEqual(JSON.parse(String(requests[5].init?.body)), { newPassword: 'long-password', confirmPassword: 'long-password' })
 })
 
+test('account removal accepts deleted and retired success responses', async () => {
+  for (const status of ['deleted', 'retired'] as const) {
+    const client = new ApiClient('https://api.example.test', new MemorySession(), async () =>
+      new Response(JSON.stringify({ status }), { status: 200, headers: { 'content-type': 'application/json' } }))
+
+    assert.deepEqual(await new AdminUsersApi(client).deleteUser('user-1'), { status })
+  }
+})
+
 test('Users & Roles management exposes safe actions and protects Admin identities', async () => {
   const users = await readFile(new URL('../src/pages/AdminUsers.tsx', import.meta.url), 'utf8')
   assert.match(users, />Manage</)
@@ -192,7 +201,7 @@ test('Users & Roles management exposes safe actions and protects Admin identitie
   assert.match(users, /Passwords do not match\./)
   assert.match(users, /Existing sessions for this user were revoked\./)
   assert.match(users, /managed\.id !== currentAdmin\?\.id && <button[^>]+text-red-700/)
-  assert.match(users, /Confirm delete/)
+  assert.match(users, />Remove account<\/button>/)
   assert.match(users, /adminUsersApi\.deleteUser/)
   assert.match(users, /await loadUsers\(selectedRole\)/)
   assert.doesNotMatch(users, /Participant|Supervisor/)
@@ -212,11 +221,14 @@ test('user deletion remains server-authoritative for every activation state', as
 test('user deletion requires confirmation, refreshes the selected role, and closes management', async () => {
   const users = await readFile(new URL('../src/pages/AdminUsers.tsx', import.meta.url), 'utf8')
   assert.match(users, /onClick=\{\(\) => setMode\('delete'\)\}[^>]*>Delete user<\/button>/)
-  assert.match(users, /mode === 'delete'[\s\S]{0,1000}>Confirm delete<\/button>/)
+  assert.match(users, /mode === 'delete'[\s\S]{0,1000}>Remove account<\/button>/)
   assert.match(users, /adminUsersApi\.deleteUser\(managed\.id\)/)
   assert.match(users, /await loadUsers\(selectedRole\)[\s\S]{0,150}if \(close\) setManaged\(null\)/)
-  assert.match(users, /This permanently deletes the account when it has no platform activity that must be preserved\./)
-  assert.match(users, /The server will verify this before deletion\./)
+  assert.match(users, /Remove account\?/)
+  assert.match(users, /This permanently removes the user&apos;s access\./)
+  assert.match(users, /Platform history and records may be preserved without the user&apos;s personal account data\./)
+  assert.match(users, /'Account removed\.'/)
+  assert.doesNotMatch(users, /permanently deletes|no platform activity|hard delete|retirement|tombstone|foreign key/i)
 })
 
 test('Manage role and edit guards preserve identity invariants', async () => {
@@ -238,13 +250,13 @@ test('user-management backend conflicts are rendered as safe Admin messages', as
     ['self_admin_removal_not_allowed', 'your own Admin capability'],
     ['admin_password_change_not_allowed', "Another Admin's password"],
     ['self_password_change_use_account_security', 'Account Security'],
-    ['user_has_protected_dependencies', 'platform activity that must be preserved'],
     ['self_delete_not_allowed', 'your own account'],
     ['user_not_found', 'no longer exists'],
     ['duplicate_email', 'email already exists'],
     ['account_blocked', 'account is blocked'],
   ]
   for (const [code, expected] of cases) assert.match(adminUserManagementError(new ApiError('private database text', 409, 'conflict', { code })), new RegExp(expected, 'i'))
-  assert.doesNotMatch(adminUserManagementError(new ApiError('raw', 409, 'conflict', { code: 'user_has_protected_dependencies' })), /foreign key|dependency|table|row/i)
+  assert.equal(adminUserManagementError(new ApiError('raw', 409, 'conflict', { code: 'user_has_protected_dependencies' })), 'This change conflicts with the current account state. Refresh and try again.')
+  assert.doesNotMatch(adminUserManagementError(new ApiError('raw', 409, 'conflict', { code: 'user_has_protected_dependencies' })), /platform activity|preserved|permanently deleted/i)
   assert.doesNotMatch(adminUserManagementError(new ApiError('SQL constraint users_email_key', 409, 'conflict', {})), /SQL|constraint|users_email_key/)
 })
