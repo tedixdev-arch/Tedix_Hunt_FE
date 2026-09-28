@@ -43,7 +43,7 @@ export function AdminOrganizerApplicationsPage() {
   const [listError, setListError] = useState('')
   const [decisionError, setDecisionError] = useState('')
   const [isDeciding, setIsDeciding] = useState(false)
-  const [activationToken, setActivationToken] = useState<string | null>(null)
+  const [decisionMessage, setDecisionMessage] = useState('')
   const deciding = useRef(false)
 
   const loadApplications = useCallback(async (nextFilter: ApplicationFilter, retainSelection = false) => {
@@ -63,7 +63,7 @@ export function AdminOrganizerApplicationsPage() {
   useEffect(() => { void loadApplications(filter) }, [filter, loadApplications])
 
   function changeFilter(nextFilter: ApplicationFilter) {
-    setActivationToken(null)
+    setDecisionMessage('')
     setDecisionError('')
     setFilter(nextFilter)
   }
@@ -74,18 +74,20 @@ export function AdminOrganizerApplicationsPage() {
     deciding.current = true
     setIsDeciding(true)
     setDecisionError('')
-    setActivationToken(null)
+    setDecisionMessage('')
     try {
+      let reviewed: OrganizerApplication
       if (action === 'approve') {
         const result = await organizerApplicationsApi.approve(selected.id)
-        setSelected(result.application)
-        setActivationToken(result.activationToken)
+        reviewed = result.application
       } else {
         const result = await organizerApplicationsApi.reject(selected.id)
-        setSelected(result.application)
+        reviewed = result.application
       }
       notifyOrganizerApplicationsPendingChanged()
-      await loadApplications(filter, true)
+      await loadApplications(filter)
+      setSelected(reviewed)
+      if (action === 'approve') setDecisionMessage('Organizer approved')
     } catch (error) {
       const message = organizerApplicationDecisionError(error)
       setDecisionError(message)
@@ -111,7 +113,7 @@ export function AdminOrganizerApplicationsPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" aria-label="Organizer application list">
         {loading && <p className="p-4 text-sm text-slate-500">Loading Organizer applications…</p>}
         {!loading && !listError && applications.length === 0 && <p className="p-4 text-slate-600">{emptyLabel}</p>}
-        {!loading && applications.length > 0 && <div className="divide-y divide-slate-100">{applications.map(application => <button aria-pressed={selected?.id === application.id} className={`grid w-full gap-3 rounded-xl p-4 text-left sm:grid-cols-[1fr_auto] ${selected?.id === application.id ? 'bg-emerald-50 ring-2 ring-emerald-400' : 'hover:bg-slate-50'}`} key={application.id} onClick={() => { setSelected(application); setActivationToken(null); setDecisionError('') }} type="button"><div><h3 className="font-bold">{application.name}</h3><p className="mt-1 text-sm font-semibold text-slate-700">{application.organizationName} · {organizationTypeLabels[application.organizationType]}</p><p className="mt-1 text-sm text-slate-500">{application.email}</p><p className="mt-2 text-xs text-slate-400">Submitted {formatDate(application.createdAt)}</p></div><StatusBadge application={application} /></button>)}</div>}
+        {!loading && applications.length > 0 && <div className="divide-y divide-slate-100">{applications.map(application => <button aria-pressed={selected?.id === application.id} className={`grid w-full gap-3 rounded-xl p-4 text-left sm:grid-cols-[1fr_auto] ${selected?.id === application.id ? 'bg-emerald-50 ring-2 ring-emerald-400' : 'hover:bg-slate-50'}`} key={application.id} onClick={() => { setSelected(application); setDecisionMessage(''); setDecisionError('') }} type="button"><div><h3 className="font-bold">{application.name}</h3><p className="mt-1 text-sm font-semibold text-slate-700">{application.organizationName} · {organizationTypeLabels[application.organizationType]}</p><p className="mt-1 text-sm text-slate-500">{application.email}</p><p className="mt-2 text-xs text-slate-400">Submitted {formatDate(application.createdAt)}</p></div><StatusBadge application={application} /></button>)}</div>}
       </section>
       <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Application details">
         {!selected && <p className="text-slate-500">Select an application to view its details.</p>}
@@ -125,10 +127,10 @@ export function AdminOrganizerApplicationsPage() {
             <Detail label="Submitted" value={formatDate(selected.createdAt)} />
             <Detail label="Current status" value={statusLabels[selected.status]} />
             {selected.reviewedAt && <Detail label="Reviewed" value={formatDate(selected.reviewedAt)} />}
-            {selected.status === 'approved' && <Detail label="Account state" value={selected.activatedAt ? 'Activated' : 'Awaiting activation'} />}
+            {selected.status === 'approved' && <Detail label="Account state" value="Approved" />}
           </dl>
           {decisionError && <p className="mt-5 rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="alert">{decisionError}</p>}
-          {activationToken && <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4" role="status"><p className="font-bold text-emerald-900">Organizer approved.</p><p className="mt-2 text-sm text-emerald-950">Activation credential created successfully.<br />The Organizer activation page will be connected in E12.</p><label className="mt-4 block text-xs font-semibold text-emerald-900" htmlFor="organizer-activation-token">This activation token is shown once.</label><input className="mt-2 w-full rounded-lg border border-emerald-300 bg-white p-2 text-xs" id="organizer-activation-token" readOnly value={activationToken} /><button className="mt-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white" onClick={() => void navigator.clipboard?.writeText(activationToken)} type="button">Copy activation token</button></div>}
+          {decisionMessage && <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-900" role="status">{decisionMessage}</p>}
           {selected.status === 'pending' && <div className="mt-6 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5"><button className="min-h-12 rounded-xl bg-emerald-500 px-4 font-bold disabled:cursor-wait disabled:opacity-50" disabled={isDeciding} onClick={() => void decide('approve')} type="button">{isDeciding ? 'Updating…' : 'Approve'}</button><button className="min-h-12 rounded-xl border border-rose-300 bg-rose-50 px-4 font-bold text-rose-800 disabled:cursor-wait disabled:opacity-50" disabled={isDeciding} onClick={() => void decide('reject')} type="button">Reject</button></div>}
         </>}
       </aside>

@@ -9,17 +9,19 @@ export interface OrganizerApplicationInput {
   organizationType: OrganizationType;
   reason: string;
   phone: string | null;
+  password: string;
+  confirmPassword: string;
 }
 
 export type OrganizerApplicationStatus = 'pending' | 'approved' | 'rejected';
 
-export interface PublicOrganizerApplication extends OrganizerApplicationInput {
+export interface PublicOrganizerApplication extends Omit<OrganizerApplicationInput, 'password' | 'confirmPassword'> {
   id: string;
   status: 'pending';
   createdAt: string;
 }
 
-export interface OrganizerApplication extends OrganizerApplicationInput {
+export interface OrganizerApplication extends Omit<OrganizerApplicationInput, 'password' | 'confirmPassword'> {
   id: string;
   status: OrganizerApplicationStatus;
   createdAt: string;
@@ -28,14 +30,10 @@ export interface OrganizerApplication extends OrganizerApplicationInput {
   reviewedBy: string | null;
   userId: string | null;
   organizationId: string | null;
-  activationExpiresAt: string | null;
-  activatedAt: string | null;
 }
 
 export interface OrganizerApplicationApproval {
   application: OrganizerApplication;
-  activationToken: string;
-  activationExpiresAt: string | null;
 }
 
 export interface OrganizerApplicationRejection {

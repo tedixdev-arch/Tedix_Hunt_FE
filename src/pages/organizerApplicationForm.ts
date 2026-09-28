@@ -7,6 +7,8 @@ export interface ApplicationFormValues {
   organizationType: OrganizationType | ''
   reason: string
   phone: string
+  password: string
+  confirmPassword: string
 }
 
 export type ApplicationFormErrors = Partial<Record<keyof ApplicationFormValues, string>>
@@ -18,6 +20,10 @@ export function validateOrganizerApplication(values: ApplicationFormValues): App
   if (!values.organizationName.trim()) errors.organizationName = 'Organization name is required.'
   if (!values.organizationType) errors.organizationType = 'Select an organization type.'
   if (!values.reason.trim()) errors.reason = 'Tell us briefly why you want to organize Tedix Hunts.'
+  if (!values.password) errors.password = 'Password is required.'
+  else if (values.password.length < 8) errors.password = 'Password must be at least 8 characters.'
+  if (!values.confirmPassword) errors.confirmPassword = 'Confirm your password.'
+  else if (values.confirmPassword !== values.password) errors.confirmPassword = 'Passwords do not match.'
   return errors
 }
 
@@ -29,5 +35,7 @@ export function toOrganizerApplicationInput(values: ApplicationFormValues): Orga
     organizationType: values.organizationType as OrganizationType,
     reason: values.reason.trim(),
     phone: values.phone.trim() || null,
+    password: values.password,
+    confirmPassword: values.confirmPassword,
   }
 }
