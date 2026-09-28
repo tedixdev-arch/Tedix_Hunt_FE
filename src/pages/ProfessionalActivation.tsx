@@ -1,6 +1,7 @@
 import { FormEvent, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
+import { isPasswordPolicyError, meetsPasswordPolicy, PASSWORD_POLICY_MESSAGE, PASSWORD_REQUIREMENT_TEXT } from '../features/auth/passwordPolicy'
 
 type ActivationRole = 'organizer' | 'creator'
 
@@ -25,18 +26,19 @@ export function ProfessionalActivationPage({ role }: { role: ActivationRole }) {
     event.preventDefault()
     if (submitting.current) return
     if (!token) { setError('Invalid activation link.'); return }
-    if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (!password || !confirmPassword) { setError('Password and confirmation are required.'); return }
     if (confirmPassword !== password) { setError('Passwords do not match.'); return }
+    if (!meetsPasswordPolicy(password)) { setError(PASSWORD_POLICY_MESSAGE); return }
     submitting.current = true; setIsSubmitting(true); setError('')
     try {
       if (role === 'organizer') await auth.activateDirectOrganizer({ token, password })
       else await auth.activateCreator({ token, password })
       navigate(details.destination, { replace: true })
-    } catch { setError('This activation link is invalid or has expired.') }
+    } catch (caught) { setError(isPasswordPolicyError(caught) ? PASSWORD_POLICY_MESSAGE : 'This activation link is invalid or has expired.') }
     finally { submitting.current = false; setIsSubmitting(false) }
   }
 
-  return <main className="grid min-h-dvh place-items-center bg-slate-950 px-5 py-10 text-slate-950"><section className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">{details.label} activation</p><h1 className="mt-2 text-3xl font-bold">Create your password</h1><p className="mt-2 text-sm text-slate-600">Create a password to activate your {details.label} access.</p><p className="mt-2 text-sm text-slate-600">Use at least 8 characters.</p>
+  return <main className="grid min-h-dvh place-items-center bg-slate-950 px-5 py-10 text-slate-950"><section className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">{details.label} activation</p><h1 className="mt-2 text-3xl font-bold">Create your password</h1><p className="mt-2 text-sm text-slate-600">Create a password to activate your {details.label} access.</p><p className="mt-2 text-sm text-slate-600">{PASSWORD_REQUIREMENT_TEXT}</p>
     {!token ? <><p className="mt-6 rounded-lg bg-amber-50 p-3 font-semibold text-amber-800" role="alert">Invalid activation link.</p><Link className="mt-5 inline-flex font-bold underline" to={details.signIn}>Go to {details.label} sign in</Link></> : <form className="mt-6" onSubmit={submit}>
       <label className="block text-sm font-bold" htmlFor={`${role}-activation-password`}>New password</label><input autoComplete="new-password" className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 px-3" id={`${role}-activation-password`} minLength={8} onChange={event => { setPassword(event.target.value); setError('') }} required type="password" value={password} />
       <label className="mt-4 block text-sm font-bold" htmlFor={`${role}-activation-confirm-password`}>Confirm new password</label><input autoComplete="new-password" className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 px-3" id={`${role}-activation-confirm-password`} minLength={8} onChange={event => { setConfirmPassword(event.target.value); setError('') }} required type="password" value={confirmPassword} />

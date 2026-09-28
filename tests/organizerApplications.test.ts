@@ -9,7 +9,7 @@ import { toOrganizerApplicationInput, validateOrganizerApplication, type Applica
 const validValues: ApplicationFormValues = {
   name: 'Ada Lovelace', email: 'ada@example.test', organizationName: 'Code School',
   organizationType: 'school', reason: 'To help young people explore their city.', phone: '',
-  password: 'password1', confirmPassword: 'password1',
+  password: 'Test123!', confirmPassword: 'Test123!',
 }
 
 test('organizer application posts canonical input publicly and maps an empty phone to null', async () => {
@@ -88,8 +88,8 @@ test('required application fields reject empty values while a valid form passes'
   assert.deepEqual(Object.keys(errors).sort(), ['confirmPassword', 'email', 'name', 'organizationName', 'organizationType', 'password', 'reason'].sort())
 })
 
-test('application passwords require eight characters and matching confirmation', () => {
-  assert.equal(validateOrganizerApplication({ ...validValues, password: 'short', confirmPassword: 'short' }).password, 'Password must be at least 8 characters.')
+test('application passwords require the shared policy and matching confirmation', () => {
+  assert.equal(validateOrganizerApplication({ ...validValues, password: 'short', confirmPassword: 'short' }).password, 'Password must be at least 8 characters and include a letter, a number, and a special character.')
   assert.equal(validateOrganizerApplication({ ...validValues, confirmPassword: 'different1' }).confirmPassword, 'Passwords do not match.')
 })
 

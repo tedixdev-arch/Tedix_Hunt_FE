@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { OrganizerHeader } from './OrganizerFlow'
 import { ApiError, organizerApplicationsApi, type OrganizationType } from '../services/api'
 import { toOrganizerApplicationInput, validateOrganizerApplication, type ApplicationFormErrors, type ApplicationFormValues } from './organizerApplicationForm'
+import { isPasswordPolicyError, PASSWORD_POLICY_MESSAGE, PASSWORD_REQUIREMENT_TEXT } from '../features/auth/passwordPolicy'
 
 const initialValues: ApplicationFormValues = { name: '', email: '', organizationName: '', organizationType: '', reason: '', phone: '', password: '', confirmPassword: '' }
 const inputClass = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 px-4 outline-none focus:border-emerald-500'
@@ -36,7 +37,7 @@ export function RegisteredOrganizerApplicationPage() {
       setSubmittedEmail(email)
       setValues(initialValues)
     } catch (caught) {
-      setFormError(caught instanceof ApiError && caught.status === 400
+      setFormError(isPasswordPolicyError(caught) ? PASSWORD_POLICY_MESSAGE : caught instanceof ApiError && caught.status === 400
         ? 'Please check the application details and try again.'
         : "We couldn't submit your application. Please try again.")
     } finally {
@@ -81,7 +82,7 @@ export function RegisteredOrganizerApplicationPage() {
           <Field id="application-reason" label="Why do you want to organize Tedix Hunts?" error={errors.reason}><textarea id="application-reason" className={`${inputClass} min-h-28 py-3`} value={values.reason} onChange={(event) => update('reason', event.target.value)} /></Field>
           <Field id="application-phone" label="Phone" optional><input id="application-phone" autoComplete="tel" className={inputClass} type="tel" value={values.phone} onChange={(event) => update('phone', event.target.value)} /></Field>
           <div className="grid gap-x-5 sm:grid-cols-2">
-            <Field id="application-password" label="Password" error={errors.password}><input id="application-password" autoComplete="new-password" className={inputClass} minLength={8} required type="password" value={values.password} onChange={(event) => update('password', event.target.value)} /></Field>
+            <Field id="application-password" label="Password" error={errors.password}><input id="application-password" aria-describedby="application-password-help" autoComplete="new-password" className={inputClass} minLength={8} required type="password" value={values.password} onChange={(event) => update('password', event.target.value)} /><p className="mt-1.5 text-xs text-slate-500" id="application-password-help">{PASSWORD_REQUIREMENT_TEXT}</p></Field>
             <Field id="application-confirm-password" label="Confirm password" error={errors.confirmPassword}><input id="application-confirm-password" autoComplete="new-password" className={inputClass} minLength={8} required type="password" value={values.confirmPassword} onChange={(event) => update('confirmPassword', event.target.value)} /></Field>
           </div>
           {formError && <p className="mt-5 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="alert">{formError}</p>}
