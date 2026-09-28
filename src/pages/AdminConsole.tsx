@@ -18,6 +18,7 @@ const navigationGroups = [
   ]},
   {label:'People',items:[
     {id:'organizer-applications',label:'Organizer Applications',path:'/admin/organizer-applications',icon:'document'},
+    {id:'creator-applications',label:'Creator Applications',path:'/admin/creator-applications',icon:'document'},
     {id:'users',label:'Users & Roles',path:'/admin/users',icon:'users'},
   ]},
   {label:'System',items:[
