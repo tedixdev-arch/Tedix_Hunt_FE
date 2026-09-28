@@ -5,8 +5,44 @@ import { ApiClient } from '../src/services/api/client.ts'
 import { HuntContextsApi, type HuntContext } from '../src/services/api/huntContexts.ts'
 import type { SessionStore } from '../src/services/api/session.ts'
 import { contextualWorkspaceChoices } from '../src/features/auth/workspaceContexts.ts'
+import { canAccessAdmin, canAccessCreator, canAccessOrganizer } from '../src/features/auth/access.ts'
+import { AuthApi, type GlobalRole, type PublicUser } from '../src/services/api/auth.ts'
 
 const readProjectFile = (path: string) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
+
+function currentUser(roles: GlobalRole[]): PublicUser {
+  return {
+    id: 'professional-1', email: 'professional@example.test', name: 'Professional',
+    role: roles[0] ?? 'participant', roles, isGuest: false, tedixUserId: null,
+    createdAt: '2026-09-28T00:00:00.000Z',
+  }
+}
+
+function workspaceApis(user: PublicUser, contextsResponse: unknown) {
+  const session: SessionStore = {
+    getAccessToken: () => 'same-session-token', getRefreshToken: () => null,
+    saveSession: () => undefined, clearSession: () => undefined,
+  }
+  const fetcher: typeof fetch = async input => new Response(JSON.stringify(
+    String(input).endsWith('/api/auth/me') ? user : contextsResponse,
+  ), { headers: { 'Content-Type': 'application/json' } })
+  const client = new ApiClient('https://api.example.test', session, fetcher)
+  return { auth: new AuthApi(client, session), contexts: new HuntContextsApi(client) }
+}
+
+async function renderPathData(user: PublicUser, contextsResponse: unknown) {
+  const apis = workspaceApis(user, contextsResponse)
+  const sessionUser = await apis.auth.me()
+  const contexts = await apis.contexts.list()
+  return {
+    professional: [
+      canAccessOrganizer(sessionUser) && 'Organizer',
+      canAccessCreator(sessionUser) && 'Creator',
+      canAccessAdmin(sessionUser) && 'Admin',
+    ].filter(Boolean),
+    contextual: contextualWorkspaceChoices(contexts),
+  }
+}
 
 test('public login workspace offers exactly the professional entry choices', async () => {
   const selector = await readProjectFile('src/pages/ProfessionalAccess.tsx')
@@ -99,6 +135,41 @@ test('canonical Hunt context rows are available to workspace rendering', async (
   const contexts = await new HuntContextsApi(new ApiClient('https://api.example.test', session, fetcher)).list()
   assert.deepEqual(contexts, [context])
   assert.deepEqual(contextualWorkspaceChoices(contexts).map(choice => choice.role), ['Participant'])
+})
+
+test('workspace render data follows the real session and API contracts for professional capabilities', async () => {
+  for (const [roles, expected] of [
+    [['admin'], ['Admin']],
+    [['organizer'], ['Organizer']],
+    [['organizer', 'admin'], ['Organizer', 'Admin']],
+  ] as Array<[GlobalRole[], string[]]>) {
+    const data = await renderPathData(currentUser(roles), { contexts: [] })
+    assert.deepEqual(data.professional, expected)
+    assert.deepEqual(data.contextual, [])
+  }
+})
+
+test('workspace render data derives contextual choices only from canonical Hunt context rows', async () => {
+  const context: HuntContext = {
+    huntId: 'hunt-both', huntName: 'City Quest', huntStatus: 'active', participant: true, supervisor: true,
+  }
+  const data = await renderPathData(currentUser(['organizer']), { contexts: [context] })
+
+  assert.deepEqual(data.professional, ['Organizer'])
+  assert.deepEqual(data.contextual.map(choice => choice.role), ['Participant', 'Supervisor'])
+})
+
+test('malformed Hunt context payload fails before the render helper can call flatMap', async () => {
+  const apis = workspaceApis(currentUser(['admin']), { contexts: { unexpected: true } })
+
+  await assert.rejects(apis.contexts.list(), /Invalid Hunt contexts response/)
+})
+
+test('Participant is never manufactured as a professional capability', async () => {
+  const data = await renderPathData(currentUser(['participant']), { contexts: [] })
+
+  assert.deepEqual(data.professional, [])
+  assert.deepEqual(data.contextual, [])
 })
 
 test('context choices are derived only from each authoritative Hunt row', () => {

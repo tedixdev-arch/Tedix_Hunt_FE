@@ -23,11 +23,13 @@ test('CI generates the version marker only for deployment and passes the SHA to 
 
 test('PWA activates updates, removes old precaches, and excludes the version marker', async () => {
   const config = await readFile(new URL('../vite.config.ts', import.meta.url), 'utf8')
+  const entrypoint = await readFile(new URL('../src/main.tsx', import.meta.url), 'utf8')
 
   assert.match(config, /registerType: 'autoUpdate'/)
   assert.match(config, /cleanupOutdatedCaches: true/)
   assert.match(config, /globIgnores: \['\*\*\/version\.json'\]/)
   assert.doesNotMatch(config, /globPatterns: \[[^\]]*json/)
+  assert.match(entrypoint, /serviceWorker\.addEventListener\('controllerchange',[\s\S]*window\.location\.reload\(\)[\s\S]*once: true/)
 })
 
 test('the public version marker has a safe local-build fallback', async () => {
