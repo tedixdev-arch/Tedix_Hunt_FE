@@ -24,11 +24,11 @@ export function generalSetupProgressFromNavigationState(state: unknown): General
 }
 
 export const newHuntDefaults: GeneralSetupSettings = {
-  name: 'Signal: Cluj Napoca', date: '2026-09-12', time: '10:00', timezone: 'Europe/Bucharest',
+  name: '', date: '2026-09-12', time: '10:00', timezone: 'Europe/Bucharest',
   country: 'Romania', county: 'Cluj', location: 'Cluj Napoca', language: 'English',
   format: 'Team Hunters', duration: '90', contact: 'Ana Pop', participants: '24', teamSize: '4',
   access: 'Invitation-only', difficulty: 'Easy', checkpointOrder: 'Recommended route',
-  mission: 'Signal: Cluj Napoca', theme: 'Smart Theme (Signal)',
+  mission: '', theme: '',
 };
 
 function labelFor(options: HuntOption[] | undefined, key: string | null, fallback: string): string {
@@ -103,5 +103,6 @@ export function settingsWithTemplate(settings: GeneralSetupSettings, template: H
 }
 
 export function templateInput(templateKey: string): UpdateDraftInput {
+  // The backend resolves this key and owns the authoritative version and snapshot.
   return { templateKey };
 }
