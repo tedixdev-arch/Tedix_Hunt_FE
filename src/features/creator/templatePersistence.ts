@@ -1,5 +1,6 @@
 import { ApiError } from '../../services/api/client.ts'
 import type { CreatorTemplate, CreatorTemplateContent, CreatorTemplatesApi } from '../../services/api/creatorTemplates.ts'
+import type { CheckpointDraft, CreatorGeographyConfiguration } from './checkpointGeography.ts'
 
 export function normalizeTemplateKey(name: string): string {
   return name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -14,6 +15,19 @@ export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'cre
   if (!persisted) return api.create({ ...current, version: 1 })
   if (templateContentEqual(current, persisted.content)) return persisted
   return api.createVersion(persisted.key, { ...current, key: persisted.key, version: persisted.version + 1 })
+}
+
+export function hydratePersistedGeography(configuration: CreatorGeographyConfiguration): {
+  checkpointDrafts: CheckpointDraft[]
+  verifiedPositions: Set<number>
+  routeSafety: Set<string>
+} {
+  return {
+    checkpointDrafts: configuration.checkpointPositions.map(position => ({ ...position })),
+    // The current Template content contract stores positions, not Creator verification or route-safety confirmation.
+    verifiedPositions: new Set(),
+    routeSafety: new Set(),
+  }
 }
 
 export function creatorTemplateError(error: unknown, operation: 'save' | 'submit' | 'load'): string {

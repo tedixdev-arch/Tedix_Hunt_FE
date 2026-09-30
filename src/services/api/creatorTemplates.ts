@@ -39,11 +39,11 @@ export class CreatorTemplatesApi {
   }
 
   create(content: CreatorTemplateContent): Promise<CreatorTemplate> {
-    return this.client.post('/api/creator/templates', content)
+    return this.client.post('/api/creator/templates', { key: content.key, content })
   }
 
   createVersion(key: string, content: CreatorTemplateContent): Promise<CreatorTemplate> {
-    return this.client.post(`/api/creator/templates/${encodeURIComponent(key)}/versions`, content)
+    return this.client.post(`/api/creator/templates/${encodeURIComponent(key)}/versions`, { content })
   }
 
   submit(key: string, version: number): Promise<CreatorTemplate> {

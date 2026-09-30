@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ApiClient, ApiError } from '../src/services/api/client.ts'
 import { CreatorTemplatesApi, type CreatorTemplate, type CreatorTemplateContent } from '../src/services/api/creatorTemplates.ts'
-import { creatorTemplateError, normalizeTemplateKey, persistCreatorTemplate, templateContentEqual } from '../src/features/creator/templatePersistence.ts'
+import { creatorTemplateError, hydratePersistedGeography, normalizeTemplateKey, persistCreatorTemplate, templateContentEqual } from '../src/features/creator/templatePersistence.ts'
 import type { SessionStore, SessionTokens } from '../src/services/api/session.ts'
 
 class Session implements SessionStore {
@@ -29,7 +29,7 @@ function api(responses: unknown[]) {
   return { api: new CreatorTemplatesApi(client), calls }
 }
 
-test('Creator Template client uses owner-scoped lifecycle endpoints and exact latest version', async () => {
+test('Creator Template client matches the existing backend lifecycle request contracts', async () => {
   const setup = api([[record], record, record, { ...record, version: 2 }, { ...record, status: 'submitted' }])
   await setup.api.list(); await setup.api.get(record.key); await setup.api.create(content); await setup.api.createVersion(record.key, { ...content, version: 2 }); await setup.api.submit(record.key, 2)
   assert.deepEqual(setup.calls.map(call => [call.init?.method, call.url]), [
@@ -37,7 +37,11 @@ test('Creator Template client uses owner-scoped lifecycle endpoints and exact la
     ['POST', 'https://api.test/api/creator/templates'], ['POST', 'https://api.test/api/creator/templates/cluj-algebra-trail/versions'],
     ['POST', 'https://api.test/api/creator/templates/cluj-algebra-trail/submit'],
   ])
-  assert.deepEqual(JSON.parse(String(setup.calls[2].init?.body)), content)
+  // Existing BE POST /api/creator/templates contract: identity key plus complete v1 content.
+  assert.deepEqual(JSON.parse(String(setup.calls[2].init?.body)), { key: content.key, content })
+  // Existing BE POST /api/creator/templates/:key/versions contract: complete next-version content.
+  assert.deepEqual(JSON.parse(String(setup.calls[3].init?.body)), { content: { ...content, version: 2 } })
+  // Existing BE POST /api/creator/templates/:key/submit contract: exact latest persisted version.
   assert.deepEqual(JSON.parse(String(setup.calls[4].init?.body)), { version: 2 })
 })
 
@@ -63,6 +67,17 @@ test('Template keys are readable slugs and geography contains only the BE #59 fi
   assert.equal(normalizeTemplateKey(' Cluj Álgebră Trail! '), 'cluj-algebra-trail')
   assert.deepEqual(Object.keys(content.configuration.checkpointPositions[0]), ['checkpointNumber', 'name', 'latitude', 'longitude', 'radiusMeters'])
   assert.equal(JSON.stringify(content.configuration).includes('x'), false)
+})
+
+test('persisted positions hydrate unchanged without inventing verification or safety completion', () => {
+  const configuration = { normalCheckpointCount: 1, checkpointPositions: [position] }
+  const hydrated = hydratePersistedGeography(configuration)
+
+  assert.deepEqual(hydrated.checkpointDrafts, [position])
+  assert.notEqual(hydrated.checkpointDrafts[0], position)
+  assert.equal(hydrated.verifiedPositions.size, 0)
+  assert.equal(hydrated.routeSafety.size, 0)
+  assert.equal(hydrated.verifiedPositions.has(position.checkpointNumber), false)
 })
 
 test('duplicate, invalid, authorization and session failures have actionable safe messages', () => {

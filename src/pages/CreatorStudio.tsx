@@ -5,7 +5,7 @@ import { OrganizerHeader } from './OrganizerFlow'
 import { RouteEditor } from '../features/creator/RouteEditor'
 import { buildGeographyConfiguration, createCheckpointDrafts, isGeographyComplete, resizeCheckpointDrafts } from '../features/creator/checkpointGeography'
 import { creatorTemplatesApi, type CreatorTemplate, type CreatorTemplateContent } from '../services/api/creatorTemplates'
-import { creatorTemplateError, normalizeTemplateKey, persistCreatorTemplate, templateContentEqual } from '../features/creator/templatePersistence'
+import { creatorTemplateError, hydratePersistedGeography, normalizeTemplateKey, persistCreatorTemplate, templateContentEqual } from '../features/creator/templatePersistence'
 
 const field = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold outline-none focus:border-emerald-500'
 const checkpointFeatures = new Set(['personal', 'team', 'navigation'])
@@ -120,12 +120,14 @@ export function CreatorTemplateEditorPage() {
       setDetails(current => ({ ...current, name: content.displayName, theme: content.theme, mission: content.mission,
         summary: String(configuration.summary ?? ''), category: String(configuration.category ?? ''), age: String(configuration.ageRange ?? ''), duration: String(configuration.durationMinutes ?? ''), language: String(configuration.language ?? ''), participants: String(configuration.participants ?? ''), teamSize: String(configuration.teamSize ?? ''), format: String(configuration.format ?? ''), environment: String(configuration.environment ?? ''), equipment: String(configuration.equipment ?? ''), difficulty: String(configuration.difficulty ?? ''), briefing: String(configuration.briefing ?? '') }))
       setCheckpointCount(configuration.normalCheckpointCount); setTemplateConfiguration(configuration)
-      setCheckpointDrafts(configuration.checkpointPositions.map(position => ({ ...position })))
-      setVerifiedPositions(new Set(configuration.checkpointPositions.map(position => position.checkpointNumber)))
-      setRouteSafety(new Set(['crossings', 'surfaces', 'lighting', 'traffic', 'accessibility', 'emergency']))
+      const geography = hydratePersistedGeography(configuration)
+      setCheckpointDrafts(geography.checkpointDrafts)
+      setVerifiedPositions(geography.verifiedPositions)
+      setRouteSafety(geography.routeSafety)
       const restoredSelections = (content.scoring.selections && typeof content.scoring.selections === 'object') ? content.scoring.selections as Record<string, number> : {}
       setSelections(restoredSelections)
-      setStepDone(new Set(steps.map((_, index) => index))); setFeatureDone(new Set(organizerFeatures.map(item => item.id)))
+      setStepDone(new Set(steps.map((_, index) => index)))
+      setFeatureDone(new Set(organizerFeatures.filter(item => item.id !== 'positions').map(item => item.id)))
     }).catch(reason => setLoadError(creatorTemplateError(reason, 'load'))).finally(() => setLoadingTemplate(false))
   }, [templateKey])
   const saveStep = () => { setStepDone(current => new Set([...current, step])); if (step < steps.length - 1) setStep(step + 1); setTested(false) }
