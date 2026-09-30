@@ -28,6 +28,8 @@ export { HuntContextsApi, huntContextsApi } from './huntContexts.ts';
 export type { HuntContext, HuntContextsResponse } from './huntContexts.ts';
 export { HuntTemplatesApi, huntTemplatesApi } from './huntTemplates.ts';
 export type { HuntTemplateMetadata } from './huntTemplates.ts';
+export { CreatorTemplatesApi, creatorTemplatesApi } from './creatorTemplates.ts';
+export type { CreatorTemplate, CreatorTemplateContent, CreatorTemplateStatus } from './creatorTemplates.ts';
 export { HuntOptionsApi, huntOptionsApi } from './huntOptions.ts';
 export type { HuntOption, HuntOptions } from './huntOptions.ts';
 export { OrganizationsApi, organizationsApi } from './organizations.ts';
