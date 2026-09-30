@@ -2,6 +2,7 @@ export type OrganizerTemplate = { name: string; note: string; example: string }
 export type OrganizerFeature = { id: string; name: string; templates: OrganizerTemplate[] }
 
 export const signalCheckpointNames = ['Matthias Rex Statue', 'Stone Gate', 'Clock Tower', 'Fountain Court', 'Lantern Lane', 'North Passage', 'City Wall · FinishPoint']
+export const signalNormalCheckpointNames = signalCheckpointNames.slice(0, 6)
 
 export const signalFeatureDefaults: Record<string, OrganizerTemplate[]> = {
   personal: [
@@ -34,8 +35,8 @@ export const signalFeatureDefaults: Record<string, OrganizerTemplate[]> = {
 }
 
 export const organizerFeatures: OrganizerFeature[] = [
-  { id: 'count', name: 'Number of Checkpoints', templates: [{ name: '6 checkpoints + FinishPoint', note: 'Six relay checkpoints and one final stage.', example: '01 → 02 → 03 → 04 → 05 → 06 → FinishPoint.' }] },
-  { id: 'positions', name: 'Checkpoint Positions', templates: [{ name: 'Signal verified route', note: 'Seven Creator-verified positions with a 30 m arrival radius.', example: signalCheckpointNames.join(' → ') }] },
+  { id: 'count', name: 'Number of Checkpoints', templates: [{ name: '6 checkpoints', note: 'Six normal route checkpoints. FinishPoint is configured separately in Feature 6.', example: '01 → 02 → 03 → 04 → 05 → 06.' }] },
+  { id: 'positions', name: 'Checkpoint Positions', templates: [{ name: 'Signal verified route', note: 'Creator-verified normal checkpoint positions with a 30 m arrival radius.', example: signalNormalCheckpointNames.join(' → ') }] },
   { id: 'personal', name: 'Personal Challenge', templates: signalFeatureDefaults.personal },
   { id: 'team', name: 'Team Challenge', templates: signalFeatureDefaults.team },
   { id: 'navigation', name: 'Next Checkpoint / Navigation', templates: [...signalFeatureDefaults.navigation, { name: 'Decoded Route', note: 'Interpret a route instruction before walking.', example: 'Decode a direction, then follow the revealed route.' }, { name: 'Signal Strength', note: 'Use the simulated signal meter.', example: 'The signal grows stronger as the team approaches.' }] },
