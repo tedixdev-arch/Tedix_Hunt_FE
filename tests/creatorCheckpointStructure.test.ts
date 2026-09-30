@@ -16,7 +16,7 @@ test('Feature 1 is structural normal checkpoint configuration', () => {
 })
 
 test('Feature 1 enforces the prototype bounds and has no component-authoring fields', () => {
-  const countEditor = creatorStudio.slice(creatorStudio.indexOf('function CheckpointCountEditor'), creatorStudio.indexOf('function RouteEditor'))
+  const countEditor = creatorStudio.slice(creatorStudio.indexOf('function CheckpointCountEditor'), creatorStudio.indexOf('function CheckpointEditor'))
 
   assert.match(creatorStudio, /MIN_NORMAL_CHECKPOINTS = 1/)
   assert.match(creatorStudio, /MAX_NORMAL_CHECKPOINTS = 20/)
@@ -28,7 +28,7 @@ test('Feature 1 enforces the prototype bounds and has no component-authoring fie
 test('checkpoint-based Creator sections use the configured normal count without FinishPoint', () => {
   assert.match(creatorStudio, /normalCheckpointNames\(checkpointCount\)/)
   assert.match(creatorStudio, /<CheckpointEditor checkpointCount=\{checkpointCount\}/)
-  assert.match(creatorStudio, /<RouteEditor key=\{checkpointCount\} checkpointCount=\{checkpointCount\}/)
+  assert.match(creatorStudio, /<RouteEditor drafts=\{checkpointDrafts\}/)
   assert.match(creatorStudio, /FinishPoint configured separately in Feature 6/)
   assert.deepEqual(signalNormalCheckpointNames, signalCheckpointNames.slice(0, 6))
   assert.equal(signalNormalCheckpointNames.some(name => name.includes('FinishPoint')), false)

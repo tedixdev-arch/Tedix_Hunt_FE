@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom'
 import { router } from './routes/router'
+import 'leaflet/dist/leaflet.css'
 import './index.css'
 import './shared/theme/theme.css';
 import './shared/theme/global.css';
