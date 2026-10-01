@@ -13,7 +13,8 @@ import { RegisteredOrganizerApplicationPage } from '../pages/RegisteredOrganizer
 import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
 import { CustomHuntEditorPage } from '../pages/CustomHuntEditor'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
-import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage, AdminTemplateReviewPage } from '../pages/AdminConsole'
+import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage } from '../pages/AdminConsole'
+import { AdminTemplateReviewDetailPage, AdminTemplateReviewsPage } from '../pages/AdminTemplateReviews'
 import { AdminAccountSecurityPage } from '../pages/AdminAccountSecurity'
 import { AdminUsersPage } from '../pages/AdminUsers'
 import { AdminOrganizerApplicationsPage } from '../pages/AdminOrganizerApplications'
@@ -204,8 +205,8 @@ export const router = createHashRouter([
     element: <RequireAdmin><AdminDashboardPage /></RequireAdmin>,
   },
   {
-    path: '/admin/reviews/template-1',
-    element: <RequireAdmin><AdminTemplateReviewPage /></RequireAdmin>,
+    path: '/admin/reviews/:key',
+    element: <RequireAdmin><AdminTemplateReviewDetailPage /></RequireAdmin>,
   },
   {
     path: '/admin/account',
@@ -213,7 +214,7 @@ export const router = createHashRouter([
   },
   {
     path: '/admin/templates',
-    element: <RequireAdmin><AdminSectionPage section="templates" /></RequireAdmin>,
+    element: <RequireAdmin><AdminTemplateReviewsPage /></RequireAdmin>,
   },
   {
     path: '/admin/hunts',
