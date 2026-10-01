@@ -1,10 +1,10 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 2.9 | Updated 28 September 2026
+Version 3.0 | Updated 1 October 2026
 
-This document evolves Version 2.8 by establishing permanent account removal and anonymization while preserving the professional credential lifecycle introduced there: self-registration establishes credentials before review, while Admin provisioning retains one-time activation for identities that have no credentials. Account lifecycle is now explicitly separate from platform-record lifecycle, and the Admin frontend follows the backend's authoritative hard-delete-or-retire decision.
+This document evolves Version 2.9 while preserving its account-retirement and professional credential-lifecycle architecture.
 
-Revision note (2.9): establishes permanent account retirement/anonymization; separates account lifecycle from platform-record lifecycle; replaces dependency-blocked deletion with an authoritative hard-delete-vs-retire outcome; records Organization owner behavior after retirement; aligns Admin FE account removal with backend authority; and preserves required provenance without preserving account access. The Version 2.8 professional credential lifecycle rules remain authoritative.
+Revision note (3.0): synchronizes the plan with completed Creator onboarding and Template work; separates Backend/DB and Frontend implementation responsibilities; records immutable Creator Template persistence/versioning, Admin review/approval/request-changes, DB-backed approved Template authority, Creator Studio real persistence/submission integration, and the geographic checkpoint architecture; and preserves Step 7 deployed E2E verification as the remaining gate before Step 8.
 
 The implementation strategy is:
 
@@ -21,14 +21,15 @@ The frontend is not being rebuilt. Existing useful mockup screens remain the UX 
 
 ## 1. Status legend
 
-- ✅ Complete — implemented across the required FE/BE/DB scope for the current prototype.
-- 🟡 Partial — important pieces are real, but the end-to-end flow is not complete.
-- 🟠 Backend complete / FE pending — backend behavior exists but the frontend is not connected.
-- 🟣 FE mock exists / backend pending — the experience exists visually, but persistence/business logic is still simulated.
+- ✅ Implemented — complete for the explicitly named layer or scope.
+- 🟡 Pending verification / partial — implementation exists or important pieces are real, but the stated verification or scope is incomplete.
+- 🟣 Prototype only — a visual/client prototype exists without the required authoritative integration.
 - ⬜ Not started — no meaningful implementation yet.
 - ⚠ Deferred operational item — important, but not the immediate product-development blocker.
 
 A phase is complete only when its intended flow works through the deployed application, not merely because a table or screen exists.
+
+Layer status must be stated separately when a feature crosses layers; a combined status is not a substitute for Backend/DB, Frontend, and deployed E2E status.
 
 ---
 
@@ -171,16 +172,16 @@ Organizer application
 
 Admin approval is an authorization decision, not a credential-establishment step. There is no application activation token, second password setup or application activation page. A future approval email may say, “Your Organizer account has been approved. You can now sign in.” Email delivery is future work and is not implemented.
 
-**Self-registered Creator — future, not implemented:**
+**Self-registered Creator — implemented and deployed/verified (E17):**
 
-Creator self-registration/application
-→ Creator chooses a password
+Creator application
+→ Creator provides identity data and chooses a password
 → request remains Pending with no Creator capability
 → Admin reviews and Approves or Rejects
 → approval grants authoritative Creator capability
 → Creator can immediately use normal Creator sign-in with the registration password
 
-A self-registered Creator requires no post-approval activation token. This contract governs the future implementation; it does not describe a currently available Creator application flow.
+A self-registered Creator uses the original application password after approval and requires no post-approval activation token.
 
 **Admin-provisioned professionals — implemented separately:**
 
@@ -245,6 +246,14 @@ The frontend must not flatten contextual Hunt access into permanent global roles
 
 Frontend guards and hidden buttons are UX only. Protected actions are authorized by the backend.
 
+### Authoritative layer responsibilities
+
+**Backend / DB owns:** the domain model, PostgreSQL persistence, migrations, business rules, permissions and authorization, lifecycle transitions, API contracts, immutable-version authority, validation, and runtime truth.
+
+**Frontend owns:** UX, forms and editors, API consumption, client working state, loading/error/retry behavior, presentation, navigation, and responsive behavior.
+
+Frontend guards and UI state are never authorization authority. When a feature introduces or changes domain behavior, its Backend/DB contract comes before Frontend integration; deployed E2E verification follows both.
+
 ### Admin user-management safety
 
 Users & Roles is not only a provisioning surface. The target Admin capability also includes controlled user administration.
@@ -293,141 +302,72 @@ Each change should be narrowly scoped, reviewable, tested, deployable and verifi
 
 ## 7. Current PostgreSQL baseline
 
-Tracked migrations currently reach:
+Tracked migrations currently reach the implemented Creator/Template baseline:
 
-- 001_baseline
-- 002_user_roles
-- 003_core_hunt_records
-- 004_hunt_general_setup
-- 005_hunt_template_selection
-- 006_hunt_pilot_options
-- 007_hunt_access_code
-- 008_hunt_rewards
-- 009_organizer_applications
-- 010_organizer_approval
-- 011_professional_activation_tokens
-- 012_professional_activation_purposes
-- 013_user_account_status
-- 014_retired_account_status
+- 001–014 — existing platform, Hunt, professional activation, and account-status foundation
+- 015 — Creator application persistence/lifecycle
+- 016 — Hunt Template identities + immutable versions
+- 017 — canonical Signal v1 persistence
+- 018 — `submitted_version` / exact submitted artifact
+- 019 — approved Creator submitted-version invariant
+- 020 — `changes_requested` submitted-version invariant
 
-Migration 014 adds the retired account state. Retired identities use `NULL` email; no migration 015 is required because `users.email` was already nullable.
+Migration 014 adds the retired account state; retired identities use `NULL` email. Migrations 015–020 add the Creator application and persisted Template lifecycle described below.
 
-Current important tables include:
+Current important tables/data areas include:
 
-- users
-- user_roles
-- organizations
-- organization_members
-- organizer_applications
-- hunts
-- hunt_participants
-- teams
-- team_members
-- hunt_roles
-- hunt_leaderboard_rewards
-- hunt_special_awards
-- refresh_tokens
-- professional_activation_tokens
+- users and user_roles
+- organizations and organization_members
+- organizer_applications and creator applications
+- hunts, hunt_participants, teams, team_members, and hunt_roles
+- hunt_templates and hunt_template_versions
+- immutable Template version content stored as JSONB
+- exact submitted-version pins and Creator/platform provenance
+- Hunt Template key/version/content snapshots
+- hunt_leaderboard_rewards and hunt_special_awards
+- refresh_tokens and professional_activation_tokens
 
-Major future data areas still missing:
+Creator Templates and Template Versions are implemented data, not future/missing areas. The current design does not claim separate checkpoint or route tables: geographic configuration and other Template content live inside immutable Template-version JSONB.
 
-- creator templates
-- template versions
-- template checkpoints/challenges
-- template route points
-- template safety verification
-- template submission/review history
-- participant enrollment workflow state
-- team readiness/start gate
-- checkpoint attempts
-- answers
-- hints
-- solutions
-- progress
-- score events
-- help/PANIC incidents
-- leaderboard/final results
-- award winners
-- Passport/history
-- achievements
-- physical reward inventory
-- custom Hunt requests
-- audit events
-- platform settings
-- notifications
-
----
+Major future data areas still missing include participant enrollment workflow state, team readiness/start gates, checkpoint attempts, answers/hints/solutions, runtime progress and score events, help/PANIC incidents, final results and award winners, Passport/history, achievements, physical reward inventory, custom Hunt requests, audit events, platform settings, and notifications.
 
 ## 8. Current FE baseline
 
-The FE preserves most mockup routes and screens while progressively adding real behavior.
+The FE preserves the approved UX while progressively connecting it to authoritative backend behavior.
 
 Already-real frontend foundations include:
 
-- shared API client
-- token/session handling
-- refresh/retry
-- AuthProvider
-- participant auth
-- creator auth
-- organizer auth
-- admin auth
-- role-based guards
-- Admin login connected to the real backend
-- Admin route protection merged in FE PR #28
-- Admin Account Security / own-password change
-- Admin list, provisioning and activation UI
-- generalized Users & Roles UI for Admin / Organizer / Creator provisioning (FE PR #48)
-- Admin Remove account flow aligned with backend semantics (FE PR #58)
-  - backend remains authoritative for the removal outcome
-  - both `deleted` and `retired` responses are successful and display `Account removed.`
-  - FE does not expose the hard-delete-vs-retire distinction or retain the obsolete protected-history deletion blocker
-- direct Organizer and Creator activation pages (FE PR #48)
-- grouped collapsible Admin left sidebar
-- canonical authenticated /workspaces switcher and shared professional workspace-switch entry (FE PR #43, refined by FE PR #45)
-- public /login-workspace selector for Organizer / Creator / Admin only (FE PR #45)
-- homepage keeps Participant entry separate through Join a Hunt; professional entry links to /login-workspace
-- organizations API
-- Hunt API
-- Hunt template metadata API
-- Hunt options API
-- reward configuration API
-- organizer application form with credential establishment
-- Hunt access-code resolution
-- Hunt draft create/reopen/edit
-- publish flow
+- shared API client, token/session handling, refresh/retry, AuthProvider, and role-based guards
+- real Participant, Creator, Organizer, and Admin authentication
+- Admin account security and Users & Roles operations
+- Organizer and Creator application/provisioning/activation experiences, including deployed/verified Creator self-registration
+- canonical professional workspace selection
+- organizations, Hunt, options, rewards, and access-code API integration
+- Hunt draft create/reopen/edit and publish flow
+- Organizer Quick Setup backed by `GET /api/hunt-templates`, with loading/error/empty handling
+- Creator Studio geographic editing with Leaflet + React-Leaflet and OpenStreetMap prototype tiles
+- Creator Studio real persistence/submission integration from FE PR #68
 
-The active application uses src/main.tsx and src/routes/router.tsx.
+The Admin Template Review screen remains the existing visual prototype: it is not yet connected to the implemented Admin review APIs, so it must not be treated as authoritative review functionality.
 
----
+The active application uses `src/main.tsx` and `src/routes/router.tsx`.
 
 ## 9. Current BE baseline
 
-Current main backend domains:
+Current main backend domains include authentication and Hunt contexts; Admin users and professional applications; organizations; Creator Templates; Admin Template review; approved Hunt Templates; Hunt options/access/rewards; and Hunts.
 
-- /api/auth
-- /api/me/hunt-contexts
-- /api/admin/users
-- /api/admin/users/professional
-- /api/organizer-applications
-- /api/organizations
-- /api/hunt-templates
-- /api/hunt-options
-- /api/hunt-access
-- /api/reward-options
-- /api/hunts/:id/rewards
-- /api/hunts
+Implemented Creator/Template backend foundation includes:
 
-Implemented account-removal foundation (BE PRs #44 and #45):
-- Admin permanent account removal with a transactional backend hard-delete-vs-retire decision
-- retired-account authentication, session, credential and capability protections
-- platform-history and required User UUID provenance preservation
-- nullable retired-account email so the original address is released for reuse
-- Organization Admin fallback after an owner is retired, without replacing `owner_id`
+- Creator self-registration/application approval lifecycle
+- `hunt_templates` identity and `hunt_template_versions` immutable-version persistence
+- canonical Signal v1 as persisted platform Template content
+- Creator owner-scoped list/read/create/version/submit APIs
+- exact `submitted_version` review, approval, and request-changes lifecycle
+- approved DB-backed Template catalog
+- approved Template resolution and immutable Hunt key/version/content snapshots
+- geographic configuration validation and submission completeness
 
-This is a strong foundation, but Creator template persistence, participant runtime, live operations and long-term systems remain to be built.
-
----
+Participant runtime, live operations, and long-term systems remain to be built.
 
 # 10. Implementation roadmap
 
@@ -506,7 +446,11 @@ Status: ✅ Complete for global capabilities
 Authoritative global capabilities are Organizer, Creator and Admin. The global Participant role remains compatibility-only for the current prototype and must not be used as proof of access to a specific Hunt.
 
 ### B1.1 Workspace/context model
-Status: 🟡 Backend complete / FE contextual wiring pending
+Status: 🟡 Partial
+
+Backend / DB: ✅ Context read model implemented
+
+Frontend: 🟡 Contextual wiring pending
 
 Implemented foundation:
 - FE PR #43 introduced the canonical /workspaces selector and same-session workspace switching for global capabilities.
@@ -646,9 +590,9 @@ Still pending:
 
 ## Phase E — Professional account lifecycle
 
-Status: 🟡 In progress
+Status: ✅ Implemented and deployed/verified for E1–E17
 
-This is the immediate implementation phase.
+The professional-account lifecycle is completed foundation; it is no longer the immediate implementation phase.
 
 ### E1. Registered Organizer application
 Status: ✅ Complete
@@ -862,9 +806,9 @@ Implementation references:
 - FE PR #55 — “Correct self-registered Organizer credential lifecycle” (confirmed merged in this repository).
 
 ### E13. Verify Organizer self-registration onboarding end-to-end
-Status: ⬜ NEXT — implemented, deployed end-to-end verification not yet recorded
+Status: ✅ Implemented and deployed/verified
 
-Verification chain:
+Verified chain:
 Apply with password
 → Pending
 → Admin sees application
@@ -875,224 +819,227 @@ Apply with password
 → Organizer workspace accessible
 
 ### E14. Creator provisioning
-Status: ✅ Complete
+Status: ✅ Implemented
 
-Implemented through BE PR #36 and FE PR #48:
-- no public Creator self-registration currently exists
-- Admin can provision/invite Creator from Users & Roles
-- existing normalized identity is reused
-- existing password and existing roles are preserved
-- authoritative `creator` capability is added in `user_roles`
-- new/passwordless identities receive a one-time activation invitation
+The separate Admin-provisioned Creator flow remains:
+Admin provisions a passwordless Creator
+→ one-time activation
+→ Creator establishes a password
+→ normal sign-in.
 
-The same Users & Roles surface also supports direct Organizer provisioning.
+Existing password-backed identities are reused without changing their credentials, and authoritative `creator` capability is added in `user_roles`.
 
 ### E15. Creator activation/account lifecycle
-Status: ✅ Complete
+Status: ✅ Implemented
 
-Implemented for **Admin-provisioned Creator** accounts:
-- one-time expiring `creator_activation` token
-- Creator chooses password for a new/passwordless identity
-- existing password-backed identity keeps its credentials
-- existing roles are preserved
-- successful activation returns the normal authenticated session
-- FE public activation route: `/creator/activate`
-- successful activation enters the Creator workspace
+For Admin-provisioned Creators only, the one-time expiring `creator_activation` token lets a new/passwordless identity establish credentials. This activation lifecycle is not used by self-registered Creator applicants.
 
-Professional activation token purposes are now:
-- `admin_activation`
-- `organizer_activation`
-- `creator_activation`
+### E16. Admin-provisioned Creator onboarding verification
+Status: ✅ Implemented and deployed/verified
 
-The `organizer_activation` purpose belongs to Admin-provisioned Organizer activation, not to Organizer applications.
-
-### E16. Creator onboarding verification
-Status: 🟡 Implementation complete / deployed end-to-end verification pending
-
-Target verification:
+Verified chain:
 Admin provisions Creator
 → activation if required
 → Creator session/login
 → authoritative Creator access
-→ Creator Studio
+→ Creator Studio.
 
 ### E17. Creator self-registration/application lifecycle
-Status: ⬜ Future — not implemented
+Status: ✅ Implemented and deployed/verified
 
-Implement only after the current professional onboarding flows are verified:
-Creator chooses password during registration/application
-→ request remains Pending with no Creator capability
-→ Admin reviews and Approves or Rejects
-→ approval grants authoritative Creator capability
-→ Creator signs in normally with the original registration password
+### Backend / DB
+Status: ✅ Implemented
 
-No post-approval activation token is required for this self-registered flow. This must remain distinct from the implemented Admin-provisioned Creator lifecycle in E14–E16.
+Responsibilities / implemented work:
+- accepts Creator identity/application data and password and stores credentials on the one User identity
+- keeps the application Pending without Creator capability
+- makes Admin approval/rejection an authorization decision
+- grants authoritative Creator capability on approval without changing the original password
+- creates no post-approval activation token
 
----
+### Frontend
+Status: ✅ Implemented
 
-## Phase F — Creator template system
+Responsibilities / implemented work:
+- Creator application and password-entry UX
+- Admin application review controls
+- pending state and normal sign-in UX after approval
 
-Status: 🟣 FE mock exists / backend pending
+### Deployed E2E verification
+Status: ✅ Verified
 
-Creator Studio is visually advanced but still mostly local prototype state.
+Acceptance flow:
+Creator application
+→ identity data + password
+→ Pending without Creator capability
+→ Admin Approve
+→ Creator capability active
+→ normal sign-in using original password.
 
-### F1. Template domain model
-Status: ⬜ Not started
+This credential lifecycle remains distinct from E14–E16 Admin provisioning.
 
-Need:
-- template identity
-- creator/owner
-- lifecycle status
-- metadata
+## Phase F — Creator Template system
 
-### F2. Template versioning
-Status: ⬜ Not started
+Status: ✅ Backend/API persistence and Creator Studio integration implemented
 
-Suggested states:
-- draft
-- submitted
-- changes_requested
-- approved
-- rejected
-- archived
+### F1. Authoritative Template hierarchy
 
-Approved versions are immutable.
+1. **Creator Framework / Component Catalog** — the general authoring system defining what Creators can build. It is not copied wholesale into every Template version.
+2. **Competition Template** — a concrete reusable implementation/configuration produced with the Creator Framework. A Template version records **what was built**.
+3. **Hunt instance** — an Organizer instantiates an approved Template and configures permitted Hunt-level variables.
+4. **Hunt runtime/results** — Participant progress, answers, scores, awards, and history.
 
-### F3. Template Setup persistence
-Status: ⬜ Not started
+**Governing rule:** Creator Framework defines what can be built. Template version records what was built. Hunt records what was instantiated. Adding Creator Studio options later must not mutate existing Template versions.
 
-Persist:
-- name
-- description
-- category
-- age range
-- duration
-- language
-- participant range
-- team-size support
-- format support
-- environment/accessibility
-- equipment
-- difficulty policy
-- theme
-- mission
-- briefing
+Canonical Signal v1 is persisted platform Template content and is one concrete Competition Template implementation; it is not the Creator Framework. Legacy `eventData` is not canonical Template authority. This plan intentionally does not duplicate the complete Signal dataset.
 
-### F4. Hunt Features persistence
-Status: ⬜ Not started
+### F2. Creator Template persistence and immutable versioning
 
-Persist reusable defaults for:
-- personal challenge
-- team challenge
-- navigation
-- route/positions
-- final challenge
-- other approved mockup feature blocks
+### Backend / DB
+Status: ✅ Implemented
 
-### F5. Checkpoint/challenge model
-Status: ⬜ Not started
+Responsibilities / implemented work:
+- `hunt_templates` identity and `hunt_template_versions` immutable versions
+- Creator/platform provenance and Creator ownership
+- draft/submitted/changes_requested/approved lifecycle
+- immutable version numbering
+- Creator owner-scoped list/read
+- create Creator Template with v1 and create the next immutable draft version
+- exact `submitted_version` pin and submission of the exact latest version
+- Admin read of the exact submitted artifact, approval, and request changes
+- approved Creator catalog resolves the exact pinned submitted version
+- Hunt Template selection resolves an approved persisted Template
+- Hunt stores the exact Template key/version/content snapshot
 
-Represent:
-- order
-- title
-- prompt
-- type
-- options
-- answer definition
-- hints
-- solution/reveal rules
-- personal/team behavior
+Template-version content is immutable JSONB. As an accepted current limitation, rows are treated as immutable through model/API behavior; the schema does not currently use a database trigger that prohibits direct `UPDATE` of version content.
 
-### F6. Fixed route and location model
-Status: ⬜ Not started
+### Frontend
+Status: ✅ Implemented (FE PR #68)
 
-Persist:
-- route points
-- checkpoint coordinates
-- detection radius
-- ordering
-- FinishPoint
+Responsibilities / implemented work:
+- consumes `GET /api/creator/templates`, `GET /api/creator/templates/:key`, `POST /api/creator/templates`, `POST /api/creator/templates/:key/versions`, and `POST /api/creator/templates/:key/submit`
+- lists Creator-owned Templates and reopens persisted drafts
+- hydrates Creator Studio from backend content
+- uses **Complete Hunt Features** as the explicit persistence boundary
+- first persistence creates the Template and immutable v1
+- changed persisted content creates the next immutable version; unchanged content creates no duplicate
+- stabilizes the Template key after creation
+- submits the real persisted version and shows success only after backend success
+- treats backend status/version/content as authoritative
+- preserves BE #59 geographic configuration through persistence
+- does not manufacture verification or safety state from persisted coordinates
 
-### F7. Safety verification
-Status: ⬜ Not started
+Revision/resubmission after `changes_requested` is not yet implemented in Creator Studio and is not claimed here.
 
-### F8. Answers, hints and solutions
-Status: ⬜ Not started
+### Deployed E2E verification
+Status: 🟡 Blocked until Admin Template Review FE integration is complete
 
-Sensitive answer material stays backend-side where appropriate.
+Acceptance flow:
+Creator persists and submits an exact immutable Template version → Admin reviews the same artifact → approval exposes that pinned version to Organizer setup → Hunt stores its exact snapshot.
 
-### F9. Participant journey preview
-Status: ⬜ Not started
+### F3. Geographic checkpoint architecture
 
-Preview uses persisted template-version data.
+Normal checkpoints and FinishPoint are separate concepts. Template content uses `configuration.normalCheckpointCount` and `configuration.checkpointPositions`. Each checkpoint position contains `checkpointNumber`, `name`, `latitude`, `longitude`, and `radiusMeters`.
 
-### F10. Template validation
-Status: ⬜ Not started
+Contract rules:
+- `normalCheckpointCount` is 1..20
+- `checkpointPositions` represents only normal checkpoints
+- FinishPoint belongs to Feature 6 and is not N+1 in `checkpointPositions`
+- checkpoint numbers are unique and within 1..N
+- latitude is -90..90 and longitude is -180..180
+- `radiusMeters` is 10..500
+- name is non-empty and at most 100 characters
+- incomplete geography is allowed while drafting
+- submission requires complete N-position geography for Templates using this contract
+- legacy persisted content without geographic fields remains compatible
+- old mock-map x/y percentages are never converted to latitude/longitude
+- Signal coordinates are never invented
 
-Backend-authoritative readiness before submission.
+### Backend / DB
+Status: ✅ Implemented
 
-### F11. Submit version to Admin
-Status: ⬜ Not started
+Responsibilities / implemented work:
+- validates the geographic contract
+- persists it inside immutable Template-version JSONB
+- validates submission completeness
+- carries the exact content through approval and the Hunt snapshot
 
-Submission locks/preserves the reviewed version.
+### Frontend
+Status: ✅ Implemented
 
-### F12. Real Creator Studio list/status
-Status: ⬜ Not started
+Responsibilities / implemented work:
+- Leaflet + React-Leaflet geographic editor with isolated/replaceable OpenStreetMap prototype tiles
+- real pan/zoom, map-click placement/repositioning, and radius visualization
+- Creator verification and safety-checklist UX
+- no invented coordinates
 
-Replace mock counts/list with real:
-- Drafts
-- Changes requested
-- Submitted
-- Approved
-
----
-
-## Phase G — Admin template governance
-
-Status: 🟣 FE mock exists / backend pending
-
-### G1. Pending template review list
-Status: ⬜ Not started
-
-### G2. Review submitted version
-Status: ⬜ Not started
-
-Admin sees:
-- metadata
-- challenges
-- route
-- safety
-- preview
-- validation result
-
-### G3. Request changes
-Status: ⬜ Not started
-
-### G4. Reject template
-Status: ⬜ Not started
-
-### G5. Approve template version
-Status: ⬜ Not started
-
-### G6. DB-backed approved template catalog
-Status: ⬜ Not started
-
-Replace static backend template catalog as final authority.
-
-### G7. Organizer consumes approved template version
-Status: 🟡 Partially prepared
-
-D2 already stores version/snapshot.
-
-Future:
-- catalog comes from approved DB versions
-- Hunt snapshot remains immutable
+Coordinate persistence does not establish checkpoint verification or route-safety approval. Those facts are not currently persisted, so the FE intentionally reopens persisted coordinates as unverified and safety unchecked.
 
 ---
+
+## Phase G — Admin Template governance and approved authority
+
+Status: 🟡 Backend/DB complete; existing Admin review UI remains prototype-only; Organizer integration implemented
+
+### G1. Admin Template review
+
+### Backend / DB
+Status: ✅ Implemented
+
+Responsibilities / implemented work:
+- submitted Creator Template review list/detail
+- review of the exact `submitted_version`
+- approval and request changes
+- approved catalog pins the exact submitted version
+
+### Frontend
+Status: 🟣 Existing visual prototype only
+
+Responsibilities / implemented work:
+- presents the current Admin Template review mockup and decision affordances
+- does not yet consume the real Admin review APIs; its local UI decisions are not authoritative
+
+### Deployed E2E verification
+Status: 🟡 Blocked until Admin Template Review FE integration is complete
+
+Acceptance flow:
+Admin receives the submitted artifact → reviews that exact version → approval makes that pinned version available in the approved catalog.
+
+### G2. Organizer approved Template authority
+
+### Backend / DB
+Status: ✅ Implemented
+
+Responsibilities / implemented work:
+- `GET /api/hunt-templates` returns approved persisted Templates
+- approved Creator Templates resolve the exact `submitted_version`
+- Hunt draft creation resolves an approved Template
+- Hunt stores an immutable key/version/content snapshot
+- existing Hunt snapshots remain stable
+
+### Frontend
+Status: ✅ Implemented
+
+Responsibilities / implemented work:
+- Organizer Quick Setup fetches authoritative `GET /api/hunt-templates`
+- selectable Templates come from the backend
+- only the Template key is sent during Hunt creation/update as appropriate
+- the FE does not manufacture Template snapshots
+- missing/loading/error/empty states are handled
+
+### Deployed E2E verification
+Status: 🟡 Blocked until Admin Template Review FE integration is complete
+
+Acceptance flow:
+Approved exact version appears in Quick Setup → Organizer selects its key → backend resolves and snapshots the approved key/version/content.
 
 ## Phase H — Participant enrollment and team formation
 
-Status: 🟡 Structural DB foundation exists / runtime pending
+Status: 🟡 Partial
+
+Backend / DB: 🟡 Structural foundation only; enrollment/team runtime pending
+
+Frontend: ⬜ Runtime integration not started
 
 ### H1. Resolve Hunt access code
 Status: ✅ Complete
@@ -1135,7 +1082,7 @@ Status: ⬜ Not started
 
 ## Phase I — Checkpoint runtime
 
-Status: 🟣 FE mock exists / backend pending
+Status: 🟣 Prototype only
 
 Implement one complete checkpoint before scaling to the full mission.
 
@@ -1184,7 +1131,7 @@ Status: ⬜ Not started
 
 ## Phase J — Live Hunt operations
 
-Status: 🟣 Organizer Monitor mock exists / backend pending
+Status: 🟣 Prototype only
 
 ### J1. Shared Hunt live state
 Status: ⬜ Not started
@@ -1257,7 +1204,7 @@ Status: ⬜ Not started
 
 ## Phase L — Admin operational systems
 
-Status: 🟣 FE mock exists / mostly backend pending
+Status: 🟣 Prototype only
 
 Implement each subsystem only when the underlying domain exists.
 
@@ -1397,7 +1344,7 @@ Status: ⬜ Not started
 Depends on Phase J help/PANIC.
 
 ### L4. Physical Reward Inventory
-Status: 🟣 FE mock exists / backend pending
+Status: 🟣 Prototype only
 
 Need:
 - stock
@@ -1426,7 +1373,7 @@ Audit important privileged actions:
 
 ## Phase M — Participant long-term systems
 
-Status: 🟣 FE concepts/mock exist / backend pending
+Status: 🟣 Prototype only
 
 ### M1. Hunt Passport
 Status: ⬜ Not started
@@ -1449,7 +1396,7 @@ All long-term records derive from real completed Hunt/results data.
 
 ## Phase N — Custom Hunt request workflow
 
-Status: 🟣 FE mock exists / backend pending
+Status: 🟣 Prototype only
 
 Mockup flow:
 
@@ -1509,29 +1456,21 @@ Until decided:
 
 For the current prototype:
 
-- Organizer self-registration/application establishes credentials before review; approval grants capability only
-- no public Creator self-registration is implemented yet; its future lifecycle must follow the same credential-at-registration rule
-- Organizer / Creator / Admin are global professional capabilities
+- Organizer and Creator self-registration/application establish credentials before review; approval grants capability only
+- Organizer / Creator / Admin are global professional capabilities in authoritative `user_roles`
 - Participant and Supervisor remain Hunt-contextual and are not provisioned from Users & Roles
-- Admin can directly provision Organizer and Creator
+- Admin can directly provision Organizer and Creator through a distinct activation-based lifecycle
 - existing identities keep their password and existing roles
 - Admin-provisioned new/passwordless professional identities receive one-time activation rather than an Admin-chosen password
 - guest identities cannot be promoted directly
 
-Direct Organizer provisioning is different from the public Organizer application workflow:
-- it does not create an `organizer_applications` row
-- Organization name is required
-- Organization + membership are created in the same provisioning transaction
-- retrying the same owner + normalized organization name reuses the existing Organization
-- it uses `/organizer/activate-direct` and `POST /api/auth/organizer/activate-direct` when the provisioned identity must establish a password
+Direct Organizer provisioning does not create an `organizer_applications` row. It creates/reuses the Organization and membership transactionally and uses `/organizer/activate-direct` when credentials must be established.
 
-Current Admin-provisioned Creator lifecycle:
-Admin provisions Creator → `/creator/activate` / `POST /api/auth/creator/activate` → user establishes password → Creator access.
+The two Creator credential lifecycles must remain separate:
 
-Future Creator self-registration/application lifecycle:
-Creator chooses password at registration → Pending without Creator capability → Admin approval grants capability → immediate normal sign-in. It is not implemented, requires no post-approval activation, and must be implemented before Creator template persistence is treated as an end-to-end Creator onboarding path.
+**Self-registered Creator:** application → identity data + password → Pending without Creator capability → Admin Approve → Creator capability active → normal sign-in with the original password. There is no post-approval activation token.
 
----
+**Admin-provisioned Creator:** Admin provisions a passwordless Creator → one-time activation → Creator establishes password → normal sign-in.
 
 ## 13. Admin bootstrap policy
 
@@ -1554,18 +1493,18 @@ The bootstrap `--allow-additional-admin` option remains an explicit recovery/mai
 
 ## 14. Template lifecycle contract
 
-Future Creator/Admin template architecture:
+Implemented Creator/Admin Template lifecycle:
 
 Template Draft
-→ Submitted Version
-→ Admin Review
+→ exact Submitted Version pinned
+→ Admin reviews that exact version
 → Approved Version
-→ Organizer selects version
-→ Hunt stores immutable snapshot
+→ Organizer selects the approved persisted version
+→ Hunt stores an immutable key/version/content snapshot.
 
-Never let an edited template retroactively change a published/active Hunt.
+Request changes returns the submitted Template to `changes_requested` while preserving the reviewed artifact and submitted-version invariant. Creator Studio revision/resubmission UI is not yet claimed as implemented.
 
----
+Never let an edited Template retroactively change a published/active Hunt.
 
 ## 15. Participant runtime implementation rule
 
@@ -1683,73 +1622,72 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 
 # 20. Recommended implementation order from current state
 
-1. Verify Organizer self-registration onboarding end-to-end (E13).
-2. Verify existing Admin-provisioned Creator onboarding end-to-end (E16), which remains unverified.
-3. Implement Creator self-registration/application lifecycle according to the credential-at-registration architecture (E17).
-4. Build Creator Template Persistence + Versioning. This depends on completing the required professional identity/lifecycle verification above.
-5. Build Admin Template Review / Approval.
-6. Replace static approved-template authority with real approved DB template versions.
-7. Verify Organizer selects a real approved Creator template.
-8. Build Participant enrollment/team formation.
+1. ✅ Completed milestone — Organizer self-registration onboarding E2E (E13).
+2. ✅ Completed milestone — Admin-provisioned Creator onboarding E2E (E16).
+3. ✅ Completed milestone — Creator self-registration/application lifecycle and E2E (E17).
+4. ✅ Completed milestone — Creator Template persistence + immutable versioning, with Creator Studio persistence/submission integration.
+5. ✅ Completed Backend/DB milestone — Admin Template review/approval/request-changes; current Admin FE review remains prototype-only.
+6. ✅ Completed milestone — DB-backed approved Template authority and Organizer Quick Setup integration.
+7. 🟡 **Verify Organizer selects a real approved Creator Template** — Backend/DB is implemented; Frontend is partial because Admin Template Review still requires real API integration. Complete Step 7A, then run deployed E2E verification.
+8. Build Participant enrollment/team formation only after Step 7 verification.
 9. Build ONE complete checkpoint runtime.
 10. Extend to the full Signal mission.
 11. Connect live Organizer monitoring + Help/PANIC.
 12. Build results + reward-awarding runtime.
-13. Complete only genuinely outstanding Admin operations, including audit events/UI and domain-dependent oversight systems. Core user editing, capability management, block/unblock, non-Admin password replacement, permanent account removal and professional provisioning are already implemented foundation and must not be reintroduced as future work.
+13. Complete only genuinely outstanding Admin operations/audit.
 14. Add Passport/history/achievements.
 15. Add Custom Hunt request workflow.
 16. Resolve Independent Organizer production architecture.
 
-This order avoids building participant gameplay permanently around hard-coded Signal content.
+### Step 7 — Verify Organizer selects a real approved Creator Template
 
----
+### Backend / DB
+Status: ✅ Implemented
+
+### Frontend
+Status: 🟡 Partial
+
+Implemented:
+- Creator Studio real persistence/submission
+- Organizer Quick Setup real approved-Template catalog integration
+
+Still required:
+- connect the existing Admin Template Review UI to the real backend review APIs
+- Admin must view the exact `submitted_version`
+- Approve must call the real backend approval endpoint
+- Request Changes must call the real backend request-changes endpoint
+- local/mock Admin decisions must not be treated as authoritative
+
+### Deployed E2E verification
+Status: 🟡 Blocked until Admin Template Review FE integration is complete
+
+Acceptance flow:
+Creator builds/persists Template
+→ Creator submits exact version
+→ Admin receives exact submitted version through real API
+→ Admin approves through real API
+→ approved version enters DB-backed catalog
+→ Organizer Quick Setup receives it
+→ Organizer selects it
+→ Hunt snapshots exact key/version/content.
+
+Step 7A Admin Template Review FE integration must be completed before this deployed verification can run. Passing the deployed verification remains the gate before Step 8. The order avoids building Participant gameplay permanently around hard-coded Signal content.
 
 # 21. Immediate next steps
 
-## Completed professional account foundation
+## Immediate implementation task — Step 7A Connect Admin Template Review FE
 
-Complete:
-- E6 First Admin bootstrap
-- E7 Real Admin frontend login
-- E8 Admin route protection
-- E9 Admin account security
-- E10 Additional Admin provisioning/activation and two-Admin lifecycle verification
-- E11 Organizer Applications Admin UI
-- E12 Organizer self-registration credential lifecycle
-- BE PR #36 — Admin direct provisioning for Organizer / Creator, migration 012 and professional activation purposes
-- FE PR #48 — Users & Roles for Admin / Organizer / Creator plus direct Organizer / Creator activation UI
-- FE PR #55 — corrected self-registered Organizer credential lifecycle
-- BE PR #44 — permanent account retirement with platform-history preservation
-- BE PR #45 — retired-email, Organization-owner and legacy-role corrections
-- FE PR #58 — Admin account removal aligned with backend hard-delete-vs-retire authority
-- E14 Creator provisioning
-- E15 Creator activation/account lifecycle
+Connect the existing Admin Template Review UI to the implemented backend review APIs. The Admin must receive the exact `submitted_version`, and Approve and Request Changes must use the real authoritative endpoints rather than local/mock decisions.
 
-The Admin Console now has one Users & Roles surface for the global professional capabilities Admin, Organizer and Creator. Permanent account removal is completed foundation: backend authority selects hard deletion or retirement, and platform history/provenance survives where required.
+## After Step 7A — Step 7 deployed E2E verification
 
-## Immediate 1 — E13 Organizer self-registration onboarding verification
+Run and record the full deployed acceptance flow defined in Section 20. Step 7 is not complete until that flow proves the exact Creator-built, submitted, API-reviewed, approved, catalog-resolved, selected, and snapshotted Template artifact.
 
-Verify on the deployed environment:
-Apply with password → Pending → Admin sees application → Admin Approves → Organizer capability + Organization/membership → normal Organizer sign-in with original password → Organizer workspace.
+## Next implementation phase — Step 8 Participant enrollment/team formation
 
-There is no application activation step. Admin-created Organizer provisioning remains a separate activation-based flow.
+Step 8 remains next only after Step 7A is complete and the full Step 7 deployed E2E verification passes. Do not begin Step 8 in this documentation update.
 
-## Immediate 2 — E16 Creator onboarding verification
-
-Verify on the deployed environment:
-Admin provisions Creator
-→ activation if required
-→ Creator session/login
-→ authoritative Creator access
-→ Creator Studio
-
-## Immediate 3 — E17 Creator self-registration/application
-
-After E13 and E16 verification, implement the future lifecycle defined in E17: credentials at registration, Pending without capability, Admin authorization decision, then normal Creator sign-in without post-approval activation.
-
-After E17, continue with Creator Template Persistence + Versioning; do not move template persistence ahead of the required identity/lifecycle verification.
-
----
+E13, E16, and E17 are completed professional-account foundation, not immediate future work.
 
 # 22. Prototype success milestones
 
