@@ -32,7 +32,7 @@ test('Admin guard handles loading, unauthenticated, denied, and authorized sessi
 test('every Admin Console route, including nested routes, is protected', async () => {
   const router = await readFile(new URL('../src/routes/router.tsx', import.meta.url), 'utf8')
   const protectedRoutes = [
-    '/admin', '/admin/reviews/template-1', '/admin/templates', '/admin/hunts',
+    '/admin', '/admin/reviews/:key', '/admin/templates', '/admin/hunts',
     '/admin/rewards', '/admin/alerts', '/admin/users', '/admin/settings', '/admin/audit',
   ]
 
