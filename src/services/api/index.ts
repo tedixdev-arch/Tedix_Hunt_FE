@@ -31,7 +31,7 @@ export type { HuntTemplateMetadata } from './huntTemplates.ts';
 export { CreatorTemplatesApi, creatorTemplatesApi } from './creatorTemplates.ts';
 export type { CreatorTemplate, CreatorTemplateContent, CreatorTemplateStatus } from './creatorTemplates.ts';
 export { AdminTemplateReviewsApi, adminTemplateReviewsApi } from './adminTemplateReviews.ts';
-export type { AdminTemplateReview, RequestTemplateChangesInput } from './adminTemplateReviews.ts';
+export type { AdminTemplateReview } from './adminTemplateReviews.ts';
 export { HuntOptionsApi, huntOptionsApi } from './huntOptions.ts';
 export type { HuntOption, HuntOptions } from './huntOptions.ts';
 export { OrganizationsApi, organizationsApi } from './organizations.ts';

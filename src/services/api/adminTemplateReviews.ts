@@ -4,16 +4,18 @@ import type { CreatorTemplateContent, CreatorTemplateStatus } from './creatorTem
 export interface AdminTemplateReview {
   key: string
   version: number
-  submittedVersion: number
   status: CreatorTemplateStatus
+  origin: string
+  creator: {
+    id: string
+    name: string
+    email: string
+  }
   content: CreatorTemplateContent
-  createdBy?: string
-  submittedAt?: string
-  reviewNotes?: string | null
 }
 
-export interface RequestTemplateChangesInput {
-  notes: string
+interface AdminTemplateReviewsResponse {
+  templates: AdminTemplateReview[]
 }
 
 export class AdminTemplateReviewsApi {
@@ -23,8 +25,10 @@ export class AdminTemplateReviewsApi {
     this.client = client
   }
 
-  list(): Promise<AdminTemplateReview[]> {
-    return this.client.get('/api/admin/templates/review')
+  async list(): Promise<AdminTemplateReview[]> {
+    const response = await this.client.get<AdminTemplateReviewsResponse>('/api/admin/templates/review')
+    if (!Array.isArray(response?.templates)) throw new Error('Invalid Template review response.')
+    return response.templates
   }
 
   get(key: string): Promise<AdminTemplateReview> {
@@ -35,8 +39,8 @@ export class AdminTemplateReviewsApi {
     return this.client.post(`/api/admin/templates/review/${encodeURIComponent(key)}/approve`)
   }
 
-  requestChanges(key: string, input: RequestTemplateChangesInput): Promise<AdminTemplateReview> {
-    return this.client.post(`/api/admin/templates/review/${encodeURIComponent(key)}/request-changes`, input)
+  requestChanges(key: string): Promise<AdminTemplateReview> {
+    return this.client.post(`/api/admin/templates/review/${encodeURIComponent(key)}/request-changes`)
   }
 }
 
