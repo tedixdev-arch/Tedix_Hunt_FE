@@ -932,7 +932,7 @@ Responsibilities / implemented work:
 Revision/resubmission after `changes_requested` is not yet implemented in Creator Studio and is not claimed here.
 
 ### Deployed E2E verification
-Status: 🟡 Pending as part of Step 7
+Status: 🟡 Blocked until Admin Template Review FE integration is complete
 
 Acceptance flow:
 Creator persists and submits an exact immutable Template version → Admin reviews the same artifact → approval exposes that pinned version to Organizer setup → Hunt stores its exact snapshot.
@@ -1000,7 +1000,7 @@ Responsibilities / implemented work:
 - does not yet consume the real Admin review APIs; its local UI decisions are not authoritative
 
 ### Deployed E2E verification
-Status: 🟡 Pending as part of Step 7
+Status: 🟡 Blocked until Admin Template Review FE integration is complete
 
 Acceptance flow:
 Admin receives the submitted artifact → reviews that exact version → approval makes that pinned version available in the approved catalog.
@@ -1028,7 +1028,7 @@ Responsibilities / implemented work:
 - missing/loading/error/empty states are handled
 
 ### Deployed E2E verification
-Status: 🟡 Pending final Step 7 verification
+Status: 🟡 Blocked until Admin Template Review FE integration is complete
 
 Acceptance flow:
 Approved exact version appears in Quick Setup → Organizer selects its key → backend resolves and snapshots the approved key/version/content.
@@ -1628,7 +1628,7 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 4. ✅ Completed milestone — Creator Template persistence + immutable versioning, with Creator Studio persistence/submission integration.
 5. ✅ Completed Backend/DB milestone — Admin Template review/approval/request-changes; current Admin FE review remains prototype-only.
 6. ✅ Completed milestone — DB-backed approved Template authority and Organizer Quick Setup integration.
-7. 🟡 **Verify Organizer selects a real approved Creator Template** — Backend/DB and Frontend implementation are complete; deployed E2E verification is pending.
+7. 🟡 **Verify Organizer selects a real approved Creator Template** — Backend/DB is implemented; Frontend is partial because Admin Template Review still requires real API integration. Complete Step 7A, then run deployed E2E verification.
 8. Build Participant enrollment/team formation only after Step 7 verification.
 9. Build ONE complete checkpoint runtime.
 10. Extend to the full Signal mission.
@@ -1645,35 +1645,47 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 Status: ✅ Implemented
 
 ### Frontend
-Status: ✅ Implemented
+Status: 🟡 Partial
+
+Implemented:
+- Creator Studio real persistence/submission
+- Organizer Quick Setup real approved-Template catalog integration
+
+Still required:
+- connect the existing Admin Template Review UI to the real backend review APIs
+- Admin must view the exact `submitted_version`
+- Approve must call the real backend approval endpoint
+- Request Changes must call the real backend request-changes endpoint
+- local/mock Admin decisions must not be treated as authoritative
 
 ### Deployed E2E verification
-Status: 🟡 Pending final verification
+Status: 🟡 Blocked until Admin Template Review FE integration is complete
 
 Acceptance flow:
-Creator builds custom Template
-→ completes real geographic positions
-→ Template persists as an immutable version
-→ Creator submits the exact version
-→ Admin sees the exact submitted version
-→ Admin approves
-→ Organizer Quick Setup receives it from the approved DB catalog
+Creator builds/persists Template
+→ Creator submits exact version
+→ Admin receives exact submitted version through real API
+→ Admin approves through real API
+→ approved version enters DB-backed catalog
+→ Organizer Quick Setup receives it
 → Organizer selects it
-→ Hunt draft stores the exact approved Template key/version/content snapshot.
+→ Hunt snapshots exact key/version/content.
 
-This deployed verification remains the gate before Step 8. The order avoids building Participant gameplay permanently around hard-coded Signal content.
+Step 7A Admin Template Review FE integration must be completed before this deployed verification can run. Passing the deployed verification remains the gate before Step 8. The order avoids building Participant gameplay permanently around hard-coded Signal content.
 
 # 21. Immediate next steps
 
-## Immediate gate — Step 7 deployed E2E verification
+## Immediate implementation task — Step 7A Connect Admin Template Review FE
 
-Run and record the full deployed acceptance flow defined in Section 20. Backend/DB and Frontend implementation are ready, but Step 7 is not complete until the deployed flow proves the exact Creator-built, geographically complete, submitted, reviewed, approved, catalog-resolved, selected, and snapshotted Template artifact.
+Connect the existing Admin Template Review UI to the implemented backend review APIs. The Admin must receive the exact `submitted_version`, and Approve and Request Changes must use the real authoritative endpoints rather than local/mock decisions.
 
-Do not treat the Admin review mockup's local state as proof; verification must exercise backend authority and the exact submitted/approved version.
+## After Step 7A — Step 7 deployed E2E verification
+
+Run and record the full deployed acceptance flow defined in Section 20. Step 7 is not complete until that flow proves the exact Creator-built, submitted, API-reviewed, approved, catalog-resolved, selected, and snapshotted Template artifact.
 
 ## Next implementation phase — Step 8 Participant enrollment/team formation
 
-Step 8 remains next only after Step 7 deployed E2E verification passes. Do not begin Step 8 in this documentation update.
+Step 8 remains next only after Step 7A is complete and the full Step 7 deployed E2E verification passes. Do not begin Step 8 in this documentation update.
 
 E13, E16, and E17 are completed professional-account foundation, not immediate future work.
 
