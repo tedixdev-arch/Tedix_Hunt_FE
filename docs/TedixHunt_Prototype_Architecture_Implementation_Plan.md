@@ -1,10 +1,10 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 3.0 | Updated 1 October 2026
+Version 3.1 | Updated 7 October 2026
 
-This document evolves Version 2.9 while preserving its account-retirement and professional credential-lifecycle architecture.
+This revision preserves Phase A–N and the existing identity, credential and account-retirement architecture. The Creator phase is complete for its agreed baseline before the Mapbox evolution. New geographic capabilities below are unchecked future work, not reasons to reopen that baseline.
 
-Revision note (3.0): synchronizes the plan with completed Creator onboarding and Template work; separates Backend/DB and Frontend implementation responsibilities; records immutable Creator Template persistence/versioning, Admin review/approval/request-changes, DB-backed approved Template authority, Creator Studio real persistence/submission integration, and the geographic checkpoint architecture; and preserves Step 7 deployed E2E verification as the remaining gate before Step 8.
+Revision note (3.1): corrects B1.1 using merged FE #61 and G1 using merged FE #70; incorporates the finalized geographic architecture and subsequent Admin/Organizer corrections; integrates Mapbox M1–M6 into existing phases. Merged implementation is distinct from deployed E2E evidence; this revision does not claim a new deployment test.
 
 The implementation strategy is:
 
@@ -57,7 +57,7 @@ The frontend never connects directly to PostgreSQL.
 
 TedixHunt is one platform with four connected experiences:
 
-Admin governs and approves
+Admin has full platform/domain operational authority and governs approval
 ↓
 Creator builds reusable Hunt templates
 ↓
@@ -192,9 +192,9 @@ A self-registered Creator uses the original application password after approval 
 Participant and Supervisor are Hunt-contextual:
 
 - Participant access to a Hunt is authoritative from hunt_participants.
-- Supervisor access to a Hunt is authoritative from hunt_roles with role = 'supervisor'.
+- Additional Supervisor access is authoritative from hunt_roles with role = 'supervisor'; the target B6 rule also grants the Hunt's Organizer effective Supervisor access automatically.
 - The same User may be Participant in one Hunt, Supervisor in another, both Participant and Supervisor in the same Hunt, and also hold Organizer/Creator/Admin global capabilities.
-- Supervisor must never be inferred from Organizer capability or from Hunt ownership.
+- Global Organizer capability alone grants no access to arbitrary Hunts. The responsible Organizer automatically has Supervisor powers for their own Hunt; implement this backend-enforced exception in B6 and expose it through the context read model.
 
 The existing global participant role remains only as transitional compatibility data for current authentication/guards. New Hunt-context decisions must not infer Participant access from that global role.
 
@@ -300,6 +300,16 @@ Each change should be narrowly scoped, reviewable, tested, deployable and verifi
 
 ---
 
+### Shared geographic architecture and V1 boundary
+
+Mapbox is the shared geographic presentation, search and navigation provider behind a provider-neutral TedixMap boundary. PostgreSQL/TedixHunt remains authoritative for content, rules, permissions, visibility, arrival, progression, scores and runtime state. Mapbox is not the game database.
+
+TedixMap grows only as needed: Mapbox adapter/base, search, checkpoint/FinishPoint/route/radius layers, player/team layers, GPS controller and camera utilities. HuntMapEditor, HuntMapPreview, HuntGameMap and LiveHuntMap reuse those foundations. Creator, Operations and Participant are three experiences; Admin/Organizer previews reuse the same platform.
+
+Preserve configuration.checkpointPositions initially. Add FinishPoint/navigation/visibility or later game-object fields only after specific BE rules are approved. Do not introduce a giant generic mapObjects schema. Provider route estimates are advisory and cannot establish route safety or arrival.
+
+V1 excludes AR, background geofencing, permanent GPS history, complex GIS tooling and unnecessary 3D. Exact arrival mathematics remains a Participant-runtime design/real-phone validation task; 5 m is a discovery target, not a promise of device precision.
+
 ## 7. Current PostgreSQL baseline
 
 Tracked migrations currently reach the implemented Creator/Template baseline:
@@ -348,7 +358,7 @@ Already-real frontend foundations include:
 - Creator Studio geographic editing with Leaflet + React-Leaflet and OpenStreetMap prototype tiles
 - Creator Studio real persistence/submission integration from FE PR #68
 
-The Admin Template Review screen remains the existing visual prototype: it is not yet connected to the implemented Admin review APIs, so it must not be treated as authoritative review functionality.
+Admin Template Review is connected to the real list/detail/approve/request-changes APIs (merged FE PR #70). It reviews the exact submitted version. Geographic Mapbox preview is a new G3 enhancement.
 
 The active application uses `src/main.tsx` and `src/routes/router.tsx`.
 
@@ -446,11 +456,13 @@ Status: ✅ Complete for global capabilities
 Authoritative global capabilities are Organizer, Creator and Admin. The global Participant role remains compatibility-only for the current prototype and must not be used as proof of access to a specific Hunt.
 
 ### B1.1 Workspace/context model
-Status: 🟡 Partial
+Status: ✅ Implemented for the existing workspace/context contract
 
 Backend / DB: ✅ Context read model implemented
 
-Frontend: 🟡 Contextual wiring pending
+Frontend: ✅ Context wiring implemented; canonical response parsing fixed in merged FE PR #61
+
+Deployed E2E: record deployment evidence separately; no fresh test claimed here.
 
 Implemented foundation:
 - FE PR #43 introduced the canonical /workspaces selector and same-session workspace switching for global capabilities.
@@ -463,13 +475,12 @@ Implemented foundation:
 - BE PR #35 added GET /api/me/hunt-contexts.
 - The API returns one row per Hunt with huntId, huntName, huntStatus, participant and supervisor.
 - Participant context is derived only from hunt_participants.
-- Supervisor context is derived only from hunt_roles(role='supervisor').
+- Existing Supervisor context derives from hunt_roles(role='supervisor'); B6 adds automatic supervision for the responsible Organizer.
 - One Hunt may expose both Participant and Supervisor access for the same User.
 
-Remaining:
-- connect /workspaces to GET /api/me/hunt-contexts
-- render Participant/Supervisor only as specific Hunt contexts
-- add contextual navigation targets as Participant/Supervisor runtime routes mature
+Implemented: /workspaces consumes GET /api/me/hunt-contexts using the canonical { contexts: [] } envelope and renders Hunt-specific choices. Empty contexts and malformed responses are handled.
+
+Future: evolve contextual targets as runtime routes mature and extend effective Supervisor context through B6. This is new scope, not unfinished B1.1 wiring.
 
 ### B2. Backend role authorization
 Status: ✅ Complete
@@ -504,11 +515,21 @@ Status: 🟡 Context read model complete / runtime assignment-use pending
 
 Participant membership is represented by hunt_participants.
 
-Supervisor authority is represented by hunt_roles(role='supervisor').
+Additional Supervisor assignment is represented by hunt_roles(role='supervisor'). Automatic Organizer supervision is the new B6 target.
 
 GET /api/me/hunt-contexts is the authenticated read model used to expose those contextual relationships to workspace switching without converting them into global roles.
 
 Supervisor assignment/use during live Hunt operations is still pending.
+
+### B6. Effective Hunt authority — Mapbox M3 domain prerequisite
+Status: ⬜ Not started
+Backend / DB first; Frontend follows in D9.
+- [ ] Grant the responsible Organizer effective Supervisor capabilities automatically for their own Hunt. Decide against the existing model whether to derive this or maintain an invariant row; do not require a separate identity.
+- [ ] Keep additional Supervisors Hunt-scoped with operational powers only; no Organizer configuration, Template edits or checkpoint suspension by default.
+- [ ] Permit Admin full platform/domain operations across Hunts, Templates, checkpoints and runtime objects, including edit, override, reassignment and suspension, subject only to security/technical invariants.
+- [ ] Preserve authenticated active-account requirements, secret protection, last-active-Admin safeguards, referential integrity and immutable provenance. Admin corrections create explicit versions/overrides; they do not silently rewrite historical artifacts.
+- [ ] Extend authorization tests and GET /api/me/hunt-contexts consistently. Test own-Hunt access, unrelated-Hunt denial, removed assignment denial and Admin authority.
+- [ ] Define assignment list/add/remove APIs and revocation semantics before D9. Organizer's automatic effective supervision cannot be accidentally removed.
 
 ---
 
@@ -542,7 +563,7 @@ Backend validates persisted configuration before publication.
 
 ## Phase D — Organizer Hunt setup
 
-Status: ✅ Complete
+Status: ✅ Existing setup baseline complete; D8–D9 are new evolution
 
 ### D1. General Setup
 Status: ✅ Complete
@@ -587,6 +608,19 @@ Still pending:
 - final results/reward awarding
 
 ---
+
+### D8. Organizer geographic preview — Mapbox M2
+Status: ⬜ Not started
+- [ ] Reuse HuntMapPreview from G3 to inspect the approved version during selection and the exact Hunt snapshot after creation.
+- [ ] Show normal checkpoints, separate FinishPoint, radii and available route estimates; handle absent legacy geography explicitly.
+- [ ] Keep fixed Template geography read-only for Organizer. Portable/repositionable Templates require a separate future product rule.
+
+### D9. Allocate Supervisors — Mapbox M3 frontend
+Status: ⬜ Not started; depends on B6 backend deployment
+- [ ] Add Allocate Supervisors after Hunt configuration and before Review/Publish readiness.
+- [ ] List Organizer by default as Organizer · Supervisor · Automatic; allow allocation/removal of additional eligible identities through B6 APIs.
+- [ ] Show authoritative supervision readiness; do not require an extra Supervisor or create a fake professional Supervisor account.
+- [ ] E2E: Organizer appears automatically, allocated Supervisor gains only that Hunt's operational access, removal revokes access, self-removal cannot remove automatic supervision.
 
 ## Phase E — Professional account lifecycle
 
@@ -880,7 +914,7 @@ This credential lifecycle remains distinct from E14–E16 Admin provisioning.
 
 ## Phase F — Creator Template system
 
-Status: ✅ Backend/API persistence and Creator Studio integration implemented
+Status: ✅ Creator baseline complete before Mapbox evolution; F4–F6 are new work
 
 ### F1. Authoritative Template hierarchy
 
@@ -932,7 +966,7 @@ Responsibilities / implemented work:
 Revision/resubmission after `changes_requested` is not yet implemented in Creator Studio and is not claimed here.
 
 ### Deployed E2E verification
-Status: 🟡 Blocked until Admin Template Review FE integration is complete
+Status: 🟡 Deployed evidence to record; FE integration is implemented in merged FE #70 and is no longer a blocker
 
 Acceptance flow:
 Creator persists and submits an exact immutable Template version → Admin reviews the same artifact → approval exposes that pinned version to Organizer setup → Hunt stores its exact snapshot.
@@ -947,7 +981,7 @@ Contract rules:
 - FinishPoint belongs to Feature 6 and is not N+1 in `checkpointPositions`
 - checkpoint numbers are unique and within 1..N
 - latitude is -90..90 and longitude is -180..180
-- `radiusMeters` is 10..500
+- Current baseline: `radiusMeters` is 10..500. F4 changes acceptance to 5..500 before FE adopts a 5 m default; existing stored values are preserved
 - name is non-empty and at most 100 characters
 - incomplete geography is allowed while drafting
 - submission requires complete N-position geography for Templates using this contract
@@ -977,9 +1011,35 @@ Coordinate persistence does not establish checkpoint verification or route-safet
 
 ---
 
+### F4. Radius contract compatibility — Mapbox M1a
+Status: ⬜ Not started — NEXT IMPLEMENTATION STEP
+Repository: Tedix_Hunt_BE only.
+- [ ] Accept explicit radiusMeters from 5..500 throughout geographic validation, submission and serialization; retain all other geographic constraints.
+- [ ] Preserve checkpointPositions and existing immutable versions/snapshots; do not rewrite existing 30 m or other radii. Missing legacy geography remains compatible.
+- [ ] Test 5 m accepted, values below 5/above 500 rejected, existing valid content unchanged, and 5 m content survives version → submit → approve → catalog → Hunt snapshot.
+- [ ] Update the relevant API contract; tracked migration only if actual schema constraints require it.
+- [ ] Review → user merge → deploy → verify the contract before F5. No Mapbox dependency or gameplay algorithm in this BE step.
+
+### F5. Shared TedixMap and Creator Hunt Map Editor — Mapbox M1b
+Status: ⬜ Not started; follows F4
+Repository: Tedix_Hunt_FE. Split the following into separate small prompt/PR cycles.
+- [ ] Replace the Creator Leaflet surface with shared TedixMap Mapbox rendering and provider adapter boundaries; preserve the persisted contract.
+- [ ] Add location/POI search for city, address, landmark and POI. Search moves the camera; only explicit placement/confirmation writes checkpoint geography.
+- [ ] Support exact placement/repositioning, configured normal checkpoint count, radius display and 5 m default for new positions. Allow increases up to the validated limit; preserve saved values.
+- [ ] Handle token/configuration failure, search/routing errors, loading, attribution, cleanup and mobile performance. Keep provider types, IDs and camera state out of domain authority.
+- [ ] Verify save/reopen/submit preserves coordinates, names, numbering and radii. Never invent Signal coordinates or infer verified safety from location data.
+
+### F6. Route validation and Participant Preview — Mapbox M1c
+Status: ⬜ Not started
+- [ ] Inspect existing Feature 6 first; any missing FinishPoint geographic contract is a separate BE-only slice before FE wiring. FinishPoint never becomes checkpoint N+1.
+- [ ] Show CP1 → CP2 → … → CPn → FinishPoint and approximate walking distance/time when routing succeeds. Distinguish straight-line visualization, provider route estimate and human route-safety verification.
+- [ ] Support incomplete/invalid/unavailable routes without claiming safe access. Preserve explicit Creator verification.
+- [ ] Add Preview as Participant using shared map and visibility projection. Before I12 exists, label simulated navigation/arrival and never treat preview as real progression.
+- [ ] E2E: search → explicit placement → save/reopen → route inspection → Participant Preview → submit; historical versions remain unchanged.
+
 ## Phase G — Admin Template governance and approved authority
 
-Status: 🟡 Backend/DB complete; existing Admin review UI remains prototype-only; Organizer integration implemented
+Status: ✅ Backend/DB, Admin FE review and Organizer integration implemented; G3 is new map evolution
 
 ### G1. Admin Template review
 
@@ -993,14 +1053,15 @@ Responsibilities / implemented work:
 - approved catalog pins the exact submitted version
 
 ### Frontend
-Status: 🟣 Existing visual prototype only
+Status: ✅ Implemented in merged FE PR #70
 
 Responsibilities / implemented work:
-- presents the current Admin Template review mockup and decision affordances
-- does not yet consume the real Admin review APIs; its local UI decisions are not authoritative
+- real review list/detail for the exact submittedVersion
+- real approve and request-changes API calls
+- backend-authoritative decisions with loading/error/retry/empty states and duplicate-action protection
 
 ### Deployed E2E verification
-Status: 🟡 Blocked until Admin Template Review FE integration is complete
+Status: 🟡 Deployed evidence to record; FE integration is implemented in merged FE #70 and is no longer a blocker
 
 Acceptance flow:
 Admin receives the submitted artifact → reviews that exact version → approval makes that pinned version available in the approved catalog.
@@ -1028,10 +1089,17 @@ Responsibilities / implemented work:
 - missing/loading/error/empty states are handled
 
 ### Deployed E2E verification
-Status: 🟡 Blocked until Admin Template Review FE integration is complete
+Status: 🟡 Deployed evidence to record; FE integration is implemented in merged FE #70 and is no longer a blocker
 
 Acceptance flow:
 Approved exact version appears in Quick Setup → Organizer selects its key → backend resolves and snapshots the approved key/version/content.
+
+### G3. Shared Admin geographic preview — Mapbox M2
+Status: ⬜ Not started; follows F5–F6
+- [ ] Reuse HuntMapPreview for the exact submitted immutable artifact: checkpoints, FinishPoint, radii and route.
+- [ ] Reuse the same component in D8; no second map implementation or new generic domain schema.
+- [ ] Keep the review preview read-only to preserve the artifact under review. This UI mode does not restrict Admin's platform authority; explicit edit/override operations preserve versions and provenance.
+- [ ] Verify approval and later Hunt selection refer to the same version; unavailable provider services do not alter content.
 
 ## Phase H — Participant enrollment and team formation
 
@@ -1129,6 +1197,34 @@ Status: ⬜ Not started
 
 ---
 
+### I12. Participant geographic runtime — Mapbox M4
+Status: ⬜ Not started; depends on H enrollment/start/recovery and B6
+Backend / DB first, then separate FE integration slices.
+- [ ] Define authorized objective projections, discovery and progression APIs, navigation rules, FinishPoint unlock and idempotent transitions.
+- [ ] Build one persistent Hunt Game Map per mounted Hunt session; checkpoint changes update layers/state instead of remounting maps. Refresh/reopen restores backend state and may create a new provider load.
+- [ ] Browser Geolocation API supplies latitude, longitude, accuracy and timestamp; TedixHunt interprets readings and Mapbox renders them. Handle denied/unavailable/stale location and reconnect.
+- [ ] Design and field-test the accuracy-aware Arrival Engine using target radius, distance, accuracy, timestamps and a bounded recent-reading window. Output not-arrived/approaching/arrived; do not use distance <= 5 m as the complete algorithm or claim spoof-proof browser GPS.
+- [ ] Define poor-accuracy recovery/fallback and backend validation before enabling arrival awards; do not reward repeated GPS events twice.
+- [ ] Implement Map, Compass, Signal Strength, Landmark, Decoded Route and Hidden navigation progressively under explicit domain rules. Hidden/locked targets must not leak through payloads, routes or client layers; direction/distance hints must be deliberately authorized.
+- [ ] Derive visual hidden/locked/available/approaching/discovered/active/completed states from authoritative rules without persisting every presentation state.
+- [ ] Validate one checkpoint with real phones and independent sessions, uncertain GPS, denial, refresh and network loss before I10 expands the mission.
+
+### I13. Runtime checkpoint suspension — prerequisite for Mapbox M5
+Status: ⬜ Not started
+Backend / DB first, then Participant handling and J9 controls in separate FE steps.
+- [ ] Add Hunt/runtime-level active/suspended state referencing snapshot checkpoint identity, with actor, time and reason; never mutate approved Template content or the immutable Hunt snapshot.
+- [ ] Authorize Admin and the responsible Organizer only by default. Additional Supervisors may report/request suspension; later delegation requires an explicit new rule.
+- [ ] Atomically bypass suspended checkpoints without penalty or blocking, including current and future objectives; preserve completed history and prior earned scores.
+- [ ] Define score eligibility, timers, all-normal-checkpoints-suspended behavior and separate FinishPoint rules before coding. Do not silently mark bypassed checkpoints as solved or invent completion rewards.
+- [ ] Test concurrent answer/suspension requests, retries, stale clients and reconnect; refresh authoritative targets across sessions. Any reactivation rule must prevent retroactive penalties or progression rollback.
+
+### I14. Geographic gamification — Mapbox M6
+Status: ⬜ Deferred until core gameplay and J9 operate reliably
+- [ ] Define Shadow/Event, Discovery/Easter Egg, Zone and Secret Location rules individually: lifecycle, visibility, trigger, eligibility, scoring and persistence.
+- [ ] For each mechanic, ship BE contract/security first and then shared map presentation; add focused domain fields only when rules are clear.
+- [ ] Tie reveal/pulse/completion effects to actual Hunt events with reduced-motion support. No giant generic mapObjects schema in advance.
+- [ ] Test hidden-data protection and idempotent awards. Geographic Zones do not imply background geofencing.
+
 ## Phase J — Live Hunt operations
 
 Status: 🟣 Prototype only
@@ -1150,8 +1246,10 @@ Replace mock:
 ### J3. Live lifecycle controls
 Status: ⬜ Not started
 
-### J4. Supervisor assignment
+### J4. Supervisor operational access
 Status: ⬜ Not started
+
+Assignment is implemented once through B6/D9 (M3). Reuse that authority for live operations; Organizer is automatically Supervisor and additional Supervisors receive only the operational subset.
 
 ### J5. Help request
 Status: ⬜ Not started
@@ -1172,6 +1270,16 @@ Status: ⬜ Not started
 Status: ⬜ Not started
 
 ---
+
+### J9. Shared Live Hunt Operations Map — Mapbox M5
+Status: ⬜ Not started; follows I12–I13
+- [ ] BE: authorize Hunt-scoped live state and minimal location updates from active Participants; validate timestamps/payloads and throttle updates.
+- [ ] Decide a short latest-location TTL, consent/permission UX, audience and deletion rules before collecting live GPS. Expire on TTL/Hunt end; avoid permanent trails, analytics copies and raw GPS logs.
+- [ ] Use a bounded recent-reading buffer for arrival only where needed. Any incident-location evidence has a separate explicit minimum retention policy.
+- [ ] FE: Organizer/Supervisor share LiveHuntMap with checkpoints, FinishPoint, progress, last permitted location/age/accuracy, HELP/PANIC and operational state.
+- [ ] Mark stale/missing positions accurately; never imply continuous real-time tracking or safety coverage when disconnected.
+- [ ] Add Organizer/Admin suspension controls backed by I13; additional Supervisors get report/request controls only.
+- [ ] E2E: phone → browser → TedixHunt backend → authorized operations view; unrelated users denied, removal revokes access, expired location disappears, suspension bypass and HELP/PANIC work.
 
 ## Phase K — Results and rewards runtime
 
@@ -1581,9 +1689,9 @@ For prototype:
 
 ChatGPT Web / Architect
 → define ONE implementation step
-→ exact Codex task
+→ exact Codex task for ONE repository
 → Codex implements + tests
-→ PR
+→ Draft PR
 → Architect reviews diff/tests/acceptance criteria
 → User merges
 → GitHub Actions
@@ -1620,74 +1728,45 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 
 ---
 
-# 20. Recommended implementation order from current state
+# 20. Implementation order and checklist
 
-1. ✅ Completed milestone — Organizer self-registration onboarding E2E (E13).
-2. ✅ Completed milestone — Admin-provisioned Creator onboarding E2E (E16).
-3. ✅ Completed milestone — Creator self-registration/application lifecycle and E2E (E17).
-4. ✅ Completed milestone — Creator Template persistence + immutable versioning, with Creator Studio persistence/submission integration.
-5. ✅ Completed Backend/DB milestone — Admin Template review/approval/request-changes; current Admin FE review remains prototype-only.
-6. ✅ Completed milestone — DB-backed approved Template authority and Organizer Quick Setup integration.
-7. 🟡 **Verify Organizer selects a real approved Creator Template** — Backend/DB is implemented; Frontend is partial because Admin Template Review still requires real API integration. Complete Step 7A, then run deployed E2E verification.
-8. Build Participant enrollment/team formation only after Step 7 verification.
-9. Build ONE complete checkpoint runtime.
-10. Extend to the full Signal mission.
-11. Connect live Organizer monitoring + Help/PANIC.
-12. Build results + reward-awarding runtime.
-13. Complete only genuinely outstanding Admin operations/audit.
-14. Add Passport/history/achievements.
-15. Add Custom Hunt request workflow.
-16. Resolve Independent Organizer production architecture.
+Completed foundation: A–E baseline, B1.1 contextual workspace integration, F Creator baseline, G1 real Admin review and G2 approved catalog/snapshot integration. FE #61 and #70 correct stale v3.0 status. Creator completion is accepted as the project baseline; this plan does not reopen it for new Mapbox requirements.
 
-### Step 7 — Verify Organizer selects a real approved Creator Template
+Step 7A is implemented (FE #70), not the next task. Preserve Step 7 supply-chain E2E evidence as a release gate: Creator persists/submits → Admin reviews exact version/approves → catalog resolves it → Organizer selects → exact Hunt snapshot persists. Record a deployed evidence link/result if absent; do not equate merge with deployment verification.
 
-### Backend / DB
-Status: ✅ Implemented
+Mapbox sequence aliases M1–M6 below are not Phase M Passport/history item IDs.
 
-### Frontend
-Status: 🟡 Partial
+1. [ ] M1a / F4 — BE radius acceptance 5..500, preserving versions and snapshots.
+2. [ ] M1b / F5 — FE shared TedixMap foundation, then search/placement in separate small PRs.
+3. [ ] M1c / F6 — required FinishPoint contract BE first, then route validation and Participant Preview FE.
+4. [ ] M2 / G3 + D8 — shared read-only Admin/Organizer previews.
+5. [ ] M3 / B6 then D9 — BE effective authority/assignment APIs, then Allocate Supervisors FE.
+6. [ ] H / Step 8 — Participant enrollment/team formation/start/recovery; Step 7 deployed verification gates this phase.
+7. [ ] M4 / I1–I9 + I12 — one authoritative checkpoint with persistent map, GPS, navigation and Arrival Engine; BE contracts before FE.
+8. [ ] I13 — BE suspension/bypass rules, then Participant FE handling; prove before live suspension controls.
+9. [ ] I10–I11 — expand proven gameplay to Signal and separate FinishPoint.
+10. [ ] M5 / J — backend live state/minimal GPS, then shared Operations Map, suspension controls and HELP/PANIC.
+11. [ ] K — results and reward awarding; retain suspension fairness.
+12. [ ] M6 / I14 — later geographic gamification only after rules and operational gameplay are proven.
+13. [ ] Complete outstanding L Admin operations/audit, M long-term records and N custom requests as scoped steps; resolve Independent Organizer separately.
 
-Implemented:
-- Creator Studio real persistence/submission
-- Organizer Quick Setup real approved-Template catalog integration
+Each numbered entry is a sequence container, not authorization for one large PR. Split every BE/FE boundary and each sizeable feature into one small step, one repo, one prompt/PR, review, user merge, deploy and E2E before continuing.
 
-Still required:
-- connect the existing Admin Template Review UI to the real backend review APIs
-- Admin must view the exact `submitted_version`
-- Approve must call the real backend approval endpoint
-- Request Changes must call the real backend request-changes endpoint
-- local/mock Admin decisions must not be treated as authoritative
+# 21. Immediate next implementation prompt
 
-### Deployed E2E verification
-Status: 🟡 Blocked until Admin Template Review FE integration is complete
+**F4 / Mapbox M1a — accept a 5 m discovery target in Tedix_Hunt_BE.**
 
-Acceptance flow:
-Creator builds/persists Template
-→ Creator submits exact version
-→ Admin receives exact submitted version through real API
-→ Admin approves through real API
-→ approved version enters DB-backed catalog
-→ Organizer Quick Setup receives it
-→ Organizer selects it
-→ Hunt snapshots exact key/version/content.
+Implement only the existing checkpoint radius contract change from 10..500 to 5..500. Preserve configuration.checkpointPositions, all unrelated constraints, existing stored radii, immutable Template versions and Hunt snapshots. Do not backfill 30 m values to 5 m. Keep legacy geography compatibility. Add boundary/regression and lifecycle round-trip tests; update the API contract. Use a tracked migration only if a real DB constraint needs changing. Do not add Mapbox, a mapObjects schema, GPS, Arrival Engine, supervisor or suspension features in this PR.
 
-Step 7A Admin Template Review FE integration must be completed before this deployed verification can run. Passing the deployed verification remains the gate before Step 8. The order avoids building Participant gameplay permanently around hard-coded Signal content.
+Acceptance checklist:
+- [ ] 5 m survives create/version/submit/approve/catalog/snapshot.
+- [ ] Below 5 and above 500 are rejected; existing valid radii remain valid.
+- [ ] Historical versions and existing Hunt snapshots remain byte-equivalent in content.
+- [ ] Relevant tests, typecheck/build and diff review pass.
+- [ ] Draft PR in BE only; user reviews/merges.
+- [ ] Deploy and verify contract; record result before F5 adopts 5 m for new positions.
 
-# 21. Immediate next steps
-
-## Immediate implementation task — Step 7A Connect Admin Template Review FE
-
-Connect the existing Admin Template Review UI to the implemented backend review APIs. The Admin must receive the exact `submitted_version`, and Approve and Request Changes must use the real authoritative endpoints rather than local/mock decisions.
-
-## After Step 7A — Step 7 deployed E2E verification
-
-Run and record the full deployed acceptance flow defined in Section 20. Step 7 is not complete until that flow proves the exact Creator-built, submitted, API-reviewed, approved, catalog-resolved, selected, and snapshotted Template artifact.
-
-## Next implementation phase — Step 8 Participant enrollment/team formation
-
-Step 8 remains next only after Step 7A is complete and the full Step 7 deployed E2E verification passes. Do not begin Step 8 in this documentation update.
-
-E13, E16, and E17 are completed professional-account foundation, not immediate future work.
+This planning PR modifies only the FE repository plan. It does not implement F4, merge, deploy or claim new E2E results.
 
 # 22. Prototype success milestones
 
