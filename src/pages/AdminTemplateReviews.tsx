@@ -3,7 +3,25 @@ import { Link, useParams } from 'react-router-dom'
 import { AdminShell } from './AdminConsole.tsx'
 import { adminTemplateReviewsApi, type AdminTemplateReview } from '../services/api/index.ts'
 
-const checklist = ['Template information', 'Challenges, answers and hints', 'Fixed checkpoint route', 'Route-safety checks', 'Participant preview', 'Complete Hunt test']
+const checklist = ['Template information', 'Submitted checkpoint and challenge content', 'Participant-facing text', 'Answers, hints and solutions', 'Scoring configuration', 'Persisted checkpoint geography']
+
+function fieldLabel(value: string): string {
+  const label = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ')
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+function PersistedValue({ value }: { value: unknown }) {
+  if (value == null) return <span className="text-slate-500">Not submitted</span>
+  if (typeof value === 'boolean') return <span>{value ? 'Yes' : 'No'}</span>
+  if (typeof value !== 'object') return <span className="whitespace-pre-wrap break-words">{String(value)}</span>
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <span className="text-slate-500">None submitted</span>
+    return <ol className="space-y-2">{value.map((item, index) => <li className="rounded-lg border border-slate-200 bg-white p-3" key={index}><span className="mb-2 block text-xs font-bold uppercase text-slate-400">Item {index + 1}</span><PersistedValue value={item} /></li>)}</ol>
+  }
+  const entries = Object.entries(value)
+  if (entries.length === 0) return <span className="text-slate-500">No persisted values</span>
+  return <dl className="space-y-3">{entries.map(([key, item]) => <div key={key}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{fieldLabel(key)}</dt><dd className="mt-1"><PersistedValue value={item} /></dd></div>)}</dl>
+}
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : 'The request could not be completed.'
@@ -68,13 +86,17 @@ export function AdminTemplateReviewDetailPage() {
   // The review API exposes the exact version pinned by submitted_version as version.
   const configuration = review.content.configuration
   const positions = configuration.checkpointPositions ?? []
-  const duration = review.content.durationMinutes ?? review.content.duration
+  const duration = configuration.durationMinutes
+  const additionalContent = Object.fromEntries(Object.entries(review.content).filter(([field]) => !['key', 'version', 'displayName', 'theme', 'mission', 'configuration', 'checkpoints', 'scoring'].includes(field)))
   return <AdminShell active="templates"><div className="mt-6"><Link className="text-sm font-bold text-slate-500" to="/admin/templates">← Template Reviews</Link><p className="mt-5 text-xs font-semibold uppercase tracking-wide text-amber-700">Awaiting review</p><h2 className="mt-2 text-3xl font-bold">{review.content.displayName}</h2><p className="mt-2 text-slate-600">{review.creator.name} ({review.creator.email}) · {review.content.theme} · Submitted version {review.version}</p></div>
     {error && <p className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-900" role="alert">{error}</p>}
     <section className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]"><div className="space-y-4">
       <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Template summary</h3><dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3"><div><dt className="text-slate-500">Version under review</dt><dd className="mt-1 font-bold">{review.version}</dd></div><div><dt className="text-slate-500">Duration</dt><dd className="mt-1 font-bold">{duration == null ? '—' : `${String(duration)} minutes`}</dd></div><div><dt className="text-slate-500">Checkpoints</dt><dd className="mt-1 font-bold">{configuration.normalCheckpointCount}</dd></div></dl><p className="mt-5 text-sm text-slate-600">{review.content.mission}</p></article>
       <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Fixed route and safety</h3><p className="mt-2 text-sm text-slate-500">Read-only persisted checkpoint geography</p><div className="mt-4 space-y-2">{positions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm">No checkpoint positions were submitted.</p> : positions.map(position => <div className="grid gap-1 rounded-xl border border-slate-200 p-4 text-sm sm:grid-cols-[1fr_auto]" key={position.checkpointNumber}><strong>{position.checkpointNumber}. {position.name}</strong><span>{position.latitude}, {position.longitude} · {position.radiusMeters} m radius</span></div>)}</div></article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Content and participant flow</h3><div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-slate-50 p-4 text-sm font-bold">Challenges · {review.content.checkpoints.length}</div><div className="rounded-xl bg-slate-50 p-4 text-sm font-bold">Scoring · Persisted with version {review.version}</div></div></article>
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Submitted checkpoint and challenge content</h3><p className="mt-2 text-sm text-slate-500">Exact read-only content persisted with submitted version {review.version}</p><div className="mt-4 space-y-4">{review.content.checkpoints.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm">No checkpoint or challenge content was submitted.</p> : review.content.checkpoints.map((checkpoint, index) => <section className="rounded-xl bg-slate-50 p-4 text-sm" key={index}><h4 className="mb-3 text-base font-bold">Checkpoint {index + 1}</h4><PersistedValue value={checkpoint} /></section>)}</div></article>
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Scoring configuration and events</h3><p className="mt-2 text-sm text-slate-500">Persisted scoring rules for this submitted artifact</p><div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm"><PersistedValue value={review.content.scoring} /></div></article>
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Submitted configuration</h3><p className="mt-2 text-sm text-slate-500">Participant instructions and other persisted configuration fields are shown when present.</p><div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm"><PersistedValue value={configuration} /></div></article>
+      {Object.keys(additionalContent).length > 0 && <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Additional submitted content</h3><div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm"><PersistedValue value={additionalContent} /></div></article>}
     </div><aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Review checklist</h3><p className="mt-2 text-sm text-slate-500">Check every area before making a decision.</p><div className="mt-4 space-y-2">{checklist.map(item => <label className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm font-bold" key={item}><input checked={checked.has(item)} className="h-5 w-5 accent-emerald-500" onChange={() => setChecked(current => { const next = new Set(current); next.has(item) ? next.delete(item) : next.add(item); return next })} type="checkbox" />{item}</label>)}</div><button className="mt-4 min-h-12 w-full rounded-xl bg-emerald-500 font-bold disabled:cursor-not-allowed disabled:bg-slate-300" disabled={saving || checked.size !== checklist.length} onClick={() => void decide('approve')} type="button">{saving ? 'Recording decision…' : 'Approve template'}</button><button className="mt-2 min-h-12 w-full rounded-xl border border-amber-400 bg-amber-50 font-bold text-amber-900 disabled:cursor-not-allowed disabled:opacity-40" disabled={saving} onClick={() => void decide('changes')} type="button">{saving ? 'Recording decision…' : 'Request changes'}</button></aside></section>
   </AdminShell>
 }

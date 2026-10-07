@@ -8,7 +8,12 @@ import type { SessionStore } from '../src/services/api/session.ts'
 const session: SessionStore = { getAccessToken: () => 'admin-token', getRefreshToken: () => null, saveSession: () => {}, clearSession: () => {} }
 const review: AdminTemplateReview = {
   key: 'exact/template', version: 4, status: 'submitted', origin: 'creator', creator: { id: 'creator-1', name: 'Ada Creator', email: 'ada@example.test' },
-  content: { key: 'exact/template', version: 4, displayName: 'Exact submitted artifact', theme: 'Geography', mission: 'Review me', configuration: { normalCheckpointCount: 1, checkpointPositions: [{ checkpointNumber: 1, name: 'Museum', latitude: 46.77, longitude: 23.59, radiusMeters: 30 }] }, scoring: {}, checkpoints: [{}] },
+  content: {
+    key: 'exact/template', version: 4, displayName: 'Exact submitted artifact', theme: 'Geography', mission: 'Review me',
+    configuration: { durationMinutes: 75, normalCheckpointCount: 1, participantInstructions: 'Follow the marked route.', checkpointPositions: [{ checkpointNumber: 1, name: 'Museum', latitude: 46.77, longitude: 23.59, radiusMeters: 30 }] },
+    scoring: { model: 'points', events: [{ event: 'correctAnswer', points: 100 }] },
+    checkpoints: [{ checkpointNumber: 1, name: 'Museum cipher', challenge: { prompt: 'Decode the inscription.', answer: 'CLUJ', hints: ['Read every second letter.'], solution: 'Take the even-positioned letters.' } }],
+  },
 }
 
 test('Admin Template Review client uses the verified authenticated backend contracts', async () => {
@@ -57,4 +62,29 @@ test('exact persisted geographic configuration is rendered without mock x/y conv
   const source = await readFile(new URL('../src/pages/AdminTemplateReviews.tsx', import.meta.url), 'utf8')
   for (const field of ['normalCheckpointCount', 'checkpointPositions', 'latitude', 'longitude', 'radiusMeters']) assert.match(source, new RegExp(field))
   assert.doesNotMatch(source, /\bposition\.x\b|\bposition\.y\b|latest|resubmit|revision/i)
+})
+
+test('review inspection renders the exact submitted content and configuration duration read-only', async () => {
+  const source = await readFile(new URL('../src/pages/AdminTemplateReviews.tsx', import.meta.url), 'utf8')
+  const submitted = JSON.stringify(review.content)
+
+  assert.equal(review.content.configuration.durationMinutes, 75)
+  for (const value of ['Museum cipher', 'Decode the inscription.', 'CLUJ', 'Read every second letter.', 'Take the even-positioned letters.', 'Follow the marked route.', 'correctAnswer']) {
+    assert.match(submitted, new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  }
+  assert.match(source, /const duration = configuration\.durationMinutes/)
+  assert.doesNotMatch(source, /review\.content\.duration(?:Minutes)?/)
+  assert.match(source, /review\.content\.checkpoints\.map/)
+  assert.match(source, /<PersistedValue value=\{checkpoint\}/)
+  assert.match(source, /<PersistedValue value=\{review\.content\.scoring\}/)
+  assert.match(source, /<PersistedValue value=\{configuration\}/)
+  assert.match(source, /Object\.entries\(review\.content\)/)
+  assert.match(source, /typeof value !== 'object'/)
+})
+
+test('checklist only attests to inspectable persisted information', async () => {
+  const source = await readFile(new URL('../src/pages/AdminTemplateReviews.tsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(source, /'Participant preview'|'Complete Hunt test'/)
+  for (const item of ['Submitted checkpoint and challenge content', 'Participant-facing text', 'Answers, hints and solutions', 'Scoring configuration', 'Persisted checkpoint geography']) assert.match(source, new RegExp(item))
+  assert.doesNotMatch(source, /Signal|mock|latest[- ]version|version \+ 1/i)
 })
