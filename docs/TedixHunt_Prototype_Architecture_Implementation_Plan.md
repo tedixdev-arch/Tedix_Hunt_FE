@@ -1201,7 +1201,7 @@ Status: ⬜ Not started
 Status: ⬜ Not started; depends on H enrollment/start/recovery and B6
 Backend / DB first, then separate FE integration slices.
 - [ ] Define authorized objective projections, discovery and progression APIs, navigation rules, FinishPoint unlock and idempotent transitions.
-- [ ] Build one persistent Hunt Game Map per mounted Hunt session; checkpoint changes update layers/state instead of remounting maps. Refresh/reopen restores backend state and may create a new provider load.
+- [ ] Build one persistent Hunt Game Map per active Participant Hunt session. Persistent means the map remains mounted during normal in-Hunt navigation; it does not mean the map is always visible. Challenges, Score / Results, Mission History, Help and other Hunt interfaces may cover or hide the map without destroying it. When the map becomes visible again, preserve its camera, zoom, location, objective, navigation and Hunt context as appropriate. Refresh, close/reopen or session recovery may create a new map instance and must restore authoritative Hunt state from the backend.
 - [ ] Browser Geolocation API supplies latitude, longitude, accuracy and timestamp; TedixHunt interprets readings and Mapbox renders them. Handle denied/unavailable/stale location and reconnect.
 - [ ] Design and field-test the accuracy-aware Arrival Engine using target radius, distance, accuracy, timestamps and a bounded recent-reading window. Output not-arrived/approaching/arrived; do not use distance <= 5 m as the complete algorithm or claim spoof-proof browser GPS.
 - [ ] Define poor-accuracy recovery/fallback and backend validation before enabling arrival awards; do not reward repeated GPS events twice.
