@@ -59,3 +59,29 @@ navigation or game behavior and leaves the existing Leaflet editor in place.
 
 `npm test` runs the existing Node tests followed by mocked Mapbox component tests
 in Vitest/jsdom. These unit tests do not require a real token or network access.
+
+### Location search (F5 / Mapbox M1b)
+
+Enable search on the shared map with
+`<TedixMap initialLongitude={23.59} initialLatitude={46.77} locationSearch />`.
+The optional `locationSearch` prop defaults to false. Selection calls `flyTo`
+on that component's existing map with the returned longitude/latitude and zoom 14;
+initial camera props and style lifecycle retain their existing behavior.
+
+`MapboxLocationSearch` is also reusable separately: pass the configured public
+`accessToken` and an `onSelect({ center: [longitude, latitude] })` callback.
+The callback only receives temporary coordinates. Search never creates checkpoints,
+FinishPoints, templates or backend requests. The Leaflet Creator is unaffected.
+
+Set `VITE_MAPBOX_ACCESS_TOKEN` to a public Mapbox token and restart Vite. Search uses
+Mapbox Search Box `/suggest` and `/retrieve`, sharing a session token until selection,
+with requests debounced by 300 ms after two characters. It supports cities, streets,
+addresses and landmarks/POIs where Mapbox has coverage. Results are temporary and
+must not be persisted; account access, billing and applicable Search Box terms apply.
+Keep the Search by Mapbox link and Mapbox GL's default attribution visible. Restrict
+public tokens to intended deployment URLs; never configure a secret token here.
+
+Use arrow keys/Enter or tap a result; Escape dismisses results. Loading, empty and
+failure messages are announced. Provider requests and Mapbox GL are mocked in tests;
+real rendering, geographic coverage and search require browser verification with a
+configured public token.
