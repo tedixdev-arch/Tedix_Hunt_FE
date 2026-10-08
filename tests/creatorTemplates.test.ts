@@ -4,6 +4,7 @@ import { ApiClient, ApiError } from '../src/services/api/client.ts'
 import { CreatorTemplatesApi, type CreatorTemplate, type CreatorTemplateContent } from '../src/services/api/creatorTemplates.ts'
 import { creatorTemplateError, hydratePersistedGeography, normalizeTemplateKey, persistCreatorTemplate, templateContentEqual } from '../src/features/creator/templatePersistence.ts'
 import type { SessionStore, SessionTokens } from '../src/services/api/session.ts'
+import { buildGeographyConfiguration, updateCheckpointDraft } from '../src/features/creator/checkpointGeography.ts'
 
 class Session implements SessionStore {
   getAccessToken() { return 'creator-token' }
@@ -85,4 +86,22 @@ test('duplicate, invalid, authorization and session failures have actionable saf
   assert.match(creatorTemplateError(new ApiError('raw', 400, 'bad_request'), 'save'), /content or key is invalid/)
   assert.match(creatorTemplateError(new ApiError('raw', 403, 'http'), 'save'), /not authorized/)
   assert.match(creatorTemplateError(new ApiError('raw', 401, 'unauthorized'), 'submit'), /session has expired/)
+})
+
+test('editing and saving hydrated geography creates a version without mutating the saved Template', async () => {
+  const persisted = structuredClone(record)
+  const before = structuredClone(persisted)
+  Object.freeze(persisted.content.configuration.checkpointPositions[0])
+  Object.freeze(persisted.content.configuration.checkpointPositions)
+  const hydrated = hydratePersistedGeography(persisted.content.configuration)
+  const edited = updateCheckpointDraft(hydrated.checkpointDrafts, hydrated.verifiedPositions, 1, { latitude: 47, longitude: 24, radiusMeters: 5 })
+  const next = { ...persisted.content, configuration: buildGeographyConfiguration(1, edited.drafts) }
+  const setup = api([{ ...persisted, version: 2, content: { ...next, version: 2 } }])
+  await persistCreatorTemplate(setup.api, next, persisted)
+  assert.deepEqual(persisted, before)
+  assert.deepEqual(hydrated.checkpointDrafts, [position])
+  assert.equal(setup.calls.length, 1)
+  assert.equal(setup.calls[0].url, 'https://api.test/api/creator/templates/cluj-algebra-trail/versions')
+  assert.deepEqual(JSON.parse(String(setup.calls[0].init?.body)), { content: { ...next, version: 2 } })
+  assert.deepEqual(next.configuration, { normalCheckpointCount: 1, checkpointPositions: [{ ...position, latitude: 47, longitude: 24, radiusMeters: 5 }] })
 })

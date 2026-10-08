@@ -34,6 +34,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // The shared Mapbox runtime brings the application bundle above 2 MiB.
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
         // version.json is a network-only deployment marker and must never be
         // satisfied from a service worker's precache.
