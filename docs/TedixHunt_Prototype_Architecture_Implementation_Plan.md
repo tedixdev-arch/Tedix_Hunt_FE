@@ -1,10 +1,12 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 3.1 | Updated 7 October 2026
+Version 3.2 | Updated 8 October 2026
 
 This revision preserves Phase A–N and the existing identity, credential and account-retirement architecture. The Creator phase is complete for its agreed baseline before the Mapbox evolution. New geographic capabilities below are unchecked future work, not reasons to reopen that baseline.
 
 Revision note (3.1): corrects B1.1 using merged FE #61 and G1 using merged FE #70; incorporates the finalized geographic architecture and subsequent Admin/Organizer corrections; integrates Mapbox M1–M6 into existing phases. Merged implementation is distinct from deployed E2E evidence; this revision does not claim a new deployment test.
+
+Revision note (3.2): defines FinishPoint as a terminal checkpoint using the shared gameplay engine; clarifies geographic compatibility, Feature 6 authoring, backend-authoritative Hunt completion and the existing-phase implementation sequence. Documentation only: existing implementation statuses are preserved; no new implementation or deployed E2E verification is claimed.
 
 The implementation strategy is:
 
@@ -306,9 +308,28 @@ Mapbox is the shared geographic presentation, search and navigation provider beh
 
 TedixMap grows only as needed: Mapbox adapter/base, search, checkpoint/FinishPoint/route/radius layers, player/team layers, GPS controller and camera utilities. HuntMapEditor, HuntMapPreview, HuntGameMap and LiveHuntMap reuse those foundations. Creator, Operations and Participant are three experiences; Admin/Organizer previews reuse the same platform.
 
-Preserve configuration.checkpointPositions initially. Add FinishPoint/navigation/visibility or later game-object fields only after specific BE rules are approved. Do not introduce a giant generic mapObjects schema. Provider route estimates are advisory and cannot establish route safety or arrival.
+Preserve `configuration.normalCheckpointCount`, `configuration.checkpointPositions[]` and `configuration.finishPoint` as the compatible geographic persistence contract. Extend gameplay/navigation/visibility or later game-object fields only through specific BE contracts. The terminal gameplay role does not require an immediate database migration or rewriting immutable Template versions or Hunt snapshots. Do not introduce a giant generic mapObjects schema. Provider route estimates are advisory and cannot establish route safety or arrival.
 
 V1 excludes AR, background geofencing, permanent GPS history, complex GIS tooling and unnecessary 3D. Exact arrival mathematics remains a Participant-runtime design/real-phone validation task; 5 m is a discovery target, not a promise of device precision.
+
+### Shared checkpoint gameplay and terminal role
+
+FinishPoint is a regular gameplay checkpoint with the special role `terminal`. Normal and terminal checkpoints support the same geography and discovery radius, navigation, GPS arrival/discovery, Personal Challenges, Team Challenges, scoring and penalties, and checkpoint completion.
+
+Conceptual gameplay model (not a replacement persistence schema):
+
+```text
+Checkpoint
+  - Geography
+  - Navigation
+  - Personal Challenge
+  - Team Challenge
+  - Scoring
+  - Completion
+  - Role: normal | terminal
+```
+
+Use ONE checkpoint gameplay engine. FinishPoint reuses navigation logic, the Arrival Engine, Personal/Team Challenge logic, scoring, and progression/completion rules. Do not build a second FinishPoint gameplay engine or challenge system. The role changes what happens after checkpoint completion, not how the checkpoint is played: normal completion advances to the next checkpoint; terminal completion triggers backend-authoritative Hunt completion only after all required FinishPoint activities are successfully resolved. Reaching FinishPoint coordinates alone never completes the Hunt.
 
 ## 7. Current PostgreSQL baseline
 
@@ -973,12 +994,14 @@ Creator persists and submits an exact immutable Template version → Admin revie
 
 ### F3. Geographic checkpoint architecture
 
-Normal checkpoints and FinishPoint are separate concepts. Template content uses `configuration.normalCheckpointCount` and `configuration.checkpointPositions`. Each checkpoint position contains `checkpointNumber`, `name`, `latitude`, `longitude`, and `radiusMeters`.
+Normal checkpoints and FinishPoint remain separately configured and persisted geographically, while sharing one checkpoint gameplay model. Template content preserves `configuration.normalCheckpointCount`, `configuration.checkpointPositions[]` and `configuration.finishPoint`. Each normal checkpoint position contains `checkpointNumber`, `name`, `latitude`, `longitude`, and `radiusMeters`.
 
 Contract rules:
 - `normalCheckpointCount` is 1..20
 - `checkpointPositions` represents only normal checkpoints
-- FinishPoint belongs to Feature 6 and is not N+1 in `checkpointPositions`
+- normal checkpoint geography remains in Creator Studio Feature 2; FinishPoint geography remains in Feature 6 and is not N+1 in `checkpointPositions`
+- separate geographic persistence does not imply separate gameplay: FinishPoint has the terminal checkpoint role and the same applicable capabilities
+- preserve compatibility without an immediate database migration or rewriting existing immutable Template versions/snapshots
 - checkpoint numbers are unique and within 1..N
 - latitude is -90..90 and longitude is -180..180
 - Current baseline: `radiusMeters` is 10..500. F4 changes acceptance to 5..500 before FE adopts a 5 m default; existing stored values are preserved
@@ -1029,9 +1052,12 @@ Repository: Tedix_Hunt_FE. Split the following into separate small prompt/PR cyc
 - [ ] Handle token/configuration failure, search/routing errors, loading, attribution, cleanup and mobile performance. Keep provider types, IDs and camera state out of domain authority.
 - [ ] Verify save/reopen/submit preserves coordinates, names, numbering and radii. Never invent Signal coordinates or infer verified safety from location data.
 
-### F6. Route validation and Participant Preview — Mapbox M1c
+### F6. FinishPoint configuration, route validation and Participant Preview — Mapbox M1c
 Status: ⬜ Not started
-- [ ] Inspect existing Feature 6 first; any missing FinishPoint geographic contract is a separate BE-only slice before FE wiring. FinishPoint never becomes checkpoint N+1.
+- [ ] Inspect existing Feature 6 first; finish the current FinishPoint geography work through separate BE/FE slices as needed, preserving `configuration.finishPoint`. FinishPoint never becomes checkpoint N+1 in `checkpointPositions`.
+- [ ] Next define and implement the shared FinishPoint gameplay configuration contract in BE first: navigation, Personal Challenges, Team Challenges and existing applicable checkpoint scoring rules, with immutable-version/snapshot compatibility. Reuse normal checkpoint capabilities; do not invent new challenge types or a separate FinishPoint challenge system.
+- [ ] Then integrate Feature 6 navigation and Personal/Team Challenge configuration in FE, reusing the same available options and components as normal checkpoints. Feature 6 supports geographic placement and discovery radius plus these gameplay settings; normal checkpoint geography remains in Feature 2.
+- [ ] Continue the planned geographic route validation and Participant Preview after the shared gameplay configuration slices. Runtime implementation remains in Phase I, not in Creator configuration work.
 - [ ] Show CP1 → CP2 → … → CPn → FinishPoint and approximate walking distance/time when routing succeeds. Distinguish straight-line visualization, provider route estimate and human route-safety verification.
 - [ ] Support incomplete/invalid/unavailable routes without claiming safe access. Preserve explicit Creator verification.
 - [ ] Add Preview as Participant using shared map and visibility projection. Before I12 exists, label simulated navigation/arrival and never treat preview as real progression.
@@ -1157,6 +1183,8 @@ Implement one complete checkpoint before scaling to the full mission.
 ### I1. Checkpoint runtime model
 Status: ⬜ Not started
 
+Implement one shared checkpoint gameplay engine with `normal | terminal` roles. Separate geographic persistence must map into that shared runtime without duplicating navigation, arrival, Personal/Team Challenges, scoring or completion logic. BE owns required-activity validation and authoritative progression/completion; FE consumes that state.
+
 ### I2. Participant progress state
 Status: ⬜ Not started
 
@@ -1192,15 +1220,25 @@ Status: ⬜ Not started
 
 Only after one checkpoint works across independent sessions.
 
-### I11. FinishPoint / final puzzle
+### I11. FinishPoint terminal checkpoint completion
 Status: ⬜ Not started
+
+- [ ] Extend the proven shared checkpoint runtime to FinishPoint, including navigation, GPS discovery, required Personal/Team Challenges, scoring and penalties. Reuse existing challenge types and the I1–I9/I12 engine; do not implement an independent final-puzzle engine.
+- [ ] Normal checkpoint completion advances to the next checkpoint. FinishPoint completion triggers Hunt completion only after BE confirms all required terminal activities are successfully resolved; GPS arrival alone never finishes the Hunt.
+- [ ] Prove idempotent terminal completion, concurrent Personal/Team Challenge resolution and reconnect/recovery against authoritative BE state before Phase K results consume completion.
+
+Intended Participant sequence:
+
+Checkpoint 1 → required activities → Checkpoint 2 → required activities → … → FinishPoint → required Personal/Team Challenges → backend-authoritative Hunt completion.
+
+The terminal suspension/fairness policy remains explicitly unresolved under I13; this completion rule does not decide how a suspended FinishPoint is resolved.
 
 ---
 
 ### I12. Participant geographic runtime — Mapbox M4
 Status: ⬜ Not started; depends on H enrollment/start/recovery and B6
 Backend / DB first, then separate FE integration slices.
-- [ ] Define authorized objective projections, discovery and progression APIs, navigation rules, FinishPoint unlock and idempotent transitions.
+- [ ] Define authorized objective projections, discovery and progression APIs, navigation rules, FinishPoint unlock and idempotent transitions using the shared checkpoint model. FinishPoint uses the same navigation and Arrival Engine; arrival/discovery is distinct from checkpoint completion and never independently completes the Hunt.
 - [ ] Build one persistent Hunt Game Map per active Participant Hunt session. Persistent means the map remains mounted during normal in-Hunt navigation; it does not mean the map is always visible. Challenges, Score / Results, Mission History, Help and other Hunt interfaces may cover or hide the map without destroying it. When the map becomes visible again, preserve its camera, zoom, location, objective, navigation and Hunt context as appropriate. Refresh, close/reopen or session recovery may create a new map instance and must restore authoritative Hunt state from the backend.
 - [ ] Browser Geolocation API supplies latitude, longitude, accuracy and timestamp; TedixHunt interprets readings and Mapbox renders them. Handle denied/unavailable/stale location and reconnect.
 - [ ] Design and field-test the accuracy-aware Arrival Engine using target radius, distance, accuracy, timestamps and a bounded recent-reading window. Output not-arrived/approaching/arrived; do not use distance <= 5 m as the complete algorithm or claim spoof-proof browser GPS.
@@ -1214,8 +1252,8 @@ Status: ⬜ Not started
 Backend / DB first, then Participant handling and J9 controls in separate FE steps.
 - [ ] Add Hunt/runtime-level active/suspended state referencing snapshot checkpoint identity, with actor, time and reason; never mutate approved Template content or the immutable Hunt snapshot.
 - [ ] Authorize Admin and the responsible Organizer only by default. Additional Supervisors may report/request suspension; later delegation requires an explicit new rule.
-- [ ] Atomically bypass suspended checkpoints without penalty or blocking, including current and future objectives; preserve completed history and prior earned scores.
-- [ ] Define score eligibility, timers, all-normal-checkpoints-suspended behavior and separate FinishPoint rules before coding. Do not silently mark bypassed checkpoints as solved or invent completion rewards.
+- [ ] Atomically bypass suspended normal checkpoints without penalty or blocking, including current and future objectives; preserve completed history and prior earned scores. Terminal behavior requires the unresolved policy below and must not infer Hunt completion from this bypass rule.
+- [ ] Define score eligibility, timers and all-normal-checkpoints-suspended behavior before coding. Apply the same checkpoint suspension/fairness model when considering terminal checkpoints. Unresolved policy: how a suspended FinishPoint's required activities, bypass, scoring/timers and Hunt completion interact. Resolve explicitly before terminal suspension implementation; this revision introduces no new terminal suspension policy. Do not silently mark bypassed checkpoints as solved or invent completion rewards.
 - [ ] Test concurrent answer/suspension requests, retries, stale clients and reconnect; refresh authoritative targets across sessions. Any reactivation rule must prevent retroactive penalties or progression rollback.
 
 ### I14. Geographic gamification — Mapbox M6
@@ -1629,6 +1667,8 @@ First prove one checkpoint end-to-end with:
 
 Then extend the pattern.
 
+Extend it to FinishPoint through the same engine and the terminal role in I11/I12. Configuration work in F6 must not pull the entire Participant runtime forward. Arrival alone is never the Hunt-completion condition.
+
 ---
 
 ## 16. Rewards architecture boundary
@@ -1738,13 +1778,13 @@ Mapbox sequence aliases M1–M6 below are not Phase M Passport/history item IDs.
 
 1. [ ] M1a / F4 — BE radius acceptance 5..500, preserving versions and snapshots.
 2. [ ] M1b / F5 — FE shared TedixMap foundation, then search/placement in separate small PRs.
-3. [ ] M1c / F6 — required FinishPoint contract BE first, then route validation and Participant Preview FE.
+3. [ ] M1c / F6 — after current FinishPoint geography work, implement shared FinishPoint gameplay configuration BE first; integrate Feature 6 navigation and Personal/Team Challenge configuration FE using existing checkpoint options/components; then continue geographic route validation and Participant Preview. Keep each BE/FE slice separate and defer runtime to Phase I.
 4. [ ] M2 / G3 + D8 — shared read-only Admin/Organizer previews.
 5. [ ] M3 / B6 then D9 — BE effective authority/assignment APIs, then Allocate Supervisors FE.
 6. [ ] H / Step 8 — Participant enrollment/team formation/start/recovery; Step 7 deployed verification gates this phase.
 7. [ ] M4 / I1–I9 + I12 — one authoritative checkpoint with persistent map, GPS, navigation and Arrival Engine; BE contracts before FE.
 8. [ ] I13 — BE suspension/bypass rules, then Participant FE handling; prove before live suspension controls.
-9. [ ] I10–I11 — expand proven gameplay to Signal and separate FinishPoint.
+9. [ ] I10–I11 — expand proven shared checkpoint gameplay to Signal and terminal FinishPoint, reusing I12 navigation/Arrival Engine; BE completes the Hunt only after required terminal activities resolve. Resolve I13 terminal suspension/fairness policy before implementing terminal suspension behavior.
 10. [ ] M5 / J — backend live state/minimal GPS, then shared Operations Map, suspension controls and HELP/PANIC.
 11. [ ] K — results and reward awarding; retain suspension fairness.
 12. [ ] M6 / I14 — later geographic gamification only after rules and operational gameplay are proven.
