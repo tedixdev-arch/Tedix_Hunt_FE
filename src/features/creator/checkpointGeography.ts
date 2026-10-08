@@ -1,3 +1,5 @@
+import type { FinishPoint } from './finishPoint.ts'
+
 export const MIN_RADIUS_METERS = 5
 export const MAX_RADIUS_METERS = 500
 export const DEFAULT_RADIUS_METERS = 5
@@ -11,6 +13,7 @@ export interface CheckpointPosition {
 }
 
 export interface CreatorGeographyConfiguration {
+  finishPoint?: FinishPoint
   normalCheckpointCount: number
   checkpointPositions: CheckpointPosition[]
 }

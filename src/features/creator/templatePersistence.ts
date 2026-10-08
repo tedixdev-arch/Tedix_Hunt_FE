@@ -1,3 +1,4 @@
+import { finishPointValidation } from './finishPoint.ts'
 import { ApiError } from '../../services/api/client.ts'
 import type { CreatorTemplate, CreatorTemplateContent, CreatorTemplatesApi } from '../../services/api/creatorTemplates.ts'
 import type { CheckpointDraft, CreatorGeographyConfiguration } from './checkpointGeography.ts'
@@ -12,6 +13,8 @@ export function templateContentEqual(current: CreatorTemplateContent, persisted:
 }
 
 export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'create' | 'createVersion'>, current: CreatorTemplateContent, persisted: CreatorTemplate | null): Promise<CreatorTemplate> {
+  const validation = finishPointValidation(current.configuration)
+  if (validation) throw new Error(validation)
   if (!persisted) return api.create({ ...current, version: 1 })
   if (templateContentEqual(current, persisted.content)) return persisted
   return api.createVersion(persisted.key, { ...current, key: persisted.key, version: persisted.version + 1 })
@@ -23,7 +26,7 @@ export function hydratePersistedGeography(configuration: CreatorGeographyConfigu
   routeSafety: Set<string>
 } {
   return {
-    checkpointDrafts: configuration.checkpointPositions.map(position => ({ ...position })),
+    checkpointDrafts: (configuration.checkpointPositions ?? []).map(position => ({ ...position })),
     // The current Template content contract stores positions, not Creator verification or route-safety confirmation.
     verifiedPositions: new Set(),
     routeSafety: new Set(),

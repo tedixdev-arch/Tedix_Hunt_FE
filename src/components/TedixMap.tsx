@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import type { Feature, Polygon } from 'geojson'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import type { FinishPoint } from '../features/creator/finishPoint'
 import { MapboxLocationSearch } from './MapboxLocationSearch'
 
 export type TedixMapCheckpoint = {
@@ -15,7 +16,7 @@ export type TedixMapCheckpoint = {
 }
 
 /** A geodesic polygon: distances are metres on the earth, independent of zoom. */
-export function checkpointRadius(point: TedixMapCheckpoint): Feature<Polygon> {
+export function checkpointRadius(point: Pick<TedixMapCheckpoint, 'latitude' | 'longitude' | 'radiusMeters' | 'selected'>): Feature<Polygon> {
   const latitude = point.latitude * Math.PI / 180
   const longitude = point.longitude * Math.PI / 180
   const distance = point.radiusMeters / 6371008.8
@@ -36,6 +37,7 @@ export type TedixMapProps = {
   mapStyle?: string
   /** Enable temporary location search; selection only moves the mounted map. */
   locationSearch?: boolean
+  finishPoint?: FinishPoint
   checkpoints?: TedixMapCheckpoint[]
   onMapClick?: (latitude: number, longitude: number) => void
   onCheckpointSelect?: (checkpointNumber: number) => void
@@ -50,6 +52,7 @@ export function TedixMap({
   className = '',
   locationSearch = false,
   checkpoints,
+  finishPoint,
   onMapClick,
   onCheckpointSelect,
 }: TedixMapProps) {
@@ -133,6 +136,33 @@ export function TedixMap({
       if (map.getSource(sourceId)) map.removeSource(sourceId)
     }
   }, [checkpoints, onCheckpointSelect, accessToken])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !finishPoint) return
+    const sourceId = 'tedix-finishpoint-radius'
+    const element = document.createElement('div')
+    element.textContent = '⚑'
+    element.setAttribute('aria-label', `FinishPoint: ${finishPoint.name}`)
+    element.className = 'flex h-12 w-12 items-center justify-center rounded-lg border-4 border-white bg-violet-700 text-2xl text-white shadow-lg'
+    element.onclick = event => event.stopPropagation()
+    const marker = new mapboxgl.Marker({ element }).setLngLat([finishPoint.longitude, finishPoint.latitude]).addTo(map)
+    const draw = () => {
+      if (map.getSource(sourceId)) return
+      map.addSource(sourceId, { type: 'geojson', data: checkpointRadius(finishPoint) })
+      map.addLayer({ id: `${sourceId}-fill`, type: 'fill', source: sourceId, paint: { 'fill-color': '#7c3aed', 'fill-opacity': .15 } })
+      map.addLayer({ id: `${sourceId}-line`, type: 'line', source: sourceId, paint: { 'line-color': '#7c3aed', 'line-width': 2 } })
+    }
+    if (map.isStyleLoaded()) draw()
+    map.on('style.load', draw)
+    return () => {
+      map.off('style.load', draw)
+      marker.remove()
+      if (mapRef.current !== map) return
+      for (const id of [`${sourceId}-line`, `${sourceId}-fill`]) if (map.getLayer(id)) map.removeLayer(id)
+      if (map.getSource(sourceId)) map.removeSource(sourceId)
+    }
+  }, [finishPoint, accessToken])
 
   return (
     <div className={`relative h-full min-h-[300px] w-full ${className}`}>
