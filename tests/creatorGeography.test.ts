@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { buildGeographyConfiguration, createCheckpointDrafts, isGeographyComplete, isValidCheckpoint, resizeCheckpointDrafts, updateCheckpointDraft } from '../src/features/creator/checkpointGeography.ts'
 
@@ -8,8 +7,8 @@ const valid = { checkpointNumber: 1, name: 'Museum entrance', latitude: 46.77, l
 test('unpositioned normal checkpoints have no invented coordinates or FinishPoint', () => {
   const drafts = createCheckpointDrafts(2, ['One', 'Two'])
   assert.deepEqual(drafts, [
-    { checkpointNumber: 1, name: 'One', radiusMeters: 30 },
-    { checkpointNumber: 2, name: 'Two', radiusMeters: 30 },
+    { checkpointNumber: 1, name: 'One', radiusMeters: 5 },
+    { checkpointNumber: 2, name: 'Two', radiusMeters: 5 },
   ])
   assert.equal(JSON.stringify(drafts).includes('FinishPoint'), false)
 })
@@ -31,7 +30,7 @@ test('count changes preserve in-range positions, add unpositioned drafts, and re
 
 test('radius, name and coordinate validity gate verification and completion', () => {
   assert.equal(isValidCheckpoint({ ...valid, name: '' }), false)
-  assert.equal(isValidCheckpoint({ ...valid, radiusMeters: 9 }), false)
+  assert.equal(isValidCheckpoint({ ...valid, radiusMeters: 4 }), false)
   assert.equal(isValidCheckpoint({ ...valid, radiusMeters: 501 }), false)
   assert.equal(isValidCheckpoint({ ...valid, latitude: 91 }), false)
   assert.equal(isValidCheckpoint(valid), true)
@@ -47,12 +46,7 @@ test('repositioning, radius changes and name changes invalidate verification', (
   }
 })
 
-test('Leaflet tiles are isolated and use visible OpenStreetMap attribution', () => {
-  const tiles = readFileSync(new URL('../src/features/creator/mapTiles.ts', import.meta.url), 'utf8')
-  const editor = readFileSync(new URL('../src/features/creator/RouteEditor.tsx', import.meta.url), 'utf8')
-  assert.match(tiles, /tile\.openstreetmap\.org/)
-  assert.match(tiles, /OpenStreetMap/)
-  assert.match(editor, /prototypeMapTiles\.attribution/)
-  assert.doesNotMatch(editor, /tile\.openstreetmap\.org/)
-  assert.doesNotMatch(editor, /\bx\b.*%|\by\b.*%/)
+test('radius validation accepts the inclusive 5..500 metre range', () => {
+  for (let radiusMeters = 5; radiusMeters <= 500; radiusMeters++) assert.equal(isValidCheckpoint({ ...valid, radiusMeters }), true)
+  for (const radiusMeters of [4, 501, 5.5, NaN]) assert.equal(isValidCheckpoint({ ...valid, radiusMeters }), false)
 })

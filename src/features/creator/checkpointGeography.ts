@@ -1,6 +1,6 @@
-export const MIN_RADIUS_METERS = 10
+export const MIN_RADIUS_METERS = 5
 export const MAX_RADIUS_METERS = 500
-export const DEFAULT_RADIUS_METERS = 30
+export const DEFAULT_RADIUS_METERS = 5
 
 export interface CheckpointPosition {
   checkpointNumber: number
@@ -54,7 +54,7 @@ export function isValidCheckpoint(draft: CheckpointDraft): draft is CheckpointPo
     && Number.isInteger(draft.radiusMeters) && draft.radiusMeters >= MIN_RADIUS_METERS && draft.radiusMeters <= MAX_RADIUS_METERS
 }
 
-// Only backend domain values cross the Template-content boundary; never Leaflet or viewport state.
+// Only backend domain values cross the Template-content boundary; never map-provider or viewport state.
 export function buildGeographyConfiguration(count: number, drafts: CheckpointDraft[]): CreatorGeographyConfiguration {
   return {
     normalCheckpointCount: count,
