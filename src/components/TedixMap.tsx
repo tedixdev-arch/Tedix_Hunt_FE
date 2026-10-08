@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { MapboxLocationSearch } from './MapboxLocationSearch'
 
 export type TedixMapProps = {
   initialLongitude: number
   initialLatitude: number
   initialZoom?: number
   mapStyle?: string
+  /** Enable temporary location search; selection only moves the mounted map. */
+  locationSearch?: boolean
   className?: string
 }
 
@@ -16,6 +19,7 @@ export function TedixMap({
   initialZoom = 12,
   mapStyle = 'mapbox://styles/mapbox/streets-v12',
   className = '',
+  locationSearch = false,
 }: TedixMapProps) {
   const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN?.trim()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -55,7 +59,8 @@ export function TedixMap({
   }, [mapStyle, accessToken])
 
   return (
-    <div className={`h-full min-h-[300px] w-full ${className}`}>
+    <div className={`relative h-full min-h-[300px] w-full ${className}`}>
+      {accessToken && locationSearch && <MapboxLocationSearch accessToken={accessToken} onSelect={({ center }) => mapRef.current?.flyTo({ center, zoom: 14 })} />}
       {accessToken ? (
         <div ref={containerRef} className="h-full min-h-[300px] w-full" aria-label="Map" />
       ) : (
