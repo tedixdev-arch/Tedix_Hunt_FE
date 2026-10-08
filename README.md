@@ -32,3 +32,30 @@ public/                Static assets served as-is (favicon, PWA icons)
 The app is installable and works offline via a generated service worker
 ([vite-plugin-pwa](https://vite-pwa-org.netlify.app/)). Manifest fields (name, icons, theme
 color, etc.) are configured in `vite.config.ts`.
+
+## Shared Mapbox foundation
+
+`src/components/TedixMap.tsx` provides geographic rendering and normal Mapbox pan/zoom.
+Set `VITE_MAPBOX_ACCESS_TOKEN` in your local environment (see `.env.example`) and restart
+Vite. Use a public token; Vite includes it in the browser bundle. Without a token,
+the component displays a configuration message.
+
+```tsx
+<TedixMap initialLongitude={23.59} initialLatitude={46.77} initialZoom={12} />
+```
+
+The container fills its parent with a 300px minimum height. Give the parent a height
+for a taller map, or use `className` for layout. Container size changes resize the map.
+`mapStyle` accepts a Mapbox style URL and can change without replacing the map.
+Camera props are initial values; rerenders preserve the user's camera.
+
+This foundation can later serve Creator HuntMapEditor, Creator/Admin/Organizer
+HuntMapPreview, Participant HuntGameMap, and Organizer/Supervisor/Admin LiveHuntMap.
+Those wrappers are not implemented here. Mapbox owns geographic presentation;
+TedixHunt owns game rules and runtime state, with PostgreSQL/backend authoritative.
+The future Participant runtime will keep one mounted game map per active Hunt
+session, even while navigation hides or covers it. This component adds no runtime
+navigation or game behavior and leaves the existing Leaflet editor in place.
+
+`npm test` runs the existing Node tests followed by mocked Mapbox component tests
+in Vitest/jsdom. These unit tests do not require a real token or network access.
