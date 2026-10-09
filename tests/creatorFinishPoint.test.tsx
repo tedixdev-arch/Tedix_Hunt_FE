@@ -9,7 +9,7 @@ vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: mocks }))
-vi.mock('../src/components/TedixMap', () => ({ TedixMap: ({ onMapClick }: any) => <button type="button" onClick={() => onMapClick(47, 24)}>Place map point</button> }))
+vi.mock('../src/components/TedixMap', () => ({ TedixMap: ({ onMapClick }: any) => onMapClick ? <button type="button" onClick={() => onMapClick(47, 24)}>Place map point</button> : <div aria-label="Read-only route map" /> }))
 vi.mock('../src/features/creator/RouteEditor', () => ({ RouteEditor: (props: any) => <button type="button" onClick={() => {
   props.onVerifiedChange(new Set([1])); props.onSafetyChange(new Set(['a', 'b', 'c', 'd', 'e', 'f']))
   props.onConfigurationChange({ normalCheckpointCount: 1, checkpointPositions: props.drafts })

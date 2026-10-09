@@ -2,16 +2,18 @@ import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { RouteEditor } from '../src/features/creator/RouteEditor'
-import { checkpointRadius } from '../src/components/TedixMap'
+import { checkpointRadius, TedixMap } from '../src/components/TedixMap'
 import { createCheckpointDrafts, type CheckpointDraft } from '../src/features/creator/checkpointGeography'
 
 const mocks = vi.hoisted(() => ({ maps: [] as any[], markers: [] as any[], configuration: vi.fn() }))
 vi.mock('mapbox-gl', () => ({ default: {
+  LngLatBounds: class { extend() { return this } },
   Map: class {
     handlers = new Map<string, Set<(...args: any[]) => void>>()
     sources = new Map<string, any>()
     layers = new Map<string, any>()
     flyTo = vi.fn()
+    fitBounds = vi.fn()
     remove = vi.fn()
     resize = vi.fn()
     constructor() { mocks.maps.push(this) }
@@ -162,5 +164,21 @@ test('restores checkpoint radii after the map style reloads', () => {
   act(() => map.emit('style.load'))
   expect(map.sources.get('tedix-checkpoint-radii').data.features).toHaveLength(1)
   expect(map.layers.size).toBe(2)
+  expect(mocks.maps).toHaveLength(1)
+})
+
+test('walking geometry draws on shared map, fits route, survives style reload and is removed when stale', () => {
+  const geometry = { type: 'LineString' as const, coordinates: [[23.59, 46.77], [23.64, 46.78]] }
+  act(() => root.render(<TedixMap initialLatitude={46.77} initialLongitude={23.59} walkingRoute={geometry} />))
+  const map = mocks.maps[0]
+  expect(map.sources.get('tedix-walking-route').data.geometry).toEqual(geometry)
+  expect(map.layers.get('tedix-walking-route').type).toBe('line')
+  expect(map.fitBounds).toHaveBeenCalledOnce()
+  map.sources.clear(); map.layers.clear()
+  act(() => map.emit('style.load'))
+  expect(map.sources.get('tedix-walking-route').data.geometry).toEqual(geometry)
+  act(() => root.render(<TedixMap initialLatitude={46.77} initialLongitude={23.59} />))
+  expect(map.sources.has('tedix-walking-route')).toBe(false)
+  expect(map.layers.has('tedix-walking-route')).toBe(false)
   expect(mocks.maps).toHaveLength(1)
 })
