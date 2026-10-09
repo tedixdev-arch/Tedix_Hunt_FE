@@ -70,7 +70,7 @@ test('Feature 6 hydration and saving preserve settings, checkpoints and immutabl
   expect(content.configuration.checkpointPositions).toEqual([checkpoint])
   expect(content.configuration.normalCheckpointCount).toBe(1)
   expect(content.configuration.customSetting).toBe('preserved')
-  expect(content.checkpoints).toEqual(record.content.checkpoints)
+  expect(content.checkpoints).toEqual([{ ...record.content.checkpoints[0] as object, checkpoint: 1, kind: 'hidden-rule', teamKind: 'scrambled-word' }])
   expect(content.scoring).toEqual(record.content.scoring)
   expect(record).toEqual(before)
   await click('Complete Hunt Features')
@@ -85,10 +85,11 @@ test('invalid FinishPoint blocks persistence and geographic validation', async (
   const validate = Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Run template validation')!
   expect(validate.disabled).toBe(true)
 })
-test('missing geographic FinishPoint is not defaulted on loading or draft save', async () => {
+test('missing geographic FinishPoint remains an incomplete draft without defaulted geography', async () => {
   delete record.content.configuration.finishPoint
   await render(); await verify(); await save()
-  expect(mocks.createVersion).not.toHaveBeenCalled()
+  expect(mocks.createVersion).toHaveBeenCalledTimes(1)
+  expect(mocks.createVersion.mock.calls[0][1].configuration).not.toHaveProperty('finishPoint')
   expect(container.textContent).toContain('Place one FinishPoint in Feature 6')
   await click('6.')
   expect((container.querySelector('input[type="number"][min="5"]') as HTMLInputElement).value).toBe('5')
@@ -103,4 +104,95 @@ test('legacy non-geographic drafts load and save without introducing geographic 
   expect(container.textContent).not.toContain('Place one FinishPoint in Feature 6')
   expect(mocks.createVersion).not.toHaveBeenCalled()
   expect(mocks.get).toHaveBeenCalledWith('trail')
+})
+
+async function selectGameplay(label: string, value: string) {
+  const labelElement = Array.from(container.querySelectorAll('label')).find(item => item.firstChild?.textContent === label)!
+  const select = labelElement.querySelector('select')!
+  expect(select, label).toBeDefined()
+  await act(async () => {
+    select.value = value
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
+
+test('FinishPoint uses shared gameplay choices and saves one unnumbered terminal with exact scoring', async () => {
+  const before = structuredClone(record)
+  await render(); await verify(); await click('6.')
+  expect(container.textContent).not.toContain('Multi-Stage Boss Challenge')
+  await selectGameplay('Navigation', 'decoded-route')
+  await selectGameplay('Personal Challenge', 'square')
+  await selectGameplay('Team Challenge', 'hypothesis')
+  await save()
+  const saved = mocks.createVersion.mock.calls[0][1]
+  expect(saved.checkpoints).toHaveLength(2)
+  expect(saved.checkpoints[0].checkpoint).toBe(1)
+  expect(saved.checkpoints[1]).toEqual({ role: 'terminal', navigationMode: 'decoded-route', kind: 'square', teamKind: 'hypothesis' })
+  expect(saved.checkpoints[1]).not.toHaveProperty('checkpoint')
+  expect(saved.checkpoints[1]).not.toHaveProperty('checkpointNumber')
+  expect(saved.configuration).toEqual(before.content.configuration)
+  expect(saved.scoring).toEqual(before.content.scoring)
+  expect(record).toEqual(before)
+})
+
+test('saved terminal gameplay reloads, edits preserve custom data, and exact saved version submits', async () => {
+  record.content.checkpoints = [
+    { role: 'terminal', kind: 'radial', teamKind: 'clue-synthesis', navigationMode: 'none', custom: { preserved: true } },
+    { checkpoint: 1, kind: 'square', teamKind: 'hypothesis', navigationMode: 'compass', custom: ['normal'] },
+  ]
+  record.content.scoring = { startingScore: 500, finishPointPuzzle: 250, firstAttemptAccuracyEligibleCheckpoints: [1], extra: 'kept' }
+  const original = structuredClone(record)
+  await render(); await verify(); await click('6.')
+  const selects = Array.from(container.querySelectorAll('section[aria-label="Checkpoint gameplay"] select')) as HTMLSelectElement[]
+  expect(selects.map(select => select.value)).toEqual(['none', 'radial', 'clue-synthesis'])
+  expect(container.querySelector('section[aria-label="FinishPoint scoring"]')?.textContent).toContain('250')
+  await selectGameplay('Personal Challenge', 'build-key'); await save()
+  const next = mocks.createVersion.mock.calls[0][1]
+  expect(next.checkpoints[0]).toEqual({ ...original.content.checkpoints[0] as object, kind: 'build-key' })
+  expect(next.checkpoints[1]).toEqual(original.content.checkpoints[1])
+  expect(next.scoring).toEqual(original.content.scoring)
+  await click('Preview full journey'); await click('Run template validation')
+  mocks.submit.mockImplementation(async () => ({ ...record, version: 4, content: next, status: 'submitted' }))
+  await click('Submit version to Admin')
+  expect(mocks.submit).toHaveBeenCalledWith('trail', 4)
+  expect(record).toEqual(original)
+})
+
+test('older geographic drafts can explicitly configure terminal without requiring either challenge', async () => {
+  await render(); await verify(); await click('6.')
+  await click('Configure FinishPoint gameplay'); await save()
+  const next = mocks.createVersion.mock.calls[0][1]
+  expect(next.checkpoints[1]).toEqual({ role: 'terminal' })
+  expect(next.configuration.normalCheckpointCount).toBe(1)
+  await click('Preview full journey'); await click('Run template validation')
+  expect(container.textContent).toContain('Validation passed')
+})
+
+test('normal checkpoint and FinishPoint expose identical supported activity options', async () => {
+  await render(); await click('3.')
+  const normal = Array.from(container.querySelectorAll('section[aria-label="Checkpoint gameplay"] option')).map(option => (option as HTMLOptionElement).value)
+  await click('6.')
+  const personal = Array.from(container.querySelectorAll('section[aria-label="Checkpoint gameplay"] select'))[1]
+  expect(Array.from(personal.querySelectorAll('option')).map(option => option.value)).toEqual(normal)
+})
+
+test('approved Template content is read-only and never normalized or saved', async () => {
+  record.status = 'approved'
+  const original = structuredClone(record)
+  await render()
+  expect(container.textContent).toContain('read-only')
+  expect(container.querySelector('section[aria-label="Checkpoint gameplay"]')).toBeNull()
+  expect(mocks.createVersion).not.toHaveBeenCalled()
+  expect(record).toEqual(original)
+})
+
+test('editing a normal checkpoint writes the same flat fields as FinishPoint', async () => {
+  await render(); await verify(); await click('3.')
+  await selectGameplay('Personal Challenge', 'identify-signal')
+  await click('6.'); await click('Configure FinishPoint gameplay'); await save()
+  const next = mocks.createVersion.mock.calls[0][1]
+  expect(next.checkpoints[0].kind).toBe('identify-signal')
+  expect(next.checkpoints[0].checkpoint).toBe(1)
+  expect(next.checkpoints[1]).toEqual({ role: 'terminal' })
+  expect(next.scoring).toEqual(record.content.scoring)
 })
