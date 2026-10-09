@@ -1,3 +1,4 @@
+import { gameplayValidation } from './checkpointGameplay.ts'
 import { finishPointValidation } from './finishPoint.ts'
 import { ApiError } from '../../services/api/client.ts'
 import type { CreatorTemplate, CreatorTemplateContent, CreatorTemplatesApi } from '../../services/api/creatorTemplates.ts'
@@ -13,7 +14,7 @@ export function templateContentEqual(current: CreatorTemplateContent, persisted:
 }
 
 export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'create' | 'createVersion'>, current: CreatorTemplateContent, persisted: CreatorTemplate | null): Promise<CreatorTemplate> {
-  const validation = finishPointValidation(current.configuration)
+  const validation = finishPointValidation(current.configuration) || gameplayValidation(current)
   if (validation) throw new Error(validation)
   if (!persisted) return api.create({ ...current, version: 1 })
   if (templateContentEqual(current, persisted.content)) return persisted
@@ -43,6 +44,6 @@ export function creatorTemplateError(error: unknown, operation: 'save' | 'submit
     : 'This Template cannot be submitted in its current lifecycle state.'
   if (error.status === 400) return operation === 'save'
     ? 'The Template content or key is invalid. Check the required fields and try again.'
-    : 'The latest saved version could not be submitted. Refresh and try again.'
+    : 'The latest saved version could not be submitted. Check FinishPoint geography and gameplay, supported activity types, and normal checkpoint numbering; save the corrected version and retry.'
   return error.message || `The Template could not be ${operation === 'load' ? 'loaded' : operation === 'save' ? 'saved' : 'submitted'}. Please try again.`
 }
