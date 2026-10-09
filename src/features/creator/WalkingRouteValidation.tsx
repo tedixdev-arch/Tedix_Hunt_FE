@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { TedixMap } from '../../components/TedixMap'
-import { isValidCheckpoint, type CheckpointDraft } from './checkpointGeography'
+import { isValidCheckpoint, type CheckpointDraft, type CheckpointPosition } from './checkpointGeography'
 import { isValidFinishPoint } from './finishPoint'
 import { calculateWalkingRoute, walkingDestinations, walkingDistance, walkingDuration, type WalkingRoute, type RouteDestination } from './walkingRoute'
 
@@ -24,7 +24,7 @@ export function WalkingRouteValidation({ configuration }: { configuration: Recor
   }, [identity])
   const current = state?.identity === identity ? state : undefined
   const route = current?.route
-  const points = Array.isArray(configuration.checkpointPositions) ? (configuration.checkpointPositions as CheckpointDraft[]).filter(point => point && typeof point.name === 'string' && isValidCheckpoint(point)) : []
+  const points = Array.isArray(configuration.checkpointPositions) ? (configuration.checkpointPositions as CheckpointDraft[]).filter((point): point is CheckpointPosition => !!point && typeof point.name === 'string' && isValidCheckpoint(point)) : []
   const finish = isValidFinishPoint(configuration.finishPoint) ? configuration.finishPoint : undefined
 
   async function validate() {
