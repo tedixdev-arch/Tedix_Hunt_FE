@@ -196,3 +196,71 @@ test('editing a normal checkpoint writes the same flat fields as FinishPoint', a
   expect(next.checkpoints[1]).toEqual({ role: 'terminal' })
   expect(next.scoring).toEqual(record.content.scoring)
 })
+
+for (const [featureNumber, gameplayLabel, fieldName, approvedType, challenge] of [
+  ['3.', 'Personal Challenge', 'kind', 'radial', true],
+  ['4.', 'Team Challenge', 'teamKind', 'clue-synthesis', true],
+  ['5.', 'Navigation', 'navigationMode', 'signal-strength', false],
+] as const) {
+  test(`${gameplayLabel} retains prototype controls without changing saved gameplay`, async () => {
+    record.content.checkpoints = [
+      { checkpoint: 1, kind: 'square', teamKind: 'hypothesis', navigationMode: 'compass', custom: { preserved: true } },
+      { role: 'terminal', kind: 'build-key', teamKind: 'assemble-machine', navigationMode: 'none', custom: ['finish'] },
+    ]
+    const original = structuredClone(record)
+    await render(); await verify(); await click(featureNumber)
+    expect(container.textContent).toContain('Approved component')
+    expect(container.textContent).toContain('Create new')
+    expect(container.textContent).toContain('Creator note')
+    expect(container.querySelector('[aria-label="Approved Participant preview"]')).not.toBeNull()
+    await selectGameplay(gameplayLabel, approvedType)
+    const approvedPreview = container.querySelector('[aria-label="Approved Participant preview"]')!.textContent
+    await click('Create new')
+    const authoring = container.querySelector('[aria-label="Prototype component authoring"]')!
+    expect(authoring.textContent).toContain('Prototype-only · not yet persistable')
+    expect(authoring.textContent).toContain('not saved or submitted')
+    expect(authoring.textContent).toContain('Component name')
+    expect(authoring.textContent).toContain('Participant instructions')
+    for (const label of ['Challenge format', 'Correct answer', 'Difficulty', 'Options or pairs', 'Hint', 'Solution']) {
+      expect(authoring.textContent?.includes(label)).toBe(challenge)
+    }
+    const input = authoring.querySelector('input')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Unsupported custom challenge')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      const textarea = authoring.querySelector('textarea')!
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, 'Prototype instructions')
+      textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(container.querySelector('[aria-label="Prototype Participant preview"]')?.textContent).toContain('Unsupported custom challenge')
+    // Saving from the prototype tab still persists only the explicitly selected supported choice.
+    await save()
+    const saved = mocks.createVersion.mock.calls[0][1]
+    expect(saved.checkpoints).toEqual([
+      { ...original.content.checkpoints[0] as object, [fieldName]: approvedType }, original.content.checkpoints[1],
+    ])
+    expect(saved.configuration).toEqual(original.content.configuration)
+    expect(saved.scoring).toEqual(original.content.scoring)
+    expect(JSON.stringify(saved)).not.toContain('Unsupported custom challenge')
+    expect(JSON.stringify(saved)).not.toContain('Prototype instructions')
+    expect(record).toEqual(original)
+    await click(featureNumber); await click('Approved component')
+    expect(container.querySelector('[aria-label="Approved Participant preview"]')?.textContent).toBe(approvedPreview)
+    await save()
+    expect(mocks.createVersion).toHaveBeenCalledTimes(1)
+  })
+}
+
+test('prototype authoring alone does not create an immutable version or overwrite custom data', async () => {
+  record.content.checkpoints = [{ checkpoint: 1, kind: 'square', custom: { prompt: 'Saved custom prompt' } }, { role: 'terminal', custom: 'saved' }]
+  const original = structuredClone(record)
+  await render(); await verify(); await click('3.'); await click('Create new')
+  const input = container.querySelector('[aria-label="Prototype component authoring"] input')!
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Not persisted')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await save()
+  expect(mocks.createVersion).not.toHaveBeenCalled()
+  expect(record).toEqual(original)
+})

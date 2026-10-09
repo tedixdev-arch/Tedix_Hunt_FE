@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { organizerFeatures, signalNormalCheckpointNames } from '../data/organizerTemplates'
 import { OrganizerHeader } from './OrganizerFlow'
-import { CheckpointGameplayEditor, GameplayScoring } from '../features/creator/CheckpointGameplayEditor'
+import { CheckpointGameplayEditor, GameplayScoring, gameplayPresentation } from '../features/creator/CheckpointGameplayEditor'
 import { createNormalGameplay, hydrateGameplay, serializeGameplay, gameplayValidation, type CheckpointGameplay } from '../features/creator/checkpointGameplay'
 import { FinishPointEditor } from '../features/creator/FinishPointEditor'
 import { finishPointValidation, type FinishPoint, type FinishPointDraft } from '../features/creator/finishPoint'
@@ -50,10 +50,41 @@ function CheckpointCountEditor({ count, onChange }: { count: number; onChange: (
 
 function CheckpointEditor({ checkpointCount, featureId, gameplay, onChange }: { checkpointCount: number; featureId: string; gameplay: CheckpointGameplay[]; onChange: (value: CheckpointGameplay[]) => void }) {
   const [checkpoint, setCheckpoint] = useState(0)
+  const [source, setSource] = useState<'approved' | 'new'>('approved')
   const index = Math.min(checkpoint, checkpointCount - 1)
   const checkpointNames = normalCheckpointNames(checkpointCount)
   const gameplayField = featureId === 'personal' ? 'kind' : featureId === 'team' ? 'teamKind' : 'navigationMode'
-  return <div className="mt-5"><div className="flex gap-2 overflow-x-auto pb-2" aria-label="Checkpoint selector">{checkpointNames.map((name, number) => <button key={name} title={name} type="button" onClick={() => setCheckpoint(number)} className={`grid h-11 min-w-11 place-items-center rounded-full border text-sm font-bold ${index === number ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-300 bg-white'}`}>{number + 1}</button>)}</div><p className="mt-2 text-sm font-bold">{checkpointNames[index]}</p><CheckpointGameplayEditor fields={[gameplayField]} value={gameplay[index] ?? {}} onChange={value => onChange(Array.from({ length: Math.max(checkpointCount, gameplay.length) }, (_, number) => number === index ? value : gameplay[number] ?? {}))} /></div>
+  const template = gameplayPresentation(gameplayField, gameplay[index]?.[gameplayField])
+  return <div className="mt-5">
+    <div className="flex gap-2 overflow-x-auto pb-2" aria-label="Checkpoint selector">{checkpointNames.map((name, number) => <button key={name} title={name} type="button" onClick={() => setCheckpoint(number)} className={`grid h-11 min-w-11 place-items-center rounded-full border text-sm font-bold ${index === number ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-300 bg-white'}`}>{number + 1}</button>)}</div>
+    <p className="mt-2 text-sm font-bold">{checkpointNames[index]}</p>
+    <div className="mt-4 flex rounded-xl bg-slate-100 p-1"><button type="button" aria-pressed={source === 'approved'} onClick={() => setSource('approved')} className={`min-h-10 flex-1 rounded-lg text-sm font-bold ${source === 'approved' ? 'bg-white shadow' : ''}`}>Approved component</button><button type="button" aria-pressed={source === 'new'} onClick={() => setSource('new')} className={`min-h-10 flex-1 rounded-lg text-sm font-bold ${source === 'new' ? 'bg-white shadow' : ''}`}>Create new</button></div>
+    {source === 'approved' ? <>
+      <CheckpointGameplayEditor fields={[gameplayField]} value={gameplay[index] ?? {}} onChange={value => onChange(Array.from({ length: Math.max(checkpointCount, gameplay.length) }, (_, number) => number === index ? value : gameplay[number] ?? {}))} />
+      <div className="mt-5 grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase text-slate-400">Creator note</p><p className="mt-2 text-sm leading-6">{template.note}</p></div><div className="rounded-xl bg-[#031b14] p-4 text-white" aria-label="Approved Participant preview"><div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-emerald-300"><span>Tedixhunt</span><span>Participant preview</span></div><p className="mt-4 text-xs font-bold uppercase text-emerald-300">{checkpointNames[index]}</p><p className="mt-2 text-xl font-bold">{template.name}</p><p className="mt-2 text-sm text-slate-200">{template.example}</p></div></div>
+    </> : <PrototypeComponentEditor key={`${featureId}-${index}`} isChallenge={featureId !== 'navigation'} checkpointName={checkpointNames[index]} />}
+  </div>
+}
+
+function PrototypeComponentEditor({ isChallenge, checkpointName }: { isChallenge: boolean; checkpointName: string }) {
+  const [draft, setDraft] = useState({ name: '', instructions: '', format: 'Single choice · up to 3 options', answer: '', difficulty: 'Easy', options: '', hint: '', solution: '' })
+  const change = (key: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [key]: value }))
+  return <section className="mt-4 space-y-4" aria-label="Prototype component authoring">
+    <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">Prototype-only · not yet persistable. These custom fields are for trying ideas; they are not saved or submitted. Saving keeps the configured approved gameplay. Return to Approved component to change saved gameplay.</p>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <label className="text-sm font-bold sm:col-span-2">Component name<input className={field} value={draft.name} onChange={event => change('name', event.target.value)} /></label>
+      {isChallenge && <label className="text-sm font-bold sm:col-span-2">Challenge format<select className={field} value={draft.format} onChange={event => change('format', event.target.value)}>{['Single choice · up to 3 options', 'Multiple choice · up to 3 options', 'True / False', 'Match the pairs · up to 3 pairs'].map(format => <option key={format}>{format}</option>)}</select></label>}
+      <label className="text-sm font-bold sm:col-span-2">Participant instructions<textarea className={`${field} min-h-20 py-3`} value={draft.instructions} onChange={event => change('instructions', event.target.value)} /></label>
+      {isChallenge && <>
+        <label className="text-sm font-bold">Correct answer<input className={field} value={draft.answer} onChange={event => change('answer', event.target.value)} /></label>
+        <label className="text-sm font-bold">Difficulty<select className={field} value={draft.difficulty} onChange={event => change('difficulty', event.target.value)}>{['Easy', 'Medium', 'Advanced'].map(difficulty => <option key={difficulty}>{difficulty}</option>)}</select></label>
+        <label className="text-sm font-bold sm:col-span-2">Options or pairs<textarea className={`${field} min-h-20 py-3`} value={draft.options} onChange={event => change('options', event.target.value)} /></label>
+        <label className="text-sm font-bold">Hint<textarea className={`${field} min-h-20 py-3`} value={draft.hint} onChange={event => change('hint', event.target.value)} /></label>
+        <label className="text-sm font-bold">Solution<textarea className={`${field} min-h-20 py-3`} value={draft.solution} onChange={event => change('solution', event.target.value)} /></label>
+      </>}
+    </div>
+    <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase text-slate-400">Creator note</p><p className="mt-2 text-sm">Custom authoring is a prototype. Draft fields are temporary and reset when you leave this editor.</p></div><div className="rounded-xl bg-[#031b14] p-4 text-white" aria-label="Prototype Participant preview"><p className="text-xs font-bold uppercase text-emerald-300">Participant preview · prototype-only</p><p className="mt-4 text-xs font-bold uppercase text-emerald-300">{checkpointName}</p><p className="mt-2 text-xl font-bold">{draft.name || 'New component'}</p><p className="mt-2 text-sm text-slate-200">{draft.instructions || 'Try participant instructions here.'}</p></div></div>
+  </section>
 }
 
 function RewardBoundary() {

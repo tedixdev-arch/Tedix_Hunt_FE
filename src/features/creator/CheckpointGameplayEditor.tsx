@@ -10,6 +10,13 @@ function optionLabel(field: GameplayField, value: string) {
   return signalFeatureDefaults[field === 'kind' ? 'personal' : 'team'][index]?.name ?? value
 }
 
+export function gameplayPresentation(field: GameplayField, value?: string) {
+  if (!value) return { name: 'No activity configured', note: 'This activity is optional.', example: 'No participant activity is configured.' }
+  const name = optionLabel(field, value)
+  const template = signalFeatureDefaults[field === 'kind' ? 'personal' : field === 'teamKind' ? 'team' : 'navigation'].find(item => item.name === name)
+  return template ?? { name, note: 'This checkpoint has no onward navigation.', example: 'No navigation instructions are shown.' }
+}
+
 export function CheckpointGameplayEditor({ value, onChange, fields = gameplayFields }: {
   value: CheckpointGameplay; onChange: (value: CheckpointGameplay) => void; fields?: GameplayField[]
 }) {
