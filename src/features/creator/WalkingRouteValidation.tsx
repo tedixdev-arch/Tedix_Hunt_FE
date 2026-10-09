@@ -1,8 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { TedixMap } from '../../components/TedixMap'
 import { isValidCheckpoint, type CheckpointDraft, type CheckpointPosition } from './checkpointGeography'
 import { isValidFinishPoint } from './finishPoint'
 import { calculateWalkingRoute, walkingDestinations, walkingDistance, walkingDuration, type WalkingRoute, type RouteDestination } from './walkingRoute'
+
+
+/** Mount the inspection and its Mapbox resources only while explicitly open. */
+export function WalkingRouteInspection({ configuration }: { configuration: Record<string, unknown> }) {
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
+  return <div className="mt-5">
+    <button type="button" aria-expanded={open} aria-controls={open ? panelId : undefined} onClick={() => setOpen(current => !current)} className="min-h-12 rounded-xl border border-slate-300 px-4 font-bold">{open ? 'Close inspection' : 'Inspect walking route'}</button>
+    {open && <div id={panelId}><WalkingRouteValidation configuration={configuration} /></div>}
+  </div>
+}
 
 /** Derived inspection only: no Template writes and no gameplay or safety transitions. */
 export function WalkingRouteValidation({ configuration }: { configuration: Record<string, unknown> }) {

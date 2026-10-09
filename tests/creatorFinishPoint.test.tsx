@@ -264,3 +264,22 @@ test('prototype authoring alone does not create an immutable version or overwrit
   expect(mocks.createVersion).not.toHaveBeenCalled()
   expect(record).toEqual(original)
 })
+
+test('walking inspection entry is in Review and opens separately from checkpoint placement', async () => {
+  const before = structuredClone(record)
+  await render()
+  const review = container.querySelector('#creator-review')!
+  expect(review.querySelector('[aria-label="Read-only route map"]')).toBeNull()
+  expect([...review.querySelectorAll('button')].some(button => button.textContent === 'Inspect walking route')).toBe(true)
+  await click('2.')
+  expect(container.textContent).toContain('Verify saved route')
+  await click('Inspect walking route')
+  expect(review.querySelectorAll('[aria-label="Read-only route map"]')).toHaveLength(1)
+  expect(container.textContent).toContain('Verify saved route')
+  await click('Close inspection')
+  expect(review.querySelector('[aria-label="Read-only route map"]')).toBeNull()
+  await click('6.')
+  expect(container.textContent).toContain('Place map point')
+  expect(record).toEqual(before)
+  expect(mocks.createVersion).not.toHaveBeenCalled()
+})
