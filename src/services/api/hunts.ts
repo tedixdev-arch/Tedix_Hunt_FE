@@ -15,7 +15,10 @@ export interface HuntTemplateSnapshot {
   version: number;
   displayName: string;
   theme: string;
-  checkpointNames: string[];
+  checkpointNames?: string[];
+  /** Complete persisted Template content is returned by the existing Hunt API.
+   * Legacy snapshots may omit configuration; never fill it from the catalog. */
+  configuration?: Record<string, unknown> | null;
 }
 
 export interface Hunt {

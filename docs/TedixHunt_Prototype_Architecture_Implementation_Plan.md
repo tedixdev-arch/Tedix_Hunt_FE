@@ -631,10 +631,12 @@ Still pending:
 ---
 
 ### D8. Organizer geographic preview — Mapbox M2
-Status: ⬜ Not started
-- [ ] Reuse HuntMapPreview from G3 to inspect the approved version during selection and the exact Hunt snapshot after creation.
-- [ ] Show normal checkpoints, separate FinishPoint, radii and available route estimates; handle absent legacy geography explicitly.
-- [ ] Keep fixed Template geography read-only for Organizer. Portable/repositionable Templates require a separate future product rule.
+Status: 🟡 Partial FE implementation; deployed E2E unverified
+- [ ] Approved-version geography during selection is blocked: `GET /api/hunt-templates` exposes metadata only. Independent inspection browsing explains unavailable content without selecting/saving a Template or creating a Hunt.
+- [x] Reuse HuntMapPreview from G3 for the exact persisted Hunt snapshot after creation, through existing Hunt GET/save responses; never substitute a newer catalog version.
+- [x] Show normal checkpoints, separate FinishPoint, radii and optional explicit walking estimates for valid snapshots; handle absent/invalid legacy geography explicitly.
+- [x] Keep fixed Template geography read-only in inspection. Portable/repositionable Templates require a separate future product rule.
+See [Organizer geographic preview](Organizer_Geographic_Preview.md) for authority sources, the missing approved-content contract and verification limits.
 
 ### D9. Allocate Supervisors — Mapbox M3 frontend
 Status: ⬜ Not started; depends on B6 backend deployment
