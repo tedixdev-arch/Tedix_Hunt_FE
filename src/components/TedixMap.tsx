@@ -38,6 +38,8 @@ export type TedixMapProps = {
   /** Enable temporary location search; selection only moves the mounted map. */
   locationSearch?: boolean
   finishPoint?: FinishPoint
+  /** Move the existing camera to a read-only destination without recreating the map. */
+  cameraTarget?: Pick<FinishPoint, 'latitude' | 'longitude'>
   walkingRoute?: LineString
   checkpoints?: TedixMapCheckpoint[]
   onMapClick?: (latitude: number, longitude: number) => void
@@ -55,6 +57,7 @@ export function TedixMap({
   checkpoints,
   finishPoint,
   walkingRoute,
+  cameraTarget,
   onMapClick,
   onCheckpointSelect,
 }: TedixMapProps) {
@@ -96,6 +99,10 @@ export function TedixMap({
       currentStyle.current = mapStyle
     }
   }, [mapStyle, accessToken])
+
+  useEffect(() => {
+    if (cameraTarget) mapRef.current?.flyTo({ center: [cameraTarget.longitude, cameraTarget.latitude], zoom: 16 })
+  }, [cameraTarget?.latitude, cameraTarget?.longitude, accessToken])
 
   useEffect(() => {
     const map = mapRef.current

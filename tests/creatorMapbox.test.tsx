@@ -182,3 +182,13 @@ test('walking geometry draws on shared map, fits route, survives style reload an
   expect(map.layers.has('tedix-walking-route')).toBe(false)
   expect(mocks.maps).toHaveLength(1)
 })
+
+test('read-only preview camera follows checkpoint destinations on the same Mapbox instance', () => {
+  act(() => root.render(<TedixMap initialLatitude={46.77} initialLongitude={23.59} cameraTarget={{ latitude: 46.77, longitude: 23.59 }} />))
+  const map = mocks.maps[0]
+  expect(map.flyTo).toHaveBeenLastCalledWith({ center: [23.59, 46.77], zoom: 16 })
+  act(() => root.render(<TedixMap initialLatitude={47} initialLongitude={24} cameraTarget={{ latitude: 47, longitude: 24 }} />))
+  expect(map.flyTo).toHaveBeenLastCalledWith({ center: [24, 47], zoom: 16 })
+  expect(mocks.maps).toHaveLength(1)
+  expect(map.remove).not.toHaveBeenCalled()
+})
