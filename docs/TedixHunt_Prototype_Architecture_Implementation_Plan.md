@@ -631,12 +631,17 @@ Still pending:
 ---
 
 ### D8. Organizer geographic preview — Mapbox M2
-Status: 🟡 Partial FE implementation; deployed E2E unverified
-- [ ] Approved-version geography during selection is blocked: `GET /api/hunt-templates` exposes metadata only. Independent inspection browsing explains unavailable content without selecting/saving a Template or creating a Hunt.
+Status: ✅ FE implementation complete; deployed authenticated/Mapbox E2E unverified
+- [x] Pre-creation approved-version geography uses authenticated `GET /api/hunt-templates/:key/geography` (merged BE #63). Independent inspection compares exact catalog key/version before rendering; mismatches require explicit catalog refresh/reinspection, never silent version substitution.
+- [x] Loading, retry, 401/404/409, missing/partial legacy geography, rapid switching, stale responses and close/reopen are covered; close/switch/unmount cancel requests and clean up Mapbox resources.
 - [x] Reuse HuntMapPreview from G3 for the exact persisted Hunt snapshot after creation, through existing Hunt GET/save responses; never substitute a newer catalog version.
 - [x] Show normal checkpoints, separate FinishPoint, radii and optional explicit walking estimates for valid snapshots; handle absent/invalid legacy geography explicitly.
 - [x] Keep fixed Template geography read-only in inspection. Portable/repositionable Templates require a separate future product rule.
-See [Organizer geographic preview](Organizer_Geographic_Preview.md) for authority sources, the missing approved-content contract and verification limits.
+Validation: `npm test` passed (30 Node test files; 8 Vitest files / 138 tests), `npm run typecheck`, `npm run build` and `git diff --check` passed. Build retains the existing large-chunk warning. Existing Admin G3 and Organizer Quick Setup regressions pass. Deployed E2E verification remains separate from implementation completion.
+See [Organizer geographic preview](Organizer_Geographic_Preview.md) for authority sources and verification limits.
+
+#### Personal Hunt — deferred
+Organizer may eventually create a Hunt without selecting an approved Template. Reuse the existing checkpoint engine, FinishPoint, navigation and rewards; no second gameplay engine. Participant runtime must consume the persisted Hunt configuration without depending on its Template origin. Organizer-created content must pass backend publish-readiness validation. This is a future architecture note only; no Personal Hunt implementation is included.
 
 ### D9. Allocate Supervisors — Mapbox M3 frontend
 Status: ⬜ Not started; depends on B6 backend deployment

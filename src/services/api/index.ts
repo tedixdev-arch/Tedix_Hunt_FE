@@ -27,7 +27,7 @@ export type { HuntAccessResolution } from './huntAccess.ts';
 export { HuntContextsApi, huntContextsApi } from './huntContexts.ts';
 export type { HuntContext, HuntContextsResponse } from './huntContexts.ts';
 export { HuntTemplatesApi, huntTemplatesApi } from './huntTemplates.ts';
-export type { HuntTemplateMetadata } from './huntTemplates.ts';
+export type { HuntTemplateMetadata, HuntTemplateGeography, HuntTemplateGeographicPoint } from './huntTemplates.ts';
 export { CreatorTemplatesApi, creatorTemplatesApi } from './creatorTemplates.ts';
 export type { CreatorTemplate, CreatorTemplateContent, CreatorTemplateStatus } from './creatorTemplates.ts';
 export { AdminTemplateReviewsApi, adminTemplateReviewsApi } from './adminTemplateReviews.ts';

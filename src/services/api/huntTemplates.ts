@@ -7,6 +7,24 @@ export interface HuntTemplateMetadata {
   theme: string;
 }
 
+/** BE #63: saved fields are optional for legacy/partial approved geography. */
+export interface HuntTemplateGeographicPoint {
+  name?: string;
+  latitude?: number;
+  longitude?: number;
+  radiusMeters?: number;
+}
+
+export interface HuntTemplateGeography {
+  key: string;
+  version: number;
+  configuration: {
+    normalCheckpointCount?: number;
+    checkpointPositions?: (HuntTemplateGeographicPoint & { checkpointNumber?: number })[];
+    finishPoint?: HuntTemplateGeographicPoint;
+  };
+}
+
 export class HuntTemplatesApi {
   private readonly client: ApiClient;
 
@@ -16,6 +34,10 @@ export class HuntTemplatesApi {
 
   listHuntTemplates(): Promise<HuntTemplateMetadata[]> {
     return this.client.get<HuntTemplateMetadata[]>('/api/hunt-templates');
+  }
+
+  getApprovedGeography(key: string, signal?: AbortSignal): Promise<HuntTemplateGeography> {
+    return this.client.get<HuntTemplateGeography>(`/api/hunt-templates/${encodeURIComponent(key)}/geography`, { signal });
   }
 }
 
