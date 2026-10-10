@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import type { Feature, Polygon, LineString } from 'geojson'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -40,6 +40,8 @@ export type TedixMapProps = {
   finishPoint?: FinishPoint
   /** Move the existing camera to a read-only destination without recreating the map. */
   cameraTarget?: Pick<FinishPoint, 'latitude' | 'longitude'>
+  /** Dashed straight-line overview; never a directions estimate. */
+  routeOverview?: LineString
   walkingRoute?: LineString
   checkpoints?: TedixMapCheckpoint[]
   onMapClick?: (latitude: number, longitude: number) => void
@@ -57,11 +59,14 @@ export function TedixMap({
   checkpoints,
   finishPoint,
   walkingRoute,
+  routeOverview,
   cameraTarget,
   onMapClick,
   onCheckpointSelect,
 }: TedixMapProps) {
   const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN?.trim()
+  const [mapError, setMapError] = useState('')
+  const [mapLoading, setMapLoading] = useState(true)
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const initialOptions = useRef({
@@ -76,17 +81,25 @@ export function TedixMap({
   useEffect(() => {
     if (!accessToken || !containerRef.current) return
 
-    const map = new mapboxgl.Map({
+    setMapError(''); setMapLoading(true)
+    let map: mapboxgl.Map
+    try { map = new mapboxgl.Map({
       container: containerRef.current,
       accessToken,
       ...initialOptions.current,
-    })
+    }) } catch { setMapError('Map unavailable. Check browser WebGL support and Mapbox configuration.'); setMapLoading(false); return }
+    const failed = () => { setMapError('Map could not load. Check the Mapbox token and network access. Saved stop details remain available.'); setMapLoading(false) }
+    const loaded = () => { setMapLoading(false); setMapError('') }
+    map.on?.('error', failed)
+    map.on?.('load', loaded)
     mapRef.current = map
     currentStyle.current = initialOptions.current.style
     const observer = new ResizeObserver(() => map.resize())
     observer.observe(containerRef.current)
 
     return () => {
+      map.off?.('error', failed)
+      map.off?.('load', loaded)
       observer.disconnect()
       map.remove()
       mapRef.current = null
@@ -195,8 +208,32 @@ export function TedixMap({
     }
   }, [walkingRoute, accessToken])
 
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !routeOverview) return
+    const id = 'tedix-route-overview'
+    const draw = () => {
+      if (map.getSource(id)) return
+      map.addSource(id, { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: routeOverview } })
+      map.addLayer({ id, type: 'line', source: id, paint: { 'line-color': '#64748b', 'line-width': 3, 'line-dasharray': [2, 2] } })
+    }
+    if (map.isStyleLoaded()) draw()
+    map.on('style.load', draw)
+    const bounds = new mapboxgl.LngLatBounds()
+    routeOverview.coordinates.forEach(point => bounds.extend([point[0], point[1]]))
+    map.fitBounds(bounds, { padding: 55, maxZoom: 16 })
+    return () => {
+      map.off('style.load', draw)
+      if (mapRef.current !== map) return
+      if (map.getLayer(id)) map.removeLayer(id)
+      if (map.getSource(id)) map.removeSource(id)
+    }
+  }, [routeOverview, accessToken])
+
   return (
     <div className={`relative h-full min-h-[300px] w-full ${className}`}>
+      {accessToken && mapLoading && !mapError && <p role="status" className="absolute left-2 top-2 z-10 rounded-lg bg-white p-2 text-sm">Loading map…</p>}
+      {mapError && <p role="alert" className="absolute left-2 right-2 top-2 z-10 rounded-lg bg-white p-3 text-sm text-red-700">{mapError}</p>}
       {accessToken && locationSearch && <MapboxLocationSearch accessToken={accessToken} onSelect={({ center }) => mapRef.current?.flyTo({ center, zoom: 14 })} />}
       {accessToken ? (
         <div ref={containerRef} className="h-full min-h-[300px] w-full" aria-label="Map" />

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { HuntMapInspection } from '../components/HuntMapPreview'
 import { AdminShell } from './AdminConsole.tsx'
 import { adminTemplateReviewsApi, type AdminTemplateReview } from '../services/api/index.ts'
 
@@ -56,7 +57,7 @@ export function AdminTemplateReviewDetailPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const load = useCallback(async () => {
-    setLoading(true); setError(''); setReview(null)
+    setLoading(true); setError(''); setReview(null); setResult(null); setChecked(new Set())
     try { setReview(await adminTemplateReviewsApi.get(key)) }
     catch (cause) { setError(message(cause)) }
     finally { setLoading(false) }
@@ -85,14 +86,14 @@ export function AdminTemplateReviewDetailPage() {
 
   // The review API exposes the exact version pinned by submitted_version as version.
   const configuration = review.content.configuration
-  const positions = configuration.checkpointPositions ?? []
+  const positions = Array.isArray(configuration.checkpointPositions) ? configuration.checkpointPositions : []
   const duration = configuration.durationMinutes
   const additionalContent = Object.fromEntries(Object.entries(review.content).filter(([field]) => !['key', 'version', 'displayName', 'theme', 'mission', 'configuration', 'checkpoints', 'scoring'].includes(field)))
   return <AdminShell active="templates"><div className="mt-6"><Link className="text-sm font-bold text-slate-500" to="/admin/templates">← Template Reviews</Link><p className="mt-5 text-xs font-semibold uppercase tracking-wide text-amber-700">Awaiting review</p><h2 className="mt-2 text-3xl font-bold">{review.content.displayName}</h2><p className="mt-2 text-slate-600">{review.creator.name} ({review.creator.email}) · {review.content.theme} · Submitted version {review.version}</p></div>
     {error && <p className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-900" role="alert">{error}</p>}
-    <section className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]"><div className="space-y-4">
+    <section className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]"><div className="min-w-0 space-y-4">
       <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Template summary</h3><dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3"><div><dt className="text-slate-500">Version under review</dt><dd className="mt-1 font-bold">{review.version}</dd></div><div><dt className="text-slate-500">Duration</dt><dd className="mt-1 font-bold">{duration == null ? '—' : `${String(duration)} minutes`}</dd></div><div><dt className="text-slate-500">Checkpoints</dt><dd className="mt-1 font-bold">{configuration.normalCheckpointCount}</dd></div></dl><p className="mt-5 text-sm text-slate-600">{review.content.mission}</p></article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Fixed route and safety</h3><p className="mt-2 text-sm text-slate-500">Read-only persisted checkpoint geography</p><div className="mt-4 space-y-2">{positions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm">No checkpoint positions were submitted.</p> : positions.map(position => <div className="grid gap-1 rounded-xl border border-slate-200 p-4 text-sm sm:grid-cols-[1fr_auto]" key={position.checkpointNumber}><strong>{position.checkpointNumber}. {position.name}</strong><span>{position.latitude}, {position.longitude} · {position.radiusMeters} m radius</span></div>)}</div></article>
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Fixed route and safety</h3><p className="mt-2 text-sm text-slate-500">Read-only persisted checkpoint geography</p><HuntMapInspection key={`${review.key}:${review.version}`} configuration={configuration} /><div className="mt-4 space-y-2">{positions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm">No checkpoint positions were submitted.</p> : positions.map((position, index) => !position || typeof position !== 'object' || typeof position.name !== 'string' || typeof position.latitude !== 'number' || typeof position.longitude !== 'number' || typeof position.radiusMeters !== 'number' ? <div key={index}><PersistedValue value={position} /></div> : <div className="grid gap-1 rounded-xl border border-slate-200 p-4 text-sm sm:grid-cols-[1fr_auto]" key={position.checkpointNumber}><strong>{position.checkpointNumber}. {position.name}</strong><span>{position.latitude}, {position.longitude} · {position.radiusMeters} m radius</span></div>)}</div></article>
       <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Submitted checkpoint and challenge content</h3><p className="mt-2 text-sm text-slate-500">Exact read-only content persisted with submitted version {review.version}</p><div className="mt-4 space-y-4">{review.content.checkpoints.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm">No checkpoint or challenge content was submitted.</p> : review.content.checkpoints.map((checkpoint, index) => <section className="rounded-xl bg-slate-50 p-4 text-sm" key={index}><h4 className="mb-3 text-base font-bold">Checkpoint {index + 1}</h4><PersistedValue value={checkpoint} /></section>)}</div></article>
       <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Scoring configuration and events</h3><p className="mt-2 text-sm text-slate-500">Persisted scoring rules for this submitted artifact</p><div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm"><PersistedValue value={review.content.scoring} /></div></article>
       <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Submitted configuration</h3><p className="mt-2 text-sm text-slate-500">Participant instructions and other persisted configuration fields are shown when present.</p><div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm"><PersistedValue value={configuration} /></div></article>
