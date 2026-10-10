@@ -15,7 +15,7 @@ class Session implements SessionStore {
 
 const position = { checkpointNumber: 1, name: 'Museum', latitude: 46.77, longitude: 23.59, radiusMeters: 30 }
 const content: CreatorTemplateContent = {
-  key: 'cluj-algebra-trail', version: 1, displayName: 'Cluj Algebra Trail', theme: 'City', mission: 'Solve it',
+  key: 'cluj-algebra-trail', version: 1, displayName: 'Cluj Algebra Trail', theme: 'City', mission: { name: 'Solve it' },
   configuration: { normalCheckpointCount: 1, checkpointPositions: [position] }, scoring: { model: 'platform' }, checkpoints: [{ checkpointNumber: 1 }],
 }
 const record: CreatorTemplate = { key: content.key, version: 1, status: 'draft', content }

@@ -38,7 +38,7 @@ test('invalid FinishPoints are rejected equally for drafts and submissions', () 
 })
 
 test('saving emits exact FinishPoint shape, keeps checkpoints and count, and preserves immutable versions', async () => {
-  const content: CreatorTemplateContent = { key: 'trail', version: 1, displayName: 'Trail', theme: 'City', mission: 'Go', configuration, scoring: { model: 'platform' }, checkpoints: [{ checkpointNumber: 1 }] }
+  const content: CreatorTemplateContent = { key: 'trail', version: 1, displayName: 'Trail', theme: 'City', mission: { name: 'Go' }, configuration, scoring: { model: 'platform' }, checkpoints: [{ checkpointNumber: 1 }] }
   const persisted = { key: 'trail', version: 1, status: 'draft' as const, content: structuredClone(content) }
   const before = structuredClone(persisted)
   Object.freeze(persisted.content.configuration.finishPoint)

@@ -28,7 +28,7 @@ test('explicit validation shows ordered route, estimates and advisory safety cop
   expect(container.textContent).toContain('Walking route validated')
   expect(container.textContent).toContain('1.4 km')
   expect(container.textContent).toContain('15 min')
-  expect([...container.querySelectorAll('li')].map(el => el.textContent)).toEqual(['CP1', '→ FinishPoint'])
+  expect([...container.querySelectorAll('li')].map(el => el.textContent)).toEqual(['CP1 · Museum', '→ FinishPoint · Wall'])
   expect(map.props.walkingRoute).toEqual(response.routes[0].geometry)
   expect(map.props.finishPoint).toEqual(configuration.finishPoint)
   expect(container.textContent).toContain('manual geographic verification')

@@ -1,3 +1,4 @@
+import { missionStoryFields } from './mission'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { StepContainer } from '../../components/StepContainer'
@@ -57,7 +58,7 @@ export function ParticipantPreview({ content, onExit }: { content: CreatorTempla
       <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Simulation only. Arrival and activities are manual. No answers, scores, XP, rewards or Hunt progress are recorded.</p>
       <p className="mt-3 text-sm text-slate-600">Visibility approximation: Template visibility rules are not implemented yet. Only the current checkpoint’s details are shown; future locations and activities remain hidden. This does not establish backend visibility rules.</p>
       {warnings.length > 0 && <aside aria-label="Draft preview warnings" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm"><ul className="list-disc pl-4">{warnings.map(warning => <li key={warning}>{warning}</li>)}</ul></aside>}
-      {!active && <section className="mt-5"><h2 className="text-xl font-bold">{content.mission}</h2>{typeof content.configuration.briefing === 'string' && <p className="mt-2 text-sm">{content.configuration.briefing}</p>}<div className="mt-5"><PrimaryButton type="button" onClick={() => send({ type: 'start' })}>Start preview</PrimaryButton></div></section>}
+      {!active && <section className="mt-5">{missionStoryFields(content.mission).map(([key, text]) => <p key={key} className="mt-2 text-sm"><strong>{key}: </strong>{text}</p>)}{typeof content.configuration.briefing === 'string' && <p className="mt-2 text-sm">{content.configuration.briefing}</p>}<div className="mt-5"><PrimaryButton type="button" onClick={() => send({ type: 'start' })}>Start preview</PrimaryButton></div></section>}
       {active && <>
         <p role="status" aria-live="polite" className="mt-5 text-sm font-bold">{progress.phase === 'complete' ? 'Simulated Hunt complete' : `${current.label} · ${progress.index + 1} of ${journey.checkpoints.length} stops · ${progress.phase === 'arrived' ? 'Simulated arrival' : 'Simulated navigation'}`}</p>
         <ol aria-label="Journey progress" className="mt-3 flex flex-wrap gap-2 text-xs">{journey.checkpoints.map((checkpoint, index) => <li key={checkpoint.label} aria-current={index === progress.index ? 'step' : undefined} className="rounded-lg bg-slate-100 px-2 py-2">{checkpoint.label}: {index < progress.index || progress.phase === 'complete' ? 'resolved' : index === progress.index ? 'current' : 'locked'}</li>)}</ol>
@@ -76,6 +77,7 @@ export function ParticipantPreview({ content, onExit }: { content: CreatorTempla
         {activity && <section ref={interaction} role="region" aria-label={`${labels[activity]} simulation`} className="mt-5 rounded-2xl bg-brand-600 p-5 text-white">
           <h3 className="text-lg font-bold">{labels[activity]} · Simulated interaction</h3>
           <p className="mt-3 text-sm">A Participant renderer for arbitrary saved gameplay is not available. This is the actual checkpoint configuration; no question content or answers have been added.</p>
+          <p className="mt-3 text-sm">Fictional puzzle navigation is story metadata, not real walking guidance. Use persisted geographic destinations and the walking route inspection for geography.</p>
           <pre aria-label="Saved checkpoint configuration" className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-white/10 p-3 text-xs">{JSON.stringify(current.gameplay, null, 2)}</pre>
           <button type="button" disabled={progress.resolved.includes(activity)} className={`${secondary} mt-4 disabled:opacity-50`} onClick={() => { send({ type: 'resolve', activity }); setActivity(undefined) }}>Simulate {labels[activity]} completion</button>
           <button type="button" className={`${secondary} mt-3 w-full`} onClick={() => setActivity(undefined)}>Back to checkpoint</button>

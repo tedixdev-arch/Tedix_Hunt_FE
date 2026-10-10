@@ -1,3 +1,4 @@
+import type { TemplateMission } from '../../features/creator/mission.ts'
 import { apiClient, type ApiClient } from './client.ts'
 import type { CreatorGeographyConfiguration } from '../../features/creator/checkpointGeography.ts'
 
@@ -8,7 +9,7 @@ export interface CreatorTemplateContent {
   version: number
   displayName: string
   theme: string
-  mission: string
+  mission: TemplateMission
   configuration: CreatorGeographyConfiguration & Record<string, unknown>
   scoring: Record<string, unknown>
   checkpoints: unknown[]
@@ -28,6 +29,15 @@ export class CreatorTemplatesApi {
 
   constructor(client: ApiClient = apiClient) {
     this.client = client
+  }
+
+  private starterRequest?: Promise<CreatorTemplate>
+
+  createSignalClujDraft(): Promise<CreatorTemplate> {
+    if (this.starterRequest) return this.starterRequest
+    this.starterRequest = this.client.post<CreatorTemplate>('/api/creator/templates/starters/signal-cluj-napoca')
+      .finally(() => { this.starterRequest = undefined })
+    return this.starterRequest
   }
 
   list(): Promise<CreatorTemplate[]> {

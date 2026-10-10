@@ -1,3 +1,5 @@
+import { serializeMission } from './mission.ts'
+import { createCheckpointDrafts } from './checkpointGeography.ts'
 import { gameplayValidation } from './checkpointGameplay.ts'
 import { finishPointValidation } from './finishPoint.ts'
 import { ApiError } from '../../services/api/client.ts'
@@ -14,6 +16,8 @@ export function templateContentEqual(current: CreatorTemplateContent, persisted:
 }
 
 export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'create' | 'createVersion'>, current: CreatorTemplateContent, persisted: CreatorTemplate | null): Promise<CreatorTemplate> {
+  if (persisted && templateContentEqual(current, persisted.content)) return persisted
+  current = { ...current, mission: serializeMission(current.mission) }
   const validation = finishPointValidation(current.configuration) || gameplayValidation(current)
   if (validation) throw new Error(validation)
   if (!persisted) return api.create({ ...current, version: 1 })
@@ -27,18 +31,25 @@ export function hydratePersistedGeography(configuration: CreatorGeographyConfigu
   routeSafety: Set<string>
 } {
   return {
-    checkpointDrafts: (configuration.checkpointPositions ?? []).map(position => ({ ...position })),
+    checkpointDrafts: configuration.normalCheckpointCount === undefined
+      ? (configuration.checkpointPositions ?? []).map(position => ({ ...position }))
+      : createCheckpointDrafts(configuration.normalCheckpointCount, []).map(draft => {
+        const saved = configuration.checkpointPositions?.find(point => point.checkpointNumber === draft.checkpointNumber)
+        return saved ? { ...saved } : draft
+      }),
     // The current Template content contract stores positions, not Creator verification or route-safety confirmation.
     verifiedPositions: new Set(),
     routeSafety: new Set(),
   }
 }
 
-export function creatorTemplateError(error: unknown, operation: 'save' | 'submit' | 'load'): string {
+export function creatorTemplateError(error: unknown, operation: 'save' | 'submit' | 'load' | 'starter'): string {
   if (!(error instanceof ApiError)) return 'The backend is unavailable. Please try again.'
   if (error.status === 401) return 'Your session has expired. Please sign in again.'
   if (error.status === 403) return 'Your Creator account is not authorized to perform this action.'
   if (error.status === 404) return 'This Creator Template could not be found. Return to Creator Studio and reopen it.'
+  if (operation === 'starter' && error.status === 409) return 'The Signal Cluj starter could not be created because of a conflict. Return to the dashboard and check your drafts before retrying.'
+  if (operation === 'starter' && (error.status === null || error.status >= 500)) return 'Starter creation could not be confirmed. Check your drafts before retrying to avoid creating a duplicate.'
   if (error.status === 409) return operation === 'save'
     ? 'That Template key is already in use or this version can no longer be changed. Choose a distinct Template name and try again.'
     : 'This Template cannot be submitted in its current lifecycle state.'
