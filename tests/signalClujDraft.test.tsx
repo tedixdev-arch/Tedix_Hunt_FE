@@ -1,3 +1,4 @@
+import { signalClujRouteProposal } from './fixtures/signalClujRouteProposal'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
@@ -109,10 +110,23 @@ async function inputValue(input: HTMLInputElement, text: string) {
 }
 
 test('Creator places six normal points and FinishPoint using the shared map, saves, reloads and previews persisted names', async () => {
+  record.content.routeResearch = { status: 'pending', physicalVerification: 'pending', walkingNavigation: 'pending', proposal: structuredClone(signalClujRouteProposal), unknown: { preserve: true } }
+  record.content.starterSource = { key: 'signal-cluj-napoca', version: 1, checkpointsSha256: 'original' }
+  record.content.fictionalNavigation = { scope: 'puzzle-only', active: false }
+  for (const checkpoint of record.content.checkpoints as Record<string, unknown>[]) {
+    checkpoint.personalChallenge = { question: 'Saved personal puzzle', answer: '42', hints: ['Personal hint'], solution: 'Personal solution' }
+    checkpoint.teamChallenge = { question: 'Saved team puzzle', answer: 'SIGNAL', hints: ['Team hint'], solution: 'Team solution' }
+  }
+  const originalContent = structuredClone(record.content)
   const original = structuredClone(record.content.checkpoints)
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
   await feature('Checkpoint Positions')
   expect(container.querySelectorAll('[data-checkpoint]')).toHaveLength(6)
+  expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(7)
+  await click('CP6 ·')
+  expect(map.props.cameraTarget).toMatchObject({ latitude: 46.7683841, longitude: 23.5955112 })
+  expect(map.props.checkpoints).toHaveLength(0)
+  expect(api.createVersion).not.toHaveBeenCalled()
   for (let number = 1; number <= 6; number++) {
     await act(async () => (container.querySelector(`[data-checkpoint="${number}"]`) as HTMLButtonElement).click())
     await act(async () => map.props.onMapClick(46.7 + number / 1000, 23.6 + number / 1000))
@@ -132,9 +146,14 @@ test('Creator places six normal points and FinishPoint using the shared map, sav
   expect(record.content.configuration.checkpointPositions[5]).toEqual({ checkpointNumber: 6, name: 'Real place 6', latitude: 46.706, longitude: 23.606, radiusMeters: 25 })
   expect(record.content.configuration.finishPoint).toEqual({ name: 'Real finish', latitude: 46.8, longitude: 23.7, radiusMeters: 5 })
   expect(record.content.checkpoints).toEqual(original)
+  for (const key of ['mission', 'scoring', 'fictionalNavigation', 'starterSource', 'routeResearch']) expect(record.content[key]).toEqual(originalContent[key])
+  expect(record.version).toBe(2)
   await act(async () => root.unmount()); root = createRoot(container)
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
   await feature('Checkpoint Positions')
+  expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(7)
+  await click('CP6 ·')
+  expect(map.props.landmarkReference.name).toBe('Reformed Church — exterior')
   expect(map.props.checkpoints).toHaveLength(6)
   expect(map.props.checkpoints.every((point: any) => point.verified === false)).toBe(true)
   expect(map.props.checkpoints[5].name).toBe('Real place 6')
@@ -143,5 +162,8 @@ test('Creator places six normal points and FinishPoint using the shared map, sav
   await click('Preview full journey'); await click('Start preview')
   expect(container.textContent).toContain('Real place 1')
   expect(map.props.cameraTarget.latitude).toBe(46.701)
+  expect(map.props.landmarkReference).toBeUndefined()
+  expect(record.content.routeResearch).toEqual(originalContent.routeResearch)
+  expect(api.createVersion).toHaveBeenCalledTimes(1)
   expect(api.submit).not.toHaveBeenCalled()
 })
