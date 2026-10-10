@@ -75,6 +75,11 @@ function clickMap(latitude: number, longitude: number) {
 
 test('loads existing positions, radius and coordinates without emitting changes', () => {
   render()
+  expect(container.textContent).toContain('Place and inspect checkpoint positions')
+  expect(container.textContent).toContain('0 of 2 positions confirmed')
+  expect(container.textContent).toContain('Not confirmed')
+  expect(container.textContent).toContain('Review standing-area safety')
+  expect(container.textContent).not.toContain('Create and verify the safe route')
   expect(latest[0]).toEqual(saved)
   expect(container.textContent).toContain('46.770000')
   expect(container.textContent).toContain('23.590000')
@@ -191,4 +196,20 @@ test('read-only preview camera follows checkpoint destinations on the same Mapbo
   expect(map.flyTo).toHaveBeenLastCalledWith({ center: [24, 47], zoom: 16 })
   expect(mocks.maps).toHaveLength(1)
   expect(map.remove).not.toHaveBeenCalled()
+})
+
+
+test('temporary position confirmation changes wording without certifying safety or changing geography', () => {
+  render()
+  const before = structuredClone(latest)
+  const confirm = [...container.querySelectorAll('button')].find(button => button.textContent === 'Confirm position')!
+  act(() => confirm.click())
+  expect(container.textContent).toContain('1 of 2 positions confirmed')
+  expect(container.textContent).toContain('Position confirmed')
+  expect(container.textContent).toContain('not saved evidence of physical verification')
+  expect(latest).toEqual(before)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  clickMap(47, 24)
+  expect(container.textContent).toContain('0 of 2 positions confirmed')
+  expect(container.textContent).toContain('Not confirmed')
 })

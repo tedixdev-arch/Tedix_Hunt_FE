@@ -26,8 +26,8 @@ test('Feature 1 enforces the prototype bounds and has no component-authoring fie
 })
 
 test('checkpoint-based Creator sections use the configured normal count without FinishPoint', () => {
-  assert.match(creatorStudio, /normalCheckpointNames\(checkpointCount\)/)
-  assert.match(creatorStudio, /<CheckpointEditor checkpointCount=\{checkpointCount\}/)
+  assert.match(creatorStudio, /names=\{checkpointDrafts\.map\(point => point\.name\)\}/)
+  assert.ok(creatorStudio.includes('<CheckpointEditor names={checkpointDrafts.map(point => point.name)} checkpointCount={checkpointCount}'))
   assert.match(creatorStudio, /<RouteEditor drafts=\{checkpointDrafts\}/)
   assert.match(creatorStudio, /FinishPoint configured separately in Feature 6/)
   assert.deepEqual(signalNormalCheckpointNames, signalCheckpointNames.slice(0, 6))

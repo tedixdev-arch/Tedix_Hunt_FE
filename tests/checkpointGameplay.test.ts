@@ -8,7 +8,7 @@ import { ApiClient } from '../src/services/api/client.ts'
 import type { CreatorTemplateContent, CreatorTemplate } from '../src/services/api/creatorTemplates.ts'
 
 function content(checkpoints: unknown[] = [{ checkpoint: 1 }, { role: 'terminal' }]): CreatorTemplateContent {
-  return { key: 'trail', version: 3, displayName: 'Trail', theme: 'City', mission: 'Go',
+  return { key: 'trail', version: 3, displayName: 'Trail', theme: 'City', mission: { name: 'Go' },
     configuration: { normalCheckpointCount: 1, checkpointPositions: [{ checkpointNumber: 1, name: 'Museum', latitude: 47, longitude: 24, radiusMeters: 30 }], finishPoint: { name: 'Wall', latitude: 47.1, longitude: 24.1, radiusMeters: 17 } },
     scoring: { startingScore: 500, finishPointPuzzle: 250, firstAttemptAccuracyEligibleCheckpoints: [1], custom: { preserved: true } }, checkpoints }
 }
