@@ -1,3 +1,5 @@
+import { signalClujRouteProposal } from './fixtures/signalClujRouteProposal'
+import { readRouteProposal, type RouteProposal } from '../src/features/creator/routeResearch'
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
@@ -42,19 +44,21 @@ vi.mock('mapbox-gl', () => ({ default: {
 
 let container: HTMLDivElement
 let root: Root
+let proposal: RouteProposal | undefined
 let initial: FinishPointDraft | undefined
 let latest: FinishPointDraft | undefined
 const saved = { name: ' City Wall ', latitude: 46.778123, longitude: 23.641234, radiusMeters: 17 }
 function Editor() {
   const [draft, setDraft] = useState(initial)
   latest = draft
-  return <FinishPointEditor draft={draft} onChange={point => { mocks.configuration(point); setDraft(point) }} />
+  return <FinishPointEditor proposal={proposal} draft={draft} onChange={point => { mocks.configuration(point); setDraft(point) }} />
 }
 beforeEach(() => {
   mocks.maps.length = 0; mocks.markers.length = 0; mocks.configuration.mockReset()
   vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-public-token')
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
+  proposal = undefined
   initial = undefined
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
@@ -133,4 +137,25 @@ test('FinishPoint circle restores after a style reload', () => {
   act(() => map.emit('style.load'))
   expect(map.sources.get('tedix-finishpoint-radius').data).toEqual(checkpointRadius(saved))
   expect(map.layers.size).toBe(2)
+})
+
+
+test.each([false, true])('terminal research inspection never places or changes FinishPoint (placed %s)', placed => {
+  proposal = readRouteProposal({ proposal: signalClujRouteProposal })
+  initial = placed ? { ...saved } : undefined
+  render()
+  const before = latest && structuredClone(latest)
+  act(() => [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('FinishPoint ·'))!.click())
+  expect(mocks.maps[0].flyTo).toHaveBeenLastCalledWith({ center: [23.5975153, 46.768014], zoom: 16 })
+  expect(container.textContent).toContain('Terminal gameplay')
+  expect(container.textContent).not.toContain('CP7')
+  expect(latest).toEqual(before)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  expect(mocks.maps[0].sources.has('tedix-finishpoint-radius')).toBe(placed)
+  act(() => mocks.markers.at(-1)!.element.click())
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  clickMap(46.7682, 23.597)
+  expect(latest).toMatchObject({ latitude: 46.7682, longitude: 23.597, radiusMeters: placed ? 17 : 5 })
+  expect(mocks.configuration).toHaveBeenCalledOnce()
+  expect(mocks.maps).toHaveLength(1)
 })

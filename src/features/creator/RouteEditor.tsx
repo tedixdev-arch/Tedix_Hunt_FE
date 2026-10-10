@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { ProposedSignalRoute } from './ProposedSignalRoute'
+import { type RouteProposal, type candidateReference } from './routeResearch'
 import { TedixMap } from '../../components/TedixMap'
 import type { CheckpointDraft, CreatorGeographyConfiguration } from './checkpointGeography'
 import { buildGeographyConfiguration, isGeographyComplete, isValidCheckpoint, MAX_RADIUS_METERS, MIN_RADIUS_METERS, updateCheckpointDraft } from './checkpointGeography'
@@ -15,6 +17,7 @@ const safetyLabels: Record<string, string> = {
 const safetyItems = ['Safe standing area', 'Accessible walking route', 'Road crossings reviewed', 'No restricted areas', 'Day and night suitability checked', 'Emergency access available']
 
 interface Props {
+  proposal?: RouteProposal
   drafts: CheckpointDraft[]
   verified: Set<number>
   safety: Set<string>
@@ -24,7 +27,8 @@ interface Props {
   onConfigurationChange: (configuration: CreatorGeographyConfiguration) => void
 }
 
-export function RouteEditor({ drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
+export function RouteEditor({ proposal, drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
+  const [reference, setReference] = useState<ReturnType<typeof candidateReference>>()
   const [first] = drafts
   const [activeNumber, setActiveNumber] = useState(first?.checkpointNumber ?? 1)
   const active = drafts.find(point => point.checkpointNumber === activeNumber) ?? first
@@ -37,7 +41,9 @@ export function RouteEditor({ drafts, verified, safety, onDraftsChange, onVerifi
   }
 
   return <div className="mt-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><h4 className="text-lg font-bold">Place and inspect checkpoint positions</h4><p className="mt-1 max-w-2xl text-sm text-slate-500">Point confirmations and safety checkboxes are temporary and are not saved evidence of physical verification. Select a normal checkpoint, click the map to position it, inspect its radius, then confirm its position for this session. FinishPoint remains in Feature 6.</p></div><span className={`rounded-full px-3 py-1 text-xs font-bold ${complete ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>{verified.size} of {drafts.length} positions confirmed</span></div>
+    {proposal && <ProposedSignalRoute proposal={proposal} onInspect={setReference} />}
     <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_320px]"><div><div className="h-96"><TedixMap initialLatitude={46.7712} initialLongitude={23.6236} initialZoom={14}
+      cameraTarget={reference} landmarkReference={reference}
       locationSearch className="overflow-hidden rounded-2xl border border-slate-300"
       checkpoints={drafts.filter(isValidCheckpoint).map(point => ({ ...point, selected: active?.checkpointNumber === point.checkpointNumber, verified: verified.has(point.checkpointNumber) }))}
       onCheckpointSelect={setActiveNumber}
