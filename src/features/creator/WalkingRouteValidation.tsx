@@ -52,14 +52,14 @@ export function WalkingRouteValidation({ configuration }: { configuration: Recor
     }
   }
 
-  return <section className="mt-6 rounded-xl border border-slate-200 p-4" aria-label="Walking route validation">
+  return <section className="mt-6 rounded-xl border border-slate-200 p-4" aria-label="Walking route inspection">
     <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-bold">Inspect the complete walking route</h3>
-      <button type="button" disabled={!!geographyError || current?.loading} onClick={validate} className="min-h-12 rounded-xl bg-slate-950 px-4 font-bold text-white disabled:bg-slate-400">{current?.loading ? 'Calculating walking route…' : 'Validate walking route'}</button></div>
-    <p role="status" className={`mt-3 rounded-lg p-3 text-sm font-bold ${route ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'}`}>{route ? 'Walking route validated' : current?.loading ? 'Calculating walking directions…' : current?.error ? 'Walking route validation failed' : 'Walking route not validated. Recalculate after changing checkpoint or FinishPoint coordinates.'}</p>
+      <button type="button" disabled={!!geographyError || current?.loading} onClick={validate} className="min-h-12 rounded-xl bg-slate-950 px-4 font-bold text-white disabled:bg-slate-400">{current?.loading ? 'Calculating walking route…' : 'Calculate walking route'}</button></div>
+    <p role="status" className={`mt-3 rounded-lg p-3 text-sm font-bold ${route ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'}`}>{route ? 'Walking route calculated' : current?.loading ? 'Calculating walking directions…' : current?.error ? 'Walking route calculation failed' : 'Walking route not calculated. Recalculate after changing checkpoint or FinishPoint coordinates.'}</p>
     {(geographyError || current?.error) && <p role="alert" className="mt-3 text-sm font-bold text-red-700">{geographyError || current?.error}</p>}
     {destinations && <ol aria-label="Ordered walking destinations" className="mt-3 flex flex-wrap gap-2 text-sm font-bold">{destinations.map((point, index) => <li key={point.label}>{index > 0 && <span aria-hidden="true">→ </span>}{point.label} · {index < points.length ? points[index].name : finish?.name}</li>)}</ol>}
     {route && <dl className="mt-3 flex flex-wrap gap-6 text-sm"><div><dt className="font-bold">Total walking distance</dt><dd>{walkingDistance(route.distance)}</dd></div><div><dt className="font-bold">Estimated walking duration</dt><dd>{walkingDuration(route.duration)}</dd></div></dl>}
     <div className="mt-4 h-96"><TedixMap initialLatitude={points[0]?.latitude ?? 46.7712} initialLongitude={points[0]?.longitude ?? 23.6236} initialZoom={14} checkpoints={points} finishPoint={finish} walkingRoute={route?.geometry} className="overflow-hidden rounded-xl" /></div>
-    <p className="mt-3 text-xs text-slate-600">Approximate walking estimates, not guaranteed travel times. Mapbox routing does not establish safe access. Keep the manual geographic verification and safety checks in Feature 2. Calculations are temporary and must be repeated after reopening a Template.</p>
+    <p className="mt-3 text-xs text-slate-600">Approximate walking estimates, not guaranteed travel times. Mapbox routing does not establish safe access. Use the temporary position confirmations and review reminders in Feature 2. Local physical verification is still required. Calculations are temporary and must be repeated after reopening a Template.</p>
   </section>
 }
