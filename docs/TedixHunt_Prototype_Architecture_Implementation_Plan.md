@@ -1,12 +1,14 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 3.2 | Updated 8 October 2026
+Version 3.3 | Updated 10 October 2026
 
-This revision preserves Phase A–N and the existing identity, credential and account-retirement architecture. The Creator phase is complete for its agreed baseline before the Mapbox evolution. New geographic capabilities below are unchecked future work, not reasons to reopen that baseline.
+This revision preserves Phase A–N and the existing identity, credential and account-retirement architecture. The Creator phase is complete for its agreed baseline before the Mapbox evolution. Merged geographic authoring/preview capabilities are audited below; new Country/City and map-first setup work does not reopen that baseline.
 
 Revision note (3.1): corrects B1.1 using merged FE #61 and G1 using merged FE #70; incorporates the finalized geographic architecture and subsequent Admin/Organizer corrections; integrates Mapbox M1–M6 into existing phases. Merged implementation is distinct from deployed E2E evidence; this revision does not claim a new deployment test.
 
 Revision note (3.2): defines FinishPoint as a terminal checkpoint using the shared gameplay engine; clarifies geographic compatibility, Feature 6 authoring, backend-authoritative Hunt completion and the existing-phase implementation sequence. Documentation only: existing implementation statuses are preserved; no new implementation or deployed E2E verification is claimed.
+
+Revision note (3.3): documentation only, before implementation prompts. Adds AI-assisted Country/City Templates (F7/G4) and Organizer map-first General Setup (D10); audits merged F4–F6/G3/D8 without claiming deployed E2E. Preserves Signal story, Personal/Team Challenges, the Creator/Admin approval chain and immutable snapshots. No application code, content generation, migrations or deployment are part of this revision.
 
 The implementation strategy is:
 
@@ -584,10 +586,10 @@ Backend validates persisted configuration before publication.
 
 ## Phase D — Organizer Hunt setup
 
-Status: ✅ Existing setup baseline complete; D8–D9 are new evolution
+Status: ✅ Existing setup baseline and D8 implementation complete; D9/D10 remain planned; D8 deployed E2E unverified
 
 ### D1. General Setup
-Status: ✅ Complete
+Status: ✅ Existing baseline complete; future map-first ordering is D10, not yet implemented
 
 ### D2. Template selection + snapshot
 Status: ✅ Complete
@@ -649,6 +651,27 @@ Status: ⬜ Not started; depends on B6 backend deployment
 - [ ] List Organizer by default as Organizer · Supervisor · Automatic; allow allocation/removal of additional eligible identities through B6 APIs.
 - [ ] Show authoritative supervision readiness; do not require an extra Supervisor or create a fake professional Supervisor account.
 - [ ] E2E: Organizer appears automatically, allocated Supervisor gains only that Hunt's operational access, removal revokes access, self-removal cannot remove automatic supervision.
+
+### D10. Organizer map-first General Setup — planned workstream
+Status: ⬜ Not started; depends on F7/G4 location, review and approved-catalog contracts.
+
+Target order within General Setup:
+
+1. Country.
+2. City, restricted to the selected Country.
+3. Approved Template, restricted to that Country/City and exact approved version.
+4. Automatic read-only real Mapbox route preview immediately on Template selection.
+5. Hunt details.
+6. Participants/access.
+7. Experience defaults.
+
+- [ ] Reuse D8 approved geography, HuntMapPreview and TedixMap. Selection automatically fetches and displays valid saved geography; no extra Inspect click. This is a deliberate future change from merged FE #84's independent, explicitly opened inspection.
+- [ ] Show saved ordered normal checkpoints and terminal FinishPoint, names/radii and a clearly labelled route overview. A straight-line connection is not a walkable route. Mapbox walking geometry/distance/time remains a provider estimate; define request/cost/cancellation behavior in the scoped FE step and never invent metrics on failure.
+- [ ] Changing Country clears City/Template/preview; changing City clears Template/preview. Cancel stale requests; reject key/version mismatches and require fresh approval selection. Loading, no approved Templates, withdrawn approval, incomplete legacy geography and provider failure need explicit states; never show the previous route as the new choice.
+- [ ] Preview is visual confirmation, not a save/create/publish action. Keep explicit persistence and backend publish-readiness. After creation, read only the exact saved Hunt snapshot; newer catalog content must not replace it.
+- [ ] For fixed Templates, remove the simulated checkpoint editor from the **future Organizer UX plan**: no dragging, coordinate/radius/gameplay edits, fake placement or local geography overrides. Authoring stays with Creator and Admin governance. This documentation change removes no existing implementation.
+- [ ] Preserve Hunt details, access/Participants, supported Experience defaults, rewards, Review and Publish. Editable defaults cannot override immutable Template content or backend rules.
+- [ ] E2E: Country → City → approved Template automatically shows its actual route; switch locations rapidly; handle missing data; save/reopen and verify exact snapshot stability after later Template approval changes.
 
 ## Phase E — Professional account lifecycle
 
@@ -942,7 +965,7 @@ This credential lifecycle remains distinct from E14–E16 Admin provisioning.
 
 ## Phase F — Creator Template system
 
-Status: ✅ Creator baseline complete before Mapbox evolution; F4–F6 are new work
+Status: ✅ Creator baseline and F4–F6 implementation merged; geographic deployed E2E remains unverified; F7 is planned
 
 ### F1. Authoritative Template hierarchy
 
@@ -1011,7 +1034,7 @@ Contract rules:
 - preserve compatibility without an immediate database migration or rewriting existing immutable Template versions/snapshots
 - checkpoint numbers are unique and within 1..N
 - latitude is -90..90 and longitude is -180..180
-- Current baseline: `radiusMeters` is 10..500. F4 changes acceptance to 5..500 before FE adopts a 5 m default; existing stored values are preserved
+- Current merged contract: integer `radiusMeters` is 5..500 (BE #60/#61); FE #76/#77 default new positions to 5 m and preserve existing stored values
 - name is non-empty and at most 100 characters
 - incomplete geography is allowed while drafting
 - submission requires complete N-position geography for Templates using this contract
@@ -1032,7 +1055,7 @@ Responsibilities / implemented work:
 Status: ✅ Implemented
 
 Responsibilities / implemented work:
-- Leaflet + React-Leaflet geographic editor with isolated/replaceable OpenStreetMap prototype tiles
+- Shared TedixMap/Mapbox Creator editor (FE #74–#77), superseding the earlier Leaflet/React-Leaflet prototype
 - real pan/zoom, map-click placement/repositioning, and radius visualization
 - Creator verification and safety-checklist UX
 - no invented coordinates
@@ -1042,37 +1065,43 @@ Coordinate persistence does not establish checkpoint verification or route-safet
 ---
 
 ### F4. Radius contract compatibility — Mapbox M1a
-Status: ⬜ Not started — NEXT IMPLEMENTATION STEP
-Repository: Tedix_Hunt_BE only.
-- [ ] Accept explicit radiusMeters from 5..500 throughout geographic validation, submission and serialization; retain all other geographic constraints.
-- [ ] Preserve checkpointPositions and existing immutable versions/snapshots; do not rewrite existing 30 m or other radii. Missing legacy geography remains compatible.
-- [ ] Test 5 m accepted, values below 5/above 500 rejected, existing valid content unchanged, and 5 m content survives version → submit → approve → catalog → Hunt snapshot.
-- [ ] Update the relevant API contract; tracked migration only if actual schema constraints require it.
-- [ ] Review → user merge → deploy → verify the contract before F5. No Mapbox dependency or gameplay algorithm in this BE step.
+Status: ✅ Backend implementation merged in [BE #60](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/60); deployed E2E unverified.
+- [x] Accept 5..500 m; preserve historical radii, immutable versions, snapshots and legacy content; update Swagger without a migration.
+- [x] PR reports 613 tests with PostgreSQL, none skipped, including 5 m lifecycle and 30 m historical preservation.
+- [ ] Record deployed contract/lifecycle evidence. F4 is no longer the next implementation step.
 
 ### F5. Shared TedixMap and Creator Hunt Map Editor — Mapbox M1b
-Status: ⬜ Not started; follows F4
-Repository: Tedix_Hunt_FE. Split the following into separate small prompt/PR cycles.
-- [ ] Replace the Creator Leaflet surface with shared TedixMap Mapbox rendering and provider adapter boundaries; preserve the persisted contract.
-- [ ] Add location/POI search for city, address, landmark and POI. Search moves the camera; only explicit placement/confirmation writes checkpoint geography.
-- [ ] Support exact placement/repositioning, configured normal checkpoint count, radius display and 5 m default for new positions. Allow increases up to the validated limit; preserve saved values.
-- [ ] Handle token/configuration failure, search/routing errors, loading, attribution, cleanup and mobile performance. Keep provider types, IDs and camera state out of domain authority.
-- [ ] Verify save/reopen/submit preserves coordinates, names, numbering and radii. Never invent Signal coordinates or infer verified safety from location data.
+Status: ✅ FE implementation merged in [#74](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/74), [#75](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/75), [#76](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/76); deployed Mapbox E2E unverified.
+- [x] Shared Mapbox foundation, temporary location/POI search, camera-only search selection and explicit checkpoint placement.
+- [x] Numbered markers, discovery circles, 5 m new-position default, saved-value preservation and provider lifecycle/error handling.
+- [ ] Verify live token/search/placement/save/reopen/submit and mobile behavior. Mocked provider tests do not establish live behavior.
 
 ### F6. FinishPoint configuration, route validation and Participant Preview — Mapbox M1c
-Status: ⬜ Not started
-- [ ] Inspect existing Feature 6 first; finish the current FinishPoint geography work through separate BE/FE slices as needed, preserving `configuration.finishPoint`. FinishPoint never becomes checkpoint N+1 in `checkpointPositions`.
-- [ ] Next define and implement the shared FinishPoint gameplay configuration contract in BE first: navigation, Personal Challenges, Team Challenges and existing applicable checkpoint scoring rules, with immutable-version/snapshot compatibility. Reuse normal checkpoint capabilities; do not invent new challenge types or a separate FinishPoint challenge system.
-- [ ] Then integrate Feature 6 navigation and Personal/Team Challenge configuration in FE, reusing the same available options and components as normal checkpoints. Feature 6 supports geographic placement and discovery radius plus these gameplay settings; normal checkpoint geography remains in Feature 2.
-- [ ] Continue the planned geographic route validation and Participant Preview after the shared gameplay configuration slices. Runtime implementation remains in Phase I, not in Creator configuration work.
-- [ ] Show CP1 → CP2 → … → CPn → FinishPoint and approximate walking distance/time when routing succeeds. Distinguish straight-line visualization, provider route estimate and human route-safety verification.
-- [ ] Support incomplete/invalid/unavailable routes without claiming safe access. Preserve explicit Creator verification.
-- [ ] Add Preview as Participant using shared map and visibility projection. Before I12 exists, label simulated navigation/arrival and never treat preview as real progression.
-- [ ] E2E: search → explicit placement → save/reopen → route inspection → Participant Preview → submit; historical versions remain unchanged.
+Status: ✅ Scoped BE/FE authoring and preview implementation merged; deployed E2E unverified.
+- [x] FinishPoint geography: [BE #61](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/61), [FE #77](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/77). Preserve separate configuration.finishPoint; no N+1 in checkpointPositions.
+- [x] Shared terminal gameplay contract: [BE #62](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/62), [FE #79](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/79). Existing Personal/Team/navigation vocabulary; no new challenge engine.
+- [x] Explicit walking-route inspection: [FE #80](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/80). CP1 → CPn → FinishPoint, provider geometry/estimates, cancellation and errors; no safety certification.
+- [x] Creator Participant simulation: [FE #81](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/81). Preserves unsaved work and one mounted map; manual arrival/activity resolution with no real GPS, scoring, answers or gameplay mutations.
+- [ ] Deployed search → placement → save/reopen → route inspection → preview → submit verification, including immutable history.
+- [ ] Authoritative visibility, navigation, Arrival Engine, actual challenge interactions and completion remain Phase I. The Creator simulation does not complete I12 or the planned popup UX.
+Validation limits: BE #62 reported 21 database tests skipped; later BE #63 reports a full PostgreSQL suite of 712 passing tests, zero skipped. Neither is deployed E2E evidence. FE provider tests are mocked; FE #81's mobile smoke used the missing-token fallback. Temporary custom challenge controls in FE #79 are not persisted authoring support.
+
+### F7. AI-assisted Templates per Country/City — planned workstream
+Status: ⬜ Not started. Reuse the existing Creator draft/version/submission architecture; AI is assistance, not an approver or a new platform role.
+
+- [ ] Begin with Signal: preserve its story, Personal Challenges and Team Challenges while proposing real location-specific routes. Preserve the seven-stop journey (six normal checkpoints plus terminal FinishPoint); do not silently create seven normal checkpoints plus an eighth finish or rewrite canonical Signal v1.
+- [ ] Proposed content target: three distinct Templates/routes per city. This is a curation target, not a hard database cardinality, approval requirement, automated generation quota or reason to publish weak routes.
+- [ ] AI proposes location candidates, route order, narrative fit and draft content with sources, uncertainties and review notes. Candidate coordinates must be checked against real places; generated claims are not verified facts.
+- [ ] A responsible Creator explicitly reviews/edits and saves proposals as ordinary Creator-owned drafts. No direct AI publication, approval, bypass of submitted_version, or writes to approved versions/Hunt snapshots.
+- [ ] Human safety/accessibility review covers every stop AND connecting walk: pedestrian/legal access, crossings/traffic, opening hours/closures, terrain/steps, step-free alternatives and audience suitability. Record evidence, reviewer, date, limitations and unresolved issues against the exact version; use local/on-site checking where desk evidence is insufficient. AI/Mapbox cannot certify safety or accessibility.
+- [ ] BE contract first: define canonical Country/City identity, city-country validation, draft location metadata, AI provenance and version-bound review evidence/status; define required submission/approval gates and compatibility for legacy content. Field names/endpoints and any tracked migrations are design outputs of the later contract step, not invented APIs in this plan.
+- [ ] Preserve configuration.normalCheckpointCount, checkpointPositions[] and finishPoint, immutable versioning, progressive draft authoring and existing capability enforcement. Existing approved content/snapshots are not backfilled or relabelled silently.
+- [ ] Creator FE follows the contract: Country/City, AI-assisted draft intake/editing, clear unverified proposals, human review evidence and normal save/submit. Provider integration, if needed, stays behind backend authorization; no provider secret in FE.
+- [ ] Acceptance: one city pilot through Creator draft → human review → exact submission → Admin approval → location-filtered catalog → Organizer snapshot; reject missing required evidence/invalid location at the backend and preserve historical content.
 
 ## Phase G — Admin Template governance and approved authority
 
-Status: ✅ Backend/DB, Admin FE review and Organizer integration implemented; G3 is new map evolution
+Status: ✅ Backend/DB, Admin FE review, Organizer integration and G3 preview implemented; G4 location/review evolution planned
 
 ### G1. Admin Template review
 
@@ -1128,11 +1157,20 @@ Acceptance flow:
 Approved exact version appears in Quick Setup → Organizer selects its key → backend resolves and snapshots the approved key/version/content.
 
 ### G3. Shared Admin geographic preview — Mapbox M2
-Status: ⬜ Not started; follows F5–F6
-- [ ] Reuse HuntMapPreview for the exact submitted immutable artifact: checkpoints, FinishPoint, radii and route.
-- [ ] Reuse the same component in D8; no second map implementation or new generic domain schema.
-- [ ] Keep the review preview read-only to preserve the artifact under review. This UI mode does not restrict Admin's platform authority; explicit edit/override operations preserve versions and provenance.
-- [ ] Verify approval and later Hunt selection refer to the same version; unavailable provider services do not alter content.
+Status: ✅ FE implementation merged in [FE #82](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/82); deployed authenticated/Mapbox E2E unverified.
+- [x] Read-only shared HuntMapPreview of exact submitted immutable content, saved checkpoints/FinishPoint/radii and explicit walking estimates.
+- [x] Reused in D8, with loading/error/legacy-data handling and resource cleanup; inspection does not approve, edit or mutate content.
+This read-only review mode does not restrict Admin platform authority; any explicit edit/override must preserve versions and provenance.
+
+- [ ] Record deployed exact-version review → approve → Organizer selection verification and real Mapbox/mobile checks.
+
+### G4. Country/City Template governance — planned extension
+Status: ⬜ Not started; paired with F7 contract work.
+- [ ] Extend existing Admin review to inspect Country/City, AI provenance, proposed route and version-bound human safety/accessibility evidence.
+- [ ] Admin retains explicit approve/request-changes authority for the exact submitted version. Human review is a prerequisite for approval, not replaced by an AI score or map rendering.
+- [ ] Backend catalog filtering exposes only approved Templates for the requested Country/City; approval withdrawal and version changes remain authoritative. Reuse BE #63 geography projection and its key/version checks.
+- [ ] Define explicit legacy/unclassified behavior before FE filtering; do not infer a city from a display name or silently classify historical Signal content. Existing Hunt snapshots remain usable and unchanged.
+- [ ] Keep review evidence scoped to the reviewed version; edited routes require renewed review before approval. Existing G1/G2 lifecycle and Creator/Admin permissions remain intact.
 
 ## Phase H — Participant enrollment and team formation
 
@@ -1247,6 +1285,7 @@ Status: ⬜ Not started; depends on H enrollment/start/recovery and B6
 Backend / DB first, then separate FE integration slices.
 - [ ] Define authorized objective projections, discovery and progression APIs, navigation rules, FinishPoint unlock and idempotent transitions using the shared checkpoint model. FinishPoint uses the same navigation and Arrival Engine; arrival/discovery is distinct from checkpoint completion and never independently completes the Hunt.
 - [ ] Build one persistent Hunt Game Map per active Participant Hunt session. Persistent means the map remains mounted during normal in-Hunt navigation; it does not mean the map is always visible. Challenges, Score / Results, Mission History, Help and other Hunt interfaces may cover or hide the map without destroying it. When the map becomes visible again, preserve its camera, zoom, location, objective, navigation and Hunt context as appropriate. Refresh, close/reopen or session recovery may create a new map instance and must restore authoritative Hunt state from the backend.
+- [ ] Preserve Signal story and Personal/Team Challenges over the persistent route-map background. Use popups/overlays for story, checkpoint activities, scores and help without remounting the map; support focus return, keyboard access, mobile sheets and reduced motion. Show the seven-stop journey only as authorized by runtime visibility; do not expose locked coordinates/answers. Basic game-state map styling belongs here; advanced geographic mechanics remain I14.
 - [ ] Browser Geolocation API supplies latitude, longitude, accuracy and timestamp; TedixHunt interprets readings and Mapbox renders them. Handle denied/unavailable/stale location and reconnect.
 - [ ] Design and field-test the accuracy-aware Arrival Engine using target radius, distance, accuracy, timestamps and a bounded recent-reading window. Output not-arrived/approaching/arrived; do not use distance <= 5 m as the complete algorithm or claim spoof-proof browser GPS.
 - [ ] Define poor-accuracy recovery/fallback and backend validation before enabling arrival awards; do not reward repeated GPS events twice.
@@ -1777,43 +1816,59 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 
 # 20. Implementation order and checklist
 
-Completed foundation: A–E baseline, B1.1 contextual workspace integration, F Creator baseline, G1 real Admin review and G2 approved catalog/snapshot integration. FE #61 and #70 correct stale v3.0 status. Creator completion is accepted as the project baseline; this plan does not reopen it for new Mapbox requirements.
+Completed foundation: A–E baseline, B1.1 contextual workspace integration, F Creator baseline, G1 real Admin review and G2 approved catalog/snapshot integration. FE #61 and #70 correct stale v3.0 status. Preserve those accepted baselines.
 
-Step 7A is implemented (FE #70), not the next task. Preserve Step 7 supply-chain E2E evidence as a release gate: Creator persists/submits → Admin reviews exact version/approves → catalog resolves it → Organizer selects → exact Hunt snapshot persists. Record a deployed evidence link/result if absent; do not equate merge with deployment verification.
+## 20.1 Merged implementation audit — 10 October 2026
 
-Mapbox sequence aliases M1–M6 below are not Phase M Passport/history item IDs.
+Audit source: GitHub PR merge metadata and PR scope/validation reports, checked against FE main `e3a6668bde6e55a8e7392d608a413a1586067a72` (includes #84). “Merged” below is repository evidence, not a deployed E2E result.
 
-1. [ ] M1a / F4 — BE radius acceptance 5..500, preserving versions and snapshots.
-2. [ ] M1b / F5 — FE shared TedixMap foundation, then search/placement in separate small PRs.
-3. [ ] M1c / F6 — after current FinishPoint geography work, implement shared FinishPoint gameplay configuration BE first; integrate Feature 6 navigation and Personal/Team Challenge configuration FE using existing checkpoint options/components; then continue geographic route validation and Participant Preview. Keep each BE/FE slice separate and defer runtime to Phase I.
-4. [ ] M2 / G3 + D8 — shared read-only Admin/Organizer previews.
-5. [ ] M3 / B6 then D9 — BE effective authority/assignment APIs, then Allocate Supervisors FE.
-6. [ ] H / Step 8 — Participant enrollment/team formation/start/recovery; Step 7 deployed verification gates this phase.
-7. [ ] M4 / I1–I9 + I12 — one authoritative checkpoint with persistent map, GPS, navigation and Arrival Engine; BE contracts before FE.
-8. [ ] I13 — BE suspension/bypass rules, then Participant FE handling; prove before live suspension controls.
-9. [ ] I10–I11 — expand proven shared checkpoint gameplay to Signal and terminal FinishPoint, reusing I12 navigation/Arrival Engine; BE completes the Hunt only after required terminal activities resolve. Resolve I13 terminal suspension/fairness policy before implementing terminal suspension behavior.
-10. [ ] M5 / J — backend live state/minimal GPS, then shared Operations Map, suspension controls and HELP/PANIC.
-11. [ ] K — results and reward awarding; retain suspension fairness.
-12. [ ] M6 / I14 — later geographic gamification only after rules and operational gameplay are proven.
-13. [ ] Complete outstanding L Admin operations/audit, M long-term records and N custom requests as scoped steps; resolve Independent Organizer separately.
+| Plan scope | Merged evidence | Remaining verification / boundary |
+| --- | --- | --- |
+| F4, radius 5..500 | [BE #60](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/60) | Deployed contract/lifecycle evidence; no repeat implementation prompt |
+| F5, Mapbox foundation/search/placement | [FE #74](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/74), [#75](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/75), [#76](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/76) | Live provider/mobile and persisted authoring E2E |
+| F6, FinishPoint geography | [BE #61](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/61), [FE #77](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/77) | Deployed save/reopen/submit |
+| F6, terminal gameplay authoring | [BE #62](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/62), [FE #79](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/79) | Runtime/completion still Phase I; prototype custom controls not persisted |
+| F6, walking route + Creator preview | [FE #80](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/80), [#81](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/81) | Explicit provider estimates + local simulation; no real arrival/scoring or safety certification |
+| G3, Admin map preview | [FE #82](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/82) | Exact-version deployed review/approval + real provider verification |
+| D8, saved snapshot + approved Template preview | [FE #83](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/83), [BE #63](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/63), [FE #84](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/84) | Explicit Inspect action is implemented; Country/City and automatic selection preview are future D10 |
 
-Each numbered entry is a sequence container, not authorization for one large PR. Split every BE/FE boundary and each sizeable feature into one small step, one repo, one prompt/PR, review, user merge, deploy and E2E before continuing.
+All listed PRs have `merged = true`; their descriptions may retain historical “draft only” instructions. Those descriptions are scope/test evidence, while merge metadata establishes status. No new deployment or browser E2E was run for this documentation change. A deployed Swagger response, passing CI or a successful deployment job alone does not verify the user journey.
 
-# 21. Immediate next implementation prompt
+Step 7A is implemented (FE #70), not the next task. Preserve Step 7 supply-chain E2E as a release gate: Creator persists/submits → Admin reviews exact version/approves → catalog resolves it → Organizer selects → exact Hunt snapshot persists. Record environment, deployed FE/BE revisions, date, cases and results; do not relabel absent evidence as passed.
 
-**F4 / Mapbox M1a — accept a 5 m discovery target in Tedix_Hunt_BE.**
+## 20.2 Staged workstreams before Participant runtime
 
-Implement only the existing checkpoint radius contract change from 10..500 to 5..500. Preserve configuration.checkpointPositions, all unrelated constraints, existing stored radii, immutable Template versions and Hunt snapshots. Do not backfill 30 m values to 5 m. Keep legacy geography compatibility. Add boundary/regression and lifecycle round-trip tests; update the API contract. Use a tracked migration only if a real DB constraint needs changing. Do not add Mapbox, a mapObjects schema, GPS, Arrival Engine, supervisor or suspension features in this PR.
+The following are planned slices, not implementation prompts or authorization to implement now. Keep one repository and one reviewable step per Draft PR; split further where necessary.
 
-Acceptance checklist:
-- [ ] 5 m survives create/version/submit/approve/catalog/snapshot.
-- [ ] Below 5 and above 500 are rejected; existing valid radii remain valid.
-- [ ] Historical versions and existing Hunt snapshots remain byte-equivalent in content.
-- [ ] Relevant tests, typecheck/build and diff review pass.
-- [ ] Draft PR in BE only; user reviews/merges.
-- [ ] Deploy and verify contract; record result before F5 adopts 5 m for new positions.
+1. [ ] **BE contract — F7/G4:** settle Country/City identity and catalog filtering, draft metadata/provenance, version-bound human review evidence and approval gates, legacy compatibility and exact-version behavior. Reuse existing Creator/Admin lifecycle and BE #63 geography; add tracked migrations only if the agreed schema requires them. Validate authorization, invalid locations, approval withdrawal and snapshot preservation.
+2. [ ] **Creator FE — F7:** integrate Country/City and AI-assisted proposals into ordinary drafts; retain story/Personal/Team content and explicit human review. AI generation/intake must follow the agreed BE contract. Pilot one reviewed city route before working toward three distinct approved routes per city.
+3. [ ] **Admin FE — G4:** expose required location/provenance/review evidence in existing exact-version review, using the established approve/request-changes workflow.
+4. [ ] **Organizer FE — D10:** Country → City → approved Template → automatic read-only real Mapbox preview → Hunt details → Participants/access → Experience defaults. Replace the future fixed-Template simulated-editor UX with read-only inspection; preserve explicit saves and snapshots.
+5. [ ] **Deployed supply-chain verification:** use reviewed real geography and record evidence through AI-assisted draft → human review → Admin approval → automatic Organizer preview → saved Hunt snapshot. Verify empty/error/stale-version/provider failures and immutable history; merge does not satisfy this gate.
 
-This planning PR modifies only the FE repository plan. It does not implement F4, merge, deploy or claim new E2E results.
+## 20.3 Remaining existing-phase sequence
+
+Mapbox aliases M1–M6 are not Phase M Passport/history item IDs. M1/F4–F6 and M2/G3/D8 implementation are merged as audited above; their deployed verification remains outstanding.
+
+1. [ ] M3 / B6 then D9 — BE effective authority/assignment APIs, then Allocate Supervisors FE.
+2. [ ] H / Step 8 — Participant enrollment/team formation/start/recovery; Step 7 deployed verification gates this phase.
+3. [ ] M4 / I1–I9 + I12 — one authoritative checkpoint first, with persistent map background, popup/overlay interactions, Signal story and Personal/Team Challenges, GPS/navigation/Arrival Engine. BE contracts before FE; Creator simulation is not runtime completion.
+4. [ ] I13 — BE suspension/bypass rules, then Participant handling; prove before live suspension controls.
+5. [ ] I10–I11 — expand proven shared gameplay to Signal's seven stops, including terminal FinishPoint; BE completes Hunt only after required terminal activities resolve. Resolve terminal suspension/fairness policy first.
+6. [ ] M5 / J — backend live state/minimal GPS, then shared Operations Map, suspension controls and HELP/PANIC.
+7. [ ] K — results and reward awarding; retain suspension fairness.
+8. [ ] M6 / I14 — advanced geographic gamification after core rules and operations are proven; this does not defer I12's basic gamified map presentation.
+9. [ ] Outstanding L Admin operations/audit, M long-term records and N custom requests as scoped steps; resolve Independent Organizer separately.
+
+Each entry is a sequence container, not one large PR. Follow review → user merge → deployment → explicit verification, keeping implementation status and E2E status separate.
+
+# 21. Next-step planning gate — no implementation prompt yet
+
+The obsolete “implement F4 / 5 m radius” prompt is retired: BE #60 already merged, followed by the dependent FE work. Do not reissue it.
+
+First review this v3.3 documentation-only FE Draft PR in the existing project workflow. After user merge, the next scoped planning target is the **F7/G4 Backend contract** in section 20.2, including the unresolved field/API and legacy/review-gate decisions. Only then write a separate implementation prompt for that one repository/slice.
+
+No implementation prompts, AI-generated routes, application changes, automatic merge or deployment are included in this plan update. Preserve the existing architecture and verify deployed evidence independently.
 
 # 22. Prototype success milestones
 
