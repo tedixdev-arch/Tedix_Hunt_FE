@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { OrganizerHeader } from './OrganizerFlow'
+import { OrganizerHuntGeographyInspection } from '../components/OrganizerHuntGeography'
 
 type LiveStatus = 'Live' | 'Paused' | 'Completed'
 type TeamState = 'On track' | 'Needs attention' | 'Help requested' | 'Finished'
@@ -57,6 +58,7 @@ export function OrganizerMonitorPage() {
           </div>
           {messageSent && <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-800" role="status">✓ Update sent to all active participants.</p>}
         </header>
+        {!independent && huntId && <OrganizerHuntGeographyInspection key={huntId} huntId={huntId} />}
 
         {!alertResolved && <section className="mt-5 rounded-2xl border-2 border-red-300 bg-red-50 p-5 shadow-sm" aria-labelledby="urgent-alert-title"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-700">Urgent · Help request</p><h2 className="mt-2 text-xl font-bold" id="urgent-alert-title">Signal Seekers · Checkpoint 3</h2><p className="mt-2 text-sm text-red-950">Mirror Passage · requested 2 minutes ago · last location available</p></div><div className="flex flex-col gap-2 sm:flex-row"><button className="min-h-11 rounded-xl border border-red-300 bg-white px-4 text-sm font-bold text-red-800" type="button">Contact team</button><button className="min-h-11 rounded-xl bg-red-700 px-4 text-sm font-bold text-white" onClick={()=>setAlertResolved(true)} type="button">Mark resolved</button></div></div></section>}
         {alertResolved && <section className="mt-5 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><strong className="text-emerald-900">No active safety alerts</strong><button className="font-bold text-emerald-800" onClick={()=>setAlertResolved(false)} type="button">View prototype alert</button></section>}

@@ -4,10 +4,10 @@ import { isValidFinishPoint, type FinishPoint } from '../features/creator/finish
 export interface HuntGeography { checkpoints: CheckpointPosition[]; finishPoint?: FinishPoint; warning?: string }
 
 /** Validate the artifact as stored. Never sort, repair, or source another version. */
-export function inspectHuntGeography(configuration: Record<string, unknown>): HuntGeography {
+export function inspectHuntGeography(configuration: Record<string, unknown>, sourceLabel = 'Submitted-version'): HuntGeography {
   const count = configuration.normalCheckpointCount
   const points = configuration.checkpointPositions
-  const invalid = (reason: string): HuntGeography => ({ checkpoints: [], warning: `Submitted-version geography is missing or invalid: ${reason} No locations were substituted. Legacy Templates remain reviewable through their submitted content.` })
+  const invalid = (reason: string): HuntGeography => ({ checkpoints: [], warning: `${sourceLabel} geography is missing or invalid: ${reason} No locations were substituted. Existing Template content and Hunt actions remain available.` })
   if (!Number.isInteger(count) || (count as number) < 1 || (count as number) > 20) return invalid('expected 1–20 normal checkpoints.')
   if (!Array.isArray(points) || points.length !== count) return invalid('checkpoint positions must match the normal checkpoint count.')
   if (points.some((point, index) => !point || typeof point !== 'object' || point.checkpointNumber !== index + 1
