@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
-import type { Feature, Polygon } from 'geojson'
+import type { Feature, Polygon, LineString } from 'geojson'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { FinishPoint } from '../features/creator/finishPoint'
 import { MapboxLocationSearch } from './MapboxLocationSearch'
@@ -38,6 +38,7 @@ export type TedixMapProps = {
   /** Enable temporary location search; selection only moves the mounted map. */
   locationSearch?: boolean
   finishPoint?: FinishPoint
+  walkingRoute?: LineString
   checkpoints?: TedixMapCheckpoint[]
   onMapClick?: (latitude: number, longitude: number) => void
   onCheckpointSelect?: (checkpointNumber: number) => void
@@ -53,6 +54,7 @@ export function TedixMap({
   locationSearch = false,
   checkpoints,
   finishPoint,
+  walkingRoute,
   onMapClick,
   onCheckpointSelect,
 }: TedixMapProps) {
@@ -163,6 +165,28 @@ export function TedixMap({
       if (map.getSource(sourceId)) map.removeSource(sourceId)
     }
   }, [finishPoint, accessToken])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !walkingRoute) return
+    const id = 'tedix-walking-route'
+    const draw = () => {
+      if (map.getSource(id)) return
+      map.addSource(id, { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: walkingRoute } })
+      map.addLayer({ id, type: 'line', source: id, layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#2563eb', 'line-width': 5, 'line-opacity': .85 } })
+    }
+    if (map.isStyleLoaded()) draw()
+    map.on('style.load', draw)
+    const bounds = new mapboxgl.LngLatBounds()
+    walkingRoute.coordinates.forEach(point => bounds.extend([point[0], point[1]]))
+    map.fitBounds(bounds, { padding: 55, maxZoom: 16 })
+    return () => {
+      map.off('style.load', draw)
+      if (mapRef.current !== map) return
+      if (map.getLayer(id)) map.removeLayer(id)
+      if (map.getSource(id)) map.removeSource(id)
+    }
+  }, [walkingRoute, accessToken])
 
   return (
     <div className={`relative h-full min-h-[300px] w-full ${className}`}>

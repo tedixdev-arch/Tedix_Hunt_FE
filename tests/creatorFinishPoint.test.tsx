@@ -9,7 +9,7 @@ vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: mocks }))
-vi.mock('../src/components/TedixMap', () => ({ TedixMap: ({ onMapClick }: any) => <button type="button" onClick={() => onMapClick(47, 24)}>Place map point</button> }))
+vi.mock('../src/components/TedixMap', () => ({ TedixMap: ({ onMapClick }: any) => onMapClick ? <button type="button" onClick={() => onMapClick(47, 24)}>Place map point</button> : <div aria-label="Read-only route map" /> }))
 vi.mock('../src/features/creator/RouteEditor', () => ({ RouteEditor: (props: any) => <button type="button" onClick={() => {
   props.onVerifiedChange(new Set([1])); props.onSafetyChange(new Set(['a', 'b', 'c', 'd', 'e', 'f']))
   props.onConfigurationChange({ normalCheckpointCount: 1, checkpointPositions: props.drafts })
@@ -263,4 +263,23 @@ test('prototype authoring alone does not create an immutable version or overwrit
   await save()
   expect(mocks.createVersion).not.toHaveBeenCalled()
   expect(record).toEqual(original)
+})
+
+test('walking inspection entry is in Review and opens separately from checkpoint placement', async () => {
+  const before = structuredClone(record)
+  await render()
+  const review = container.querySelector('#creator-review')!
+  expect(review.querySelector('[aria-label="Read-only route map"]')).toBeNull()
+  expect([...review.querySelectorAll('button')].some(button => button.textContent === 'Inspect walking route')).toBe(true)
+  await click('2.')
+  expect(container.textContent).toContain('Verify saved route')
+  await click('Inspect walking route')
+  expect(review.querySelectorAll('[aria-label="Read-only route map"]')).toHaveLength(1)
+  expect(container.textContent).toContain('Verify saved route')
+  await click('Close inspection')
+  expect(review.querySelector('[aria-label="Read-only route map"]')).toBeNull()
+  await click('6.')
+  expect(container.textContent).toContain('Place map point')
+  expect(record).toEqual(before)
+  expect(mocks.createVersion).not.toHaveBeenCalled()
 })
