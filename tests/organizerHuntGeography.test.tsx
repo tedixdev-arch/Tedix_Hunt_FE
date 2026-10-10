@@ -2,17 +2,18 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { HuntSnapshotGeographyInspection, OrganizerHuntGeographyInspection } from '../src/components/OrganizerHuntGeography'
+import { ApprovedTemplateGeographyInspection, HuntSnapshotGeographyInspection, OrganizerHuntGeographyInspection } from '../src/components/OrganizerHuntGeography'
+import { ApiError } from '../src/services/api/client'
 import { CustomHuntEditorPage } from '../src/pages/CustomHuntEditor'
 import { OrganizerMonitorPage } from '../src/pages/OrganizerMonitor'
 import type { Hunt } from '../src/services/api/hunts'
 
-const mocks = vi.hoisted(() => ({ maps: [] as any[], markers: [] as any[], get: vi.fn(), catalog: vi.fn(), options: vi.fn(), organizations: vi.fn(), rewards: vi.fn(), create: vi.fn(), update: vi.fn(), publish: vi.fn(), access: vi.fn() }))
+const mocks = vi.hoisted(() => ({ maps: [] as any[], markers: [] as any[], geography: vi.fn(), get: vi.fn(), catalog: vi.fn(), options: vi.fn(), organizations: vi.fn(), rewards: vi.fn(), create: vi.fn(), update: vi.fn(), publish: vi.fn(), access: vi.fn() }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <header>Organizer workspace</header> }))
 vi.mock('../src/services/api', async importOriginal => ({
   ...await importOriginal<any>(),
   huntsApi: { getHunt: mocks.get, createDraft: mocks.create, updateDraft: mocks.update, publish: mocks.publish, createOrGetAccess: mocks.access },
-  huntTemplatesApi: { listHuntTemplates: mocks.catalog }, huntOptionsApi: { listHuntOptions: mocks.options },
+  huntTemplatesApi: { listHuntTemplates: mocks.catalog, getApprovedGeography: mocks.geography }, huntOptionsApi: { listHuntOptions: mocks.options },
   organizationsApi: { listAccessible: mocks.organizations }, huntRewardsApi: { list: mocks.rewards },
 }))
 vi.mock('mapbox-gl', () => ({ default: {
@@ -55,6 +56,7 @@ let container: HTMLDivElement, root: Root
 beforeEach(() => {
   vi.clearAllMocks(); mocks.maps.length = 0; mocks.markers.length = 0
   mocks.get.mockReset().mockResolvedValue(structuredClone(savedHunt)); mocks.catalog.mockReset().mockResolvedValue(catalog)
+  mocks.geography.mockReset().mockImplementation(async (key: string) => ({ key, version: catalog.find(item => item.key === key)!.version, configuration: structuredClone(configuration) }))
   mocks.options.mockResolvedValue(options); mocks.organizations.mockResolvedValue([{ id: 'org', name: 'School' }]); mocks.rewards.mockResolvedValue({ leaderboard: [], specialAwards: [] })
   mocks.publish.mockReset().mockResolvedValue({ ...savedHunt, status: 'published' })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-token')
@@ -74,16 +76,114 @@ async function editor(path = '/organizer/hunts/old-hunt/setup') {
   await render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/organizer/hunts/:huntId/setup" element={<CustomHuntEditorPage />} /><Route path="/organizer/hunts/new/setup" element={<CustomHuntEditorPage />} /></Routes></MemoryRouter>)
 }
 
-test('approved catalog browsing preserves exact identity and does not select or create a Hunt; missing content is explicit', async () => {
-  // Even unexpected extra content is not an established approved-version contract.
+async function approved(onRefreshTemplates = vi.fn()) {
+  await render(<ApprovedTemplateGeographyInspection templates={catalog} onRefreshTemplates={onRefreshTemplates} />)
+  await choose(container.querySelector('select')!, 'trail')
+  return onRefreshTemplates
+}
+
+test('approved geography preserves saved CP order, names, coordinates and radii; map and estimates are explicit', async () => {
+  const before = structuredClone(configuration)
+  await approved(); expect(mocks.geography).not.toHaveBeenCalled(); expect(mocks.maps).toHaveLength(0); expect(fetch).not.toHaveBeenCalled()
+  await click('Inspect Hunt geography')
+  expect(mocks.geography).toHaveBeenCalledExactlyOnceWith('trail', expect.any(AbortSignal))
+  expect([...container.querySelectorAll('[aria-label="Ordered Hunt journey"] li')].map(item => item.textContent)).toEqual(['CP1', '→ CP2', '→ FinishPoint'])
+  for (const stop of [...configuration.checkpointPositions, configuration.finishPoint]) {
+    expect(container.textContent).toContain(stop.name)
+    expect(container.textContent).toContain(`Coordinates: ${stop.latitude}, ${stop.longitude}`)
+    expect(container.textContent).toContain(`Discovery radius: ${stop.radiusMeters} m`)
+  }
+  expect(mocks.markers.map(item => item.coordinates)).toEqual([[23, 46], [24, 47], [25, 48]])
+  expect(fetch).not.toHaveBeenCalled(); await click('Estimate walking route')
+  expect(container.textContent).toContain('1.4 km'); expect(container.textContent).toContain('15 min')
+  await click('Close geography inspection'); expect(mocks.maps[0].remove).toHaveBeenCalledOnce()
+  expect(mocks.geography).toHaveBeenCalledTimes(1)
+  await click('Inspect Hunt geography'); expect(mocks.geography).toHaveBeenCalledTimes(2)
+  expect(container.querySelector('dl')).toBeNull(); expect(configuration).toEqual(before); noMutation()
+})
+
+test.each([{ key: 'other', version: 7 }, { key: 'trail', version: 8 }, { key: 'trail', version: '7' }])('rejects mismatched approved identity %j and offers catalog refresh', async identity => {
+  mocks.geography.mockResolvedValue({ ...identity, configuration })
+  const refresh = await approved(); await click('Inspect Hunt geography')
+  expect(container.textContent).toContain('approved version changed')
+  expect(container.textContent).not.toContain('Snapshot museum'); expect(mocks.maps).toHaveLength(0)
+  await click('Refresh approved Templates'); expect(refresh).toHaveBeenCalledOnce(); noMutation()
+  await click('Retry geography'); expect(mocks.geography).toHaveBeenCalledTimes(2)
+  expect(mocks.maps).toHaveLength(0)
+})
+
+test.each([401, 404, 409, 500])('approved geography handles HTTP %s and retry without mutation', async status => {
+  mocks.geography.mockRejectedValueOnce(new ApiError('Failure', status, 'http'))
+  const refresh = await approved(); await click('Inspect Hunt geography')
+  expect(container.textContent).toContain(status === 401 ? 'Sign in again' : status === 404 ? 'approval was withdrawn' : status === 409 ? 'unavailable or malformed' : 'Please retry')
+  expect(mocks.maps).toHaveLength(0)
+  if (status === 404) { await click('Refresh approved Templates'); expect(refresh).toHaveBeenCalledOnce() }
+  await click('Retry geography'); expect(container.textContent).toContain('Snapshot finish'); noMutation()
+})
+
+test.each([undefined, null, [], {}, { normalCheckpointCount: 2 }, { ...configuration, checkpointPositions: [{ checkpointNumber: 1, name: 'Legacy only' }] }, { ...configuration, finishPoint: {} }])('missing or partial approved geography never invents locations %#', async saved => {
+  mocks.geography.mockResolvedValue({ key: 'trail', version: 7, configuration: saved })
+  await approved(); await click('Inspect Hunt geography')
+  expect(container.querySelector('[role="alert"]')).not.toBeNull(); expect(mocks.maps).toHaveLength(0)
+  expect(container.querySelector('[aria-label="Ordered Hunt journey"]')).toBeNull(); expect(fetch).not.toHaveBeenCalled(); noMutation()
+})
+
+test('loading, rapid switching and stale responses cannot display the previous approved geography', async () => {
+  let resolve!: (value: unknown) => void
+  mocks.geography.mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  await approved(); expect(mocks.geography).not.toHaveBeenCalled()
+  await click('Inspect Hunt geography'); expect(container.textContent).toContain('Loading approved Template geography')
+  const signal = mocks.geography.mock.calls[0][1] as AbortSignal
+  await choose(container.querySelector('select')!, 'other'); expect(signal.aborted).toBe(true)
+  expect(mocks.geography).toHaveBeenCalledTimes(1)
+  await click('Inspect Hunt geography')
+  expect(mocks.geography).toHaveBeenCalledTimes(2)
+  await act(async () => resolve({ key: 'trail', version: 7, configuration: { ...configuration, finishPoint: { ...configuration.finishPoint, name: 'STALE FINISH' } } }))
+  expect(container.textContent).not.toContain('STALE FINISH'); expect(container.textContent).toContain('other · Version 3'); noMutation()
+})
+
+test.each(['close', 'unmount'])('approved pending request aborts on %s and late success cannot survive reopening', async action => {
+  let resolve!: (value: unknown) => void
+  mocks.geography.mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  await approved(); expect(mocks.geography).not.toHaveBeenCalled()
+  await click('Inspect Hunt geography')
+  const signal = mocks.geography.mock.calls[0][1] as AbortSignal
+  if (action === 'close') { await click('Close geography inspection'); await click('Inspect Hunt geography') }
+  else { await render(<div />); await approved(); await click('Inspect Hunt geography') }
+  expect(signal.aborted).toBe(true)
+  await act(async () => resolve({ key: 'trail', version: 7, configuration: { ...configuration, finishPoint: { ...configuration.finishPoint, name: 'STALE FINISH' } } }))
+  expect(container.textContent).not.toContain('STALE FINISH'); expect(container.textContent).toContain('Snapshot finish'); noMutation()
+})
+
+test('catalog version change removes the map and pending walking request before loading the new identity', async () => {
+  let resolve!: (value: Response) => void
+  vi.mocked(fetch).mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  await approved(); await click('Inspect Hunt geography'); await click('Estimate walking route')
+  const routeSignal = vi.mocked(fetch).mock.calls[0][1]!.signal!
+  mocks.geography.mockResolvedValue({ key: 'trail', version: 8, configuration })
+  await render(<ApprovedTemplateGeographyInspection templates={[{ ...catalog[0], version: 8 }]} />)
+  expect(routeSignal.aborted).toBe(true); expect(mocks.maps[0].remove).toHaveBeenCalledOnce()
+  await click('Inspect Hunt geography'); await act(async () => resolve(new Response(JSON.stringify(directions))))
+  expect(container.querySelector('dl')).toBeNull(); expect(container.textContent).toContain('Version 8'); noMutation()
+})
+
+test('empty approved catalog exposes an empty state and makes no requests', async () => {
+  await render(<ApprovedTemplateGeographyInspection templates={[]} />)
+  expect(container.textContent).toContain('No approved Competition Templates')
+  expect(mocks.geography).not.toHaveBeenCalled(); expect(mocks.maps).toHaveLength(0); noMutation()
+})
+
+test('approved inspection uses the geography endpoint and preserves independent Competition selection and Quick Setup', async () => {
+  // Unexpected catalog content must not replace endpoint authority.
   mocks.catalog.mockResolvedValue(catalog.map(item => ({ ...item, configuration })))
   await editor('/organizer/hunts/new/setup'); await click('4. Mission template & story')
   const selection = [...container.querySelectorAll('select')].find(item => item.closest('label')?.textContent?.startsWith('Competition template'))!
   const browsing = container.querySelector<HTMLSelectElement>('[aria-label="Approved Template geography inspection"] select')!
   expect(selection.value).toBe(''); await choose(browsing, 'other'); await click('Inspect Hunt geography')
   expect(container.textContent).toContain('Approved Template: Another approved trail · other · Version 3')
-  expect(container.textContent).toContain('approved catalog provides names and versions only')
-  expect(selection.value).toBe(''); expect(mocks.maps).toHaveLength(0); expect(fetch).not.toHaveBeenCalled(); noMutation()
+  expect(container.textContent).toContain('Snapshot museum')
+  expect(mocks.geography).toHaveBeenCalledExactlyOnceWith('other', expect.any(AbortSignal))
+  expect(selection.value).toBe(''); expect(mocks.maps).toHaveLength(1); expect(fetch).not.toHaveBeenCalled(); noMutation()
   await click('Close geography inspection'); await choose(browsing, 'trail')
   expect(container.textContent).toContain('Approved Template: New approved trail · trail · Version 7')
   expect(container.querySelector('[aria-expanded]')!.getAttribute('aria-expanded')).toBe('false')

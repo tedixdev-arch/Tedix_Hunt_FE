@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { LineString } from 'geojson'
 import { inspectHuntGeography } from './huntMapGeography'
 import { calculateWalkingRoute, walkingDistance, walkingDuration, type WalkingRoute } from '../features/creator/walkingRoute'
@@ -6,19 +6,21 @@ import { calculateWalkingRoute, walkingDistance, walkingDuration, type WalkingRo
 import { TedixMap } from './TedixMap'
 
 /** On-demand lifecycle shared by reviews and future snapshot consumers. */
-export function HuntMapInspection({ configuration, unavailableReason, sourceLabel = 'Submitted-version' }: {
+export function HuntMapInspection({ configuration, unavailableReason, sourceLabel = 'Submitted-version', children, onOpenChange }: {
   configuration?: Record<string, unknown>
   unavailableReason?: string
   sourceLabel?: string
+  children?: ReactNode
+  onOpenChange?: (open: boolean) => void
 }) {
   const [open, setOpen] = useState(false)
   const id = useId()
   return <div className="mt-4 min-w-0">
-    <button type="button" className="min-h-12 rounded-xl border border-slate-300 px-4 font-bold" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)}>{open ? 'Close geography inspection' : 'Inspect Hunt geography'}</button>
+    <button type="button" className="min-h-12 rounded-xl border border-slate-300 px-4 font-bold" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => { setOpen(!open); onOpenChange?.(!open) }}>{open ? 'Close geography inspection' : 'Inspect Hunt geography'}</button>
     {open && <div id={id}>
-      {unavailableReason || !configuration
+      {children ?? (unavailableReason || !configuration
         ? <p role="alert" className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{unavailableReason ?? 'Authoritative geography is unavailable. No locations were substituted.'}</p>
-        : <HuntMapPreview configuration={configuration} sourceLabel={sourceLabel} />}
+        : <HuntMapPreview configuration={configuration} sourceLabel={sourceLabel} />)}
     </div>}
   </div>
 }
