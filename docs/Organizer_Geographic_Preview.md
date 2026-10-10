@@ -30,8 +30,9 @@ never silently accept a newer version. 404 explains missing/withdrawn approval a
 offers the same refresh path. 401 asks the Organizer to sign in again, then retry;
 409 and other failures explain unavailable geography and allow retry.
 
-Selecting an inspection identity begins a read-only geography request, while Mapbox
-remains unmounted until **Inspect Hunt geography** opens valid content. Identity
+Selecting an inspection identity makes no geography request. Clicking **Inspect Hunt
+geography** begins the authenticated read-only request; Mapbox mounts only once valid
+content is available in the open inspection. Identity
 changes remount inspection; close/switch/unmount abort the geography request and
 ignore late success or failure. Closing discards loaded content. Reopening fetches
 approval again, compares it with the same catalog identity, and starts without route

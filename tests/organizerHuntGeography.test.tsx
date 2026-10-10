@@ -84,8 +84,9 @@ async function approved(onRefreshTemplates = vi.fn()) {
 
 test('approved geography preserves saved CP order, names, coordinates and radii; map and estimates are explicit', async () => {
   const before = structuredClone(configuration)
-  await approved(); expect(mocks.maps).toHaveLength(0); expect(fetch).not.toHaveBeenCalled()
+  await approved(); expect(mocks.geography).not.toHaveBeenCalled(); expect(mocks.maps).toHaveLength(0); expect(fetch).not.toHaveBeenCalled()
   await click('Inspect Hunt geography')
+  expect(mocks.geography).toHaveBeenCalledExactlyOnceWith('trail', expect.any(AbortSignal))
   expect([...container.querySelectorAll('[aria-label="Ordered Hunt journey"] li')].map(item => item.textContent)).toEqual(['CP1', '→ CP2', '→ FinishPoint'])
   for (const stop of [...configuration.checkpointPositions, configuration.finishPoint]) {
     expect(container.textContent).toContain(stop.name)
@@ -96,6 +97,7 @@ test('approved geography preserves saved CP order, names, coordinates and radii;
   expect(fetch).not.toHaveBeenCalled(); await click('Estimate walking route')
   expect(container.textContent).toContain('1.4 km'); expect(container.textContent).toContain('15 min')
   await click('Close geography inspection'); expect(mocks.maps[0].remove).toHaveBeenCalledOnce()
+  expect(mocks.geography).toHaveBeenCalledTimes(1)
   await click('Inspect Hunt geography'); expect(mocks.geography).toHaveBeenCalledTimes(2)
   expect(container.querySelector('dl')).toBeNull(); expect(configuration).toEqual(before); noMutation()
 })
@@ -129,10 +131,13 @@ test.each([undefined, null, [], {}, { normalCheckpointCount: 2 }, { ...configura
 test('loading, rapid switching and stale responses cannot display the previous approved geography', async () => {
   let resolve!: (value: unknown) => void
   mocks.geography.mockImplementationOnce(() => new Promise(done => { resolve = done }))
-  await approved(); const signal = mocks.geography.mock.calls[0][1] as AbortSignal
+  await approved(); expect(mocks.geography).not.toHaveBeenCalled()
   await click('Inspect Hunt geography'); expect(container.textContent).toContain('Loading approved Template geography')
+  const signal = mocks.geography.mock.calls[0][1] as AbortSignal
   await choose(container.querySelector('select')!, 'other'); expect(signal.aborted).toBe(true)
+  expect(mocks.geography).toHaveBeenCalledTimes(1)
   await click('Inspect Hunt geography')
+  expect(mocks.geography).toHaveBeenCalledTimes(2)
   await act(async () => resolve({ key: 'trail', version: 7, configuration: { ...configuration, finishPoint: { ...configuration.finishPoint, name: 'STALE FINISH' } } }))
   expect(container.textContent).not.toContain('STALE FINISH'); expect(container.textContent).toContain('other · Version 3'); noMutation()
 })
@@ -140,8 +145,9 @@ test('loading, rapid switching and stale responses cannot display the previous a
 test.each(['close', 'unmount'])('approved pending request aborts on %s and late success cannot survive reopening', async action => {
   let resolve!: (value: unknown) => void
   mocks.geography.mockImplementationOnce(() => new Promise(done => { resolve = done }))
-  await approved(); const signal = mocks.geography.mock.calls[0][1] as AbortSignal
+  await approved(); expect(mocks.geography).not.toHaveBeenCalled()
   await click('Inspect Hunt geography')
+  const signal = mocks.geography.mock.calls[0][1] as AbortSignal
   if (action === 'close') { await click('Close geography inspection'); await click('Inspect Hunt geography') }
   else { await render(<div />); await approved(); await click('Inspect Hunt geography') }
   expect(signal.aborted).toBe(true)

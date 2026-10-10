@@ -28,7 +28,7 @@ type ApprovedResult = { configuration: HuntTemplateGeography['configuration'] } 
 function ApprovedGeography({ template, onRefreshTemplates }: { template: HuntTemplateMetadata; onRefreshTemplates?: () => void }) {
   const [result, setResult] = useState<ApprovedResult>()
   const [attempt, setAttempt] = useState(0)
-  const [enabled, setEnabled] = useState(true)
+  const [enabled, setEnabled] = useState(false)
   const { key, version } = template
   useEffect(() => {
     if (!enabled) return
