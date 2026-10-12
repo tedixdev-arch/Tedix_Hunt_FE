@@ -29,7 +29,8 @@ export function ProposedSignalRoute({ proposal, onInspect, selectedCheckpoint, o
     <p className="mt-2 font-bold text-amber-900">These are desk-researched landmark candidates, not physically verified arrival locations.</p>
     <p className="mt-2">Inspect a landmark, then choose a suitable public exterior arrival area. Select the checkpoint in the placement editor and click the map deliberately; review its name, coordinates and radius before saving the draft.</p>
     <p className="mt-2">Proposal physical verification: {proposal.physicalVerification}. Mapbox walking estimates do not certify safety or accessibility.</p>
-    <p className="mt-2 font-bold text-amber-900">Check Piața Unirii pedestrian crossings, CP5/CP6 proximity and discovery-radius overlap, Tailors' Tower approach and unnecessary crossings. Accessibility and physical inspection remain pending.</p>
+    <p className="mt-2 font-bold text-amber-900">Review the backend field checklist below for landmark proximity, discovery-radius overlap, crossings and approaches. Accessibility and physical inspection remain pending.</p>
+    {candidates.some(candidate => candidate.originalProposalPosition) && <p className="mt-2 text-xs">Retained source notes may use original proposal checkpoint numbers. Follow the current landmark identities and field checklist shown here.</p>}
     <ol aria-label="Ordered route candidates" className="mt-3 grid gap-2 sm:grid-cols-2">
       {candidates.map(candidate => <li key={candidate.order} className="min-w-0">
         <button type="button" aria-controls={detailId} aria-expanded={selected === candidate} onClick={() => { setSelectedOrder(candidate.order); onSelectCheckpoint?.(candidate.role === 'terminal' ? 0 : candidate.checkpoint!); onInspect(candidateReference(candidate, proposal)) }} className={`min-h-11 w-full break-words rounded-lg border p-2 text-left ${selected === candidate ? 'border-blue-600 bg-blue-50' : 'border-amber-200 bg-white'}`}>

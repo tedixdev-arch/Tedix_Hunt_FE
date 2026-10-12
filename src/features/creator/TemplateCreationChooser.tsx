@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 
 const option = 'min-h-12 w-full rounded-xl border border-slate-300 px-4 py-3 text-left font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:opacity-50'
 
-export function TemplateCreationChooser({ creating, error, onScratch, onSignal, onClose, onCheckTemplates }: {
+export function TemplateCreationChooser({ creating, creatingLabel = 'Creating Signal Cluj draft…', error, onScratch, onSignal, onOverload, onClose, onCheckTemplates }: {
   creating: boolean
+  creatingLabel?: string
   error: string
   onScratch: () => void
   onSignal: () => void
+  onOverload: () => void
   onClose: () => void
   onCheckTemplates: () => void
 }) {
@@ -20,6 +22,11 @@ export function TemplateCreationChooser({ creating, error, onScratch, onSignal, 
     name: 'Signal: Cluj Napoca',
     description: 'Pre-filled story, challenges, scoring and researched route.',
     onSelect: onSignal,
+  }, {
+    key: 'signal-overload-cluj-napoca',
+    name: 'Signal Overload - Cluj Napoca',
+    description: 'A new story and reversed researched route. Creates your own independent draft.',
+    onSelect: onOverload,
   }]
   useEffect(() => {
     if (previousView.current === view) return
@@ -61,7 +68,7 @@ export function TemplateCreationChooser({ creating, error, onScratch, onSignal, 
         <button type="button" disabled={creating} onClick={() => setView('begin')} className={option}>Back</button>
       </>}
     </div>
-    {creating && <p role="status" className="mt-4 text-sm font-bold text-emerald-800">Creating Signal Cluj draft…</p>}
+    {creating && <p role="status" className="mt-4 text-sm font-bold text-emerald-800">{creatingLabel}</p>}
     {error && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900"><p>{error}</p><button type="button" onClick={onCheckTemplates} className="mt-3 min-h-12 rounded-xl border border-red-300 px-4 font-bold">Check My Templates</button></div>}
   </dialog>
 }

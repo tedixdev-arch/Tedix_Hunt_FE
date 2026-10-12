@@ -1,3 +1,4 @@
+import { CheckpointStoryPreview } from './CheckpointStoryPreview'
 import { signalFeatureDefaults } from '../../data/organizerTemplates'
 import { checkpointExercises } from '../../data/templateOne'
 import { gameplayFields, supportedGameplay, type CheckpointGameplay, type GameplayField } from './checkpointGameplay'
@@ -21,6 +22,7 @@ export function CheckpointGameplayEditor({ value, onChange, fields = gameplayFie
   value: CheckpointGameplay; onChange: (value: CheckpointGameplay) => void; fields?: GameplayField[]
 }) {
   return <section className="mt-6 space-y-4" aria-label="Checkpoint gameplay">
+    <CheckpointStoryPreview value={value} />
     {fields.map(field => <label key={field} className="block text-sm font-bold">{labels[field]}
       <select className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold focus:border-emerald-500" value={value[field] ?? ''} onChange={event => {
         const next = { ...value }

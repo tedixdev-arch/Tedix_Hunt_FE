@@ -21,6 +21,7 @@ export interface CreatorTemplate {
   version: number
   status: CreatorTemplateStatus
   content: CreatorTemplateContent
+  origin?: unknown
   submittedVersion?: number | null
 }
 
@@ -38,6 +39,15 @@ export class CreatorTemplatesApi {
     this.starterRequest = this.client.post<CreatorTemplate>('/api/creator/templates/starters/signal-cluj-napoca')
       .finally(() => { this.starterRequest = undefined })
     return this.starterRequest
+  }
+
+  private overloadRequest?: Promise<CreatorTemplate>
+
+  createSignalOverloadClujDraft(): Promise<CreatorTemplate> {
+    if (this.overloadRequest) return this.overloadRequest
+    this.overloadRequest = this.client.post<CreatorTemplate>('/api/creator/templates/starters/signal-overload-cluj-napoca')
+      .finally(() => { this.overloadRequest = undefined })
+    return this.overloadRequest
   }
 
   list(): Promise<CreatorTemplate[]> {
