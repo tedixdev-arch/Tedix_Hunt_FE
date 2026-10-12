@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { ProposedSignalRoute } from './ProposedSignalRoute'
-import { type RouteProposal, type candidateReference } from './routeResearch'
+import { type RouteProposal, candidateReference } from './routeResearch'
 import { createFinishPointDraft, isValidFinishPoint, type FinishPointDraft } from './finishPoint'
+import { CLUJ_NAPOCA_VIEW } from './mapTiles'
 import { TedixMap } from '../../components/TedixMap'
 import type { CheckpointDraft, CreatorGeographyConfiguration } from './checkpointGeography'
 import { buildGeographyConfiguration, isGeographyComplete, isValidCheckpoint, MAX_RADIUS_METERS, MIN_RADIUS_METERS, updateCheckpointDraft } from './checkpointGeography'
@@ -18,6 +19,7 @@ const safetyLabels: Record<string, string> = {
 const safetyItems = ['Safe standing area', 'Accessible walking route', 'Road crossings reviewed', 'No restricted areas', 'Day and night suitability checked', 'Emergency access available']
 
 interface Props {
+  templateName?: string
   finishDraft?: FinishPointDraft
   onFinishChange?: (point: FinishPointDraft) => void
   savedConfiguration?: CreatorGeographyConfiguration
@@ -31,7 +33,7 @@ interface Props {
   onConfigurationChange: (configuration: CreatorGeographyConfiguration) => void
 }
 
-export function RouteEditor({ finishDraft, onFinishChange, savedConfiguration, proposal, drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
+export function RouteEditor({ templateName, finishDraft, onFinishChange, savedConfiguration, proposal, drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
   const [reference, setReference] = useState<ReturnType<typeof candidateReference>>()
   const [first] = drafts
   const [activeNumber, setActiveNumber] = useState(first?.checkpointNumber ?? 1)
@@ -44,7 +46,19 @@ export function RouteEditor({ finishDraft, onFinishChange, savedConfiguration, p
     const coordinates = [...drafts.filter(isValidCheckpoint), ...(isValidFinishPoint(finish) ? [finish] : [])].map(point => [point.longitude, point.latitude])
     return coordinates.length > 1 ? { type: 'LineString' as const, coordinates } : undefined
   }, [drafts, finishDraft])
-  const center = positioned[0] ?? validFinish
+  // Camera context never enters checkpoint drafts, confirmation or persistence.
+  const savedCheckpoint = savedConfiguration?.checkpointPositions?.find(isValidCheckpoint)
+  const savedFinish = isValidFinishPoint(savedConfiguration?.finishPoint) ? savedConfiguration.finishPoint : undefined
+  const center = savedCheckpoint ?? savedFinish ?? positioned[0] ?? validFinish
+  const isSignalCluj = /signal\s*:?\s*cluj[ -]napoca/i.test(templateName ?? '')
+    || proposal?.candidates.some(candidate => /cluj[ -]napoca/i.test(candidate.address))
+  const researchCenter = proposal && [...proposal.candidates].sort((a, b) => a.order - b.order)
+    .map(candidate => candidateReference(candidate, proposal)).find(point => !!point)
+  const context = isSignalCluj ? undefined : researchCenter
+  const initialLatitude = center?.latitude ?? context?.latitude ?? CLUJ_NAPOCA_VIEW.center[0]
+  const initialLongitude = center?.longitude ?? context?.longitude ?? CLUJ_NAPOCA_VIEW.center[1]
+  // Without geographic context, show a regional overview around the existing app default.
+  const initialZoom = center || context || isSignalCluj ? CLUJ_NAPOCA_VIEW.zoom : 3
   function status(point: CheckpointDraft | FinishPointDraft, saved?: CheckpointDraft | FinishPointDraft) {
     if (point.latitude === undefined || point.longitude === undefined) return 'Not positioned'
     return saved && ['name', 'latitude', 'longitude', 'radiusMeters'].every(key => point[key as keyof typeof point] === saved[key as keyof typeof saved]) ? 'Saved position' : 'Positioned · not saved'
@@ -65,7 +79,7 @@ export function RouteEditor({ finishDraft, onFinishChange, savedConfiguration, p
   }
     return <section className="mt-5 min-w-0" aria-label="Checkpoint position editor">
     <div className="h-[360px] w-full min-w-0 sm:h-[500px]" data-testid="position-map"><TedixMap
-      initialLatitude={center?.latitude ?? 0} initialLongitude={center?.longitude ?? 0} initialZoom={center ? 14 : 1}
+      initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
       cameraTarget={reference} landmarkReference={reference} routeOverview={routeOverview}
       locationSearch className="overflow-hidden rounded-2xl border border-slate-300"
       checkpoints={positioned.map(point => ({ ...point, selected: !finishSelected && active?.checkpointNumber === point.checkpointNumber, verified: verified.has(point.checkpointNumber) }))}

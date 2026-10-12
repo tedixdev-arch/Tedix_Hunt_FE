@@ -275,6 +275,7 @@ test('Creator places six normal points and FinishPoint using the shared map, sav
   const original = structuredClone(record.content.checkpoints)
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
   await feature('Checkpoint Positions')
+  expect(map.props).toMatchObject({ initialLatitude: 46.7712, initialLongitude: 23.6236, initialZoom: 14 })
   expect(container.querySelectorAll('[data-checkpoint]:not([data-checkpoint="F"])')).toHaveLength(6)
   expect(container.querySelector('[data-checkpoint="F"]')).not.toBeNull()
   expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(7)

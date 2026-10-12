@@ -1,5 +1,5 @@
 import { signalClujRouteProposal } from './fixtures/signalClujRouteProposal'
-import { readRouteProposal, type RouteProposal } from '../src/features/creator/routeResearch'
+import { candidateReference, readRouteProposal, type RouteProposal } from '../src/features/creator/routeResearch'
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
@@ -19,7 +19,7 @@ vi.mock('mapbox-gl', () => ({ default: {
     fitBounds = vi.fn()
     remove = vi.fn()
     resize = vi.fn()
-    constructor() { mocks.maps.push(this) }
+    constructor(public options: any) { mocks.maps.push(this) }
     on(event: string, handler: (...args: any[]) => void) {
       if (!this.handlers.has(event)) this.handlers.set(event, new Set())
       this.handlers.get(event)!.add(handler)
@@ -49,6 +49,7 @@ vi.mock('mapbox-gl', () => ({ default: {
 
 let container: HTMLDivElement
 let root: Root
+let templateName: string | undefined
 let proposal: RouteProposal | undefined
 let initial: CheckpointDraft[]
 let finishInitial: FinishPointDraft | undefined
@@ -63,7 +64,7 @@ function Editor() {
   const [finish, setFinish] = useState(finishInitial)
   latestFinish = finish
   latest = drafts
-  return <RouteEditor savedConfiguration={{ normalCheckpointCount: initial.length, checkpointPositions: initial.filter(point => point.latitude !== undefined) as typeof saved[], finishPoint: undefined }} finishDraft={finish} onFinishChange={finishInitial ? setFinish : undefined} proposal={proposal} drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
+  return <RouteEditor templateName={templateName} savedConfiguration={{ normalCheckpointCount: initial.length, checkpointPositions: initial.filter(point => point.latitude !== undefined) as typeof saved[], finishPoint: undefined }} finishDraft={finish} onFinishChange={finishInitial ? setFinish : undefined} proposal={proposal} drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
     onVerifiedChange={setVerified} onSafetyChange={setSafety} onConfigurationChange={mocks.configuration} />
 }
 
@@ -73,6 +74,7 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
   finishInitial = undefined
+  templateName = undefined
   proposal = undefined
   initial = [{ ...saved }, createCheckpointDrafts(2, ['Museum', 'Park'])[1]]
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
@@ -353,4 +355,64 @@ test('FinishPoint has F selection and placement without increasing normal count 
   act(() => finishMarker.handlers.get('dragend')!())
   expect(latestFinish).toMatchObject({ latitude: 48, longitude: 25 })
   expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+
+test.each(['name', 'research'])('unpositioned Signal Cluj opens at the existing Cluj view via %s without placing or confirming points', context => {
+  initial = createCheckpointDrafts(6, [])
+  if (context === 'name') templateName = 'Signal: Cluj Napoca'
+  else proposal = readRouteProposal({ proposal: signalClujRouteProposal })
+  const before = structuredClone(initial)
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [23.6236, 46.7712], zoom: 14 })
+  expect(latest).toEqual(before)
+  expect(mocks.markers).toHaveLength(0)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  expect(container.textContent).toContain('0 of 6 positions confirmed')
+})
+
+test('saved checkpoint geography takes priority over FinishPoint and Signal context', () => {
+  templateName = 'Signal: Cluj Napoca'
+  initial = [{ ...saved, latitude: 51.5, longitude: -0.12 }]
+  finishInitial = { name: 'Finish', latitude: 48.85, longitude: 2.35, radiusMeters: 30 }
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [-0.12, 51.5], zoom: 14 })
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+test('valid FinishPoint geography takes priority over Signal context when normal points are unpositioned', () => {
+  templateName = 'Signal: Cluj Napoca'
+  initial = createCheckpointDrafts(2, [])
+  finishInitial = { name: 'Finish', latitude: 48.85, longitude: 2.35, radiusMeters: 30 }
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [2.35, 48.85], zoom: 14 })
+  expect(latest.every(point => point.latitude === undefined)).toBe(true)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+test('Templates without geographic context use the regional overview without fabricated pins', () => {
+  initial = createCheckpointDrafts(2, [])
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [23.6236, 46.7712], zoom: 3 })
+  expect(mocks.markers).toHaveLength(0)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+
+test('non-Signal Templates use existing sourced research context only for the camera', () => {
+  initial = createCheckpointDrafts(2, [])
+  proposal = structuredClone(signalClujRouteProposal)
+  proposal.candidates.forEach(candidate => { candidate.address = 'Another city' })
+  const reference = proposal.candidates.map(candidate => candidateReference(candidate, proposal!)).find(point => !!point)!
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [reference.longitude, reference.latitude], zoom: 14 })
+  expect(mocks.markers).toHaveLength(0)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+test('invalid saved positions do not override valid saved geography', () => {
+  initial = [{ ...saved, latitude: 999 }, { ...saved, checkpointNumber: 2, latitude: 51.5, longitude: -0.12 }]
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [-0.12, 51.5], zoom: 14 })
+  expect(mocks.markers).toHaveLength(1)
 })
