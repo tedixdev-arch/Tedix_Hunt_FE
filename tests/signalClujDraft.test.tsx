@@ -18,7 +18,7 @@ let record: CreatorTemplate
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.resetAllMocks()
-  // jsdom lacks the browser dialog methods; native focus containment and Escape are checked in Chromium.
+  // jsdom lacks the browser dialog methods; simulate opening and closing the native dialog.
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function () { this.setAttribute('open', '') } })
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function () { this.removeAttribute('open') } })
   Element.prototype.scrollIntoView = vi.fn()
@@ -45,10 +45,17 @@ test('dashboard prevents repeat clicks and navigates to returned draft key witho
   api.createSignalClujDraft.mockReturnValue(new Promise(done => { resolve = done }))
   await render(<MemoryRouter initialEntries={['/creator']}><Routes><Route path="/creator" element={<CreatorStudioPage />} /><Route path="/create" element={<Location />} /></Routes></MemoryRouter>)
   await click('Create Template')
-  const starter = [...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Signal Cluj')!
+  await click('Start from Template')
+  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  const starter = [...container.querySelectorAll('button')].find(button => button.textContent === 'Signal: Cluj Napoca')!
   await act(async () => { starter.click(); starter.click() })
-  const button = [...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Signal Cluj')!
+  const button = [...container.querySelectorAll('button')].find(button => button.textContent === 'Signal: Cluj Napoca')!
   expect(button.disabled).toBe(true)
+  expect(container.querySelector('[role="status"]')?.textContent).toBe('Creating Signal Cluj draft…')
+  const back = [...container.querySelectorAll('button')].find(button => button.textContent === 'Back')!
+  expect(back.disabled).toBe(true)
+  await act(async () => back.click())
+  expect(container.querySelector('#template-creation-title')?.textContent).toBe('Choose a starter Template')
   await act(async () => button.click())
   expect(api.createSignalClujDraft).toHaveBeenCalledTimes(1)
   await act(async () => resolve({ ...record, key: 'returned key&draft' }))
@@ -60,9 +67,9 @@ test.each([401, 403, 409, 500])('dashboard displays starter error %s and allows 
   api.createSignalClujDraft.mockRejectedValue(new ApiError('Failure', status, 'http'))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
   await click('Create Template')
-  await click('Start from Signal Cluj')
+  await click('Start from Template'); await click('Signal: Cluj Napoca')
   expect(container.querySelector('[role="alert"]')).not.toBeNull()
-  expect([...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Signal Cluj')?.disabled).toBe(false)
+  expect([...container.querySelectorAll('button')].find(button => button.textContent === 'Signal: Cluj Napoca')?.disabled).toBe(false)
 })
 
 test('one creation CTA opens both options with accessible labels and closing creates nothing', async () => {
@@ -77,7 +84,7 @@ test('one creation CTA opens both options with accessible labels and closing cre
   expect(dialog.querySelector(`#${dialog.getAttribute('aria-labelledby')}`)?.textContent).toBe('Create Template')
   expect(dialog.querySelector(`#${dialog.getAttribute('aria-describedby')}`)?.textContent).toBe("Choose how you'd like to begin.")
   expect(document.activeElement?.getAttribute('aria-label')).toBe('Close template creation chooser')
-  for (const name of ['Start from scratch', 'Start from Signal Cluj']) {
+  for (const name of ['Start from scratch', 'Start from Template']) {
     const button = [...dialog.querySelectorAll('button')].find(button => button.textContent === name)!
     expect(dialog.querySelector(`#${button.getAttribute('aria-describedby')}`)?.textContent).toBeTruthy()
   }
@@ -91,12 +98,42 @@ test('one creation CTA opens both options with accessible labels and closing cre
   expect(api.create).not.toHaveBeenCalled()
 })
 
-test('Tab and Shift+Tab wrap inside the chooser, including while both options are disabled', async () => {
+test.each(['Close', 'Escape'])('starter view supports Back and %s without creating a draft', async control => {
+  await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
+  const trigger = [...container.querySelectorAll('button')].find(button => button.textContent === 'Create Template')!
+  trigger.focus()
+  await click('Create Template')
+  const dialog = container.querySelector('dialog')!
+  const template = [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Start from Template')!
+  expect(dialog.querySelector('#template-starter-description')?.textContent).toBe('Choose an existing starter Template to customize.')
+  await click('Start from Template')
+  expect(container.querySelector('dialog')).toBe(dialog)
+  expect(dialog.querySelector('#template-creation-title')?.textContent).toBe('Choose a starter Template')
+  const starter = [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Signal: Cluj Napoca')!
+  expect(document.activeElement).toBe(starter)
+  expect(dialog.querySelector(`#${starter.getAttribute('aria-describedby')}`)?.textContent).toBe('Pre-filled story, challenges, scoring and researched route.')
+  expect(dialog.textContent).not.toContain('Start from scratch')
+  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  await click('Back')
+  expect(dialog.querySelector('#template-creation-title')?.textContent).toBe('Create Template')
+  expect(document.activeElement?.textContent).toBe('Start from Template')
+  await click('Start from Template')
+  if (control === 'Close') await click('Close')
+  else await act(async () => dialog.dispatchEvent(new Event('cancel', { cancelable: true })))
+  expect(container.querySelector('dialog')).toBeNull()
+  expect(document.activeElement).toBe(trigger)
+  await click('Create Template')
+  expect(container.querySelector('#template-creation-title')?.textContent).toBe('Create Template')
+  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(api.create).not.toHaveBeenCalled()
+})
+
+test('Tab and Shift+Tab wrap inside both views, including while starter creation is pending', async () => {
   api.createSignalClujDraft.mockRejectedValue(new ApiError('Failure', 409, 'http'))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
   await click('Create Template')
   const close = container.querySelector<HTMLButtonElement>('[aria-label="Close template creation chooser"]')!
-  const signal = [...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Signal Cluj')!
+  const signal = [...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Template')!
   const tab = async (shiftKey = false) => {
     const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true })
     await act(async () => document.activeElement!.dispatchEvent(event))
@@ -104,11 +141,15 @@ test('Tab and Shift+Tab wrap inside the chooser, including while both options ar
   }
   close.focus(); await tab(true); expect(document.activeElement).toBe(signal)
   await tab(); expect(document.activeElement).toBe(close)
-  await click('Start from Signal Cluj')
+  await click('Start from Template')
+  const back = [...container.querySelectorAll('button')].find(button => button.textContent === 'Back')!
+  close.focus(); await tab(true); expect(document.activeElement).toBe(back)
+  await tab(); expect(document.activeElement).toBe(close)
+  await click('Signal: Cluj Napoca')
   const check = [...container.querySelectorAll('button')].find(button => button.textContent === 'Check My Templates')!
   check.focus(); await tab(); expect(document.activeElement).toBe(close)
   api.createSignalClujDraft.mockReturnValue(new Promise(() => {}))
-  await click('Start from Signal Cluj')
+  await click('Signal: Cluj Napoca')
   close.focus(); await tab(); expect(document.activeElement).toBe(close)
   await tab(true); expect(document.activeElement).toBe(close)
 })
@@ -128,9 +169,9 @@ test('closing and reopening during Signal creation keeps both paths protected', 
   let resolve!: (value: CreatorTemplate) => void
   api.createSignalClujDraft.mockReturnValue(new Promise(done => { resolve = done }))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Template'); await click('Start from Signal Cluj')
+  await click('Create Template'); await click('Start from Template'); await click('Signal: Cluj Napoca')
   await click('Close'); await click('Create Template')
-  for (const name of ['Start from scratch', 'Start from Signal Cluj']) {
+  for (const name of ['Start from scratch', 'Start from Template']) {
     expect([...container.querySelectorAll('button')].find(button => button.textContent === name)?.disabled).toBe(true)
     await click(name)
   }
@@ -141,7 +182,7 @@ test('closing and reopening during Signal creation keeps both paths protected', 
 test('starter errors survive closing, offer checking drafts, and permit an explicit retry', async () => {
   api.createSignalClujDraft.mockRejectedValueOnce(new ApiError('Failure', 500, 'http')).mockResolvedValue(record)
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Template'); await click('Start from Signal Cluj')
+  await click('Create Template'); await click('Start from Template'); await click('Signal: Cluj Napoca')
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('Check your drafts before retrying')
   await click('Check My Templates')
   expect(api.list).toHaveBeenCalledTimes(2)
@@ -149,7 +190,7 @@ test('starter errors survive closing, offer checking drafts, and permit an expli
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('Check your drafts before retrying')
   await click('Create Template')
   expect(container.querySelector('dialog [role="alert"]')).not.toBeNull()
-  await click('Start from Signal Cluj')
+  await click('Start from Template'); await click('Signal: Cluj Napoca')
   expect(api.createSignalClujDraft).toHaveBeenCalledTimes(2)
 })
 
