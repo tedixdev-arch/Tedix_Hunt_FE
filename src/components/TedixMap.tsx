@@ -46,6 +46,10 @@ export type TedixMapProps = {
   routeOverview?: LineString
   walkingRoute?: LineString
   checkpoints?: TedixMapCheckpoint[]
+  finishPointSelected?: boolean
+  onFinishPointSelect?: () => void
+  onFinishPointMove?: (latitude: number, longitude: number) => void
+  onCheckpointMove?: (checkpointNumber: number, latitude: number, longitude: number) => void
   onMapClick?: (latitude: number, longitude: number) => void
   onCheckpointSelect?: (checkpointNumber: number) => void
   className?: string
@@ -64,6 +68,10 @@ export function TedixMap({
   routeOverview,
   cameraTarget,
   landmarkReference,
+  finishPointSelected,
+  onFinishPointSelect,
+  onFinishPointMove,
+  onCheckpointMove,
   onMapClick,
   onCheckpointSelect,
 }: TedixMapProps) {
@@ -78,6 +86,7 @@ export function TedixMap({
     style: mapStyle,
   })
   const currentStyle = useRef(mapStyle)
+  const suppressClickUntil = useRef(0)
   const clickHandler = useRef(onMapClick)
   clickHandler.current = onMapClick
 
@@ -137,7 +146,7 @@ export function TedixMap({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !onMapClick) return
-    const click = (event: mapboxgl.MapMouseEvent) => clickHandler.current?.(event.lngLat.lat, event.lngLat.lng)
+    const click = (event: mapboxgl.MapMouseEvent) => { if (Date.now() > suppressClickUntil.current) clickHandler.current?.(event.lngLat.lat, event.lngLat.lng) }
     map.on('click', click)
     return () => { map.off('click', click) }
   }, [!!onMapClick, accessToken])
@@ -156,7 +165,13 @@ export function TedixMap({
       button.setAttribute('aria-pressed', String(!!point.selected))
       button.className = `flex h-11 w-11 items-center justify-center rounded-full border-4 border-white font-bold text-white shadow-lg ${point.selected ? 'bg-slate-900 ring-4 ring-emerald-400' : point.verified ? 'bg-emerald-600' : 'bg-amber-600'}`
       button.onclick = event => { event.stopPropagation(); onCheckpointSelect?.(point.checkpointNumber) }
-      return new mapboxgl.Marker({ element: button }).setLngLat([point.longitude, point.latitude]).addTo(map)
+      const marker = new mapboxgl.Marker({ element: button, ...(onCheckpointMove ? { draggable: true } : {}) }).setLngLat([point.longitude, point.latitude]).addTo(map)
+      if (onCheckpointMove) marker.on('dragend', () => {
+        suppressClickUntil.current = Date.now() + 250
+        const { lat, lng } = marker.getLngLat()
+        onCheckpointMove(point.checkpointNumber, lat, lng)
+      })
+      return marker
     })
     const draw = () => {
       if (map.getSource(sourceId)) return
@@ -174,18 +189,25 @@ export function TedixMap({
       if (map.getLayer(fillId)) map.removeLayer(fillId)
       if (map.getSource(sourceId)) map.removeSource(sourceId)
     }
-  }, [checkpoints, onCheckpointSelect, accessToken])
+  }, [checkpoints, onCheckpointSelect, onCheckpointMove, accessToken])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !finishPoint) return
     const sourceId = 'tedix-finishpoint-radius'
-    const element = document.createElement('div')
-    element.textContent = '⚑'
+    const element = document.createElement(onFinishPointSelect ? 'button' : 'div')
+    if (element instanceof HTMLButtonElement) element.type = 'button'
+    element.textContent = onFinishPointSelect ? 'F' : '⚑'
+    if (onFinishPointSelect) element.setAttribute('aria-pressed', String(!!finishPointSelected))
     element.setAttribute('aria-label', `FinishPoint: ${finishPoint.name}`)
-    element.className = 'flex h-12 w-12 items-center justify-center rounded-lg border-4 border-white bg-violet-700 text-2xl text-white shadow-lg'
-    element.onclick = event => event.stopPropagation()
-    const marker = new mapboxgl.Marker({ element }).setLngLat([finishPoint.longitude, finishPoint.latitude]).addTo(map)
+    element.className = `flex h-12 w-12 items-center justify-center rounded-lg border-4 border-white bg-violet-700 text-2xl text-white shadow-lg ${finishPointSelected ? 'ring-4 ring-emerald-400' : ''}`
+    element.onclick = event => { event.stopPropagation(); onFinishPointSelect?.() }
+    const marker = new mapboxgl.Marker({ element, ...(onFinishPointMove ? { draggable: true } : {}) }).setLngLat([finishPoint.longitude, finishPoint.latitude]).addTo(map)
+    if (onFinishPointMove) marker.on('dragend', () => {
+      suppressClickUntil.current = Date.now() + 250
+      const { lat, lng } = marker.getLngLat()
+      onFinishPointMove(lat, lng)
+    })
     const draw = () => {
       if (map.getSource(sourceId)) return
       map.addSource(sourceId, { type: 'geojson', data: checkpointRadius(finishPoint) })
@@ -201,7 +223,7 @@ export function TedixMap({
       for (const id of [`${sourceId}-line`, `${sourceId}-fill`]) if (map.getLayer(id)) map.removeLayer(id)
       if (map.getSource(sourceId)) map.removeSource(sourceId)
     }
-  }, [finishPoint, accessToken])
+  }, [finishPoint, finishPointSelected, onFinishPointSelect, onFinishPointMove, accessToken])
 
   useEffect(() => {
     const map = mapRef.current

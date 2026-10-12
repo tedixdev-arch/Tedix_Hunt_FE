@@ -275,7 +275,8 @@ test('Creator places six normal points and FinishPoint using the shared map, sav
   const original = structuredClone(record.content.checkpoints)
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
   await feature('Checkpoint Positions')
-  expect(container.querySelectorAll('[data-checkpoint]')).toHaveLength(6)
+  expect(container.querySelectorAll('[data-checkpoint]:not([data-checkpoint="F"])')).toHaveLength(6)
+  expect(container.querySelector('[data-checkpoint="F"]')).not.toBeNull()
   expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(7)
   await click('CP6 ·')
   expect(map.props.cameraTarget).toMatchObject({ latitude: 46.7683841, longitude: 23.5955112 })
@@ -286,7 +287,7 @@ test('Creator places six normal points and FinishPoint using the shared map, sav
     await act(async () => map.props.onMapClick(46.7 + number / 1000, 23.6 + number / 1000))
     const card = container.querySelector(`[data-checkpoint="${number}"]`)!.closest('article')!
     await inputValue(card.querySelector('input')!, `Real place ${number}`)
-    await inputValue(card.querySelector('input[type="number"]')!, '25')
+    await inputValue(card.querySelector('input[type="number"][max="500"]')!, '25')
     expect(map.props.checkpoints.find((point: any) => point.checkpointNumber === number)?.name).toBe(`Real place ${number}`)
   }
   await feature('Final Checkpoint')
