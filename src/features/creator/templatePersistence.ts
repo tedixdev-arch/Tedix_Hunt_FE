@@ -43,10 +43,17 @@ export function hydratePersistedGeography(configuration: CreatorGeographyConfigu
   }
 }
 
-export function creatorTemplateError(error: unknown, operation: 'save' | 'submit' | 'load' | 'starter'): string {
+export function creatorTemplateError(error: unknown, operation: 'save' | 'submit' | 'load' | 'starter' | 'delete'): string {
   if (!(error instanceof ApiError)) return 'The backend is unavailable. Please try again.'
   if (error.status === 401) return 'Your session has expired. Please sign in again.'
   if (error.status === 403) return 'Your Creator account is not authorized to perform this action.'
+  if (operation === 'delete') {
+    if (error.status === 404) return 'This Template was not found or is no longer owned by your account. Cancel and refresh My Templates before trying again.'
+    const code = error.details && typeof error.details === 'object' && 'error' in error.details ? error.details.error : undefined
+    if (error.status === 409 && code === 'template_not_deletable') return 'This Template can no longer be deleted in its current status. Only drafts and changes requested Templates can be deleted. Cancel and refresh My Templates.'
+    if (error.status === 409 && code === 'template_in_use') return 'This Template is in use by a Hunt or has protected dependencies and cannot be deleted. Cancel and keep this Template, or contact support.'
+    return 'Deletion could not be confirmed. Cancel and refresh My Templates to check its current state, or retry.'
+  }
   if (error.status === 404) return 'This Creator Template could not be found. Return to Creator Studio and reopen it.'
   if (operation === 'starter' && error.status === 409) return 'The Signal Cluj starter could not be created because of a conflict. Return to the dashboard and check your drafts before retrying.'
   if (operation === 'starter' && (error.status === null || error.status >= 500)) return 'Starter creation could not be confirmed. Check your drafts before retrying to avoid creating a duplicate.'

@@ -48,6 +48,10 @@ export class CreatorTemplatesApi {
     return this.client.get(`/api/creator/templates/${encodeURIComponent(key)}`)
   }
 
+  delete(key: string): Promise<void> {
+    return this.client.delete(`/api/creator/templates/${encodeURIComponent(key)}`)
+  }
+
   create(content: CreatorTemplateContent): Promise<CreatorTemplate> {
     return this.client.post('/api/creator/templates', { key: content.key, content })
   }
