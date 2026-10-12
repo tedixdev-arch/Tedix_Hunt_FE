@@ -105,3 +105,30 @@ test('editing and saving hydrated geography creates a version without mutating t
   assert.deepEqual(JSON.parse(String(setup.calls[0].init?.body)), { content: { ...next, version: 2 } })
   assert.deepEqual(next.configuration, { normalCheckpointCount: 1, checkpointPositions: [{ ...position, latitude: 47, longitude: 24, radiusMeters: 5 }] })
 })
+
+test('DELETE encodes the entire key, uses authentication and accepts an empty 204 response', async () => {
+  const setup = api([new Response(null, { status: 204 })])
+  assert.equal(await setup.api.delete('draft /?#&é'), undefined)
+  assert.equal(setup.calls.length, 1)
+  assert.equal(setup.calls[0].url, 'https://api.test/api/creator/templates/draft%20%2F%3F%23%26%C3%A9')
+  assert.equal(setup.calls[0].init?.method, 'DELETE')
+  assert.equal(new Headers(setup.calls[0].init?.headers).get('Authorization'), 'Bearer creator-token')
+  assert.equal(setup.calls[0].init?.body, undefined)
+})
+
+for (const [status, code, message] of [
+  [401, 'unauthorized', /sign in again/], [403, 'forbidden', /not authorized/],
+  [404, 'not_found', /not found or is no longer owned/],
+  [409, 'template_not_deletable', /current status/], [409, 'template_in_use', /protected dependencies/],
+] as const) {
+  test(`DELETE preserves ${status} ${code} for actionable error handling`, async () => {
+    const setup = api([new Response(JSON.stringify({ error: code }), { status, headers: { 'content-type': 'application/json' } })])
+    await assert.rejects(setup.api.delete(record.key), error => {
+      assert.ok(error instanceof ApiError)
+      assert.equal(error.status, status)
+      assert.match(creatorTemplateError(error, 'delete'), message)
+      return true
+    })
+    assert.equal(setup.calls.length, 1)
+  })
+}

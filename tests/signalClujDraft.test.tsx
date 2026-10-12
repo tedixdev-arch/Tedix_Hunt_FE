@@ -207,7 +207,7 @@ test('My Templates preserves every status counter, card and existing editor link
   cards.forEach((card, index) => {
     expect(card.querySelector('h2')?.textContent).toBe(`${statuses[index]} Template`)
     expect(card.querySelector('a')?.getAttribute('href')).toBe(`/create?template=${statuses[index]}%26key`)
-    expect(card.querySelector('a')?.textContent).toBe(index === 0 ? 'Edit template' : 'View template')
+    expect(card.querySelector('a')?.textContent).toBe(index < 2 ? 'Edit template' : 'View template')
   })
   await click('Create Template'); await click('Close')
   expect(container.querySelectorAll('[aria-label="Creator Templates"] article')).toHaveLength(4)

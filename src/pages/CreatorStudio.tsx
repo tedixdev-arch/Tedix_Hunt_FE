@@ -1,4 +1,5 @@
 import { editMissionStory, missionStoryFields, type TemplateMission } from '../features/creator/mission'
+import { DeleteTemplateDialog } from '../features/creator/DeleteTemplateDialog'
 import { TemplateCreationChooser } from '../features/creator/TemplateCreationChooser'
 import { readRouteProposal } from '../features/creator/routeResearch'
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
@@ -114,17 +115,78 @@ export function CreatorStudioPage() {
   const [templates, setTemplates] = useState<CreatorTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const load = () => { setLoading(true); setError(''); creatorTemplatesApi.list().then(setTemplates).catch(reason => setError(creatorTemplateError(reason, 'load'))).finally(() => setLoading(false)) }
-  useEffect(load, [])
+  const loadSequence = useRef(0)
+  const load = async () => {
+    const sequence = ++loadSequence.current
+    setLoading(true); setError('')
+    try {
+      const records = await creatorTemplatesApi.list()
+      if (sequence === loadSequence.current) setTemplates(records)
+    } catch (reason) {
+      if (sequence === loadSequence.current) setError(creatorTemplateError(reason, 'load'))
+    } finally { if (sequence === loadSequence.current) setLoading(false) }
+  }
+  const [deleteTarget, setDeleteTarget] = useState<CreatorTemplate | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const deletingRequest = useRef(false)
+  const [deleteError, setDeleteError] = useState('')
+  const deleteTrigger = useRef<HTMLButtonElement | null>(null)
+  const templatesHeading = useRef<HTMLHeadingElement>(null)
+  const restoreDeleteFocus = () => {
+    if (deleteTrigger.current?.isConnected && !deleteTrigger.current.disabled) deleteTrigger.current.focus()
+    else templatesHeading.current?.focus()
+  }
+  const confirmDelete = async () => {
+    if (!deleteTarget || deletingRequest.current) return
+    deletingRequest.current = true; setDeleting(true); setDeleteError('')
+    try {
+      await creatorTemplatesApi.delete(deleteTarget.key)
+    } catch (reason) {
+      setDeleteError(creatorTemplateError(reason, 'delete'))
+      deletingRequest.current = false; setDeleting(false)
+      return
+    }
+    // Only a confirmed DELETE can initiate a refresh; never remove cards locally.
+    setDeleteTarget(null)
+    await load()
+    deletingRequest.current = false; setDeleting(false)
+    // The deleted trigger may have disappeared after the authoritative list refresh.
+    if (!deleteTrigger.current?.isConnected && (document.activeElement === document.body || document.activeElement === templatesHeading.current)) templatesHeading.current?.focus()
+  }
+  useEffect(() => { void load() }, [])
   const statuses = [['Drafts', 'draft'], ['Changes requested', 'changes_requested'], ['Submitted', 'submitted'], ['Approved', 'approved']] as const
   return <Shell><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Creator Studio</p><div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-4xl font-bold">Competition Templates</h1><p className="mt-3 max-w-2xl text-slate-600">Create complete, safe Hunts that Organizers can adapt in Set the Hunt.</p></div><button type="button" aria-haspopup="dialog" onClick={() => setChoosing(true)} className="flex min-h-12 items-center rounded-xl bg-emerald-500 px-5 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Create Template</button></div>
     {choosing && <TemplateCreationChooser creating={creatingStarter} error={starterError} onScratch={() => { if (!creating.current) navigate('/create') }} onSignal={createStarter} onClose={() => setChoosing(false)} onCheckTemplates={() => { setChoosing(false); load() }} />}
     {!choosing && creatingStarter && <p role="status" className="mt-3 text-sm font-bold text-emerald-800">Creating Signal Cluj draft…</p>}
     {!choosing && starterError && <p role="alert" className="mt-3 text-sm text-red-800">{starterError}</p>}
     {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">{error}<button type="button" className="ml-3 underline" onClick={load}>Retry</button></div>}
-    <h2 className="mt-8 text-2xl font-bold">My Templates</h2>
+    <h2 ref={templatesHeading} tabIndex={-1} className="mt-8 text-2xl font-bold">My Templates</h2>
+    {deleteTarget && <DeleteTemplateDialog name={deleteTarget.content.displayName} deleting={deleting} error={deleteError} onCancel={() => setDeleteTarget(null)} onConfirm={() => void confirmDelete()} restoreFocus={restoreDeleteFocus} />}
+    {!deleteTarget && deleteError && <p role="alert" className="mt-4 text-sm text-red-900">{deleteError} <button type="button" onClick={() => { setDeleteError(''); void load() }} className="min-h-12 px-3 font-bold underline">Refresh My Templates</button></p>}
     <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Template queues">{statuses.map(([name, status]) => <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={name}><p className="text-sm font-bold text-slate-500">{name}</p><p className="mt-2 text-3xl font-bold">{templates.filter(item => item.status === status).length}</p></article>)}</section>
-    <section className="mt-8 space-y-4" aria-label="Creator Templates">{loading ? <p className="rounded-2xl bg-white p-5">Loading Creator Templates…</p> : templates.length === 0 ? <p className="rounded-2xl bg-white p-5 text-slate-600">No persisted Creator Templates yet.</p> : templates.map(item => <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={item.key}><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase text-amber-700">{item.status.replace('_', ' ')} · Version {item.version}</p><h2 className="mt-2 text-xl font-bold">{item.content.displayName}</h2><p className="mt-2 text-sm text-slate-500">{item.content.theme} · {item.content.configuration.normalCheckpointCount} checkpoints + FinishPoint</p></div><Link className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold" to={`/create?template=${encodeURIComponent(item.key)}`}>{item.status === 'draft' ? 'Edit template' : 'View template'}</Link></div></article>)}</section></Shell>
+    <section className="mt-8 space-y-4" aria-label="Creator Templates" aria-busy={loading}>
+      {loading && templates.length === 0 ? <p className="rounded-2xl bg-white p-5">Loading Creator Templates…</p>
+        : templates.length === 0 ? <p className="rounded-2xl bg-white p-5 text-slate-600">No persisted Creator Templates yet.</p>
+        : templates.map(item => {
+          const editable = item.status === 'draft' || item.status === 'changes_requested'
+          return <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={item.key}>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="min-w-0 break-words">
+                <p className="text-xs font-bold uppercase text-amber-700">{item.status.replace('_', ' ')} · Version {item.version}</p>
+                <h2 className="mt-2 text-xl font-bold">{item.content.displayName}</h2>
+                <p className="mt-2 text-sm text-slate-500">{item.content.theme} · {item.content.configuration.normalCheckpointCount} checkpoints + FinishPoint</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link className="min-h-12 rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold focus-visible:outline focus-visible:outline-2" to={`/create?template=${encodeURIComponent(item.key)}`}>{editable ? 'Edit template' : 'View template'}</Link>
+                {editable && <button type="button" aria-haspopup="dialog" disabled={deleting} onClick={event => {
+                  deleteTrigger.current = event.currentTarget
+                  setDeleteError(''); setDeleteTarget(item)
+                }} className="min-h-12 rounded-xl px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 disabled:opacity-50">Delete</button>}
+              </div>
+            </div>
+          </article>
+        })}
+    </section></Shell>
 }
 
 export function CreatorTemplateEditorPage() {
