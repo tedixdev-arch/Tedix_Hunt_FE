@@ -1,4 +1,5 @@
 import { editMissionStory, missionStoryFields, type TemplateMission } from '../features/creator/mission'
+import { TemplateCreationChooser } from '../features/creator/TemplateCreationChooser'
 import { readRouteProposal } from '../features/creator/routeResearch'
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -97,6 +98,7 @@ function RewardBoundary() {
 
 export function CreatorStudioPage() {
   const navigate = useNavigate()
+  const [choosing, setChoosing] = useState(false)
   const creating = useRef(false)
   const [creatingStarter, setCreatingStarter] = useState(false)
   const [starterError, setStarterError] = useState('')
@@ -115,11 +117,13 @@ export function CreatorStudioPage() {
   const load = () => { setLoading(true); setError(''); creatorTemplatesApi.list().then(setTemplates).catch(reason => setError(creatorTemplateError(reason, 'load'))).finally(() => setLoading(false)) }
   useEffect(load, [])
   const statuses = [['Drafts', 'draft'], ['Changes requested', 'changes_requested'], ['Submitted', 'submitted'], ['Approved', 'approved']] as const
-  return <Shell><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Creator Studio</p><div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-4xl font-bold">Competition Templates</h1><p className="mt-3 max-w-2xl text-slate-600">Create complete, safe Hunts that Organizers can adapt in Set the Hunt.</p></div><Link className="flex min-h-12 items-center rounded-xl bg-emerald-500 px-5 font-bold" to="/create">Create template</Link></div>
-    <button type="button" disabled={creatingStarter} onClick={createStarter} className="mt-5 min-h-12 rounded-xl border border-emerald-500 px-5 font-bold disabled:opacity-50">{creatingStarter ? 'Creating Signal Cluj draft…' : 'Create Signal Cluj route draft'}</button>
-    {starterError && <p role="alert" className="mt-3 text-sm text-red-800">{starterError}</p>}
+  return <Shell><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Creator Studio</p><div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-4xl font-bold">Competition Templates</h1><p className="mt-3 max-w-2xl text-slate-600">Create complete, safe Hunts that Organizers can adapt in Set the Hunt.</p></div><button type="button" aria-haspopup="dialog" onClick={() => setChoosing(true)} className="flex min-h-12 items-center rounded-xl bg-emerald-500 px-5 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Create Template</button></div>
+    {choosing && <TemplateCreationChooser creating={creatingStarter} error={starterError} onScratch={() => { if (!creating.current) navigate('/create') }} onSignal={createStarter} onClose={() => setChoosing(false)} onCheckTemplates={() => { setChoosing(false); load() }} />}
+    {!choosing && creatingStarter && <p role="status" className="mt-3 text-sm font-bold text-emerald-800">Creating Signal Cluj draft…</p>}
+    {!choosing && starterError && <p role="alert" className="mt-3 text-sm text-red-800">{starterError}</p>}
     {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">{error}<button type="button" className="ml-3 underline" onClick={load}>Retry</button></div>}
-    <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Template queues">{statuses.map(([name, status]) => <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={name}><p className="text-sm font-bold text-slate-500">{name}</p><p className="mt-2 text-3xl font-bold">{templates.filter(item => item.status === status).length}</p></article>)}</section>
+    <h2 className="mt-8 text-2xl font-bold">My Templates</h2>
+    <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Template queues">{statuses.map(([name, status]) => <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={name}><p className="text-sm font-bold text-slate-500">{name}</p><p className="mt-2 text-3xl font-bold">{templates.filter(item => item.status === status).length}</p></article>)}</section>
     <section className="mt-8 space-y-4" aria-label="Creator Templates">{loading ? <p className="rounded-2xl bg-white p-5">Loading Creator Templates…</p> : templates.length === 0 ? <p className="rounded-2xl bg-white p-5 text-slate-600">No persisted Creator Templates yet.</p> : templates.map(item => <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={item.key}><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase text-amber-700">{item.status.replace('_', ' ')} · Version {item.version}</p><h2 className="mt-2 text-xl font-bold">{item.content.displayName}</h2><p className="mt-2 text-sm text-slate-500">{item.content.theme} · {item.content.configuration.normalCheckpointCount} checkpoints + FinishPoint</p></div><Link className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold" to={`/create?template=${encodeURIComponent(item.key)}`}>{item.status === 'draft' ? 'Edit template' : 'View template'}</Link></div></article>)}</section></Shell>
 }
 
