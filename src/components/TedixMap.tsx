@@ -40,6 +40,8 @@ export type TedixMapProps = {
   finishPoint?: FinishPoint
   /** Move the existing camera to a read-only destination without recreating the map. */
   cameraTarget?: Pick<FinishPoint, 'latitude' | 'longitude'>
+  /** Informational landmark pin only: no radius or placement callback. */
+  landmarkReference?: Pick<FinishPoint, 'latitude' | 'longitude' | 'name'>
   /** Dashed straight-line overview; never a directions estimate. */
   routeOverview?: LineString
   walkingRoute?: LineString
@@ -61,6 +63,7 @@ export function TedixMap({
   walkingRoute,
   routeOverview,
   cameraTarget,
+  landmarkReference,
   onMapClick,
   onCheckpointSelect,
 }: TedixMapProps) {
@@ -115,7 +118,21 @@ export function TedixMap({
 
   useEffect(() => {
     if (cameraTarget) mapRef.current?.flyTo({ center: [cameraTarget.longitude, cameraTarget.latitude], zoom: 16 })
-  }, [cameraTarget?.latitude, cameraTarget?.longitude, accessToken])
+  }, [cameraTarget, accessToken])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !landmarkReference) return
+    const element = document.createElement('div')
+    element.textContent = 'R'
+    element.setAttribute('role', 'img')
+    element.setAttribute('aria-label', `Landmark reference, not an arrival location: ${landmarkReference.name}`)
+    element.title = `Landmark reference only: ${landmarkReference.name}`
+    element.className = 'flex h-10 w-10 items-center justify-center rounded-lg border-2 border-white bg-blue-700 font-bold text-white shadow-lg'
+    element.onclick = event => event.stopPropagation()
+    const marker = new mapboxgl.Marker({ element }).setLngLat([landmarkReference.longitude, landmarkReference.latitude]).addTo(map)
+    return () => { marker.remove() }
+  }, [landmarkReference, accessToken])
 
   useEffect(() => {
     const map = mapRef.current
@@ -232,6 +249,7 @@ export function TedixMap({
 
   return (
     <div className={`relative h-full min-h-[300px] w-full ${className}`}>
+      {landmarkReference && <p className="absolute bottom-3 left-3 right-3 z-10 rounded-lg bg-white p-2 text-xs font-bold text-blue-900">R · Landmark reference only: {landmarkReference.name}. Not an arrival location.</p>}
       {accessToken && mapLoading && !mapError && <p role="status" className="absolute left-2 top-2 z-10 rounded-lg bg-white p-2 text-sm">Loading map…</p>}
       {mapError && <p role="alert" className="absolute left-2 right-2 top-2 z-10 rounded-lg bg-white p-3 text-sm text-red-700">{mapError}</p>}
       {accessToken && locationSearch && <MapboxLocationSearch accessToken={accessToken} onSelect={({ center }) => mapRef.current?.flyTo({ center, zoom: 14 })} />}

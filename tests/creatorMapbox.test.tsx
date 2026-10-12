@@ -1,3 +1,5 @@
+import { signalClujRouteProposal } from './fixtures/signalClujRouteProposal'
+import { readRouteProposal, type RouteProposal } from '../src/features/creator/routeResearch'
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
@@ -43,6 +45,7 @@ vi.mock('mapbox-gl', () => ({ default: {
 
 let container: HTMLDivElement
 let root: Root
+let proposal: RouteProposal | undefined
 let initial: CheckpointDraft[]
 let latest: CheckpointDraft[]
 const saved = { checkpointNumber: 1, name: 'Museum', latitude: 46.77, longitude: 23.59, radiusMeters: 30 }
@@ -52,7 +55,7 @@ function Editor() {
   const [verified, setVerified] = useState(new Set<number>())
   const [safety, setSafety] = useState(new Set<string>())
   latest = drafts
-  return <RouteEditor drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
+  return <RouteEditor proposal={proposal} drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
     onVerifiedChange={setVerified} onSafetyChange={setSafety} onConfigurationChange={mocks.configuration} />
 }
 
@@ -61,6 +64,7 @@ beforeEach(() => {
   vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-public-token')
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
+  proposal = undefined
   initial = [{ ...saved }, createCheckpointDrafts(2, ['Museum', 'Park'])[1]]
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
@@ -75,6 +79,7 @@ function clickMap(latitude: number, longitude: number) {
 
 test('loads existing positions, radius and coordinates without emitting changes', () => {
   render()
+  expect(container.querySelector('[aria-label="Proposed Signal Route"]')).toBeNull()
   expect(container.textContent).toContain('Place and inspect checkpoint positions')
   expect(container.textContent).toContain('0 of 2 positions confirmed')
   expect(container.textContent).toContain('Not confirmed')
@@ -112,12 +117,15 @@ test('switching, placement and repositioning retain the map and change only the 
 })
 
 test('search selection only moves the map, even with a selected unpositioned checkpoint', async () => {
+  proposal = readRouteProposal({ proposal: signalClujRouteProposal })
   vi.useFakeTimers()
   vi.stubGlobal('fetch', vi.fn()
     .mockResolvedValueOnce({ ok: true, json: async () => ({ suggestions: [{ mapbox_id: 'park', name: 'Park' }] }) })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [{ geometry: { coordinates: [23.7, 46.9] } }] }) }))
   render()
   act(() => container.querySelector<HTMLButtonElement>('[data-checkpoint="2"]')!.click())
+  act(() => [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('CP2 ·'))!.click())
+  expect(container.textContent).toContain('No researched reference coordinate available.')
   const before = structuredClone(latest)
   const input = container.querySelector('input[role="combobox"]')!
   await act(async () => {
@@ -212,4 +220,60 @@ test('temporary position confirmation changes wording without certifying safety 
   clickMap(47, 24)
   expect(container.textContent).toContain('0 of 2 positions confirmed')
   expect(container.textContent).toContain('Not confirmed')
+})
+
+
+test('research references inspect the existing map without placement, radius changes or confirmation changes', () => {
+  vi.stubGlobal('fetch', vi.fn())
+  proposal = readRouteProposal({ proposal: signalClujRouteProposal })
+  initial = createCheckpointDrafts(6, [])
+  render()
+  const before = structuredClone(latest)
+  const select = (prefix: string) => act(() => [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith(prefix))!.click())
+  select('CP6 ·')
+  const map = mocks.maps[0]
+  expect(map.flyTo).toHaveBeenLastCalledWith({ center: [23.5955112, 46.7683841], zoom: 16 })
+  expect(latest).toEqual(before)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  expect(map.sources.get('tedix-checkpoint-radii').data.features).toEqual([])
+  const reference = mocks.markers.at(-1)!
+  expect(reference.element.getAttribute('aria-label')).toContain('Landmark reference, not an arrival location')
+  act(() => reference.element.click())
+  expect(latest).toEqual(before)
+  expect(container.textContent).toContain('0 of 6 positions confirmed')
+  expect(container.textContent).toContain('selected checkpoint: 1')
+  select('FinishPoint ·')
+  expect(map.flyTo).toHaveBeenLastCalledWith({ center: [23.5975153, 46.768014], zoom: 16 })
+  expect(latest).toEqual(before)
+  expect(document.querySelector('[aria-label^="FinishPoint:"]')).toBeNull()
+  select('CP1 ·')
+  expect(container.textContent).toContain('No researched reference coordinate available.')
+  expect(document.querySelector('[aria-label^="Landmark reference,"]')).toBeNull()
+  expect(map.flyTo).toHaveBeenCalledTimes(2)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  // Selecting the gameplay checkpoint and clicking an exterior area are still explicit actions.
+  act(() => container.querySelector<HTMLButtonElement>('[data-checkpoint="6"]')!.click())
+  clickMap(46.7685, 23.5958)
+  expect(latest[5]).toMatchObject({ latitude: 46.7685, longitude: 23.5958, radiusMeters: 5 })
+  expect(latest.slice(0, 5)).toEqual(before.slice(0, 5))
+  expect(container.textContent).toContain('0 of 6 positions confirmed')
+  expect(mocks.configuration).toHaveBeenCalledOnce()
+  expect(mocks.maps).toHaveLength(1)
+  expect(fetch).not.toHaveBeenCalled()
+})
+
+test('inspection preserves a placed and session-confirmed checkpoint and can refocus after search', () => {
+  proposal = readRouteProposal({ proposal: signalClujRouteProposal })
+  render()
+  act(() => [...container.querySelectorAll('button')].find(button => button.textContent === 'Confirm position')!.click())
+  const before = structuredClone(latest)
+  const candidate = [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('CP6 ·'))!
+  act(() => candidate.click())
+  act(() => mocks.maps[0].flyTo({ center: [24, 47], zoom: 14 }))
+  act(() => candidate.click())
+  expect(mocks.maps[0].flyTo).toHaveBeenLastCalledWith({ center: [23.5955112, 46.7683841], zoom: 16 })
+  expect(mocks.maps[0].flyTo).toHaveBeenCalledTimes(3)
+  expect(latest).toEqual(before)
+  expect(container.textContent).toContain('1 of 2 positions confirmed')
+  expect(mocks.configuration).not.toHaveBeenCalled()
 })
