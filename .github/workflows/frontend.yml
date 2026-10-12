@@ -44,8 +44,12 @@ jobs:
       - run: npm ci
       - name: Generate deployment version marker
         run: printf '{"commit":"%s"}\n' "$GITHUB_SHA" > public/version.json
-      - run: npm run build
+      - name: Build frontend with public Mapbox token
+        run: |
+          node -e "const token = process.env.VITE_MAPBOX_ACCESS_TOKEN?.trim(); if (!token?.startsWith('pk.')) { console.error('Configure the VITE_MAPBOX_ACCESS_TOKEN Actions secret with a public Mapbox token (pk.) before deployment.'); process.exit(1); }"
+          npm run build
         env:
+          VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
           VITE_API_BASE_URL: https://tedixhunt-be-dev.anainfo.ai
           VITE_BUILD_SHA: ${{ github.sha }}
       - name: Set up SSH
@@ -164,8 +168,12 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - name: Build frontend with public Mapbox token
+        run: |
+          node -e "const token = process.env.VITE_MAPBOX_ACCESS_TOKEN?.trim(); if (!token?.startsWith('pk.')) { console.error('Configure the VITE_MAPBOX_ACCESS_TOKEN Actions secret with a public Mapbox token (pk.) before deployment.'); process.exit(1); }"
+          npm run build
         env:
+          VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
           VITE_API_BASE_URL: https://tedixhunt-be-prod.anainfo.ai
       - name: Set up SSH
         run: |

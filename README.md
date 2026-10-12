@@ -60,6 +60,41 @@ navigation or game behavior and leaves the existing Leaflet editor in place.
 `npm test` runs the existing Node tests followed by mocked Mapbox component tests
 in Vitest/jsdom. These unit tests do not require a real token or network access.
 
+### Deployment token configuration
+
+The GitHub Actions workflow builds the static frontend on the runner, then copies
+`dist/` to the web server. Vite replaces `import.meta.env.VITE_MAPBOX_ACCESS_TOKEN`
+at **build time**. Setting a variable on the web server or restarting it does not
+update an existing bundle; rebuild and publish the new `dist/` instead.
+
+Before approving this workflow change for deployment, the deployment administrator should:
+
+1. Check the existing authorized Mapbox account and GitHub Actions configuration
+   for a usable **public** token (`pk.`); reuse it if suitable. Never use a secret
+   Mapbox token (`sk.`), commit a token, or print its value in logs.
+2. In this repository's **Settings → Secrets and variables → Actions**, add or
+   update the repository **secret** named `VITE_MAPBOX_ACCESS_TOKEN`. The dev job
+   has no GitHub Environment, so an environment-only secret will not reach it.
+   The production job uses the `production` Environment; configure an identically
+   named environment secret there if production needs a separate token (it overrides
+   the repository secret).
+3. Ensure the token is active, has access to the existing Mapbox styles/tiles,
+   Search Box and Directions APIs, and permits `https://tedixhunt-fe-dev.anainfo.ai/`
+   in its URL restrictions. Include the production URL for a shared token, or use
+   the production environment override. Confirm account billing/API access.
+4. Review and merge the PR when ready; the existing push-to-main workflow rebuilds
+   and deploys dev. Production remains a separate manually dispatched workflow.
+   Changing the secret alone does not rebuild a previously deployed bundle.
+5. After deployment, reload Creator Studio and verify map tiles, location search
+   and the existing walking-route estimate. Check the browser's Mapbox requests
+   for authentication/restriction errors without sharing token-bearing URLs.
+
+Both deployment builds pass this secret directly to `npm run build` and reject a
+missing or non-public token before copying assets. This prefix check does not
+establish token validity or account permissions. Validation/PR builds and mocked
+unit tests still work without a real token. Public tokens remain visible in the
+browser bundle even when stored as GitHub Actions secrets.
+
 ### Location search (F5 / Mapbox M1b)
 
 Enable search on the shared map with
