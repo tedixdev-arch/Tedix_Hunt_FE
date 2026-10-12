@@ -1,10 +1,11 @@
 import { signalClujRouteProposal } from './fixtures/signalClujRouteProposal'
-import { readRouteProposal, type RouteProposal } from '../src/features/creator/routeResearch'
+import { candidateReference, readRouteProposal, type RouteProposal } from '../src/features/creator/routeResearch'
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { RouteEditor } from '../src/features/creator/RouteEditor'
 import { checkpointRadius, TedixMap } from '../src/components/TedixMap'
+import { createFinishPointDraft, type FinishPointDraft } from '../src/features/creator/finishPoint'
 import { createCheckpointDrafts, type CheckpointDraft } from '../src/features/creator/checkpointGeography'
 
 const mocks = vi.hoisted(() => ({ maps: [] as any[], markers: [] as any[], configuration: vi.fn() }))
@@ -18,7 +19,7 @@ vi.mock('mapbox-gl', () => ({ default: {
     fitBounds = vi.fn()
     remove = vi.fn()
     resize = vi.fn()
-    constructor() { mocks.maps.push(this) }
+    constructor(public options: any) { mocks.maps.push(this) }
     on(event: string, handler: (...args: any[]) => void) {
       if (!this.handlers.has(event)) this.handlers.set(event, new Set())
       this.handlers.get(event)!.add(handler)
@@ -36,6 +37,9 @@ vi.mock('mapbox-gl', () => ({ default: {
   Marker: class {
     element: HTMLElement
     coordinates?: number[]
+    handlers = new Map<string, () => void>()
+    on(event: string, handler: () => void) { this.handlers.set(event, handler); return this }
+    getLngLat() { return { lat: this.coordinates![1], lng: this.coordinates![0] } }
     constructor({ element }: { element: HTMLElement }) { this.element = element; mocks.markers.push(this) }
     setLngLat(coordinates: number[]) { this.coordinates = coordinates; return this }
     addTo() { document.body.append(this.element); return this }
@@ -45,8 +49,11 @@ vi.mock('mapbox-gl', () => ({ default: {
 
 let container: HTMLDivElement
 let root: Root
+let templateName: string | undefined
 let proposal: RouteProposal | undefined
 let initial: CheckpointDraft[]
+let finishInitial: FinishPointDraft | undefined
+let latestFinish: FinishPointDraft | undefined
 let latest: CheckpointDraft[]
 const saved = { checkpointNumber: 1, name: 'Museum', latitude: 46.77, longitude: 23.59, radiusMeters: 30 }
 
@@ -54,8 +61,10 @@ function Editor() {
   const [drafts, setDrafts] = useState(initial)
   const [verified, setVerified] = useState(new Set<number>())
   const [safety, setSafety] = useState(new Set<string>())
+  const [finish, setFinish] = useState(finishInitial)
+  latestFinish = finish
   latest = drafts
-  return <RouteEditor proposal={proposal} drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
+  return <RouteEditor templateName={templateName} savedConfiguration={{ normalCheckpointCount: initial.length, checkpointPositions: initial.filter(point => point.latitude !== undefined) as typeof saved[], finishPoint: undefined }} finishDraft={finish} onFinishChange={finishInitial ? setFinish : undefined} proposal={proposal} drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
     onVerifiedChange={setVerified} onSafetyChange={setSafety} onConfigurationChange={mocks.configuration} />
 }
 
@@ -64,6 +73,8 @@ beforeEach(() => {
   vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-public-token')
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
+  finishInitial = undefined
+  templateName = undefined
   proposal = undefined
   initial = [{ ...saved }, createCheckpointDrafts(2, ['Museum', 'Park'])[1]]
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
@@ -86,11 +97,11 @@ test('loads existing positions, radius and coordinates without emitting changes'
   expect(container.textContent).toContain('Review standing-area safety')
   expect(container.textContent).not.toContain('Create and verify the safe route')
   expect(latest[0]).toEqual(saved)
-  expect(container.textContent).toContain('46.770000')
-  expect(container.textContent).toContain('23.590000')
+  expect(container.querySelector<HTMLInputElement>('[aria-label="Latitude"]')!.value).toBe('46.77')
+  expect(container.querySelector<HTMLInputElement>('[aria-label="Longitude"]')!.value).toBe('23.59')
   expect(mocks.markers[0].coordinates).toEqual([23.59, 46.77])
   expect(mocks.markers[0].element.getAttribute('aria-pressed')).toBe('true')
-  expect((container.querySelector('input[type="number"]') as HTMLInputElement).value).toBe('30')
+  expect((container.querySelector('input[type="number"][max="500"]') as HTMLInputElement).value).toBe('30')
   expect(mocks.configuration).not.toHaveBeenCalled()
 })
 
@@ -144,7 +155,7 @@ test('search selection only moves the map, even with a selected unpositioned che
 
 test('radius input updates presentation and preserves the backend fields', () => {
   render()
-  const input = container.querySelector('input[type="number"]')!
+  const input = container.querySelector('input[type="number"][max="500"]')!
   act(() => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '500')
     input.dispatchEvent(new Event('input', { bubbles: true }))
@@ -241,7 +252,7 @@ test('research references inspect the existing map without placement, radius cha
   act(() => reference.element.click())
   expect(latest).toEqual(before)
   expect(container.textContent).toContain('0 of 6 positions confirmed')
-  expect(container.textContent).toContain('selected checkpoint: 1')
+  expect(container.textContent).toContain('Selected checkpoint: 1')
   select('FinishPoint ·')
   expect(map.flyTo).toHaveBeenLastCalledWith({ center: [23.5975153, 46.768014], zoom: 16 })
   expect(latest).toEqual(before)
@@ -276,4 +287,132 @@ test('inspection preserves a placed and session-confirmed checkpoint and can ref
   expect(latest).toEqual(before)
   expect(container.textContent).toContain('1 of 2 positions confirmed')
   expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+
+test('map precedes one expanded form and collapsed research, with responsive height', () => {
+  proposal = readRouteProposal({ proposal: signalClujRouteProposal })
+  render()
+  const map = container.querySelector('[data-testid="position-map"]')!
+  expect(map.className).toContain('sm:h-[500px]')
+  expect(map.className).toContain('h-[360px]')
+  const list = container.querySelector('[aria-label="Checkpoint positions"]')!
+  expect(map.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(container.querySelectorAll('input[aria-label="Latitude"]')).toHaveLength(1)
+  const research = [...container.querySelectorAll('details')].find(detail => detail.querySelector('summary')?.textContent === 'Location research & safety notes')!
+  expect(research.open).toBe(false)
+  expect(list.compareDocumentPosition(research) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  act(() => research.querySelector('summary')!.click())
+  expect(research.open).toBe(true)
+  act(() => research.querySelector('summary')!.click())
+  expect(research.open).toBe(false)
+})
+
+test('dragging changes local coordinates and resets confirmation without creating unpositioned pins', () => {
+  render()
+  expect(mocks.markers).toHaveLength(1)
+  act(() => [...container.querySelectorAll('button')].find(button => button.textContent === 'Confirm position')!.click())
+  const marker = mocks.markers.at(-1)!
+  marker.coordinates = [24, 47]
+  act(() => marker.handlers.get('dragend')!())
+  expect(latest[0]).toMatchObject({ latitude: 47, longitude: 24 })
+  expect(latest[1].latitude).toBeUndefined()
+  expect(container.textContent).toContain('0 of 2 positions confirmed')
+  expect(container.textContent).toContain('Positioned · not saved')
+  clickMap(48, 25)
+  expect(latest[0].latitude).toBe(47)
+})
+
+
+test('saved position changes to unsaved after placement and only confirmed valid positions can continue', () => {
+  render()
+  expect(container.textContent).toContain('Saved position')
+  expect(container.textContent).toContain('Not positioned')
+  clickMap(47, 24)
+  expect(container.textContent).not.toContain('Saved position')
+  expect(container.textContent).toContain('Positioned · not saved')
+  act(() => container.querySelector<HTMLButtonElement>('[data-checkpoint="2"]')!.click())
+  expect([...container.querySelectorAll('button')].find(button => button.textContent === 'Confirm position')!.disabled).toBe(true)
+})
+
+test('FinishPoint has F selection and placement without increasing normal count or fabricating a pin', () => {
+  finishInitial = { ...createFinishPointDraft(), name: 'Finish' }
+  render()
+  expect(mocks.markers).toHaveLength(1)
+  expect(container.querySelectorAll('[data-checkpoint]')).toHaveLength(3)
+  act(() => container.querySelector<HTMLButtonElement>('[data-checkpoint="F"]')!.click())
+  clickMap(47, 24)
+  expect(latestFinish).toMatchObject({ latitude: 47, longitude: 24 })
+  expect(latest).toHaveLength(2)
+  const marker = mocks.markers.findLast(item => item.element.isConnected && item.element.textContent === 'F')!
+  expect(marker.element.textContent).toBe('F')
+  expect(marker.element.getAttribute('aria-pressed')).toBe('true')
+  act(() => container.querySelector<HTMLButtonElement>('[data-checkpoint="1"]')!.click())
+  act(() => mocks.markers.findLast(item => item.element.isConnected && item.element.textContent === 'F')!.element.click())
+  expect(container.querySelector('[data-checkpoint="F"]')!.getAttribute('aria-pressed')).toBe('true')
+  const finishMarker = mocks.markers.findLast(item => item.element.isConnected && item.element.textContent === 'F')!
+  finishMarker.coordinates = [25, 48]
+  act(() => finishMarker.handlers.get('dragend')!())
+  expect(latestFinish).toMatchObject({ latitude: 48, longitude: 25 })
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+
+test.each(['name', 'research'])('unpositioned Signal Cluj opens at the existing Cluj view via %s without placing or confirming points', context => {
+  initial = createCheckpointDrafts(6, [])
+  if (context === 'name') templateName = 'Signal: Cluj Napoca'
+  else proposal = readRouteProposal({ proposal: signalClujRouteProposal })
+  const before = structuredClone(initial)
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [23.6236, 46.7712], zoom: 14 })
+  expect(latest).toEqual(before)
+  expect(mocks.markers).toHaveLength(0)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  expect(container.textContent).toContain('0 of 6 positions confirmed')
+})
+
+test('saved checkpoint geography takes priority over FinishPoint and Signal context', () => {
+  templateName = 'Signal: Cluj Napoca'
+  initial = [{ ...saved, latitude: 51.5, longitude: -0.12 }]
+  finishInitial = { name: 'Finish', latitude: 48.85, longitude: 2.35, radiusMeters: 30 }
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [-0.12, 51.5], zoom: 14 })
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+test('valid FinishPoint geography takes priority over Signal context when normal points are unpositioned', () => {
+  templateName = 'Signal: Cluj Napoca'
+  initial = createCheckpointDrafts(2, [])
+  finishInitial = { name: 'Finish', latitude: 48.85, longitude: 2.35, radiusMeters: 30 }
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [2.35, 48.85], zoom: 14 })
+  expect(latest.every(point => point.latitude === undefined)).toBe(true)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+test('Templates without geographic context use the regional overview without fabricated pins', () => {
+  initial = createCheckpointDrafts(2, [])
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [23.6236, 46.7712], zoom: 3 })
+  expect(mocks.markers).toHaveLength(0)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+
+test('non-Signal Templates use existing sourced research context only for the camera', () => {
+  initial = createCheckpointDrafts(2, [])
+  proposal = structuredClone(signalClujRouteProposal)
+  proposal.candidates.forEach(candidate => { candidate.address = 'Another city' })
+  const reference = proposal.candidates.map(candidate => candidateReference(candidate, proposal!)).find(point => !!point)!
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [reference.longitude, reference.latitude], zoom: 14 })
+  expect(mocks.markers).toHaveLength(0)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+test('invalid saved positions do not override valid saved geography', () => {
+  initial = [{ ...saved, latitude: 999 }, { ...saved, checkpointNumber: 2, latitude: 51.5, longitude: -0.12 }]
+  render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [-0.12, 51.5], zoom: 14 })
+  expect(mocks.markers).toHaveLength(1)
 })

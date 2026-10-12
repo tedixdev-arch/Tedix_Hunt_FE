@@ -2,15 +2,16 @@ import { useId, useState } from 'react'
 import { candidateLabel, candidateReference, supportingSourceUrl, type RouteProposal } from './routeResearch'
 
 interface Props {
+  selectedCheckpoint?: number | 'F'
   proposal: RouteProposal
   onInspect: (reference: ReturnType<typeof candidateReference>) => void
 }
 
-export function ProposedSignalRoute({ proposal, onInspect }: Props) {
+export function ProposedSignalRoute({ proposal, onInspect, selectedCheckpoint }: Props) {
   const detailId = useId()
   const [selectedOrder, setSelectedOrder] = useState<number>()
   const candidates = [...proposal.candidates].sort((a, b) => a.order - b.order)
-  const selected = candidates.find(candidate => candidate.order === selectedOrder)
+  const selected = candidates.find(candidate => candidate.order === selectedOrder) ?? candidates.find(candidate => selectedCheckpoint === 'F' ? candidate.role === 'terminal' : candidate.role !== 'terminal' && candidate.order === selectedCheckpoint)
   const reference = selected && candidateReference(selected, proposal)
   const stopLabel = (order: number) => {
     const candidate = candidates.find(candidate => candidate.order === order)
