@@ -4,7 +4,7 @@ Creator Studio reads the existing `content.routeResearch.proposal` from
 [BE #65](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/65), merged as
 `5ff05031fb8fe8b2b5c044f7c670aa5d90db1eae`. Schema version 1 carries its source
 registry, ordered normal/terminal candidates and walking assessment. The FE
-does not maintain a landmark catalog or fetch a new API. The test-only fixture
+does not maintain a landmark catalog or require a new backend API. The test-only fixture
 is copied from `src/domain/templates/signalClujRouteProposal.ts` at that merge.
 
 The Proposed Signal Route panel appears in Checkpoint Positions and Final
@@ -15,14 +15,18 @@ Walking research includes the Unirii crossing survey, CP5/CP6 separation and
 possible discovery-radius overlap, the tower approach, accessibility and field
 inspection. These are desk-researched candidates, not verified arrival locations.
 
-Selecting research does not select a gameplay checkpoint. It moves the existing
-Mapbox camera only when coordinates are finite, in range, explicitly scoped as
-`landmark-reference-only`, marked `arrivalLocation: false`, and refer to a
-supporting source in the proposal and candidate. The blue **R** pin is labelled
-as a landmark reference. It has no discovery circle, placement action or
-confirmation action. Missing or unsupported coordinates display **No researched
-reference coordinate available.** The existing Mapbox search remains manual and
-moves only the camera; candidate addresses are never automatically geocoded.
+Checkpoint Positions now synchronizes research, checkpoint-card and map-marker
+selection. Signal Cluj shows sourced amber numbered provisional references
+immediately, separate from draggable Creator arrivals. Five sourced FE
+landmark references now supplement missing backend coordinates without replacing
+the original research; all seven references fit the initial map overview. Missing/default local
+geographic labels receive proposal names during hydration; saved positions and
+custom Creator labels remain authoritative. The standalone FinishPoint research
+panel continues to inspect the map without changing geography.
+
+For current marker, sequence, source evidence and reference-only supplement behavior and validation,
+see [Signal landmark prefill](signal-landmark-prefill/README.md). No reference
+coordinates are promoted to saved arrival positions.
 
 Creators select a normal checkpoint (or use the separate FinishPoint editor),
 inspect research, choose a public exterior arrival area, deliberately click the

@@ -10,7 +10,7 @@ import { createCheckpointDrafts, type CheckpointDraft } from '../src/features/cr
 
 const mocks = vi.hoisted(() => ({ maps: [] as any[], markers: [] as any[], configuration: vi.fn() }))
 vi.mock('mapbox-gl', () => ({ default: {
-  LngLatBounds: class { extend() { return this } },
+  LngLatBounds: class { coordinates: number[][] = []; extend(point: number[]) { this.coordinates.push(point); return this } },
   Map: class {
     handlers = new Map<string, Set<(...args: any[]) => void>>()
     sources = new Map<string, any>()
@@ -40,7 +40,7 @@ vi.mock('mapbox-gl', () => ({ default: {
     handlers = new Map<string, () => void>()
     on(event: string, handler: () => void) { this.handlers.set(event, handler); return this }
     getLngLat() { return { lat: this.coordinates![1], lng: this.coordinates![0] } }
-    constructor({ element }: { element: HTMLElement }) { this.element = element; mocks.markers.push(this) }
+    constructor(public options: { element: HTMLElement; draggable?: boolean }) { this.element = options.element; mocks.markers.push(this) }
     setLngLat(coordinates: number[]) { this.coordinates = coordinates; return this }
     addTo() { document.body.append(this.element); return this }
     remove() { this.element.remove() }
@@ -136,7 +136,7 @@ test('search selection only moves the map, even with a selected unpositioned che
   render()
   act(() => container.querySelector<HTMLButtonElement>('[data-checkpoint="2"]')!.click())
   act(() => [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('CP2 ·'))!.click())
-  expect(container.textContent).toContain('No researched reference coordinate available.')
+  expect(container.textContent).toContain('Provisional landmark reference available')
   const before = structuredClone(latest)
   const input = container.querySelector('input[role="combobox"]')!
   await act(async () => {
@@ -247,24 +247,27 @@ test('research references inspect the existing map without placement, radius cha
   expect(latest).toEqual(before)
   expect(mocks.configuration).not.toHaveBeenCalled()
   expect(map.sources.get('tedix-checkpoint-radii').data.features).toEqual([])
-  const reference = mocks.markers.at(-1)!
-  expect(reference.element.getAttribute('aria-label')).toContain('Landmark reference, not an arrival location')
+  const reference = mocks.markers.findLast(marker => marker.element.isConnected && marker.element.getAttribute('aria-label')?.startsWith('Select provisional landmark 6'))!
+  expect(reference.options.draggable).toBe(false)
+  expect(reference.handlers.has('dragend')).toBe(false)
   act(() => reference.element.click())
   expect(latest).toEqual(before)
   expect(container.textContent).toContain('0 of 6 positions confirmed')
-  expect(container.textContent).toContain('Selected checkpoint: 1')
+  expect(container.textContent).toContain('Selected checkpoint: 6')
   select('FinishPoint ·')
   expect(map.flyTo).toHaveBeenLastCalledWith({ center: [23.5975153, 46.768014], zoom: 16 })
   expect(latest).toEqual(before)
   expect(document.querySelector('[aria-label^="FinishPoint:"]')).toBeNull()
   select('CP1 ·')
-  expect(container.textContent).toContain('No researched reference coordinate available.')
-  expect(document.querySelector('[aria-label^="Landmark reference,"]')).toBeNull()
-  expect(map.flyTo).toHaveBeenCalledTimes(2)
+  expect(container.textContent).toContain('Provisional landmark reference available')
+  expect(document.querySelectorAll('[aria-label^="Select provisional landmark"]')).toHaveLength(7)
+  expect(map.flyTo).toHaveBeenCalledTimes(4)
   expect(mocks.configuration).not.toHaveBeenCalled()
   // Selecting the gameplay checkpoint and clicking an exterior area are still explicit actions.
   act(() => container.querySelector<HTMLButtonElement>('[data-checkpoint="6"]')!.click())
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000)
   clickMap(46.7685, 23.5958)
+  vi.restoreAllMocks()
   expect(latest[5]).toMatchObject({ latitude: 46.7685, longitude: 23.5958, radiusMeters: 5 })
   expect(latest.slice(0, 5)).toEqual(before.slice(0, 5))
   expect(container.textContent).toContain('0 of 6 positions confirmed')
@@ -366,7 +369,9 @@ test.each(['name', 'research'])('unpositioned Signal Cluj opens at the existing 
   render()
   expect(mocks.maps[0].options).toMatchObject({ center: [23.6236, 46.7712], zoom: 14 })
   expect(latest).toEqual(before)
-  expect(mocks.markers).toHaveLength(0)
+  expect(mocks.markers).toHaveLength(context === 'research' ? 7 : 0)
+  expect(mocks.markers.map(marker => marker.element.textContent)).toEqual(context === 'research' ? ['1', '2', '3', '4', '5', '6', 'F'] : [])
+  expect(mocks.markers.every(marker => marker.options.draggable === false)).toBe(true)
   expect(mocks.configuration).not.toHaveBeenCalled()
   expect(container.textContent).toContain('0 of 6 positions confirmed')
 })
@@ -415,4 +420,75 @@ test('invalid saved positions do not override valid saved geography', () => {
   render()
   expect(mocks.maps[0].options).toMatchObject({ center: [-0.12, 51.5], zoom: 14 })
   expect(mocks.markers).toHaveLength(1)
+})
+
+
+test('reference/card/arrival selection stays synchronized and references never satisfy confirmation', () => {
+  proposal = readRouteProposal({ proposal: signalClujRouteProposal })
+  finishInitial = { name: "Tailors' Tower — exterior", radiusMeters: 5 }
+  initial = createCheckpointDrafts(6, [])
+  render()
+  const reference = () => mocks.markers.findLast(marker => marker.element.isConnected && marker.element.getAttribute('aria-label')?.startsWith('Select provisional landmark 6'))!
+  act(() => reference().element.click())
+  expect(container.querySelector('[data-checkpoint="6"]')!.getAttribute('aria-pressed')).toBe('true')
+  expect(reference().element.getAttribute('aria-pressed')).toBe('true')
+  expect(latest[5].latitude).toBeUndefined()
+  expect(container.querySelector<HTMLButtonElement>('.bg-emerald-500')!.disabled).toBe(true)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  expect(mocks.maps[0].sources.get('tedix-proposed-landmarks').data.geometry.coordinates).toHaveLength(6)
+  // Reference selection suppresses placement from the same click, then a later deliberate click places an arrival.
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000)
+  clickMap(46.7686, 23.5959)
+  const arrival = mocks.markers.findLast(marker => marker.element.isConnected && marker.element.getAttribute('aria-label')?.startsWith('Select checkpoint 6'))!
+  expect(arrival.options.draggable).toBe(true)
+  expect(arrival.element.className).toContain('bg-emerald-700')
+  expect(arrival.handlers.has('dragend')).toBe(true)
+  expect(reference().handlers.has('dragend')).toBe(false)
+  expect(mocks.configuration).toHaveBeenLastCalledWith({ normalCheckpointCount: 6, checkpointPositions: [{ checkpointNumber: 6, name: 'Checkpoint 6', radiusMeters: 5, latitude: 46.7686, longitude: 23.5959 }] })
+  act(() => container.querySelector<HTMLButtonElement>('[data-checkpoint="F"]')!.click())
+  expect(reference().element.getAttribute('aria-pressed')).toBe('false')
+  expect(mocks.markers.findLast(marker => marker.element.isConnected && marker.element.getAttribute('aria-label')?.startsWith('Select provisional landmark F'))!.element.getAttribute('aria-pressed')).toBe('true')
+  act(() => arrival.element.click())
+  expect(container.querySelector('[data-checkpoint="6"]')!.getAttribute('aria-pressed')).toBe('true')
+  vi.restoreAllMocks()
+})
+
+test('all seven sourced references fit initially and expose metadata without network lookup or saved geography', () => {
+  proposal = readRouteProposal({ proposal: signalClujRouteProposal })
+  finishInitial = { name: "Tailors' Tower — exterior", radiusMeters: 5 }
+  initial = createCheckpointDrafts(6, [])
+  vi.stubGlobal('fetch', vi.fn())
+  render()
+  const map = mocks.maps[0]
+  const pins = mocks.markers.filter(marker => marker.element.isConnected)
+  expect(pins.map(marker => marker.element.textContent)).toEqual(['1', '2', '3', '4', '5', '6', 'F'])
+  expect(pins.every(marker => marker.options.draggable === false && !marker.handlers.has('dragend'))).toBe(true)
+  expect(map.fitBounds).toHaveBeenCalledOnce()
+  expect(map.fitBounds.mock.calls[0][0].coordinates).toEqual(pins.map(marker => marker.coordinates))
+  expect(map.fitBounds.mock.calls[0][1]).toEqual({ padding: 64, maxZoom: 16, duration: 0 })
+  expect(container.querySelector('[data-checkpoint="1"]')!.closest('article')!.textContent).toContain('Wikidata Q368963')
+  expect(container.querySelector('a[href="https://www.wikidata.org/wiki/Q368963"]')).not.toBeNull()
+  const source = [...container.querySelectorAll('details')].find(detail => detail.querySelector('summary')?.textContent === 'Reference source & uncertainty')!
+  expect(source.open).toBe(false)
+  act(() => pins[4].element.click())
+  expect(container.querySelector('[data-checkpoint="5"]')!.getAttribute('aria-pressed')).toBe('true')
+  expect(container.textContent).toContain('OSM node 963409421')
+  expect(map.fitBounds).toHaveBeenCalledOnce()
+  expect(latest.every(point => point.latitude === undefined)).toBe(true)
+  expect(latestFinish!.latitude).toBeUndefined()
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  expect(fetch).not.toHaveBeenCalled()
+})
+
+test('unidentified replacement landmark remains unresolved and its sequence has a gap', () => {
+  proposal = structuredClone(signalClujRouteProposal)
+  proposal.candidates[2].landmark = 'Unknown replacement building'
+  initial = createCheckpointDrafts(6, [])
+  render()
+  expect(document.querySelector('[aria-label^="Select provisional landmark 3"]')).toBeNull()
+  act(() => container.querySelector<HTMLButtonElement>('[data-checkpoint="3"]')!.click())
+  expect(container.querySelector('[data-checkpoint="3"]')!.closest('article')!.textContent).toContain('Reference location unavailable')
+  expect(container.textContent).toContain('Incomplete sequence')
+  expect(mocks.maps[0].sources.get('tedix-proposed-landmarks').data.geometry.coordinates).toHaveLength(4)
+  expect(mocks.configuration).not.toHaveBeenCalled()
 })
