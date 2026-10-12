@@ -1,0 +1,56 @@
+/** Provisional map-display supplement only. Never Template configuration or gameplay.
+ * Inspected 2026-10-12. Decimal values are conversions of the cited object coordinates,
+ * not estimated addresses or surveyed arrival points. CP6/F remain backend authority.
+ */
+export const signalClujReferences = [
+  {
+    checkpointNumber: 1, researchSourceId: 'unirii', landmark: 'Piața Unirii — Matthias Corvinus monument',
+    identifier: 'Wikidata Q368963 · heritage CJ-III-m-A-07819',
+    latitude: 46 + 46 / 60 + 10.2 / 3600, longitude: 23 + 35 / 60 + 23.3 / 3600,
+    sourceUrls: ['https://www.wikidata.org/wiki/Q368963', 'https://visitcluj.ro/tourist_spot/piata-unirii/'],
+    method: 'Named monument coordinate (46°46′10.2″N, 23°35′23.3″E); identity and square corroborated by municipal tourism research.',
+    confidence: 'Landmark identity supported · physical verification pending',
+    uncertainty: 'Monument reference, not a standing area. Source precision is not surveyed accuracy; access, crowd capacity and square crossings remain unchecked.',
+    attribution: 'Wikidata contributors (CC0); VisitCluj',
+  },
+  {
+    checkpointNumber: 2, researchSourceId: 'piarist', landmark: 'Piarist Church — exterior',
+    identifier: 'Wikidata Q578767 · heritage CJ-II-m-A-07499 · OSM way 202393309',
+    latitude: 46 + 46 / 60 + 4.13 / 3600, longitude: 23 + 35 / 60 + 25.44 / 3600,
+    sourceUrls: ['https://www.wikidata.org/wiki/Q578767', 'https://visitcluj.ro/tourist_spot/biserica-romano-catolica-a-piaristilor/', 'https://www.openstreetmap.org/way/202393309'],
+    method: 'Church object coordinate (46°46′4.13″N, 23°35′25.44″E), matched to the named church and Universității 5; OSM church identity/address cross-checked.',
+    confidence: 'Building identity supported · physical verification pending',
+    uncertainty: 'Building reference can fall inside the church. OSM building representative point differs slightly; exterior frontage, steps and gathering access are unverified.',
+    attribution: 'Wikidata contributors (CC0); © OpenStreetMap contributors; VisitCluj',
+  },
+  {
+    checkpointNumber: 3, researchSourceId: 'ubb', landmark: 'Babeș-Bolyai University — main building exterior',
+    identifier: 'Wikidata Q42855318 · heritage CJ-II-m-B-07370',
+    latitude: 46 + 46 / 60 + 3 / 3600, longitude: 23 + 35 / 60 + 28.7 / 3600,
+    sourceUrls: ['https://www.wikidata.org/wiki/Q42855318', 'https://www.cs.ubbcluj.ro/files/orar/2026-1/sali/legenda.html'],
+    method: 'Cluj University Main Building heritage record coordinate (46°46′3.0″N, 23°35′28.7″E), explicitly addressed Mihail Kogălniceanu 1; matched to university research.',
+    confidence: 'Building identity supported · physical verification pending',
+    uncertainty: 'Heritage building reference, not an entrance. Other UBB buildings exist; the unrelated Napoca university POI was excluded. Public exterior suitability remains unchecked.',
+    attribution: 'Wikidata contributors (CC0); Wiki Loves Monuments; Babeș-Bolyai University',
+  },
+  {
+    checkpointNumber: 4, researchSourceId: 'academic', landmark: 'Colegiul Academic — exterior',
+    identifier: 'Wikidata Q988141 · heritage CJ-II-m-A-07388',
+    latitude: 46 + 46 / 60 + 3.7 / 3600, longitude: 23 + 35 / 60 + 33 / 3600,
+    sourceUrls: ['https://www.wikidata.org/wiki/Q988141', 'https://visitcluj.ro/tourist_spot/colegiul-academic/'],
+    method: 'Academic College heritage record coordinate (46°46′3.7″N, 23°35′33.0″E); named Casa Universitarilor/Emmanuel de Martonne 1 identity corroborated by municipal research.',
+    confidence: 'Building identity supported · physical verification pending',
+    uncertainty: 'Building reference, not the chosen façade or arrival boundary. OSM building representative point is farther north; exact exterior frontage and access remain pending.',
+    attribution: 'Wikidata contributors (CC0); Wiki Loves Monuments; VisitCluj',
+  },
+  {
+    checkpointNumber: 5, researchSourceId: 'george', landmark: 'Saint George statue',
+    identifier: 'Wikimedia Commons Saint George statue category · OSM node 963409421 · heritage CJ-III-m-A-07815',
+    latitude: 46 + 46 / 60 + 5.02 / 3600, longitude: 23 + 35 / 60 + 43.01 / 3600,
+    sourceUrls: ['https://commons.wikimedia.org/wiki/Category:Statue_of_Saint_George_and_the_Dragon_in_Cluj-Napoca', 'https://www.openstreetmap.org/node/963409421', 'https://mapcarta.com/39154140', 'https://visitcluj.ro/tourist_spot/statuia-sfantul-gheorghe-ucigand-balaurul-2/'],
+    method: 'Named statue category object coordinate (46°46′5.02″N, 23°35′43.01″E), not photo camera coordinates; corroborated by the OSM node listing via Mapcarta and municipal church-entrance identity.',
+    confidence: 'Statue identity supported · physical verification pending',
+    uncertainty: 'Direct OSM node fetch was unavailable; its published listing and Commons agree. A Wikidata coordinate is farther west and was excluded. Statue base is not an arrival area; CP5/CP6 separation remains unverified.',
+    attribution: 'Wikimedia Commons contributors; © OpenStreetMap contributors (cross-check via Mapcarta); VisitCluj',
+  },
+] as const

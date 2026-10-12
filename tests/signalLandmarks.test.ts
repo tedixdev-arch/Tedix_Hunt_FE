@@ -2,9 +2,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createCheckpointDrafts, buildGeographyConfiguration } from '../src/features/creator/checkpointGeography.ts'
 import { hydratePersistedGeography } from '../src/features/creator/templatePersistence.ts'
-import { prefillSignalLandmarks, researchReferences, landmarkSequence } from '../src/features/creator/signalLandmarks.ts'
+import { prefillSignalLandmarks, researchReferences, signalLandmarkReferences, landmarkSequence } from '../src/features/creator/signalLandmarks.ts'
 import { readRouteProposal } from '../src/features/creator/routeResearch.ts'
-import { resolveLandmarkAddress } from '../src/features/creator/landmarkGeocoding.ts'
 import { signalClujRouteProposal } from './fixtures/signalClujRouteProposal.ts'
 const proposal = readRouteProposal({ proposal: signalClujRouteProposal })!
 
@@ -45,42 +44,37 @@ test('references require trustworthy sourced coordinates and sequence never brid
   assert.equal(landmarkSequence(proposal, [{ ...references[0], checkpointNumber: 1 }, references[1]]), undefined)
 })
 
-const candidate = proposal.candidates[1]
-const exact = { geometry: { coordinates: [23.59, 46.77] }, properties: { feature_type: 'address', match_code: { confidence: 'exact', address_number: 'matched', street: 'matched', place: 'matched' }, context: { address: { name: 'Strada Universității 5' }, place: { name: 'Cluj-Napoca' } } } }
-let tokenIndex = 0
-const token = () => `test-token-${tokenIndex++}`
-const response = (features: unknown[]) => async () => new Response(JSON.stringify({ features }))
-
-test('geocoding accepts only an exact single researched address and caches requests without writing geography', async () => {
-  let calls = 0
-  const accessToken = token()
-  const request = (async (url: string) => {
-    calls++
-    const parsed = new URL(url)
-    assert.equal(parsed.pathname, '/search/geocode/v6/forward')
-    assert.equal(parsed.searchParams.get('q'), candidate.address)
-    assert.equal(parsed.searchParams.get('country'), 'ro')
-    assert.equal(parsed.searchParams.get('permanent'), 'false')
-    return new Response(JSON.stringify({ features: [exact] }))
-  }) as typeof fetch
-  const result = await resolveLandmarkAddress(candidate, accessToken, request)
-  assert.deepEqual(result.reference, { checkpointNumber: 2, name: candidate.landmark, latitude: 46.77, longitude: 23.59, origin: 'address' })
-  assert.deepEqual(await resolveLandmarkAddress(candidate, accessToken, request), result)
-  assert.equal(calls, 1)
-  assert.equal(candidate.candidateGps, null)
+test('all seven identifiable landmarks have display-only references with source metadata, while backend coordinates retain authority', () => {
+  const original = structuredClone(proposal)
+  const references = signalLandmarkReferences(proposal)
+  assert.deepEqual(references.map(point => point.checkpointNumber), [1, 2, 3, 4, 5, 6, 0])
+  assert.deepEqual(references.map(point => point.origin), ['supplement', 'supplement', 'supplement', 'supplement', 'supplement', 'research', 'research'])
+  assert.equal(references[0].metadata!.identifier.includes('Q368963'), true)
+  assert.equal(references[2].metadata!.identifier.includes('Q42855318'), true)
+  assert.ok(references.every(point => point.metadata!.sourceUrls.length > 0 && point.metadata!.uncertainty && point.metadata!.method))
+  assert.equal(references[5].latitude, 46.7683841)
+  assert.equal(references[6].longitude, 23.5975153)
+  assert.equal(landmarkSequence(proposal, references)!.coordinates.length, 6)
+  assert.deepEqual(proposal, original)
+  assert.ok(references.every(point => !('radiusMeters' in point) && !('verified' in point)))
+  const changed = structuredClone(proposal)
+  changed.candidates[0].candidateGps = { ...changed.candidates[5].candidateGps!, latitude: 46.77, longitude: 23.59, sourceId: 'unirii' }
+  assert.equal(signalLandmarkReferences(changed)[0].origin, 'research')
+  assert.equal(signalLandmarkReferences(changed)[0].latitude, 46.77)
 })
 
-test('geocoding rejects ambiguity, weak matches, fabricated/malformed coordinates and wrong city/address', async () => {
-  for (const features of [[], [exact, exact], [{ ...exact, geometry: { coordinates: [] } }], [{ ...exact, geometry: { coordinates: [24, 47] } }], [{ ...exact, properties: { ...exact.properties, match_code: { ...exact.properties.match_code, confidence: 'high' } } }], [{ ...exact, properties: { ...exact.properties, context: { ...exact.properties.context, address: { name: 'Wrong street 5' } } } }], [{ ...exact, properties: { ...exact.properties, context: { ...exact.properties.context, place: { name: 'Bucharest' } } } }]]) {
-    assert.equal((await resolveLandmarkAddress(candidate, token(), response(features))).reference, undefined)
+test('supplements cannot identify changed candidates, missing registry sources, malformed backend coordinates or unrelated cities', () => {
+  for (const change of [
+    (p: typeof proposal) => { p.candidates[2].landmark = 'Different UBB building' },
+    (p: typeof proposal) => { p.sources = p.sources.filter(source => source.id !== 'ubb') },
+    (p: typeof proposal) => { p.candidates[2].candidateGps = { ...p.candidates[5].candidateGps!, latitude: NaN } },
+    (p: typeof proposal) => { p.candidates[2].address = 'Another city' },
+  ]) {
+    const changed = structuredClone(proposal)
+    change(changed)
+    const references = signalLandmarkReferences(changed)
+    assert.ok(!references.some(point => point.checkpointNumber === 3))
+    const line = landmarkSequence(changed, references)
+    assert.ok(!line?.coordinates.some(pair => references.find(point => point.checkpointNumber === 2)?.longitude === pair[0][0] && references.find(point => point.checkpointNumber === 4)?.longitude === pair[1][0]))
   }
-})
-
-test('token unavailable, broad square address, API errors and rate limits stay unresolved', async () => {
-  const unexpected = (() => { throw new Error('should not fetch') }) as typeof fetch
-  assert.equal((await resolveLandmarkAddress(candidate, undefined, unexpected)).reason, 'Mapbox token unavailable')
-  assert.equal((await resolveLandmarkAddress(proposal.candidates[0], token(), unexpected)).reference, undefined)
-  assert.equal((await resolveLandmarkAddress(candidate, token(), unexpected)).reason, 'Mapbox address lookup unavailable')
-  assert.equal((await resolveLandmarkAddress(candidate, token(), async () => new Response('', { status: 429 }))).reason, 'Mapbox rate limit reached')
-  assert.equal((await resolveLandmarkAddress(candidate, token(), async () => new Response('', { status: 403 }))).reference, undefined)
 })

@@ -17,12 +17,14 @@ inspection. These are desk-researched candidates, not verified arrival locations
 
 Checkpoint Positions now synchronizes research, checkpoint-card and map-marker
 selection. Signal Cluj shows sourced amber numbered provisional references
-immediately, separate from draggable Creator arrivals. Missing/default local
+immediately, separate from draggable Creator arrivals. Five sourced FE
+landmark references now supplement missing backend coordinates without replacing
+the original research; all seven references fit the initial map overview. Missing/default local
 geographic labels receive proposal names during hydration; saved positions and
 custom Creator labels remain authoritative. The standalone FinishPoint research
 panel continues to inspect the map without changing geography.
 
-For current marker, sequence, optional address-resolution behavior and validation,
+For current marker, sequence, source evidence and reference-only supplement behavior and validation,
 see [Signal landmark prefill](signal-landmark-prefill/README.md). No reference
 coordinates are promoted to saved arrival positions.
 

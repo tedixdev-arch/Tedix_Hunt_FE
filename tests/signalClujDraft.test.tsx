@@ -332,7 +332,7 @@ test('hydration prefills seven research names and draft save cannot promote refe
   await feature('Checkpoint Positions')
   const cards = [...container.querySelectorAll('[data-checkpoint] strong')]
   expect(cards.map(card => card.textContent)).toEqual(signalClujRouteProposal.candidates.map((candidate, index) => `${index === 6 ? 'F' : index + 1} · ${candidate.landmark}`))
-  expect(map.props.landmarkReferences.map((point: any) => point.checkpointNumber)).toEqual([6, 0])
+  expect(map.props.landmarkReferences.map((point: any) => point.checkpointNumber)).toEqual([1, 2, 3, 4, 5, 6, 0])
   expect(map.props.checkpoints).toHaveLength(0)
   expect(map.props.finishPoint).toBeUndefined()
   await act(async () => map.props.onLandmarkSelect(6))

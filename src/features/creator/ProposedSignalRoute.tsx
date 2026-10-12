@@ -1,19 +1,21 @@
 import { useId, useState } from 'react'
+import type { LandmarkReference } from './signalLandmarks'
 import { candidateLabel, candidateReference, supportingSourceUrl, type RouteProposal } from './routeResearch'
 
 interface Props {
+  landmarkReferences?: LandmarkReference[]
   onSelectCheckpoint?: (checkpoint: number) => void
   selectedCheckpoint?: number | 'F'
   proposal: RouteProposal
   onInspect: (reference: ReturnType<typeof candidateReference>) => void
 }
 
-export function ProposedSignalRoute({ proposal, onInspect, selectedCheckpoint, onSelectCheckpoint }: Props) {
+export function ProposedSignalRoute({ proposal, onInspect, selectedCheckpoint, onSelectCheckpoint, landmarkReferences }: Props) {
   const detailId = useId()
   const [selectedOrder, setSelectedOrder] = useState<number>()
   const candidates = [...proposal.candidates].sort((a, b) => a.order - b.order)
   const selected = (onSelectCheckpoint ? undefined : candidates.find(candidate => candidate.order === selectedOrder)) ?? candidates.find(candidate => selectedCheckpoint === 'F' ? candidate.role === 'terminal' : candidate.role !== 'terminal' && candidate.checkpoint === selectedCheckpoint)
-  const reference = selected && candidateReference(selected, proposal)
+  const reference = selected && (landmarkReferences?.find(point => point.checkpointNumber === (selected.role === 'terminal' ? 0 : selected.checkpoint)) ?? candidateReference(selected, proposal))
   const stopLabel = (order: number) => {
     const candidate = candidates.find(candidate => candidate.order === order)
     return candidate ? candidateLabel(candidate) : `Stop ${order}`

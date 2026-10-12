@@ -1,9 +1,11 @@
+import { signalClujReferences } from './signalClujReferences.ts'
 import type { MultiLineString } from 'geojson'
 import type { CheckpointDraft } from './checkpointGeography.ts'
 import { createFinishPointDraft, type FinishPointDraft } from './finishPoint.ts'
 import { candidateReference, type RouteProposal } from './routeResearch.ts'
 
-export type LandmarkReference = { checkpointNumber: number; name: string; latitude: number; longitude: number; selected?: boolean; origin?: 'research' | 'address' }
+export type ReferenceMetadata = { identifier: string; sourceUrls: readonly string[]; method: string; confidence: string; uncertainty: string; attribution: string }
+export type LandmarkReference = { checkpointNumber: number; name: string; latitude: number; longitude: number; selected?: boolean; origin?: 'research' | 'supplement'; metadata?: ReferenceMetadata }
 
 export function isSignalClujProposal(name: string, proposal?: RouteProposal): boolean {
   return !!proposal && (/signal\s*:?\s*cluj[ -]napoca/i.test(name) || proposal.candidates.every(candidate => /cluj[ -]napoca/i.test(candidate.address)))
@@ -30,6 +32,34 @@ export function researchReferences(proposal: RouteProposal): LandmarkReference[]
   return [...proposal.candidates].sort((a, b) => a.order - b.order).flatMap(candidate => {
     const reference = candidateReference(candidate, proposal)
     return reference ? [{ ...reference, checkpointNumber: candidate.role === 'terminal' ? 0 : candidate.checkpoint!, origin: 'research' as const }] : []
+  })
+}
+
+/** Backend coordinates take precedence. Supplements require exact existing research identity,
+ * source registry association and Cluj context; unknown/replaced landmarks remain unresolved.
+ */
+export function signalLandmarkReferences(proposal: RouteProposal): LandmarkReference[] {
+  if (!isSignalClujProposal('', proposal)) return researchReferences(proposal)
+  return [...proposal.candidates].sort((a, b) => a.order - b.order).flatMap<LandmarkReference>(candidate => {
+    const checkpointNumber = candidate.role === 'terminal' ? 0 : candidate.checkpoint!
+    const reference = candidateReference(candidate, proposal)
+    if (reference) {
+      const source = proposal.sources.find(source => source.id === candidate.candidateGps!.sourceId)!
+      return [{ ...reference, checkpointNumber, origin: 'research' as const, metadata: {
+        identifier: `Backend research source: ${source.id}`,
+        sourceUrls: [source.url], method: 'Existing explicitly sourced landmark-reference-only backend coordinate.',
+        confidence: candidate.confidence, uncertainty: candidate.unresolvedIssues.join(' '), attribution: 'VisitCluj · backend route research',
+      } }]
+    }
+    const supplement = signalClujReferences.find(item => candidate.role === 'normal'
+      && item.checkpointNumber === candidate.checkpoint && item.landmark === candidate.landmark
+      && candidate.sourceIds.includes(item.researchSourceId)
+      && proposal.sources.some(source => source.id === item.researchSourceId && (item.sourceUrls as readonly string[]).includes(source.url)))
+    // A malformed or conflicting backend coordinate must not be silently replaced.
+    if (!supplement || candidate.candidateGps != null) return []
+    const { latitude, longitude, identifier, sourceUrls, method, confidence, uncertainty, attribution } = supplement
+    return [{ checkpointNumber, name: candidate.landmark, latitude, longitude, origin: 'supplement' as const,
+      metadata: { identifier, sourceUrls, method, confidence, uncertainty, attribution } }]
   })
 }
 

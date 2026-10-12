@@ -45,6 +45,8 @@ export type TedixMapProps = {
   landmarkReference?: Pick<FinishPoint, 'latitude' | 'longitude' | 'name'>
   /** Dashed straight-line overview; never a directions estimate. */
   landmarkReferences?: LandmarkReference[]
+  /** Fit provisional references once on opening, without changing authored geography. */
+  fitLandmarkReferences?: boolean
   proposedSequence?: MultiLineString
   onLandmarkSelect?: (checkpointNumber: number) => void
   routeOverview?: LineString
@@ -73,6 +75,7 @@ export function TedixMap({
   cameraTarget,
   landmarkReference,
   landmarkReferences,
+  fitLandmarkReferences = false,
   proposedSequence,
   onLandmarkSelect,
   finishPointSelected,
@@ -93,6 +96,7 @@ export function TedixMap({
     style: mapStyle,
   })
   const currentStyle = useRef(mapStyle)
+  const didFitLandmarks = useRef(false)
   const suppressClickUntil = useRef(0)
   const clickHandler = useRef(onMapClick)
   clickHandler.current = onMapClick
@@ -112,6 +116,7 @@ export function TedixMap({
     map.on?.('error', failed)
     map.on?.('load', loaded)
     mapRef.current = map
+    didFitLandmarks.current = false
     currentStyle.current = initialOptions.current.style
     const observer = new ResizeObserver(() => map.resize())
     observer.observe(containerRef.current)
@@ -159,7 +164,7 @@ export function TedixMap({
       button.textContent = point.checkpointNumber === 0 ? 'F' : String(point.checkpointNumber)
       button.setAttribute('aria-label', `Select provisional landmark ${button.textContent}: ${point.name}. Not an arrival location.`)
       button.setAttribute('aria-pressed', String(!!point.selected))
-      button.title = `${point.origin === 'address' ? 'Geocoded address' : 'Research landmark'} reference only: ${point.name}`
+      button.title = `Sourced landmark reference only: ${point.name}`
       button.className = `flex h-11 w-11 items-center justify-center border-4 border-white bg-amber-600 font-bold text-white shadow-lg ${point.checkpointNumber === 0 ? 'rounded-lg' : 'rounded-full'} ${point.selected ? 'ring-4 ring-amber-300' : ''}`
       button.onclick = event => {
         event.stopPropagation()
@@ -316,6 +321,18 @@ export function TedixMap({
       if (map.getSource(id)) map.removeSource(id)
     }
   }, [routeOverview, accessToken])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !fitLandmarkReferences || didFitLandmarks.current) return
+    const points = landmarkReferences?.filter(point => Number.isFinite(point.longitude) && Math.abs(point.longitude) <= 180 && Number.isFinite(point.latitude) && Math.abs(point.latitude) <= 90)
+    if (!points?.length) return
+    const bounds = new mapboxgl.LngLatBounds()
+    points.forEach(point => bounds.extend([point.longitude, point.latitude]))
+    // Runs after the authored overview's initial fit. Selection and editing do not refit references.
+    map.fitBounds(bounds, { padding: 64, maxZoom: 16, duration: 0 })
+    didFitLandmarks.current = true
+  }, [landmarkReferences, fitLandmarkReferences, accessToken])
 
   return (
     <div className={`relative h-full min-h-[300px] w-full ${className}`}>

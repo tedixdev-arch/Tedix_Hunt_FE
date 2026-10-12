@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { isSignalClujProposal, landmarkSequence, researchReferences, type LandmarkReference } from './signalLandmarks'
-import { resolveLandmarkAddress } from './landmarkGeocoding'
+import { useMemo, useState } from 'react'
+import { isSignalClujProposal, landmarkSequence, signalLandmarkReferences } from './signalLandmarks'
 import { ProposedSignalRoute } from './ProposedSignalRoute'
 import { type RouteProposal, candidateReference } from './routeResearch'
 import { createFinishPointDraft, isValidFinishPoint, type FinishPointDraft } from './finishPoint'
@@ -37,29 +36,9 @@ interface Props {
 
 export function RouteEditor({ templateName, finishDraft, onFinishChange, savedConfiguration, proposal, drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
   const [reference, setReference] = useState<ReturnType<typeof candidateReference>>()
-  const [resolved, setResolved] = useState<LandmarkReference[]>([])
-  const [resolutionStatus, setResolutionStatus] = useState<Record<number, string>>({})
-  const [resolving, setResolving] = useState(false)
-  const mounted = useRef(true)
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const signalProposal = isSignalClujProposal(templateName ?? '', proposal) ? proposal : undefined
-  const references = useMemo(() => signalProposal ? [...researchReferences(signalProposal), ...resolved] : [], [signalProposal, resolved])
+  const references = useMemo(() => signalProposal ? signalLandmarkReferences(signalProposal) : [], [signalProposal])
   const proposedSequence = useMemo(() => signalProposal ? landmarkSequence(signalProposal, references) : undefined, [signalProposal, references])
-  async function resolveMissing() {
-    if (!signalProposal || resolving) return
-    setResolving(true)
-    // Explicit lookup is session-cached, sequential and never writes Template state.
-    for (const candidate of signalProposal.candidates) {
-      const number = candidate.role === 'terminal' ? 0 : candidate.checkpoint!
-      if (references.some(reference => reference.checkpointNumber === number)) continue
-      const result = await resolveLandmarkAddress(candidate, import.meta.env.VITE_MAPBOX_ACCESS_TOKEN)
-      if (!mounted.current) return
-      if (result.reference) setResolved(current => [...current.filter(point => point.checkpointNumber !== number), result.reference!])
-      setResolutionStatus(current => ({ ...current, [number]: result.reason ?? 'Geocoded address reference · landmark identity unverified' }))
-      if (result.reason === 'Mapbox rate limit reached') break
-    }
-    if (mounted.current) setResolving(false)
-  }
   const [first] = drafts
   const [activeNumber, setActiveNumber] = useState(first?.checkpointNumber ?? 1)
   const active = drafts.find(point => point.checkpointNumber === activeNumber) ?? first
@@ -97,7 +76,9 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
     const candidate = proposal?.candidates.find(candidate => number === 0 ? candidate.role === 'terminal' : candidate.role === 'normal' && candidate.checkpoint === number)
     if (!candidate) return null
     const ref = references.find(point => point.checkpointNumber === number)
-    return <div className="mt-2 text-sm text-slate-600"><p className={activeNumber === number ? undefined : 'line-clamp-2'}>{candidate.arrivalArea}</p>{signalProposal && <p className="mt-1 text-xs font-bold text-amber-900">{ref ? ref.origin === 'address' ? 'Geocoded address reference · landmark identity unverified' : 'Research landmark reference available' : 'Reference location unavailable'}{resolutionStatus[number] && !ref ? ` · ${resolutionStatus[number]}` : ''}</p>}</div>
+    return <div className="mt-2 text-sm text-slate-600"><p className={activeNumber === number ? undefined : 'line-clamp-2'}>{candidate.arrivalArea}</p>{signalProposal && <p className="mt-1 text-xs font-bold text-amber-900">{ref ? 'Provisional landmark reference available' : 'Reference location unavailable'}</p>}
+      {activeNumber === number && ref?.metadata && <details className="mt-2 text-xs"><summary className="min-h-11 cursor-pointer py-3 font-bold">Reference source &amp; uncertainty</summary><p>{ref.metadata.identifier}</p><p className="mt-1">{ref.metadata.method}</p><p className="mt-1">{ref.metadata.confidence}</p><p className="mt-1">{ref.metadata.uncertainty}</p><ul className="mt-2 space-y-1">{ref.metadata.sourceUrls.map(url => <li key={url}><a className="break-all underline" href={url} target="_blank" rel="noreferrer">{url}</a></li>)}</ul><p className="mt-2">{ref.metadata.attribution}</p></details>}
+    </div>
   }
   const field = 'mt-1 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 px-3'
   function fields(point: CheckpointDraft | FinishPointDraft, change: (value: Partial<CheckpointDraft>) => void) {
@@ -117,7 +98,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
     <div className="h-[360px] w-full min-w-0 sm:h-[500px]" data-testid="position-map"><TedixMap
       initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
       cameraTarget={reference} landmarkReference={signalProposal ? undefined : reference} routeOverview={routeOverview}
-      landmarkReferences={signalProposal ? references.map(point => ({ ...point, selected: point.checkpointNumber === activeNumber })) : undefined} proposedSequence={proposedSequence} onLandmarkSelect={select}
+      fitLandmarkReferences={!!signalProposal} landmarkReferences={signalProposal ? references.map(point => ({ ...point, selected: point.checkpointNumber === activeNumber })) : undefined} proposedSequence={proposedSequence} onLandmarkSelect={select}
       locationSearch className="overflow-hidden rounded-2xl border border-slate-300"
       checkpoints={positioned.map(point => ({ ...point, selected: !finishSelected && active?.checkpointNumber === point.checkpointNumber, verified: verified.has(point.checkpointNumber) }))}
       finishPoint={validFinish} finishPointSelected={finishSelected}
@@ -129,7 +110,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
     /></div>
     <p className="mt-2 text-sm text-slate-600">Select a checkpoint below or on the map, then click/tap to place it or drag its marker. Search moves the map only. Changes remain local until you explicitly save the Template. Selected checkpoint: {finishSelected ? 'F' : active?.checkpointNumber ?? 'none'}.</p>
     <p className="mt-2 text-xs text-slate-500">Grey dashed line: Creator-positioned checkpoint order · not verified walking directions.</p>
-    {signalProposal && <div className="mt-2 space-y-2 text-xs"><p aria-label="Map legend"><span className="font-bold text-amber-800">Amber: provisional landmark references</span> · <span className="font-bold text-emerald-800">Green: Creator-positioned arrivals</span> · Violet F: Creator-positioned terminal FinishPoint. Offset reference badges remain separate when positions overlap.</p><p>Proposed landmark sequence — not verified walking directions. Amber dashed segments connect adjacent available references only. {references.length < signalProposal.candidates.length ? 'Incomplete sequence: missing references break the line.' : 'Arrival areas remain unverified.'}</p><button type="button" className="min-h-11 rounded-lg border border-amber-300 px-3 font-bold" disabled={resolving || !import.meta.env.VITE_MAPBOX_ACCESS_TOKEN?.trim() || references.length === signalProposal.candidates.length} onClick={() => void resolveMissing()}>{resolving ? 'Resolving address references…' : 'Resolve missing address references'}</button><p>Mapbox can resolve exact researched addresses, not verify landmarks or safe arrival areas. Uncertain matches stay unavailable.</p></div>}
+    {signalProposal && <div className="mt-2 space-y-2 text-xs"><p aria-label="Map legend"><span className="font-bold text-amber-800">Amber: provisional landmark references</span> · <span className="font-bold text-emerald-800">Green: Creator-positioned arrivals</span> · Violet F: Creator-positioned terminal FinishPoint. Offset reference badges remain separate when positions overlap.</p><p>Proposed landmark sequence — not verified walking directions. Amber dashed segments connect adjacent available references only. {references.length < signalProposal.candidates.length ? 'Incomplete sequence: missing references break the line.' : 'All seven landmark references available; arrival areas remain unverified.'}</p><p>Landmark references have no detection radius and do not confirm arrivals. Reference sources and uncertainty are available in the selected card.</p></div>}
     <div className="mt-5 flex flex-wrap justify-between gap-3"><h4 className="text-lg font-bold">Place and inspect checkpoint positions</h4><span>{verified.size} of {drafts.length} positions confirmed</span></div>
     <ol className="mt-3 space-y-3" aria-label="Checkpoint positions">{drafts.map(point => {
       const selected = !finishSelected && active?.checkpointNumber === point.checkpointNumber
@@ -143,6 +124,6 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
     <p className="mt-4 text-xs text-slate-600">Position confirmations and safety reminders are temporary session checks, not saved evidence of physical verification.</p>
     <div className="mt-3 grid gap-2 sm:grid-cols-2">{safetyItems.map(item => <label key={item} className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm font-bold"><input className="h-5 w-5 accent-emerald-500" type="checkbox" checked={safety.has(item)} onChange={() => { const next = new Set(safety); next.has(item) ? next.delete(item) : next.add(item); onSafetyChange(next) }} />{safetyLabels[item]}</label>)}</div>
     {!complete && <p className="mt-4 text-sm font-bold text-amber-800">Place and confirm every normal checkpoint position, then complete the temporary review reminders for this session.</p>}
-    {proposal && <details className="mt-5 rounded-xl border border-amber-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">Location research &amp; safety notes</summary><ProposedSignalRoute proposal={proposal} onInspect={target => { if (!signalProposal) setReference(target) }} onSelectCheckpoint={select} selectedCheckpoint={finishSelected ? 'F' : active?.checkpointNumber} /></details>}
+    {proposal && <details className="mt-5 rounded-xl border border-amber-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">Location research &amp; safety notes</summary><ProposedSignalRoute landmarkReferences={references} proposal={proposal} onInspect={target => { if (!signalProposal) setReference(target) }} onSelectCheckpoint={select} selectedCheckpoint={finishSelected ? 'F' : active?.checkpointNumber} /></details>}
   </section>
 }
