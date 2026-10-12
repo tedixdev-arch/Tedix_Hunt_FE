@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
-import type { Feature, Polygon, LineString } from 'geojson'
+import type { Feature, Polygon, LineString, MultiLineString } from 'geojson'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { FinishPoint } from '../features/creator/finishPoint'
+import type { LandmarkReference } from '../features/creator/signalLandmarks'
 import { MapboxLocationSearch } from './MapboxLocationSearch'
 
 export type TedixMapCheckpoint = {
@@ -43,6 +44,9 @@ export type TedixMapProps = {
   /** Informational landmark pin only: no radius or placement callback. */
   landmarkReference?: Pick<FinishPoint, 'latitude' | 'longitude' | 'name'>
   /** Dashed straight-line overview; never a directions estimate. */
+  landmarkReferences?: LandmarkReference[]
+  proposedSequence?: MultiLineString
+  onLandmarkSelect?: (checkpointNumber: number) => void
   routeOverview?: LineString
   walkingRoute?: LineString
   checkpoints?: TedixMapCheckpoint[]
@@ -68,6 +72,9 @@ export function TedixMap({
   routeOverview,
   cameraTarget,
   landmarkReference,
+  landmarkReferences,
+  proposedSequence,
+  onLandmarkSelect,
   finishPointSelected,
   onFinishPointSelect,
   onFinishPointMove,
@@ -145,6 +152,47 @@ export function TedixMap({
 
   useEffect(() => {
     const map = mapRef.current
+    if (!map || !landmarkReferences) return
+    const markers = landmarkReferences.map(point => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = point.checkpointNumber === 0 ? 'F' : String(point.checkpointNumber)
+      button.setAttribute('aria-label', `Select provisional landmark ${button.textContent}: ${point.name}. Not an arrival location.`)
+      button.setAttribute('aria-pressed', String(!!point.selected))
+      button.title = `${point.origin === 'address' ? 'Geocoded address' : 'Research landmark'} reference only: ${point.name}`
+      button.className = `flex h-11 w-11 items-center justify-center border-4 border-white bg-amber-600 font-bold text-white shadow-lg ${point.checkpointNumber === 0 ? 'rounded-lg' : 'rounded-full'} ${point.selected ? 'ring-4 ring-amber-300' : ''}`
+      button.onclick = event => {
+        event.stopPropagation()
+        suppressClickUntil.current = Date.now() + 250
+        onLandmarkSelect?.(point.checkpointNumber)
+      }
+      // No drag callback or radius: reference data cannot become gameplay geography.
+      return new mapboxgl.Marker({ element: button, draggable: false, offset: [24, -24] }).setLngLat([point.longitude, point.latitude]).addTo(map)
+    })
+    return () => { markers.forEach(marker => marker.remove()) }
+  }, [landmarkReferences, onLandmarkSelect, accessToken])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !proposedSequence) return
+    const id = 'tedix-proposed-landmarks'
+    const draw = () => {
+      if (map.getSource(id)) return
+      map.addSource(id, { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: proposedSequence } })
+      map.addLayer({ id, type: 'line', source: id, paint: { 'line-color': '#d97706', 'line-width': 3, 'line-dasharray': [2, 2] } })
+    }
+    if (map.isStyleLoaded()) draw()
+    map.on('style.load', draw)
+    return () => {
+      map.off('style.load', draw)
+      if (mapRef.current !== map) return
+      if (map.getLayer(id)) map.removeLayer(id)
+      if (map.getSource(id)) map.removeSource(id)
+    }
+  }, [proposedSequence, accessToken])
+
+  useEffect(() => {
+    const map = mapRef.current
     if (!map || !onMapClick) return
     const click = (event: mapboxgl.MapMouseEvent) => { if (Date.now() > suppressClickUntil.current) clickHandler.current?.(event.lngLat.lat, event.lngLat.lng) }
     map.on('click', click)
@@ -163,7 +211,7 @@ export function TedixMap({
       button.textContent = String(point.checkpointNumber)
       button.setAttribute('aria-label', `Select checkpoint ${point.checkpointNumber}: ${point.name}`)
       button.setAttribute('aria-pressed', String(!!point.selected))
-      button.className = `flex h-11 w-11 items-center justify-center rounded-full border-4 border-white font-bold text-white shadow-lg ${point.selected ? 'bg-slate-900 ring-4 ring-emerald-400' : point.verified ? 'bg-emerald-600' : 'bg-amber-600'}`
+      button.className = `flex h-11 w-11 items-center justify-center rounded-full border-4 border-white font-bold text-white shadow-lg ${point.selected ? 'bg-emerald-700 ring-4 ring-emerald-400' : 'bg-emerald-600'}`
       button.onclick = event => { event.stopPropagation(); onCheckpointSelect?.(point.checkpointNumber) }
       const marker = new mapboxgl.Marker({ element: button, ...(onCheckpointMove ? { draggable: true } : {}) }).setLngLat([point.longitude, point.latitude]).addTo(map)
       if (onCheckpointMove) marker.on('dragend', () => {

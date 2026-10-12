@@ -2,16 +2,17 @@ import { useId, useState } from 'react'
 import { candidateLabel, candidateReference, supportingSourceUrl, type RouteProposal } from './routeResearch'
 
 interface Props {
+  onSelectCheckpoint?: (checkpoint: number) => void
   selectedCheckpoint?: number | 'F'
   proposal: RouteProposal
   onInspect: (reference: ReturnType<typeof candidateReference>) => void
 }
 
-export function ProposedSignalRoute({ proposal, onInspect, selectedCheckpoint }: Props) {
+export function ProposedSignalRoute({ proposal, onInspect, selectedCheckpoint, onSelectCheckpoint }: Props) {
   const detailId = useId()
   const [selectedOrder, setSelectedOrder] = useState<number>()
   const candidates = [...proposal.candidates].sort((a, b) => a.order - b.order)
-  const selected = candidates.find(candidate => candidate.order === selectedOrder) ?? candidates.find(candidate => selectedCheckpoint === 'F' ? candidate.role === 'terminal' : candidate.role !== 'terminal' && candidate.order === selectedCheckpoint)
+  const selected = (onSelectCheckpoint ? undefined : candidates.find(candidate => candidate.order === selectedOrder)) ?? candidates.find(candidate => selectedCheckpoint === 'F' ? candidate.role === 'terminal' : candidate.role !== 'terminal' && candidate.checkpoint === selectedCheckpoint)
   const reference = selected && candidateReference(selected, proposal)
   const stopLabel = (order: number) => {
     const candidate = candidates.find(candidate => candidate.order === order)
@@ -29,7 +30,7 @@ export function ProposedSignalRoute({ proposal, onInspect, selectedCheckpoint }:
     <p className="mt-2 font-bold text-amber-900">Check Piața Unirii pedestrian crossings, CP5/CP6 proximity and discovery-radius overlap, Tailors' Tower approach and unnecessary crossings. Accessibility and physical inspection remain pending.</p>
     <ol aria-label="Ordered route candidates" className="mt-3 grid gap-2 sm:grid-cols-2">
       {candidates.map(candidate => <li key={candidate.order} className="min-w-0">
-        <button type="button" aria-controls={detailId} aria-expanded={selectedOrder === candidate.order} onClick={() => { setSelectedOrder(candidate.order); onInspect(candidateReference(candidate, proposal)) }} className={`min-h-11 w-full break-words rounded-lg border p-2 text-left ${selectedOrder === candidate.order ? 'border-blue-600 bg-blue-50' : 'border-amber-200 bg-white'}`}>
+        <button type="button" aria-controls={detailId} aria-expanded={selected === candidate} onClick={() => { setSelectedOrder(candidate.order); onSelectCheckpoint?.(candidate.role === 'terminal' ? 0 : candidate.checkpoint!); onInspect(candidateReference(candidate, proposal)) }} className={`min-h-11 w-full break-words rounded-lg border p-2 text-left ${selected === candidate ? 'border-blue-600 bg-blue-50' : 'border-amber-200 bg-white'}`}>
           <strong>{candidateLabel(candidate)} · {candidate.landmark}</strong>
         </button>
       </li>)}

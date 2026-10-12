@@ -309,7 +309,7 @@ test('Creator places six normal points and FinishPoint using the shared map, sav
   await feature('Checkpoint Positions')
   expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(7)
   await click('CP6 ·')
-  expect(map.props.landmarkReference.name).toBe('Reformed Church — exterior')
+  expect(map.props.landmarkReferences.find((point: any) => point.checkpointNumber === 6)).toMatchObject({ name: 'Reformed Church — exterior', selected: true })
   expect(map.props.checkpoints).toHaveLength(6)
   expect(map.props.checkpoints.every((point: any) => point.verified === false)).toBe(true)
   expect(map.props.checkpoints[5].name).toBe('Real place 6')
@@ -321,5 +321,28 @@ test('Creator places six normal points and FinishPoint using the shared map, sav
   expect(map.props.landmarkReference).toBeUndefined()
   expect(record.content.routeResearch).toEqual(originalContent.routeResearch)
   expect(api.createVersion).toHaveBeenCalledTimes(1)
+  expect(api.submit).not.toHaveBeenCalled()
+})
+
+
+test('hydration prefills seven research names and draft save cannot promote reference coordinates or name-only FinishPoint', async () => {
+  record.content.routeResearch = { proposal: structuredClone(signalClujRouteProposal) }
+  const original = structuredClone(record.content)
+  await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
+  await feature('Checkpoint Positions')
+  const cards = [...container.querySelectorAll('[data-checkpoint] strong')]
+  expect(cards.map(card => card.textContent)).toEqual(signalClujRouteProposal.candidates.map((candidate, index) => `${index === 6 ? 'F' : index + 1} · ${candidate.landmark}`))
+  expect(map.props.landmarkReferences.map((point: any) => point.checkpointNumber)).toEqual([6, 0])
+  expect(map.props.checkpoints).toHaveLength(0)
+  expect(map.props.finishPoint).toBeUndefined()
+  await act(async () => map.props.onLandmarkSelect(6))
+  expect(container.querySelector('[data-checkpoint="6"]')!.getAttribute('aria-pressed')).toBe('true')
+  expect(map.props.checkpoints).toHaveLength(0)
+  await click('Save draft')
+  expect(record.content.configuration.checkpointPositions).toEqual([])
+  expect(record.content.configuration.finishPoint).toBeUndefined()
+  expect(record.content.routeResearch).toEqual(original.routeResearch)
+  expect(record.content.checkpoints).toEqual(original.checkpoints)
+  expect(original.configuration.checkpointPositions).toEqual([])
   expect(api.submit).not.toHaveBeenCalled()
 })
