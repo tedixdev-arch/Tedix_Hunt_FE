@@ -17,7 +17,10 @@ let root: Root, container: HTMLDivElement
 let record: CreatorTemplate
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-  vi.clearAllMocks()
+  vi.resetAllMocks()
+  // jsdom lacks the browser dialog methods; native focus containment and Escape are checked in Chromium.
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function () { this.setAttribute('open', '') } })
+  Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function () { this.removeAttribute('open') } })
   Element.prototype.scrollIntoView = vi.fn()
   record = { key: 'signal-cluj-new', version: 1, status: 'draft', content: {
     key: 'signal-cluj-new', version: 1, displayName: 'Signal starter', theme: 'Smart Theme (Signal)',
@@ -29,7 +32,7 @@ beforeEach(() => {
   api.createVersion.mockImplementation(async (_, content) => { record = { ...record, version: content.version, content }; return structuredClone(record) })
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
-afterEach(() => { act(() => root.unmount()); container.remove(); vi.unstubAllGlobals() })
+afterEach(() => { act(() => root.unmount()); container.remove(); Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal'); Reflect.deleteProperty(HTMLDialogElement.prototype, 'close'); vi.unstubAllGlobals() })
 async function render(node: React.ReactNode) { await act(async () => root.render(node)) }
 async function click(text: string) {
   const button = [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith(text))!
@@ -41,8 +44,10 @@ test('dashboard prevents repeat clicks and navigates to returned draft key witho
   let resolve!: (value: CreatorTemplate) => void
   api.createSignalClujDraft.mockReturnValue(new Promise(done => { resolve = done }))
   await render(<MemoryRouter initialEntries={['/creator']}><Routes><Route path="/creator" element={<CreatorStudioPage />} /><Route path="/create" element={<Location />} /></Routes></MemoryRouter>)
-  await click('Create Signal Cluj route draft')
-  const button = [...container.querySelectorAll('button')].find(button => button.textContent === 'Creating Signal Cluj draft…')!
+  await click('Create Template')
+  const starter = [...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Signal Cluj')!
+  await act(async () => { starter.click(); starter.click() })
+  const button = [...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Signal Cluj')!
   expect(button.disabled).toBe(true)
   await act(async () => button.click())
   expect(api.createSignalClujDraft).toHaveBeenCalledTimes(1)
@@ -54,9 +59,117 @@ test('dashboard prevents repeat clicks and navigates to returned draft key witho
 test.each([401, 403, 409, 500])('dashboard displays starter error %s and allows manual retry', async status => {
   api.createSignalClujDraft.mockRejectedValue(new ApiError('Failure', status, 'http'))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Signal Cluj route draft')
+  await click('Create Template')
+  await click('Start from Signal Cluj')
   expect(container.querySelector('[role="alert"]')).not.toBeNull()
-  expect([...container.querySelectorAll('button')].find(button => button.textContent === 'Create Signal Cluj route draft')?.disabled).toBe(false)
+  expect([...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Signal Cluj')?.disabled).toBe(false)
+})
+
+test('one creation CTA opens both options with accessible labels and closing creates nothing', async () => {
+  await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
+  const trigger = [...container.querySelectorAll('button')].find(button => button.textContent === 'Create Template')!
+  expect(container.querySelectorAll('[aria-haspopup="dialog"]')).toHaveLength(1)
+  expect(container.textContent).not.toContain('Create Signal Cluj route draft')
+  trigger.focus()
+  await click('Create Template')
+  const dialog = container.querySelector('dialog')!
+  expect(dialog.open).toBe(true)
+  expect(dialog.querySelector(`#${dialog.getAttribute('aria-labelledby')}`)?.textContent).toBe('Create Template')
+  expect(dialog.querySelector(`#${dialog.getAttribute('aria-describedby')}`)?.textContent).toBe("Choose how you'd like to begin.")
+  expect(document.activeElement?.getAttribute('aria-label')).toBe('Close template creation chooser')
+  for (const name of ['Start from scratch', 'Start from Signal Cluj']) {
+    const button = [...dialog.querySelectorAll('button')].find(button => button.textContent === name)!
+    expect(dialog.querySelector(`#${button.getAttribute('aria-describedby')}`)?.textContent).toBeTruthy()
+  }
+  await click('Close')
+  expect(container.querySelector('dialog')).toBeNull()
+  expect(document.activeElement).toBe(trigger)
+  await click('Create Template')
+  await act(async () => container.querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true })))
+  expect(container.querySelector('dialog')).toBeNull()
+  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(api.create).not.toHaveBeenCalled()
+})
+
+test('Tab and Shift+Tab wrap inside the chooser, including while both options are disabled', async () => {
+  api.createSignalClujDraft.mockRejectedValue(new ApiError('Failure', 409, 'http'))
+  await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
+  await click('Create Template')
+  const close = container.querySelector<HTMLButtonElement>('[aria-label="Close template creation chooser"]')!
+  const signal = [...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Signal Cluj')!
+  const tab = async (shiftKey = false) => {
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true })
+    await act(async () => document.activeElement!.dispatchEvent(event))
+    expect(event.defaultPrevented).toBe(true)
+  }
+  close.focus(); await tab(true); expect(document.activeElement).toBe(signal)
+  await tab(); expect(document.activeElement).toBe(close)
+  await click('Start from Signal Cluj')
+  const check = [...container.querySelectorAll('button')].find(button => button.textContent === 'Check My Templates')!
+  check.focus(); await tab(); expect(document.activeElement).toBe(close)
+  api.createSignalClujDraft.mockReturnValue(new Promise(() => {}))
+  await click('Start from Signal Cluj')
+  close.focus(); await tab(); expect(document.activeElement).toBe(close)
+  await tab(true); expect(document.activeElement).toBe(close)
+})
+
+test('scratch opens the unchanged generic editor without persisting a Template', async () => {
+  await render(<MemoryRouter initialEntries={['/creator']}><Routes><Route path="/creator" element={<CreatorStudioPage />} /><Route path="/create" element={<CreatorTemplateEditorPage />} /></Routes></MemoryRouter>)
+  await click('Create Template')
+  await click('Start from scratch')
+  expect(container.textContent).toContain('Template details')
+  expect(container.querySelector('dialog')).toBeNull()
+  expect(api.get).not.toHaveBeenCalled()
+  expect(api.create).not.toHaveBeenCalled()
+  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+})
+
+test('closing and reopening during Signal creation keeps both paths protected', async () => {
+  let resolve!: (value: CreatorTemplate) => void
+  api.createSignalClujDraft.mockReturnValue(new Promise(done => { resolve = done }))
+  await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
+  await click('Create Template'); await click('Start from Signal Cluj')
+  await click('Close'); await click('Create Template')
+  for (const name of ['Start from scratch', 'Start from Signal Cluj']) {
+    expect([...container.querySelectorAll('button')].find(button => button.textContent === name)?.disabled).toBe(true)
+    await click(name)
+  }
+  expect(api.createSignalClujDraft).toHaveBeenCalledTimes(1)
+  await act(async () => resolve(record))
+})
+
+test('starter errors survive closing, offer checking drafts, and permit an explicit retry', async () => {
+  api.createSignalClujDraft.mockRejectedValueOnce(new ApiError('Failure', 500, 'http')).mockResolvedValue(record)
+  await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
+  await click('Create Template'); await click('Start from Signal Cluj')
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Check your drafts before retrying')
+  await click('Check My Templates')
+  expect(api.list).toHaveBeenCalledTimes(2)
+  expect(container.querySelector('dialog')).toBeNull()
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Check your drafts before retrying')
+  await click('Create Template')
+  expect(container.querySelector('dialog [role="alert"]')).not.toBeNull()
+  await click('Start from Signal Cluj')
+  expect(api.createSignalClujDraft).toHaveBeenCalledTimes(2)
+})
+
+test('My Templates preserves every status counter, card and existing editor link', async () => {
+  const statuses = ['draft', 'changes_requested', 'submitted', 'approved'] as const
+  api.list.mockResolvedValue(statuses.map(status => ({ ...record, key: `${status}&key`, status, content: { ...record.content, displayName: `${status} Template` } })))
+  await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
+  expect(container.querySelector('h2')?.textContent).toBe('My Templates')
+  const queues = [...container.querySelectorAll('[aria-label="Template queues"] article')]
+  expect(queues.map(queue => queue.firstElementChild?.textContent)).toEqual(['Drafts', 'Changes requested', 'Submitted', 'Approved'])
+  expect(queues.every(queue => queue.lastElementChild?.textContent === '1')).toBe(true)
+  const cards = [...container.querySelectorAll('[aria-label="Creator Templates"] article')]
+  expect(cards).toHaveLength(4)
+  cards.forEach((card, index) => {
+    expect(card.querySelector('h2')?.textContent).toBe(`${statuses[index]} Template`)
+    expect(card.querySelector('a')?.getAttribute('href')).toBe(`/create?template=${statuses[index]}%26key`)
+    expect(card.querySelector('a')?.textContent).toBe(index === 0 ? 'Edit template' : 'View template')
+  })
+  await click('Create Template'); await click('Close')
+  expect(container.querySelectorAll('[aria-label="Creator Templates"] article')).toHaveLength(4)
 })
 
 test('editor hydrates and edits mission strings, preserves metadata and all gameplay, saves and reopens unplaced geography', async () => {
