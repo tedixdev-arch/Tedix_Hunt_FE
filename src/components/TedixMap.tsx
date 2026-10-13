@@ -413,9 +413,9 @@ export function TedixMap({
   return (
     <div className={`relative h-full min-h-[300px] w-full ${positionPins ? 'flex flex-col' : ''} ${className}`}>
       {landmarkReference && <p className="absolute bottom-3 left-3 right-3 z-10 rounded-lg bg-white p-2 text-xs font-bold text-blue-900">R · Landmark reference only: {landmarkReference.name}. Not an arrival location.</p>}
-      {accessToken && mapLoading && !mapError && <p role="status" className="absolute left-2 top-2 z-10 rounded-lg bg-white p-2 text-sm">Loading map…</p>}
-      {mapError && <p role="alert" className="absolute left-2 right-2 top-2 z-10 rounded-lg bg-white p-3 text-sm text-red-700">{mapError}</p>}
-      {accessToken && locationSearch && <MapboxLocationSearch inline={!!positionPins} accessToken={accessToken} locationLabel={selectedLocationLabel} onSelect={({ center }) => {
+      {accessToken && mapLoading && !mapError && <p role="status" className={`absolute left-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-2 text-sm`}>Loading map…</p>}
+      {mapError && <p role="alert" className={`absolute left-2 right-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-3 text-sm text-red-700`}>{mapError}</p>}
+      {accessToken && locationSearch && <MapboxLocationSearch compact={!!positionPins} inline={false} accessToken={accessToken} locationLabel={positionPins ? undefined : selectedLocationLabel} onSelect={({ center }) => {
         if (onSearchPosition) onSearchPosition(center[1], center[0])
         else mapRef.current?.flyTo({ center, zoom: 14 })
       }} />}

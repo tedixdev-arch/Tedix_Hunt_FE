@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 export type MapboxLocation = { center: [number, number] }
 type Suggestion = { mapbox_id: string; name: string; full_address?: string; place_formatted?: string }
 type Props = {
+  compact?: boolean
   inline?: boolean
   locationLabel?: string
   accessToken: string
@@ -10,7 +11,7 @@ type Props = {
   onSelect: (location: MapboxLocation) => void
 }
 
-export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inline = false }: Props) {
+export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inline = false, compact = false }: Props) {
   const id = useId()
   const session = useRef(crypto.randomUUID())
   const request = useRef<AbortController | null>(null)
@@ -80,12 +81,12 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
   }
 
   return (
-    <div className={inline ? "relative z-10 w-full shrink-0 bg-white p-2 text-gray-900 shadow" : "absolute left-3 top-3 z-10 w-[calc(100%_-_6rem)] max-w-sm rounded bg-white p-2 text-gray-900 shadow"}>
-      <label htmlFor={id}>Search locations</label>
+    <div className={inline ? "relative z-10 w-full shrink-0 bg-white p-2 text-gray-900 shadow" : `absolute left-3 top-3 z-10 ${compact ? 'w-[calc(100%_-_1.5rem)]' : 'w-[calc(100%_-_6rem)]'} max-w-sm rounded bg-white p-2 text-gray-900 shadow`}>
+      <label htmlFor={id} className={compact ? "sr-only" : undefined}>Search locations</label>
       {locationLabel && <p className="my-1 break-words text-xs" aria-live="polite">{locationLabel}</p>}
       <input id={id} role="combobox" aria-autocomplete="list" aria-expanded={open && suggestions.length > 0}
         aria-controls={`${id}-results`} aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined}
-        placeholder="City, street, address or landmark" value={query} disabled={retrieving}
+        placeholder={compact ? "Search landmark or address…" : "City, street, address or landmark"} value={query} disabled={retrieving}
         className="min-h-11 w-full rounded border p-2"
         onChange={(event) => {
           request.current?.abort()
@@ -104,8 +105,8 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
           }
           if (event.key === 'Enter' && open && active >= 0) { event.preventDefault(); void select(suggestions[active]) }
         }} />
-      <p role="status" aria-live="polite">{status}</p>
-      {open && suggestions.length > 0 && <ul id={`${id}-results`} role="listbox" aria-label="Locations">
+      {status && <p className="text-xs" role="status" aria-live="polite">{status}</p>}
+      {open && suggestions.length > 0 && <ul id={`${id}-results`} role="listbox" aria-label="Locations" className="max-h-64 overflow-y-auto overscroll-contain">
         {suggestions.map((suggestion, index) => <li key={suggestion.mapbox_id} id={`${id}-${index}`} role="option" aria-selected={active === index}>
           <button type="button" disabled={retrieving} className={`min-h-11 w-full p-2 text-left ${active === index ? 'bg-gray-100' : ''}`}
             onClick={() => void select(suggestion)} onBlur={(event) => { if (!event.currentTarget.closest('ul')?.parentElement?.contains(event.relatedTarget)) dismiss() }}>

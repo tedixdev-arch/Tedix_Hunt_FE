@@ -293,7 +293,7 @@ test.each([false, true])('Creator saves and reopens six authored positions and s
   for (let number = 1; number <= 6; number++) {
     await act(async () => (container.querySelector(`[data-checkpoint="${number}"]`) as HTMLButtonElement).click())
     await act(async () => map.props.onMapClick(46.7 + number / 1000, 23.6 + number / 1000))
-    const card = container.querySelector(`[data-checkpoint="${number}"]`)!.closest('article')!
+    const card = container.querySelector('[aria-label="Selected checkpoint inspector"]')!
     await inputValue(card.querySelector('input')!, `Real place ${number}`)
     await inputValue(card.querySelector('input[type="number"][max="500"]')!, '25')
     await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Confirm position')!.click())
@@ -459,4 +459,24 @@ test('resetting saved checkpoint and FinishPoint geography saves an incomplete d
   expect(record.content.configuration.finishPoint).toBeUndefined()
   expect(record.content.routeResearch).toEqual(original.routeResearch)
   expect(record.content.checkpoints).toEqual(original.checkpoints)
+})
+
+
+test('Feature 2 expands the workspace and compacts navigation, restoring the previous layout on exit', async () => {
+  await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
+  expect(container.querySelector('.position-feature-navigation')).toBeNull()
+  await feature('Checkpoint Positions')
+  const navigation = container.querySelector<HTMLDetailsElement>('.position-feature-navigation')!
+  expect(navigation.open).toBe(false)
+  expect(navigation.querySelector('summary')!.textContent).toContain('Hunt features · 2/9')
+  await act(async () => navigation.querySelector('summary')!.click())
+  expect(navigation.open).toBe(true)
+  const options = [...navigation.querySelectorAll('button')]
+  expect(options).toHaveLength(9)
+  expect(options[0].textContent).toContain('Number of Checkpoints')
+  expect(container.querySelector('.max-w-\\[1600px\\]')).not.toBeNull()
+  await feature('Personal Challenge')
+  expect(container.querySelector('.position-feature-navigation')).toBeNull()
+  expect(container.querySelector('[aria-label="Checkpoint position editor"]')).toBeNull()
+  expect(container.querySelector('.max-w-6xl')).not.toBeNull()
 })
