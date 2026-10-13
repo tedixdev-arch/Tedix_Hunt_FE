@@ -3,12 +3,14 @@ import { useEffect, useId, useRef, useState } from 'react'
 export type MapboxLocation = { center: [number, number] }
 type Suggestion = { mapbox_id: string; name: string; full_address?: string; place_formatted?: string }
 type Props = {
+  inline?: boolean
+  locationLabel?: string
   accessToken: string
   /** Receives temporary coordinates only; callers decide how to move their map. */
   onSelect: (location: MapboxLocation) => void
 }
 
-export function MapboxLocationSearch({ accessToken, onSelect }: Props) {
+export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inline = false }: Props) {
   const id = useId()
   const session = useRef(crypto.randomUUID())
   const request = useRef<AbortController | null>(null)
@@ -78,8 +80,9 @@ export function MapboxLocationSearch({ accessToken, onSelect }: Props) {
   }
 
   return (
-    <div className="absolute left-3 top-3 z-10 w-[calc(100%-6rem)] max-w-sm rounded bg-white p-2 text-gray-900 shadow">
+    <div className={inline ? "relative z-10 w-full shrink-0 bg-white p-2 text-gray-900 shadow" : "absolute left-3 top-3 z-10 w-[calc(100%_-_6rem)] max-w-sm rounded bg-white p-2 text-gray-900 shadow"}>
       <label htmlFor={id}>Search locations</label>
+      {locationLabel && <p className="my-1 break-words text-xs" aria-live="polite">{locationLabel}</p>}
       <input id={id} role="combobox" aria-autocomplete="list" aria-expanded={open && suggestions.length > 0}
         aria-controls={`${id}-results`} aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined}
         placeholder="City, street, address or landmark" value={query} disabled={retrieving}

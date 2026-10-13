@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
-import { isSignalClujProposal, landmarkSequence, signalLandmarkReferences } from './signalLandmarks'
+import { isSignalClujProposal, researchReferences, signalLandmarkReferences } from './signalLandmarks'
 import { ProposedSignalRoute } from './ProposedSignalRoute'
 import { type RouteProposal, candidateReference } from './routeResearch'
 import { createFinishPointDraft, isValidFinishPoint, type FinishPointDraft } from './finishPoint'
 import { CLUJ_NAPOCA_VIEW } from './mapTiles'
-import { TedixMap } from '../../components/TedixMap'
+import { TedixMap, type PositionPin } from '../../components/TedixMap'
 import type { CheckpointDraft, CreatorGeographyConfiguration } from './checkpointGeography'
 import { buildGeographyConfiguration, isGeographyComplete, isValidCheckpoint, MAX_RADIUS_METERS, MIN_RADIUS_METERS, updateCheckpointDraft } from './checkpointGeography'
 
@@ -35,21 +35,15 @@ interface Props {
 }
 
 export function RouteEditor({ templateName, finishDraft, onFinishChange, savedConfiguration, proposal, drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
-  const [reference, setReference] = useState<ReturnType<typeof candidateReference>>()
   const signalProposal = isSignalClujProposal(templateName ?? '', proposal) ? proposal : undefined
-  const references = useMemo(() => signalProposal ? signalLandmarkReferences(signalProposal) : [], [signalProposal])
-  const proposedSequence = useMemo(() => signalProposal ? landmarkSequence(signalProposal, references) : undefined, [signalProposal, references])
-  const [first] = drafts
-  const [activeNumber, setActiveNumber] = useState(first?.checkpointNumber ?? 1)
-  const active = drafts.find(point => point.checkpointNumber === activeNumber) ?? first
+  const references = useMemo(() => signalProposal ? signalLandmarkReferences(signalProposal) : proposal ? researchReferences(proposal) : [], [signalProposal, proposal])
+  const [activeNumber, setActiveNumber] = useState<number | undefined>(drafts[0]?.checkpointNumber)
+  const active = drafts.find(point => point.checkpointNumber === activeNumber)
+  const [finishConfirmed, setFinishConfirmed] = useState(false)
   const finish = finishDraft ?? createFinishPointDraft()
   const finishSelected = activeNumber === 0
   const positioned = drafts.filter(isValidCheckpoint)
   const validFinish = isValidFinishPoint(finish) ? finish : undefined
-  const routeOverview = useMemo(() => {
-    const coordinates = [...drafts.filter(isValidCheckpoint), ...(isValidFinishPoint(finish) ? [finish] : [])].map(point => [point.longitude, point.latitude])
-    return coordinates.length > 1 ? { type: 'LineString' as const, coordinates } : undefined
-  }, [drafts, finishDraft])
   // Camera context never enters checkpoint drafts, confirmation or persistence.
   const savedCheckpoint = savedConfiguration?.checkpointPositions?.find(isValidCheckpoint)
   const savedFinish = isValidFinishPoint(savedConfiguration?.finishPoint) ? savedConfiguration.finishPoint : undefined
@@ -64,21 +58,42 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
   // Without geographic context, show a regional overview around the existing app default.
   const initialZoom = center || researchContext || isSignalCluj ? CLUJ_NAPOCA_VIEW.zoom : 3
   function status(point: CheckpointDraft | FinishPointDraft, saved?: CheckpointDraft | FinishPointDraft) {
-    if (point.latitude === undefined || point.longitude === undefined) return 'Not positioned'
+    if (point.latitude === undefined || point.longitude === undefined) return references.some(ref => ref.checkpointNumber === ('checkpointNumber' in point ? point.checkpointNumber : 0)) ? 'Reference · unconfirmed' : 'Not positioned'
     return saved && ['name', 'latitude', 'longitude', 'radiusMeters'].every(key => point[key as keyof typeof point] === saved[key as keyof typeof saved]) ? 'Saved position' : 'Positioned · not saved'
   }
-  function select(number: number) {
-    setActiveNumber(number)
-    const target = references.find(point => point.checkpointNumber === number)
-    setReference(target ? { latitude: target.latitude, longitude: target.longitude, name: target.name } : undefined)
+  function select(number: number) { setActiveNumber(number) }
+  function changeFinish(change: Partial<FinishPointDraft>) {
+    setFinishConfirmed(false)
+    onFinishChange?.({ ...finish, ...change })
+  }
+  function place(number: number, latitude: number, longitude: number) {
+    if (number === 0) changeFinish({ latitude, longitude })
+    else update(number, { latitude, longitude })
+  }
+  function placeSelected(latitude: number, longitude: number) {
+    if (activeNumber !== undefined) place(activeNumber, latitude, longitude)
+  }
+  const pins: PositionPin[] = [...drafts.map(point => ({ ...point, status: verified.has(point.checkpointNumber) ? 'confirmed' as const : 'edited' as const })),
+    { ...finish, checkpointNumber: 0, status: finishConfirmed ? 'confirmed' as const : 'edited' as const }].flatMap(point => {
+    const ref = references.find(ref => ref.checkpointNumber === point.checkpointNumber)
+    const authored = typeof point.latitude === 'number' && Math.abs(point.latitude) <= 90 && typeof point.longitude === 'number' && Math.abs(point.longitude) <= 180
+    const location = authored ? { latitude: point.latitude!, longitude: point.longitude! } : ref
+    return location ? [{ checkpointNumber: point.checkpointNumber, name: point.name || ref?.name || 'FinishPoint', latitude: location.latitude, longitude: location.longitude,
+      selected: point.checkpointNumber === activeNumber, status: authored ? point.status : 'reference' as const }] : []
+  })
+  const selectedPin = pins.find(point => point.checkpointNumber === activeNumber)
+  const locationLabel = activeNumber === undefined ? 'No checkpoint selected · search explores the map' : `${activeNumber === 0 ? 'F' : `CP${activeNumber}`} · ${selectedPin ? `${selectedPin.latitude.toFixed(5)}, ${selectedPin.longitude.toFixed(5)} · ${selectedPin.status === 'reference' ? 'Reference · unconfirmed' : selectedPin.status === 'confirmed' ? 'Creator-confirmed' : 'Locally edited · unconfirmed'}` : 'No location yet'}`
+  function resetControl(number: number) {
+    const available = references.some(point => point.checkpointNumber === number)
+    return <span className="flex flex-col items-end gap-1"><button type="button" aria-label="Reset checkpoint position" title={available ? 'Restore researched reference; clear position and confirmation' : 'Reset unavailable: no researched reference coordinate'} disabled={!available} className="min-h-11 min-w-11 rounded-lg border border-slate-300 text-xl disabled:opacity-40" onClick={() => number === 0 ? changeFinish({ latitude: undefined, longitude: undefined }) : update(number, { latitude: undefined, longitude: undefined })}><span aria-hidden="true">↶</span></button>{!available && <span className="text-xs text-slate-500">No researched reference to restore.</span>}</span>
   }
   function context(number: number) {
     const candidate = proposal?.candidates.find(candidate => number === 0 ? candidate.role === 'terminal' : candidate.role === 'normal' && candidate.checkpoint === number)
     if (!candidate) return null
     const ref = references.find(point => point.checkpointNumber === number)
-    return <div className="mt-2 text-sm text-slate-600"><p className={activeNumber === number ? undefined : 'line-clamp-2'}>{candidate.arrivalArea}</p>{signalProposal && <p className="mt-1 text-xs font-bold text-amber-900">{ref ? 'Provisional landmark reference available' : 'Reference location unavailable'}</p>}
+    return <details className="mt-2 text-sm text-slate-600"><summary className="min-h-11 cursor-pointer py-3 text-xs font-bold">Arrival area &amp; research notes</summary><p>{candidate.arrivalArea}</p>{signalProposal && <p className="mt-1 text-xs font-bold text-amber-900">{ref ? 'Researched reference available' : 'Reference location unavailable'}</p>}
       {activeNumber === number && ref?.metadata && <details className="mt-2 text-xs"><summary className="min-h-11 cursor-pointer py-3 font-bold">Reference source &amp; uncertainty</summary><p>{ref.metadata.identifier}</p><p className="mt-1">{ref.metadata.method}</p><p className="mt-1">{ref.metadata.confidence}</p><p className="mt-1">{ref.metadata.uncertainty}</p><ul className="mt-2 space-y-1">{ref.metadata.sourceUrls.map(url => <li key={url}><a className="break-all underline" href={url} target="_blank" rel="noreferrer">{url}</a></li>)}</ul><p className="mt-2">{ref.metadata.attribution}</p></details>}
-    </div>
+    </details>
   }
   const field = 'mt-1 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 px-3'
   function fields(point: CheckpointDraft | FinishPointDraft, change: (value: Partial<CheckpointDraft>) => void) {
@@ -95,35 +110,36 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
     onConfigurationChange(buildGeographyConfiguration(drafts.length, next.drafts))
   }
     return <section className="mt-5 min-w-0" aria-label="Checkpoint position editor">
-    <div className="h-[360px] w-full min-w-0 sm:h-[500px]" data-testid="position-map"><TedixMap
+    <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
+    <div className="min-w-0 lg:sticky lg:top-24">
+    <div className="h-[540px] w-full min-w-0 sm:h-[640px]" data-testid="position-map"><TedixMap
       initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
-      cameraTarget={reference} landmarkReference={signalProposal ? undefined : reference} routeOverview={routeOverview}
-      fitLandmarkReferences={!!signalProposal} landmarkReferences={signalProposal ? references.map(point => ({ ...point, selected: point.checkpointNumber === activeNumber })) : undefined} proposedSequence={proposedSequence} onLandmarkSelect={select}
+      positionPins={pins} initialFitPoints={references} selectedLocationLabel={locationLabel}
       locationSearch className="overflow-hidden rounded-2xl border border-slate-300"
-      checkpoints={positioned.map(point => ({ ...point, selected: !finishSelected && active?.checkpointNumber === point.checkpointNumber, verified: verified.has(point.checkpointNumber) }))}
-      finishPoint={validFinish} finishPointSelected={finishSelected}
-      onFinishPointSelect={onFinishChange ? () => select(0) : undefined}
-      onFinishPointMove={onFinishChange ? (latitude, longitude) => { setActiveNumber(0); onFinishChange({ ...finish, latitude, longitude }) } : undefined}
-      onCheckpointSelect={select}
-      onCheckpointMove={(number, latitude, longitude) => { setActiveNumber(number); update(number, { latitude, longitude }) }}
-      onMapClick={(latitude, longitude) => finishSelected ? onFinishChange?.({ ...finish, latitude, longitude }) : active && update(active.checkpointNumber, { latitude, longitude })}
+      onCheckpointSelect={select} onCheckpointMove={(number, latitude, longitude) => place(number, latitude, longitude)}
+      onMapClick={placeSelected} onSearchPosition={activeNumber === undefined ? undefined : placeSelected}
     /></div>
-    <p className="mt-2 text-sm text-slate-600">Select a checkpoint below or on the map, then click/tap to place it or drag its marker. Search moves the map only. Changes remain local until you explicitly save the Template. Selected checkpoint: {finishSelected ? 'F' : active?.checkpointNumber ?? 'none'}.</p>
-    <p className="mt-2 text-xs text-slate-500">Grey dashed line: Creator-positioned checkpoint order · not verified walking directions.</p>
-    {signalProposal && <div className="mt-2 space-y-2 text-xs"><p aria-label="Map legend"><span className="font-bold text-amber-800">Amber: provisional landmark references</span> · <span className="font-bold text-emerald-800">Green: Creator-positioned arrivals</span> · Violet F: Creator-positioned terminal FinishPoint. Offset reference badges remain separate when positions overlap.</p><p>Proposed landmark sequence — not verified walking directions. Amber dashed segments connect adjacent available references only. {references.length < signalProposal.candidates.length ? 'Incomplete sequence: missing references break the line.' : 'All seven landmark references available; arrival areas remain unverified.'}</p><p>Landmark references have no detection radius and do not confirm arrivals. Reference sources and uncertainty are available in the selected card.</p></div>}
+    <div className="mt-2 flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-slate-600">Select a checkpoint, then click the map to position it.</p>{activeNumber !== undefined && <button type="button" className="min-h-11 rounded-lg border border-slate-300 px-3 text-sm font-bold" onClick={() => setActiveNumber(undefined)}>Deselect checkpoint</button>}</div>
+    <p className="text-xs text-slate-600" role="status">{locationLabel}. Changes stay local until you save the Template.</p>
+    <details className="mt-3 rounded-xl border border-slate-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">How to position checkpoints</summary><ol className="grid gap-3 sm:grid-cols-3">{[['⌖', '1. Select', 'Choose a checkpoint.'], ['⌕', '2. Position', 'Click the map or choose a search result.'], ['✓', '3. Confirm & Save', 'Confirm the arrival area and save the Template.']].map(([icon, title, text]) => <li key={title} className="rounded-lg bg-slate-50 p-3"><span aria-hidden="true" className="text-2xl">{icon}</span><strong className="block text-sm">{title}</strong><p className="mt-1 text-xs">{text}</p></li>)}</ol></details>
+    </div>
+    <div className="min-w-0">
     <div className="mt-5 flex flex-wrap justify-between gap-3"><h4 className="text-lg font-bold">Place and inspect checkpoint positions</h4><span>{verified.size} of {drafts.length} positions confirmed</span></div>
     <ol className="mt-3 space-y-3" aria-label="Checkpoint positions">{drafts.map(point => {
       const selected = !finishSelected && active?.checkpointNumber === point.checkpointNumber
       return <li key={point.checkpointNumber}><article className={`min-w-0 rounded-xl border p-3 ${selected ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'}`}>
         <button data-checkpoint={point.checkpointNumber} aria-expanded={selected} aria-pressed={selected} onClick={() => select(point.checkpointNumber)} className="flex min-h-12 w-full flex-wrap items-center gap-3 text-left" type="button"><strong>{point.checkpointNumber} · {point.name}</strong><span className="text-xs">{status(point, savedConfiguration?.checkpointPositions.find(saved => saved.checkpointNumber === point.checkpointNumber))}</span><span className="ml-auto text-sm font-bold">{point.latitude === undefined ? 'Place on map' : 'Edit position'}</span></button>{context(point.checkpointNumber)}
-        {selected && <div>{fields(point, change => update(point.checkpointNumber, change))}<p className="mt-2 text-xs">Session confirmation: {verified.has(point.checkpointNumber) ? 'Position confirmed' : 'Not confirmed'}</p><button className="mt-3 min-h-11 rounded-lg bg-emerald-500 px-4 text-sm font-bold disabled:bg-slate-300" disabled={!isValidCheckpoint(point)} type="button" onClick={() => { const next = new Set(verified); next.add(point.checkpointNumber); onVerifiedChange(next) }}>Confirm position</button></div>}
+        {selected && <div><div className="flex items-center justify-between gap-2 text-xs"><span>{selectedPin ? `${selectedPin.latitude.toFixed(5)}, ${selectedPin.longitude.toFixed(5)}` : 'No location yet'}</span>{resetControl(point.checkpointNumber)}</div>{fields(point, change => update(point.checkpointNumber, change))}<p className="mt-2 text-xs">Confirm only after inspecting the arrival area. Session confirmation: {verified.has(point.checkpointNumber) ? 'Position confirmed' : 'Not confirmed'}</p><button className="mt-3 min-h-11 rounded-lg bg-emerald-500 px-4 text-sm font-bold disabled:bg-slate-300" disabled={!isValidCheckpoint(point)} type="button" onClick={() => { const next = new Set(verified); next.add(point.checkpointNumber); onVerifiedChange(next) }}>Confirm position</button></div>}
       </article></li>
     })}
-    {onFinishChange && <li><article className={`rounded-xl border p-3 ${finishSelected ? 'border-violet-500 bg-violet-50' : 'border-slate-200'}`}><button type="button" data-checkpoint="F" aria-expanded={finishSelected} aria-pressed={finishSelected} className="flex min-h-12 w-full flex-wrap items-center gap-3 text-left" onClick={() => select(0)}><strong>F · {finish.name || 'FinishPoint'}</strong><span className="text-xs">{status(finish, savedConfiguration?.finishPoint)}</span><span className="ml-auto text-sm font-bold">{finish.latitude === undefined ? 'Place on map' : 'Edit position'}</span></button>{context(0)}{finishSelected && <>{fields(finish, change => onFinishChange({ ...finish, ...change }))}<p className="mt-2 text-xs">Terminal FinishPoint · separate from the normal checkpoint count. FinishPoint gameplay remains in Feature 6.</p>{!validFinish && <p role="status">Enter a name, valid coordinates and an integer radius from 5 to 500 metres.</p>}</>}</article></li>}
+    {onFinishChange && <li><article className={`rounded-xl border p-3 ${finishSelected ? 'border-violet-500 bg-violet-50' : 'border-slate-200'}`}><button type="button" data-checkpoint="F" aria-expanded={finishSelected} aria-pressed={finishSelected} className="flex min-h-12 w-full flex-wrap items-center gap-3 text-left" onClick={() => select(0)}><strong>F · {finish.name || 'FinishPoint'}</strong><span className="text-xs">{status(finish, savedConfiguration?.finishPoint)}</span><span className="ml-auto text-sm font-bold">{finish.latitude === undefined ? 'Place on map' : 'Edit position'}</span></button>{context(0)}{finishSelected && <><div className="flex items-center justify-between gap-2 text-xs"><span>{locationLabel}</span>{resetControl(0)}</div>{fields(finish, changeFinish)}<p className="mt-2 text-xs">{finishConfirmed ? 'Position confirmed' : 'Not confirmed'}</p><button type="button" disabled={!validFinish} className="mt-3 min-h-11 rounded-lg bg-emerald-500 px-4 text-sm font-bold disabled:bg-slate-300" onClick={() => setFinishConfirmed(true)}>Confirm FinishPoint position</button><p className="mt-2 text-xs">Terminal FinishPoint · separate from the normal checkpoint count. FinishPoint gameplay remains in Feature 6.</p>{!validFinish && <p role="status">Enter a name, valid coordinates and an integer radius from 5 to 500 metres.</p>}</>}</article></li>}
     </ol>
+    </div></div>
+    <details className="mt-4 rounded-xl border border-slate-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">Arrival verification &amp; safety reminders</summary>
     <p className="mt-4 text-xs text-slate-600">Position confirmations and safety reminders are temporary session checks, not saved evidence of physical verification.</p>
     <div className="mt-3 grid gap-2 sm:grid-cols-2">{safetyItems.map(item => <label key={item} className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm font-bold"><input className="h-5 w-5 accent-emerald-500" type="checkbox" checked={safety.has(item)} onChange={() => { const next = new Set(safety); next.has(item) ? next.delete(item) : next.add(item); onSafetyChange(next) }} />{safetyLabels[item]}</label>)}</div>
     {!complete && <p className="mt-4 text-sm font-bold text-amber-800">Place and confirm every normal checkpoint position, then complete the temporary review reminders for this session.</p>}
-    {proposal && <details className="mt-5 rounded-xl border border-amber-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">Location research &amp; safety notes</summary><ProposedSignalRoute landmarkReferences={references} proposal={proposal} onInspect={target => { if (!signalProposal) setReference(target) }} onSelectCheckpoint={select} selectedCheckpoint={finishSelected ? 'F' : active?.checkpointNumber} /></details>}
+    </details>
+    {proposal && <details className="mt-5 rounded-xl border border-amber-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">Location research &amp; safety notes</summary><ProposedSignalRoute landmarkReferences={references} proposal={proposal} onInspect={() => {}} onSelectCheckpoint={select} selectedCheckpoint={finishSelected ? 'F' : active?.checkpointNumber} /></details>}
   </section>
 }

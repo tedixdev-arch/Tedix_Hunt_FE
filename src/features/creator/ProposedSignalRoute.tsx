@@ -45,7 +45,7 @@ export function ProposedSignalRoute({ proposal, onInspect, selectedCheckpoint, o
       <p><strong>Proposed exterior arrival area: </strong>{selected.arrivalArea}</p>
       <p><strong>Research confidence: </strong>{selected.confidence}</p>
       <p><strong>Physical verification: </strong>{selected.physicalVerification}</p>
-      {reference ? <p role="status" className="font-bold text-blue-900">Landmark reference only: {reference.latitude}, {reference.longitude}. This is not an arrival location. No checkpoint has been placed by this inspection.</p> : <p role="status">No researched reference coordinate available. Use Search locations on the map to find this landmark; search only moves the map.</p>}
+      {reference ? <p role="status" className="font-bold text-blue-900">Landmark reference only: {reference.latitude}, {reference.longitude}. This is not an arrival location. No checkpoint has been placed by this inspection.</p> : <p role="status">No researched reference coordinate available. Use Search locations on the map to find this landmark; search positions the selected checkpoint, or explores the map when none is selected.</p>}
       <p className="font-bold">Outstanding verification issues</p>
       <ul className="list-disc space-y-1 pl-5">{selected.unresolvedIssues.map(issue => <li key={issue}>{issue}</li>)}</ul>
       <p className="font-bold">Supporting sources</p>

@@ -10,7 +10,7 @@ import { OrganizerHeader } from './OrganizerFlow'
 import { CheckpointGameplayEditor, GameplayScoring, gameplayPresentation } from '../features/creator/CheckpointGameplayEditor'
 import { createNormalGameplay, hydrateGameplay, serializeGameplay, gameplayValidation, type CheckpointGameplay } from '../features/creator/checkpointGameplay'
 import { FinishPointEditor } from '../features/creator/FinishPointEditor'
-import { finishPointValidation, type FinishPoint, type FinishPointDraft } from '../features/creator/finishPoint'
+import { finishPointConfiguration, finishPointValidation, type FinishPoint, type FinishPointDraft } from '../features/creator/finishPoint'
 import { RouteEditor } from '../features/creator/RouteEditor'
 import { ParticipantPreview } from '../features/creator/ParticipantPreview'
 import { WalkingRouteInspection } from '../features/creator/WalkingRouteValidation'
@@ -227,7 +227,7 @@ export function CreatorTemplateEditorPage() {
     displayName: details.name,
     theme: details.theme,
     mission,
-    configuration: { ...templateConfiguration, ...(finishPointDraft && (finishPointEdited || persisted?.content.configuration.finishPoint) ? { finishPoint: finishPointDraft as FinishPoint } : {}), summary: details.summary, category: details.category, ageRange: details.age, durationMinutes: Number(details.duration), language: details.language, participants: details.participants, teamSize: details.teamSize, format: details.format, environment: details.environment, equipment: details.equipment, difficulty: details.difficulty, briefing: details.briefing },
+    configuration: { ...finishPointConfiguration(templateConfiguration, finishPointDraft, finishPointEdited), ...(!finishPointEdited && finishPointDraft && persisted?.content.configuration.finishPoint ? { finishPoint: finishPointDraft as FinishPoint } : {}), summary: details.summary, category: details.category, ageRange: details.age, durationMinutes: Number(details.duration), language: details.language, participants: details.participants, teamSize: details.teamSize, format: details.format, environment: details.environment, equipment: details.equipment, difficulty: details.difficulty, briefing: details.briefing },
     scoring: { ...(persisted?.content.scoring ?? { model: 'platform' }), ...(Object.keys(selections).length ? { selections } : {}) },
     checkpoints: persisted && !gameplayEdited && ((templateConfiguration.normalCheckpointCount === undefined && templateConfiguration.checkpointPositions === undefined) || persisted.content.checkpoints.every(entry => !!entry && typeof entry === 'object' && ['normal', 'terminal'].includes((entry as CheckpointGameplay).role ?? ''))) && checkpointCount === persisted.content.checkpoints.filter(entry => (entry as CheckpointGameplay).role !== 'terminal').length ? persisted.content.checkpoints : serializeGameplay(normalGameplay, checkpointCount, terminalGameplay, persisted?.content.checkpoints),
   }), [checkpointCount, checkpointDrafts, gameplayEdited, normalGameplay, terminalGameplay, finishPointDraft, finishPointEdited, details, mission, persisted, selections, stableKey, templateConfiguration])
