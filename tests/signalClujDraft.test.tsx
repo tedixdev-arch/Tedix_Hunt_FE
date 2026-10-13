@@ -10,8 +10,8 @@ import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 import { ApiError } from '../src/services/api/client'
 
 const map = vi.hoisted(() => ({ props: {} as any }))
-const api = vi.hoisted(() => ({ list: vi.fn(), get: vi.fn(), createSignalClujDraft: vi.fn(), createSignalOverloadClujDraft: vi.fn(), createVersion: vi.fn(), create: vi.fn(), submit: vi.fn() }))
-vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
+const api = vi.hoisted(() => ({ listStarters: vi.fn(), list: vi.fn(), get: vi.fn(), createStarterDraft: vi.fn(), createVersion: vi.fn(), create: vi.fn(), submit: vi.fn() }))
+vi.mock('../src/services/api/creatorTemplates', async importOriginal => ({ ...await importOriginal<typeof import('../src/services/api/creatorTemplates')>(), creatorTemplatesApi: api }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <div /> }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: (props: any) => { map.props = props; return <div aria-label="Shared Mapbox" /> } }))
 let root: Root, container: HTMLDivElement
@@ -29,6 +29,7 @@ beforeEach(() => {
     configuration: { normalCheckpointCount: 6, checkpointPositions: [] }, scoring: { startingScore: 500 },
     checkpoints: [...Array.from({ length: 6 }, (_, index) => ({ checkpoint: index + 1, role: 'normal', kind: 'square', navigationMode: 'none', correctAnswers: { x: '42' }, hint: 'Original hint', fictionalNavigation: { scope: 'puzzle-only', direction: 'NW', distance: '80 m' } })), { role: 'terminal', kind: 'radial', teamKind: 'clue-synthesis', navigationMode: 'none', teamAnswer: 'SIGNAL' }],
   } }
+  api.listStarters.mockResolvedValue({ items: [{ key: 'signal-cluj-napoca', displayName: 'Signal: Cluj Napoca', description: 'Pre-filled story, challenges, scoring and researched route.', createdAt: null, creationPath: '/api/creator/templates/starters/signal-cluj-napoca' }, { key: 'signal-overload-cluj-napoca', displayName: 'Signal Overload - Cluj Napoca', description: 'Backend Overload description', createdAt: null, creationPath: '/api/creator/templates/starters/signal-overload-cluj-napoca' }] });
   api.list.mockResolvedValue([]); api.get.mockImplementation(async () => structuredClone(record))
   api.createVersion.mockImplementation(async (_, content) => { record = { ...record, version: content.version, content }; return structuredClone(record) })
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
@@ -36,41 +37,41 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); container.remove(); Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal'); Reflect.deleteProperty(HTMLDialogElement.prototype, 'close'); vi.unstubAllGlobals() })
 async function render(node: React.ReactNode) { await act(async () => root.render(node)) }
 async function click(text: string) {
-  const button = [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith(text))!
+  const button = [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith(text) || (text === 'Back' && button.getAttribute('aria-label') === 'Back to Create Template choices') || (text === 'Close' && button.getAttribute('aria-label') === 'Close template creation chooser'))!
   expect(button, text).toBeDefined(); await act(async () => button.click())
 }
 function Location() { return <p aria-label="Navigated location">{useLocation().search}</p> }
 
 test('dashboard prevents repeat clicks and navigates to returned draft key without submission', async () => {
   let resolve!: (value: CreatorTemplate) => void
-  api.createSignalClujDraft.mockReturnValue(new Promise(done => { resolve = done }))
+  api.createStarterDraft.mockReturnValue(new Promise(done => { resolve = done }))
   await render(<MemoryRouter initialEntries={['/creator']}><Routes><Route path="/creator" element={<CreatorStudioPage />} /><Route path="/create" element={<Location />} /></Routes></MemoryRouter>)
   await click('Create Template')
   await click('Start from Template')
-  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
-  const starter = [...container.querySelectorAll('button')].find(button => button.textContent === 'Signal: Cluj Napoca')!
+  expect(api.createStarterDraft).not.toHaveBeenCalled()
+  const starter = [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('Signal: Cluj Napoca'))!
   await act(async () => { starter.click(); starter.click() })
-  const button = [...container.querySelectorAll('button')].find(button => button.textContent === 'Signal: Cluj Napoca')!
+  const button = [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('Signal: Cluj Napoca'))!
   expect(button.disabled).toBe(true)
-  expect(container.querySelector('[role="status"]')?.textContent).toBe('Creating Signal Cluj draft…')
-  const back = [...container.querySelectorAll('button')].find(button => button.textContent === 'Back')!
+  expect(container.querySelector('[role="status"]')?.textContent).toBe('Creating Template draft…')
+  const back = [...container.querySelectorAll('button')].find(button => button.getAttribute('aria-label') === 'Back to Create Template choices')!
   expect(back.disabled).toBe(true)
   await act(async () => back.click())
   expect(container.querySelector('#template-creation-title')?.textContent).toBe('Choose a starter Template')
   await act(async () => button.click())
-  expect(api.createSignalClujDraft).toHaveBeenCalledTimes(1)
+  expect(api.createStarterDraft).toHaveBeenCalledTimes(1)
   await act(async () => resolve({ ...record, key: 'returned key&draft' }))
   expect(container.textContent).toContain('?template=returned%20key%26draft')
   expect(api.submit).not.toHaveBeenCalled(); expect(api.create).not.toHaveBeenCalled()
 })
 
 test.each([401, 403, 409, 500])('dashboard displays starter error %s and allows manual retry', async status => {
-  api.createSignalClujDraft.mockRejectedValue(new ApiError('Failure', status, 'http'))
+  api.createStarterDraft.mockRejectedValue(new ApiError('Failure', status, 'http'))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
   await click('Create Template')
   await click('Start from Template'); await click('Signal: Cluj Napoca')
   expect(container.querySelector('[role="alert"]')).not.toBeNull()
-  expect([...container.querySelectorAll('button')].find(button => button.textContent === 'Signal: Cluj Napoca')?.disabled).toBe(false)
+  expect([...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('Signal: Cluj Napoca'))?.disabled).toBe(false)
 })
 
 test('one creation CTA opens both options with accessible labels and closing creates nothing', async () => {
@@ -95,7 +96,7 @@ test('one creation CTA opens both options with accessible labels and closing cre
   await click('Create Template')
   await act(async () => container.querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true })))
   expect(container.querySelector('dialog')).toBeNull()
-  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(api.createStarterDraft).not.toHaveBeenCalled()
   expect(api.create).not.toHaveBeenCalled()
 })
 
@@ -110,11 +111,11 @@ test.each(['Close', 'Escape'])('starter view supports Back and %s without creati
   await click('Start from Template')
   expect(container.querySelector('dialog')).toBe(dialog)
   expect(dialog.querySelector('#template-creation-title')?.textContent).toBe('Choose a starter Template')
-  const starter = [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Signal: Cluj Napoca')!
-  expect(document.activeElement).toBe(starter)
+  const starter = [...dialog.querySelectorAll('button')].find(button => button.textContent?.startsWith('Signal: Cluj Napoca'))!
+  expect(document.activeElement?.getAttribute('aria-label')).toBe('Back to Create Template choices')
   expect(dialog.querySelector(`#${starter.getAttribute('aria-describedby')}`)?.textContent).toBe('Pre-filled story, challenges, scoring and researched route.')
   expect(dialog.textContent).not.toContain('Start from scratch')
-  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(api.createStarterDraft).not.toHaveBeenCalled()
   await click('Back')
   expect(dialog.querySelector('#template-creation-title')?.textContent).toBe('Create Template')
   expect(document.activeElement?.textContent).toBe('Start from Template')
@@ -125,12 +126,12 @@ test.each(['Close', 'Escape'])('starter view supports Back and %s without creati
   expect(document.activeElement).toBe(trigger)
   await click('Create Template')
   expect(container.querySelector('#template-creation-title')?.textContent).toBe('Create Template')
-  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(api.createStarterDraft).not.toHaveBeenCalled()
   expect(api.create).not.toHaveBeenCalled()
 })
 
 test('Tab and Shift+Tab wrap inside both views, including while starter creation is pending', async () => {
-  api.createSignalClujDraft.mockRejectedValue(new ApiError('Failure', 409, 'http'))
+  api.createStarterDraft.mockRejectedValue(new ApiError('Failure', 409, 'http'))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
   await click('Create Template')
   const close = container.querySelector<HTMLButtonElement>('[aria-label="Close template creation chooser"]')!
@@ -143,13 +144,13 @@ test('Tab and Shift+Tab wrap inside both views, including while starter creation
   close.focus(); await tab(true); expect(document.activeElement).toBe(signal)
   await tab(); expect(document.activeElement).toBe(close)
   await click('Start from Template')
-  const back = [...container.querySelectorAll('button')].find(button => button.textContent === 'Back')!
-  close.focus(); await tab(true); expect(document.activeElement).toBe(back)
-  await tab(); expect(document.activeElement).toBe(close)
+  const back = [...container.querySelectorAll('button')].find(button => button.getAttribute('aria-label') === 'Back to Create Template choices')!
+  back.focus(); await tab(true); expect(document.activeElement?.textContent).toContain('Signal Overload - Cluj Napoca')
+  await tab(); expect(document.activeElement).toBe(back)
   await click('Signal: Cluj Napoca')
   const check = [...container.querySelectorAll('button')].find(button => button.textContent === 'Check My Templates')!
-  check.focus(); await tab(); expect(document.activeElement).toBe(close)
-  api.createSignalClujDraft.mockReturnValue(new Promise(() => {}))
+  check.focus(); await tab(); expect(document.activeElement).toBe(back)
+  api.createStarterDraft.mockReturnValue(new Promise(() => {}))
   await click('Signal: Cluj Napoca')
   close.focus(); await tab(); expect(document.activeElement).toBe(close)
   await tab(true); expect(document.activeElement).toBe(close)
@@ -163,12 +164,12 @@ test('scratch opens the unchanged generic editor without persisting a Template',
   expect(container.querySelector('dialog')).toBeNull()
   expect(api.get).not.toHaveBeenCalled()
   expect(api.create).not.toHaveBeenCalled()
-  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(api.createStarterDraft).not.toHaveBeenCalled()
 })
 
 test('closing and reopening during Signal creation keeps both paths protected', async () => {
   let resolve!: (value: CreatorTemplate) => void
-  api.createSignalClujDraft.mockReturnValue(new Promise(done => { resolve = done }))
+  api.createStarterDraft.mockReturnValue(new Promise(done => { resolve = done }))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
   await click('Create Template'); await click('Start from Template'); await click('Signal: Cluj Napoca')
   await click('Close'); await click('Create Template')
@@ -176,12 +177,12 @@ test('closing and reopening during Signal creation keeps both paths protected', 
     expect([...container.querySelectorAll('button')].find(button => button.textContent === name)?.disabled).toBe(true)
     await click(name)
   }
-  expect(api.createSignalClujDraft).toHaveBeenCalledTimes(1)
+  expect(api.createStarterDraft).toHaveBeenCalledTimes(1)
   await act(async () => resolve(record))
 })
 
 test('starter errors survive closing, offer checking drafts, and permit an explicit retry', async () => {
-  api.createSignalClujDraft.mockRejectedValueOnce(new ApiError('Failure', 500, 'http')).mockResolvedValue(record)
+  api.createStarterDraft.mockRejectedValueOnce(new ApiError('Failure', 500, 'http')).mockResolvedValue(record)
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
   await click('Create Template'); await click('Start from Template'); await click('Signal: Cluj Napoca')
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('Check your drafts before retrying')
@@ -192,7 +193,7 @@ test('starter errors survive closing, offer checking drafts, and permit an expli
   await click('Create Template')
   expect(container.querySelector('dialog [role="alert"]')).not.toBeNull()
   await click('Start from Template'); await click('Signal: Cluj Napoca')
-  expect(api.createSignalClujDraft).toHaveBeenCalledTimes(2)
+  expect(api.createStarterDraft).toHaveBeenCalledTimes(2)
 })
 
 test('My Templates preserves every status counter, card and existing editor link', async () => {
@@ -355,23 +356,23 @@ test('hydration prefills seven research names and draft save cannot promote refe
 
 
 test('Overload is a distinct starter choice and opens its own returned draft', async () => {
-  api.createSignalOverloadClujDraft.mockResolvedValue({ ...record, key: 'overload-owned' })
+  api.createStarterDraft.mockResolvedValue({ ...record, key: 'overload-owned' })
   await render(<MemoryRouter initialEntries={['/creator']}><Routes><Route path="/creator" element={<CreatorStudioPage />} /><Route path="/create" element={<Location />} /></Routes></MemoryRouter>)
   await click('Create Template'); await click('Start from Template')
   expect(container.textContent).toContain('Signal: Cluj Napoca')
   await click('Signal Overload - Cluj Napoca')
-  expect(api.createSignalOverloadClujDraft).toHaveBeenCalledTimes(1)
-  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(api.createStarterDraft).toHaveBeenCalledTimes(1)
+  expect(api.createStarterDraft.mock.calls[0][0].key).toBe('signal-overload-cluj-napoca')
   expect(container.textContent).toContain('?template=overload-owned')
   expect(api.submit).not.toHaveBeenCalled()
 })
 
 test('unavailable Overload reports an error without invoking original Signal', async () => {
-  api.createSignalOverloadClujDraft.mockRejectedValue(new ApiError('Missing', 404, 'http'))
+  api.createStarterDraft.mockRejectedValue(new ApiError('Missing', 404, 'http'))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
   await click('Create Template'); await click('Start from Template'); await click('Signal Overload - Cluj Napoca')
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('starter is unavailable')
-  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(api.createStarterDraft.mock.calls[0][0].key).toBe('signal-overload-cluj-napoca')
 })
 
 test('Overload shared map editor exposes reversed seven pins and separate F, and backend story preview', async () => {
@@ -391,4 +392,39 @@ test('Overload shared map editor exposes reversed seven pins and separate F, and
   await feature('Personal Challenge')
   expect(container.querySelector('[aria-label="Checkpoint story preview"]')?.textContent).toContain('Backend ACCESS revelation')
   expect(container.textContent).toContain('Backend next destination')
+})
+
+test('catalog loading, error retry and empty states preserve navigation without fallback', async () => {
+  let reject!: (reason: Error) => void
+  api.listStarters.mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({ items: [] })
+  await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
+  await click('Create Template'); await click('Start from Template')
+  expect(container.querySelector('[role="status"]')?.textContent).toBe('Loading starter Templates…')
+  expect(container.textContent).not.toContain('Signal: Cluj Napoca')
+  await act(async () => reject(new Error('404')))
+  expect(container.querySelector('dialog [role="alert"]')?.textContent).toContain('catalog may not be available yet')
+  await click('Retry')
+  expect(api.listStarters).toHaveBeenCalledTimes(2)
+  expect(container.textContent).toContain('No starter Templates available.')
+  await click('Back'); expect(container.textContent).toContain('Start from scratch')
+  await click('Close'); expect(container.querySelector('dialog')).toBeNull()
+})
+
+test('backend names, descriptions, dates and order render inside selectable rows', async () => {
+  const items = [
+    { key: 'signal-cluj-napoca', displayName: 'Backend first', description: 'First description', createdAt: null, creationPath: '/api/creator/templates/starters/signal-cluj-napoca' },
+    { key: 'signal-overload-cluj-napoca', displayName: 'Backend second', description: 'Second description', createdAt: '2026-10-12T00:00:00Z', creationPath: '/api/creator/templates/starters/signal-overload-cluj-napoca' },
+    { key: 'unknown', displayName: 'Unknown', description: 'Unsupported', createdAt: 'invalid', creationPath: 'https://evil.test' },
+  ]
+  api.listStarters.mockResolvedValue({ items })
+  api.createStarterDraft.mockReturnValue(new Promise(() => {}))
+  await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
+  await click('Create Template'); await click('Start from Template')
+  const rows = [...container.querySelectorAll<HTMLButtonElement>('dialog li button')]
+  expect(rows.map(row => row.querySelector('.font-bold')?.textContent)).toEqual(items.map(item => item.displayName))
+  expect(rows.map(row => row.children[1].textContent)).toEqual(['-', '12 Oct 2026', '-'])
+  expect(rows[0].textContent).toContain('First description')
+  expect(rows[2].disabled).toBe(true)
+  await act(async () => { rows[1].click(); rows[1].click() })
+  expect(api.createStarterDraft).toHaveBeenCalledExactlyOnceWith(items[1])
 })

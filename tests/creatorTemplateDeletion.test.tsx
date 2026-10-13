@@ -6,8 +6,8 @@ import { CreatorStudioPage } from '../src/pages/CreatorStudio'
 import type { CreatorTemplate, CreatorTemplateStatus } from '../src/services/api/creatorTemplates'
 import { ApiError } from '../src/services/api/client'
 
-const api = vi.hoisted(() => ({ list: vi.fn(), delete: vi.fn(), createSignalClujDraft: vi.fn() }))
-vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
+const api = vi.hoisted(() => ({ list: vi.fn(), delete: vi.fn(), createStarterDraft: vi.fn(), listStarters: vi.fn() }))
+vi.mock('../src/services/api/creatorTemplates', async importOriginal => ({ ...await importOriginal<typeof import('../src/services/api/creatorTemplates')>(), creatorTemplatesApi: api }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <div /> }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: () => <div /> }))
 let root: Root, container: HTMLDivElement
@@ -21,12 +21,13 @@ beforeEach(() => {
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function () { this.setAttribute('open', '') } })
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function () { this.removeAttribute('open') } })
   api.list.mockResolvedValue(structuredClone(records))
+  api.listStarters.mockResolvedValue({ items: [{ key: 'signal-cluj-napoca', displayName: 'Signal: Cluj Napoca', description: 'Catalog description', creationPath: '/api/creator/templates/starters/signal-cluj-napoca' }] })
   api.delete.mockResolvedValue(undefined)
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
 afterEach(() => { act(() => root.unmount()); container.remove(); vi.unstubAllGlobals() })
 async function render() { await act(async () => root.render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)) }
-const button = (text: string, scope: ParentNode = container) => [...scope.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === text)!
+const button = (text: string, scope: ParentNode = container) => [...scope.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === text || (text === 'Signal: Cluj Napoca' && item.textContent?.startsWith(text)) || (text === 'Close' && item.getAttribute('aria-label') === 'Close template creation chooser'))!
 async function click(text: string, scope: ParentNode = container) { await act(async () => button(text, scope).click()) }
 const cards = () => [...container.querySelectorAll<HTMLElement>('[aria-label="Creator Templates"] article')]
 const counts = () => [...container.querySelectorAll('[aria-label="Template queues"] article')].map(card => card.lastElementChild?.textContent)
@@ -157,7 +158,7 @@ test('creation chooser still opens both paths after cancellation', async () => {
   expect(button('Start from scratch')).toBeDefined()
   await click('Start from Template')
   expect(button('Signal: Cluj Napoca')).toBeDefined()
-  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(api.createStarterDraft).not.toHaveBeenCalled()
   await click('Close')
   expect(api.delete).not.toHaveBeenCalled()
 })
