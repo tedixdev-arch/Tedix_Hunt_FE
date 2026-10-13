@@ -36,6 +36,9 @@ export type PositionPin = Pick<TedixMapCheckpoint, 'checkpointNumber' | 'name' |
 }
 
 export type TedixMapProps = {
+  /** Increment only for an explicit camera fit from an external toolbar. */
+  fitPositionsRequest?: number
+  hideFitPositionsControl?: boolean
   /** Creator display coordinates only; reference pins never enter persistence. */
   positionPins?: PositionPin[]
   initialFitPoints?: Pick<PositionPin, 'latitude' | 'longitude'>[]
@@ -71,7 +74,7 @@ export type TedixMapProps = {
 }
 
 export function TedixMap({
-  positionPins, initialFitPoints, selectedLocationLabel, onSearchPosition,
+  fitPositionsRequest, hideFitPositionsControl = false, positionPins, initialFitPoints, selectedLocationLabel, onSearchPosition,
   initialLongitude,
   initialLatitude,
   initialZoom = 12,
@@ -146,6 +149,11 @@ export function TedixMap({
     points.forEach(point => bounds.extend([point.longitude, point.latitude]))
     mapRef.current.fitBounds(bounds, { padding: 64, maxZoom: 16, duration: 0 })
   }
+
+  useEffect(() => {
+    if (fitPositionsRequest) fitPositions()
+    // Request changes alone fit the camera; edits and selection never trigger this effect.
+  }, [fitPositionsRequest])
 
   useEffect(() => {
     if (!mapRef.current || didFitLandmarks.current || !initialFitPoints?.length) return
@@ -411,7 +419,7 @@ export function TedixMap({
         if (onSearchPosition) onSearchPosition(center[1], center[0])
         else mapRef.current?.flyTo({ center, zoom: 14 })
       }} />}
-      {positionPins && <button type="button" disabled={!positionPins.length} className="absolute bottom-10 right-3 z-10 min-h-11 rounded-lg bg-white px-3 text-sm font-bold shadow disabled:opacity-50" onClick={() => fitPositions()}>Fit route</button>}
+      {positionPins && !hideFitPositionsControl && <button type="button" disabled={!positionPins.length} className="absolute bottom-10 right-3 z-10 min-h-11 rounded-lg bg-white px-3 text-sm font-bold shadow disabled:opacity-50" onClick={() => fitPositions()}>Fit route</button>}
       {accessToken ? (
         <div ref={containerRef} className={positionPins ? "min-h-[300px] w-full flex-1" : "h-full min-h-[300px] w-full"} aria-label="Map" />
       ) : (
