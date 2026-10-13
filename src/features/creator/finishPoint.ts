@@ -12,6 +12,14 @@ export function createFinishPointDraft(): FinishPointDraft {
   return { name: '', radiusMeters: DEFAULT_RADIUS_METERS }
 }
 
+/** An explicit reset removes authored geography; a partial edit still reaches validation. */
+export function finishPointConfiguration<T extends { finishPoint?: FinishPoint }>(configuration: T, draft: FinishPointDraft | undefined, edited: boolean): T {
+  if (!edited) return configuration
+  const { finishPoint: _previous, ...rest } = configuration
+  if (!draft || (draft.latitude === undefined && draft.longitude === undefined)) return rest as T
+  return { ...rest, finishPoint: draft as FinishPoint } as T
+}
+
 export function isValidFinishPoint(value: unknown): value is FinishPoint {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const point = value as Record<string, unknown>
