@@ -10,12 +10,12 @@
 .position-camera-actions { display: flex; gap: 4px; border-left: 1px solid #cbd5e1; padding-left: 4px; }
 /* Reserve separate space for results and the top-right Mapbox navigation controls. */
 .position-map div:has(> input[role="combobox"]) { top: 70px; width: calc(100% - 72px); max-width: 280px; }
-.position-checkpoints { min-width: 0; padding: 16px 10px; }
+.position-checkpoints { min-width: 0; padding: 10px; }
 .position-checkpoints h4 { margin: 0 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: #64748b; font-weight: 700; }
-.position-checkpoints ol { display: flex; flex-direction: column; gap: 4px; }
-.position-checkpoint { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; min-width: 44px; padding: 8px; border-radius: 8px; text-align: left; font-size: 13px; }
+.position-checkpoints ol { display: flex; flex-direction: column; gap: 2px; }
+.position-checkpoint { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; min-width: 44px; padding: 4px 8px; border-radius: 8px; text-align: left; font-size: 13px; }
 .position-checkpoint:hover { background: #f1f5f9; }
-.position-checkpoint[aria-pressed="true"] { background: #ecfdf5; box-shadow: inset 3px 0 #059669; }
+.position-checkpoint[aria-pressed="true"] { background: #eff6ff; box-shadow: inset 3px 0 #2563eb; }
 .position-checkpoint strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .position-number { display: none; }
 .position-state { margin-left: auto; flex-shrink: 0; color: #64748b; }
@@ -36,9 +36,15 @@
   .position-map { height: 420px; }
   .position-toolbar { left: 8px; right: 48px; gap: 0; }
   .position-toolbar button { font-size: 11px; padding: 4px; min-width: 44px; }
-  .position-toolbar svg { width: 14px; height: 14px; }
+
   .position-camera-actions { padding-left: 0; gap: 0; }
-  .position-toolbar button span { display: none; }
+  .position-checkpoint { min-height: 44px; }
   .position-checkpoints { padding: 12px; }
   .position-inspector { border-left: 0; border-top: 1px solid #e2e8f0; padding: 12px; border-radius: 0 0 16px 16px; }
 }
+
+.position-deselect { background: #dbeafe; color: #1e40af; }
+.position-values { display: grid; gap: 10px; margin-top: 12px; font-size: 13px; }
+.position-values dt { font-weight: 700; font-size: 12px; }
+.position-values dd { overflow-wrap: anywhere; white-space: pre-wrap; }
+.position-toolbar button[aria-label] { width: 44px; height: 44px; }

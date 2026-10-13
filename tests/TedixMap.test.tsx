@@ -152,6 +152,7 @@ test.each(['city', 'street', 'address', 'landmark'])('searches %s and selects by
   const retrieveUrl = new URL(fetchMock.mock.calls[1][0])
   expect(retrieveUrl.searchParams.get('session_token')).toBe(suggestUrl.searchParams.get('session_token'))
   expect(suggestUrl.searchParams.get('access_token')).toBe('test-public-token')
+  expect(suggestUrl.searchParams.get('proximity')).toBe('23.59,46.77')
   expect(fetchMock.mock.calls.every(([url]) => url.startsWith('https://api.mapbox.com/search/searchbox/v1/'))).toBe(true)
 })
 
@@ -214,4 +215,21 @@ test('cancels stale searches and keeps optional search independent of map lifecy
   expect(container.querySelector('input')).toBeNull()
   expect(mocks.createMap).toHaveBeenCalledTimes(1)
   expect(mocks.remove).not.toHaveBeenCalled()
+})
+
+test.each([401, 403, 429])('search reports Mapbox HTTP %s explicitly', async status => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status }))
+  render({ locationSearch: true }); await search('piata mihai')
+  expect(container.textContent).toContain(status === 429 ? 'Mapbox search limit reached' : 'Mapbox search authorization failed')
+  expect(mocks.flyTo).not.toHaveBeenCalled()
+})
+
+test('invalid retrieved coordinates never move the camera', async () => {
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ suggestions }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [{ geometry: { coordinates: [200, 100] } }] }) }))
+  render({ locationSearch: true }); await search('piata mihai')
+  await act(async () => container.querySelector('button')!.click())
+  expect(container.textContent).toContain('Location search unavailable')
+  expect(mocks.flyTo).not.toHaveBeenCalled()
 })

@@ -1,0 +1,336 @@
+{
+  "mockedMapbox": true,
+  "measurements": [
+    {
+      "width": 1440,
+      "pageOverflow": false,
+      "mainOverflow": false,
+      "map": {
+        "x": 498,
+        "y": 225.5,
+        "w": 744,
+        "h": 500
+      },
+      "workspace": {
+        "x": 497,
+        "y": 224.5,
+        "w": 746,
+        "h": 945
+      },
+      "list": {
+        "x": 498,
+        "y": 725.5,
+        "w": 297.59375,
+        "h": 443
+      },
+      "inspector": {
+        "x": 795.59375,
+        "y": 725.5,
+        "w": 446.40625,
+        "h": 443
+      },
+      "rows": [
+        34,
+        34,
+        34,
+        34,
+        34,
+        34,
+        34
+      ],
+      "toolbar": [
+        {
+          "label": "Undo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Redo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Deselect",
+          "width": 109.96875,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "pageOverflow": false,
+      "mainOverflow": false,
+      "map": {
+        "x": 418,
+        "y": 225.5,
+        "w": 744,
+        "h": 500
+      },
+      "workspace": {
+        "x": 417,
+        "y": 224.5,
+        "w": 746,
+        "h": 945
+      },
+      "list": {
+        "x": 418,
+        "y": 725.5,
+        "w": 297.59375,
+        "h": 443
+      },
+      "inspector": {
+        "x": 715.59375,
+        "y": 725.5,
+        "w": 446.40625,
+        "h": 443
+      },
+      "rows": [
+        34,
+        34,
+        34,
+        34,
+        34,
+        34,
+        34
+      ],
+      "toolbar": [
+        {
+          "label": "Undo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Redo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Deselect",
+          "width": 109.96875,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "pageOverflow": false,
+      "mainOverflow": false,
+      "map": {
+        "x": 54,
+        "y": 301.5,
+        "w": 660,
+        "h": 500
+      },
+      "workspace": {
+        "x": 53,
+        "y": 300.5,
+        "w": 662,
+        "h": 1032.5
+      },
+      "list": {
+        "x": 54,
+        "y": 801.5,
+        "w": 264,
+        "h": 530.5
+      },
+      "inspector": {
+        "x": 318,
+        "y": 801.5,
+        "w": 396,
+        "h": 530.5
+      },
+      "rows": [
+        34,
+        34,
+        34,
+        34,
+        34,
+        34,
+        34
+      ],
+      "toolbar": [
+        {
+          "label": "Undo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Redo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Deselect",
+          "width": 109.96875,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "pageOverflow": false,
+      "mainOverflow": false,
+      "map": {
+        "x": 38,
+        "y": 416.5,
+        "w": 314,
+        "h": 420
+      },
+      "workspace": {
+        "x": 37,
+        "y": 415.5,
+        "w": 316,
+        "h": 1383.59375
+      },
+      "list": {
+        "x": 38,
+        "y": 836.5,
+        "w": 314,
+        "h": 414.09375
+      },
+      "inspector": {
+        "x": 38,
+        "y": 1250.59375,
+        "w": 314,
+        "h": 547.5
+      },
+      "rows": [
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44
+      ],
+      "toolbar": [
+        {
+          "label": "Undo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Redo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Deselect",
+          "width": 80.265625,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "pageOverflow": false,
+      "mainOverflow": false,
+      "map": {
+        "x": 38,
+        "y": 416.5,
+        "w": 284,
+        "h": 420
+      },
+      "workspace": {
+        "x": 37,
+        "y": 415.5,
+        "w": 286,
+        "h": 1472.6875
+      },
+      "list": {
+        "x": 38,
+        "y": 836.5,
+        "w": 284,
+        "h": 431.6875
+      },
+      "inspector": {
+        "x": 38,
+        "y": 1268.1875,
+        "w": 284,
+        "h": 619
+      },
+      "rows": [
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44
+      ],
+      "toolbar": [
+        {
+          "label": "Undo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Redo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Deselect",
+          "width": 80.265625,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "pageOverflow": false,
+      "mainOverflow": false,
+      "map": {
+        "x": 38,
+        "y": 468,
+        "w": 244,
+        "h": 420
+      },
+      "workspace": {
+        "x": 37,
+        "y": 467,
+        "w": 246,
+        "h": 1508.1875
+      },
+      "list": {
+        "x": 38,
+        "y": 888,
+        "w": 244,
+        "h": 431.6875
+      },
+      "inspector": {
+        "x": 38,
+        "y": 1319.6875,
+        "w": 244,
+        "h": 654.5
+      },
+      "rows": [
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44
+      ],
+      "toolbar": [
+        {
+          "label": "Undo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Redo last position change",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Deselect",
+          "width": 80.265625,
+          "height": 44
+        }
+      ]
+    }
+  ],
+  "errors": []
+}
