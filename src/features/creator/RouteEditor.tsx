@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import './positionWorkspace.css'
 import { isSignalClujProposal, researchReferences, signalLandmarkReferences } from './signalLandmarks'
 import { ProposedSignalRoute } from './ProposedSignalRoute'
 import { type RouteProposal, candidateReference } from './routeResearch'
@@ -112,10 +113,6 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
   const initialLongitude = center?.longitude ?? researchContext?.longitude ?? CLUJ_NAPOCA_VIEW.center[1]
   // Without geographic context, show a regional overview around the existing app default.
   const initialZoom = center || researchContext || isSignalCluj ? CLUJ_NAPOCA_VIEW.zoom : 3
-  function status(point: CheckpointDraft | FinishPointDraft, saved?: CheckpointDraft | FinishPointDraft) {
-    if (point.latitude === undefined || point.longitude === undefined) return references.some(ref => ref.checkpointNumber === ('checkpointNumber' in point ? point.checkpointNumber : 0)) ? 'Reference · unconfirmed' : 'Not positioned'
-    return saved && ['name', 'latitude', 'longitude', 'radiusMeters'].every(key => point[key as keyof typeof point] === saved[key as keyof typeof saved]) ? 'Saved position' : 'Positioned · not saved'
-  }
   function select(number: number) { setActiveNumber(number) }
   function changeFinish(change: Partial<FinishPointDraft>) {
     if (!onFinishChange) return
@@ -143,10 +140,15 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
       selected: point.checkpointNumber === activeNumber, status: authored ? point.status : 'reference' as const }] : []
   })
   const selectedPin = pins.find(point => point.checkpointNumber === activeNumber)
-  const locationLabel = activeNumber === undefined ? 'No checkpoint selected · search explores the map' : `${activeNumber === 0 ? 'F' : `CP${activeNumber}`} · ${selectedPin ? `${selectedPin.latitude.toFixed(5)}, ${selectedPin.longitude.toFixed(5)} · ${selectedPin.status === 'reference' ? 'Reference · unconfirmed' : selectedPin.status === 'confirmed' ? 'Creator-confirmed' : 'Locally edited · unconfirmed'}` : 'No location yet'}`
+  const selectedPoint = finishSelected ? finish : active
+  function positionStatus(number: number) {
+    const pin = pins.find(point => point.checkpointNumber === number)
+    return pin?.status === 'confirmed' ? 'Confirmed' : pin?.status === 'edited' ? 'Locally edited · unconfirmed' : pin?.status === 'reference' ? 'Reference · unconfirmed' : 'Not positioned'
+  }
+  const selectedLabel = activeNumber === undefined ? 'No checkpoint selected' : `${finishSelected ? 'F' : `CP${activeNumber}`} · ${selectedPoint?.name || 'FinishPoint'}`
   function resetControl(number: number) {
     const available = references.some(point => point.checkpointNumber === number)
-    return <span className="flex flex-col items-end gap-1"><button type="button" aria-label="Reset checkpoint position" title={available ? 'Restore researched reference; clear position and confirmation' : 'Reset unavailable: no researched reference coordinate'} disabled={!available} className="min-h-11 min-w-11 rounded-lg border border-slate-300 text-xl disabled:opacity-40" onClick={() => number === 0 ? changeFinish({ latitude: undefined, longitude: undefined }) : update(number, { latitude: undefined, longitude: undefined })}><span aria-hidden="true">↶</span></button>{!available && <span className="text-xs text-slate-500">No researched reference to restore.</span>}</span>
+    return <span className="flex flex-col items-end gap-1"><button type="button" aria-label="Reset checkpoint position" title={available ? 'Restore researched reference; clear position and confirmation' : 'Reset unavailable: no researched reference coordinate'} disabled={!available} className="min-h-11 min-w-11 rounded-lg border border-slate-300 px-3 text-sm font-bold disabled:opacity-40" onClick={() => number === 0 ? changeFinish({ latitude: undefined, longitude: undefined }) : update(number, { latitude: undefined, longitude: undefined })}>Reset position</button>{!available && <span className="text-xs text-slate-500">No researched reference to restore.</span>}</span>
   }
   function context(number: number) {
     const candidate = proposal?.candidates.find(candidate => number === 0 ? candidate.role === 'terminal' : candidate.role === 'normal' && candidate.checkpoint === number)
@@ -176,44 +178,53 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
     onDraftsChange(next.drafts); onVerifiedChange(next.verified)
     onConfigurationChange(buildGeographyConfiguration(drafts.length, next.drafts))
   }
-    return <section className="mt-5 min-w-0" aria-label="Checkpoint position editor">
-    <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
-    <div className="min-w-0 lg:sticky lg:top-24">
-    <div role="toolbar" aria-label="Checkpoint positioning" className="mb-2 min-w-0 rounded-xl border border-slate-200 bg-white p-3">
-      <p className="break-words text-sm font-bold">{activeNumber === undefined ? 'No checkpoint selected' : `${finishSelected ? 'F' : `CP${activeNumber}`} · ${finishSelected ? finish.name || 'FinishPoint' : active?.name}`}</p>
-      <p className="mt-1 break-words text-xs text-slate-600">{locationLabel}</p>
-      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
-        <div className="flex gap-1">{(['undo', 'redo'] as const).map(direction => <button key={direction} type="button" aria-label={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} title={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} disabled={!history.current[direction].length} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg border border-slate-300 px-2 text-sm font-bold disabled:opacity-40" onClick={() => restorePosition(direction)}><ToolbarIcon kind={direction} /><span className="hidden sm:inline">{direction === 'undo' ? 'Undo' : 'Redo'}</span></button>)}</div>
-        <div className="flex flex-wrap gap-1"><button type="button" disabled={!pins.length} className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-slate-300 px-2 text-sm font-bold disabled:opacity-40" onClick={() => setFitRequest(value => value + 1)}><ToolbarIcon kind="fit" />Fit route</button>
-        <button type="button" disabled={activeNumber === undefined} className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-slate-300 px-2 text-sm font-bold disabled:opacity-40" onClick={() => setActiveNumber(undefined)}><ToolbarIcon kind="pin" />Deselect</button></div>
-        <button type="button" disabled={finishSelected ? !onFinishChange || !validFinish : !active || !isValidCheckpoint(active)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-500 px-3 text-sm font-bold disabled:bg-slate-300" onClick={() => { if (finishSelected) setFinishConfirmed(true); else if (active) { const next = new Set(verified); next.add(active.checkpointNumber); onVerifiedChange(next) } }}><ToolbarIcon kind="check" />Confirm position</button>
+  return <section className="position-editor" aria-label="Checkpoint position editor">
+    <div className="position-progress"><p>Select a checkpoint, then tap the map, drag its pin or search to position it.</p><span>{verified.size}/{drafts.length} confirmed</span></div>
+    <div className="position-workspace">
+      <div role="toolbar" aria-label="Checkpoint positioning" className="position-toolbar min-w-0">
+        <div className="flex gap-1">{(['undo', 'redo'] as const).map(direction => <button key={direction} type="button" aria-label={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} title={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} disabled={!history.current[direction].length} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg px-2 text-sm font-bold disabled:opacity-40" onClick={() => restorePosition(direction)}><ToolbarIcon kind={direction} /><span>{direction === 'undo' ? 'Undo' : 'Redo'}</span></button>)}</div>
+        <div className="position-camera-actions"><button type="button" disabled={!pins.length} className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-bold disabled:opacity-40" onClick={() => setFitRequest(value => value + 1)}><ToolbarIcon kind="fit" />Fit route</button>
+        <button type="button" disabled={activeNumber === undefined} className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-bold disabled:opacity-40" onClick={() => setActiveNumber(undefined)}><ToolbarIcon kind="pin" />Deselect</button></div>
+        <p role="status" className="sr-only">{historyMessage}</p>
       </div>
-      <p role="status" className="mt-1 text-xs text-slate-600">{historyMessage}</p>
+      <div className="position-map" data-testid="position-map"><TedixMap
+        initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
+        fitPositionsRequest={fitRequest} hideFitPositionsControl
+        positionPins={pins} initialFitPoints={references}
+        locationSearch
+        onCheckpointSelect={select} onCheckpointMove={(number, latitude, longitude) => place(number, latitude, longitude)}
+        onMapClick={placeSelected} onSearchPosition={activeNumber === undefined ? undefined : placeSelected}
+      /></div>
+      <nav className="position-checkpoints" aria-label="Checkpoint selection">
+        <h4>Checkpoints</h4>
+        <ol aria-label="Checkpoint positions">{[...drafts.map(point => ({ ...point, number: point.checkpointNumber })), ...(onFinishChange ? [{ ...finish, number: 0 }] : [])].map(point => {
+          const selected = point.number === activeNumber
+          const pinStatus = pins.find(pin => pin.checkpointNumber === point.number)?.status
+          return <li key={point.number}><button type="button" data-checkpoint={point.number === 0 ? 'F' : point.number} aria-pressed={selected} aria-label={`${point.number === 0 ? 'F' : `CP${point.number}`} · ${point.name || 'FinishPoint'} · ${positionStatus(point.number)}`} title={`${point.name || 'FinishPoint'} · ${positionStatus(point.number)}`} className="position-checkpoint" onClick={() => select(point.number)}>
+            <span className="position-number" aria-hidden="true">{point.number === 0 ? 'F' : point.number}</span>
+            <strong>{point.number === 0 ? 'F' : point.number} · {point.name || 'FinishPoint'}</strong>
+            <span className={`position-state position-state-${pinStatus ?? 'empty'}`} aria-hidden="true">{pinStatus === 'confirmed' ? '✓' : pinStatus === 'edited' ? '●' : '○'}</span>
+          </button></li>
+        })}</ol>
+        <p className="position-legend">○ Reference / unplaced · ● Edited · ✓ Confirmed</p>
+      </nav>
+      <section className="position-inspector" aria-label="Selected checkpoint inspector">
+        {selectedPoint && activeNumber !== undefined ? <>
+          <div className="position-inspector-main">
+            <div className="min-w-0"><h4 className="break-words font-bold">{selectedLabel}</h4><p className="text-sm text-slate-600" aria-live="polite">{positionStatus(activeNumber)}{selectedPin && <span className="position-coordinates"> · {selectedPin.latitude.toFixed(5)}, {selectedPin.longitude.toFixed(5)}</span>}</p></div>
+            <button type="button" disabled={finishSelected ? !onFinishChange || !validFinish : !active || !isValidCheckpoint(active)} className="min-h-11 rounded-lg bg-emerald-500 px-4 text-sm font-bold disabled:bg-slate-300" onClick={() => { if (finishSelected) setFinishConfirmed(true); else if (active) { const next = new Set(verified); next.add(active.checkpointNumber); onVerifiedChange(next) } }}>Confirm position</button>
+          </div>
+          <details key={activeNumber} className="position-advanced"><summary className="min-h-11 cursor-pointer py-3 text-sm font-bold">Advanced settings</summary>
+            {fields(selectedPoint, finishSelected ? changeFinish : change => update(activeNumber, change))}
+            {context(activeNumber)}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-600">Reset clears authored coordinates and session confirmation.</p>{resetControl(activeNumber)}</div>
+            {finishSelected && <p className="mt-2 text-xs">Terminal FinishPoint · separate from the normal checkpoint count. FinishPoint gameplay remains in Feature 6.</p>}
+            {!(finishSelected ? validFinish : active && isValidCheckpoint(active)) && <p role="status" className="mt-2 text-xs">Enter a name, valid coordinates and an integer radius from 5 to 500 metres. Reference positions cannot be confirmed.</p>}
+          </details>
+        </> : <p className="py-2 text-sm text-slate-600">Select a checkpoint to position it. Search explores the map while nothing is selected.</p>}
+        <p className="text-xs text-slate-500">Changes stay local until you save the Template. Confirmation is a session check, not physical safety verification.</p>
+      </section>
     </div>
-    <div className="h-[540px] w-full min-w-0 sm:h-[640px]" data-testid="position-map"><TedixMap
-      initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
-      fitPositionsRequest={fitRequest} hideFitPositionsControl
-      positionPins={pins} initialFitPoints={references} selectedLocationLabel={locationLabel}
-      locationSearch className="overflow-hidden rounded-2xl border border-slate-300"
-      onCheckpointSelect={select} onCheckpointMove={(number, latitude, longitude) => place(number, latitude, longitude)}
-      onMapClick={placeSelected} onSearchPosition={activeNumber === undefined ? undefined : placeSelected}
-    /></div>
-    <p className="mt-2 text-sm text-slate-600">Select a checkpoint, then click the map to position it.</p>
-    <p className="text-xs text-slate-600" role="status">{locationLabel}. Changes stay local until you save the Template.</p>
-    <details className="mt-3 rounded-xl border border-slate-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">How to position checkpoints</summary><ol className="grid gap-3 sm:grid-cols-3">{[['⌖', '1. Select', 'Choose a checkpoint.'], ['⌕', '2. Position', 'Click the map or choose a search result.'], ['✓', '3. Confirm & Save', 'Confirm the arrival area and save the Template.']].map(([icon, title, text]) => <li key={title} className="rounded-lg bg-slate-50 p-3"><span aria-hidden="true" className="text-2xl">{icon}</span><strong className="block text-sm">{title}</strong><p className="mt-1 text-xs">{text}</p></li>)}</ol></details>
-    </div>
-    <div className="min-w-0">
-    <div className="mt-5 flex flex-wrap justify-between gap-3"><h4 className="text-lg font-bold">Place and inspect checkpoint positions</h4><span>{verified.size} of {drafts.length} positions confirmed</span></div>
-    <ol className="mt-3 space-y-3" aria-label="Checkpoint positions">{drafts.map(point => {
-      const selected = !finishSelected && active?.checkpointNumber === point.checkpointNumber
-      return <li key={point.checkpointNumber}><article className={`min-w-0 rounded-xl border p-3 ${selected ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'}`}>
-        <button data-checkpoint={point.checkpointNumber} aria-expanded={selected} aria-pressed={selected} onClick={() => select(point.checkpointNumber)} className="flex min-h-12 w-full flex-wrap items-center gap-3 text-left" type="button"><strong>{point.checkpointNumber} · {point.name}</strong><span className="text-xs">{status(point, savedConfiguration?.checkpointPositions.find(saved => saved.checkpointNumber === point.checkpointNumber))}</span><span className="ml-auto text-sm font-bold">{point.latitude === undefined ? 'Place on map' : 'Edit position'}</span></button>{context(point.checkpointNumber)}
-        {selected && <div><div className="flex items-center justify-between gap-2 text-xs"><span>{selectedPin ? `${selectedPin.latitude.toFixed(5)}, ${selectedPin.longitude.toFixed(5)}` : 'No location yet'}</span>{resetControl(point.checkpointNumber)}</div>{fields(point, change => update(point.checkpointNumber, change))}<p className="mt-2 text-xs">Confirm only after inspecting the arrival area. Session confirmation: {verified.has(point.checkpointNumber) ? 'Position confirmed' : 'Not confirmed'}</p></div>}
-      </article></li>
-    })}
-    {onFinishChange && <li><article className={`rounded-xl border p-3 ${finishSelected ? 'border-violet-500 bg-violet-50' : 'border-slate-200'}`}><button type="button" data-checkpoint="F" aria-expanded={finishSelected} aria-pressed={finishSelected} className="flex min-h-12 w-full flex-wrap items-center gap-3 text-left" onClick={() => select(0)}><strong>F · {finish.name || 'FinishPoint'}</strong><span className="text-xs">{status(finish, savedConfiguration?.finishPoint)}</span><span className="ml-auto text-sm font-bold">{finish.latitude === undefined ? 'Place on map' : 'Edit position'}</span></button>{context(0)}{finishSelected && <><div className="flex items-center justify-between gap-2 text-xs"><span>{locationLabel}</span>{resetControl(0)}</div>{fields(finish, changeFinish)}<p className="mt-2 text-xs">{finishConfirmed ? 'Position confirmed' : 'Not confirmed'}</p><p className="mt-2 text-xs">Terminal FinishPoint · separate from the normal checkpoint count. FinishPoint gameplay remains in Feature 6.</p>{!validFinish && <p role="status">Enter a name, valid coordinates and an integer radius from 5 to 500 metres.</p>}</>}</article></li>}
-    </ol>
-    </div></div>
     <details className="mt-4 rounded-xl border border-slate-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">Arrival verification &amp; safety reminders</summary>
     <p className="mt-4 text-xs text-slate-600">Position confirmations and safety reminders are temporary session checks, not saved evidence of physical verification.</p>
     <div className="mt-3 grid gap-2 sm:grid-cols-2">{safetyItems.map(item => <label key={item} className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm font-bold"><input className="h-5 w-5 accent-emerald-500" type="checkbox" checked={safety.has(item)} onChange={() => { const next = new Set(safety); next.has(item) ? next.delete(item) : next.add(item); onSafetyChange(next) }} />{safetyLabels[item]}</label>)}</div>

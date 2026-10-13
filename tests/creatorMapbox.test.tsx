@@ -253,7 +253,7 @@ test('deselecting makes clicks inert and turns off marker drag', () => {
   expect(latest[0]).toEqual(saved)
   expect(pin('1').options.draggable).toBe(false)
   expect(mocks.configuration).not.toHaveBeenCalled()
-  expect(container.textContent).toContain('No checkpoint selected')
+  expect(container.textContent).toContain('Select a checkpoint to position it')
 })
 
 async function searchResult() {
@@ -287,20 +287,29 @@ test('general search moves only the camera', async () => {
   expect(mocks.configuration).not.toHaveBeenCalled()
 })
 
-test('map-first responsive layout uses one form, 44px controls and collapsed accessible HowTo', () => {
+test('map workspace has a compact selection list, one contextual inspector and collapsed advanced settings', () => {
   signal(); render()
-  const map = container.querySelector('[data-testid="position-map"]')!
-  expect(map.className).toContain('h-[540px]')
-  expect(map.className).toContain('sm:h-[640px]')
-  expect(map.parentElement!.className).toContain('lg:sticky lg:top-24')
-  expect(container.querySelectorAll('[aria-label="Latitude"]')).toHaveLength(1)
-  const how = [...container.querySelectorAll('details')].find(detail => detail.querySelector('summary')?.textContent === 'How to position checkpoints')!
-  expect(how.open).toBe(false)
-  act(() => how.querySelector('summary')!.click()); expect(how.open).toBe(true)
-  expect(how.textContent).toContain('1. Select'); expect(how.textContent).toContain('2. Position'); expect(how.textContent).toContain('3. Confirm & Save')
-  act(() => how.querySelector('summary')!.click()); expect(how.open).toBe(false)
+  const list = container.querySelector('[aria-label="Checkpoint positions"]')!
+  expect(list.querySelectorAll('[data-checkpoint]')).toHaveLength(7)
+  expect(list.querySelectorAll('input, details')).toHaveLength(0)
+  expect(list.textContent).not.toContain('46.')
+  expect(container.querySelectorAll('[role="combobox"]')).toHaveLength(1)
+  expect(container.querySelector('[role="combobox"]')!.closest('[data-testid="position-map"]')).not.toBeNull()
+  const inspector = container.querySelector('[aria-label="Selected checkpoint inspector"]')!
+  expect(inspector.querySelectorAll('input[aria-label="Latitude"]')).toHaveLength(1)
+  const advanced = inspector.querySelector<HTMLDetailsElement>('.position-advanced')!
+  expect(advanced.open).toBe(false)
+  expect(advanced.querySelector('summary')!.textContent).toBe('Advanced settings')
+  act(() => advanced.querySelector('summary')!.click()); expect(advanced.open).toBe(true)
+  expect(advanced.querySelector('[aria-label="Reset checkpoint position"]')).not.toBeNull()
+  expect(advanced.textContent).toContain('Arrival area & research notes')
+  select('F')
+  expect(inspector.querySelector('h4')!.textContent).toContain('F · Finish')
+  expect(inspector.querySelector<HTMLDetailsElement>('.position-advanced')!.open).toBe(false)
+  act(() => button('Deselect').click())
+  expect(inspector.querySelectorAll('input, details, button')).toHaveLength(0)
+  expect(inspector.textContent).toContain('Select a checkpoint')
   expect(pin('1').element.className).toContain('h-11 w-11')
-  expect(container.querySelector<HTMLInputElement>('[role="combobox"]')!.value).toBe('')
 })
 
 function undo() { act(() => button('Undo').click()) }
@@ -313,10 +322,10 @@ async function coordinate(label: string, value: string) {
   })
 }
 
-test('toolbar centralizes five actions, has mirrored equally styled icons and empty disabled history', () => {
+test('toolbar keeps four map actions separate from contextual confirmation, has mirrored equally styled icons and empty disabled history', () => {
   render()
   const toolbar = container.querySelector('[role="toolbar"]')!
-  expect([...toolbar.querySelectorAll('button')].map(button => button.textContent)).toEqual(['Undo', 'Redo', 'Fit route', 'Deselect', 'Confirm position'])
+  expect([...toolbar.querySelectorAll('button')].map(button => button.textContent)).toEqual(['Undo', 'Redo', 'Fit route', 'Deselect'])
   expect(button('Undo').disabled).toBe(true)
   expect(button('Redo').disabled).toBe(true)
   expect(button('Undo').title).toBe('Undo last position change')
@@ -333,7 +342,8 @@ test('toolbar centralizes five actions, has mirrored equally styled icons and em
   expect([...container.querySelectorAll('button')].filter(button => button.textContent === 'Fit route')).toHaveLength(1)
   expect(toolbar.querySelector('[aria-label="Reset checkpoint position"]')).toBeNull()
   expect(toolbar.className).toContain('min-w-0')
-  expect(toolbar.querySelectorAll('button').length).toBe(5)
+  expect(toolbar.querySelectorAll('button').length).toBe(4)
+  expect(button('Confirm position').closest('[aria-label="Selected checkpoint inspector"]')).not.toBeNull()
   expect([...toolbar.querySelectorAll('button')].every(button => button.className.includes('min-h-11'))).toBe(true)
 })
 
@@ -425,7 +435,7 @@ test('selection, pan, zoom, fit and deselect preserve geography, confirmation an
   expect(latest).toEqual(geography)
   expect(latestVerified.has(1)).toBe(true)
   expect(button('Deselect').disabled).toBe(true)
-  expect(button('Confirm position').disabled).toBe(true)
+  expect(button('Confirm position')).toBeUndefined()
   await searchResult()
   expect(latest).toEqual(geography)
   undo(); expect(latest[0]).toEqual(saved); expect(button('Undo').disabled).toBe(true)
