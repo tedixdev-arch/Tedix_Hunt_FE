@@ -1,57 +1,52 @@
-# Map-first Checkpoint Positions workspace
+# Checkpoint Positions — approved sketch layout
 
-Feature 2 uses a wide Creator shell and a compact, expandable Hunt features menu. All nine features retain their order, completion marks and navigation callbacks; the previous shell and sidebar return on leaving Feature 2.
+Based on current main `a290636` (PR #98). The existing Creator shell, desktop nine-feature sidebar and mobile horizontal feature navigation are restored. No separate full-width Feature 2 shell or expandable feature grid remains.
 
-The desktop workspace allocates approximately 75% of its width to the map and 25% to a compact checkpoint list. Undo · Redo | Fit route · Deselect sit on the map's top edge. Search is a single overlay inside the map. The selected checkpoint has one inspector below the map with the only **Confirm position** action. Name, radius, coordinates, research and Reset position are in a native, initially collapsed Advanced settings disclosure. Selecting another checkpoint collapses it again.
+The active feature follows the supplied text sketch: **Creator sidebar → full-width map → checkpoint list + selected checkpoint editor → safety reminders → Previous / Save & continue**. The map is 500px tall on desktop/tablet and 420px on phones. List and editor sit side by side below the map, stacking below 640px. The screenshots select CP3 · Saint George statue to match the sketch.
 
-At tablet/phone widths, the checkpoint list becomes a scrollable numbered strip above the map. Map actions move below it; Undo and Redo remain adjacent. The inspector follows, with confirmation above Advanced settings. Controls have 44px minimum touch targets. Reference coordinates remain display-only and cannot be confirmed. Confirmation and edits remain local until an explicit Template save, and confirmation never represents physical safety verification.
+Undo/Redo remain adjacent with mirrored icons. All four actions sit compactly at the map's upper edge. Search occupies the upper-left corner; narrow map containers put it on a separate row below the actions so results remain selectable. Detection radius and notes are visible in the inspector. Name, coordinates, research context and Reset position remain in collapsed Advanced settings. One Confirm position action uses the existing validation; its disabled explanation is visible outside Advanced settings.
 
-Positioning/history, marker dragging, camera fitting, confirmation restoration and persistence callbacks are reused from current main (`c9840f8`). No backend, schema, Directions, gameplay, story, scoring or existing Hunt changes are included.
+Notes edit the existing research candidate `arrivalArea` field and save only through the existing Template save controls. No Template contract fields are added. Unrelated research metadata is preserved. Templates without a matching research candidate show a disabled notes field with a contextual explanation; this change does not invent research records for legacy Templates.
 
-## Actual validation
+Positioning, global checkpoint position history, confirmation restoration, FinishPoint, camera behavior, reference/authored distinction, safety completion and save flow are unchanged. No backend, schema, Directions, gameplay or scoring change.
 
-- `npm test`: **35 Node test files passed**, plus **202 component tests across 12 Vitest files passed**.
+## Validation
+
+- `npm test`: 35 Node test files and 204 Vitest tests across 12 files passed.
 - `npm run typecheck`: passed.
-- `npm run build`: passed; existing warning about chunks larger than 500kB remains.
+- `npm run build`: passed; existing bundle-size/plugin timing warnings remain.
 - `git diff --check`: passed.
-- Chromium using real CreatorTemplateEditorPage, RouteEditor, location search and Mapbox GL components: no page/main horizontal overflow at **320, 360, 390, 768, 1280 and 1440px**. Desktop map width measured approximately **74.9%** of the workspace. Every map action measured at least **44×44px**; Undo/Redo stayed adjacent.
-- Browser interactions: search results were visible and hit-testable above the map at every width; typing kept confirmation disabled; keyboard retrieval positioned the selected checkpoint; confirmation and Undo/Redo restored session status. Real touch taps and selected marker touch dragging authored positions at 390 and 320px. The phone selector reached FinishPoint, Advanced settings opened with Enter, and the feature menu exposed all nine options and restored the standard layout on exit.
-- Existing component/integration coverage remains for map clicks, drag click suppression, general search camera-only behavior, Fit route, Deselect, invalid/empty coordinates, reference reset, CP1–CP6 and FinishPoint history, metadata/confirmation safeguards, and save/reopen of original Signal and Signal Overload without changing research, story, scoring or gameplay.
+- Chromium checked 1440, 1280, 768, 390, 360 and 320px: no page or main horizontal overflow, full-width map above list/editor, side-by-side columns on larger screens, stacked columns on phones, one search field and Confirm action, and at least 44×44px map actions.
+- Browser interaction checks cover visible/hit-testable search results, typing without GPS authoring, keyboard search placement, confirmation/history restoration, phone map taps and marker touch dragging, FinishPoint selection, keyboard Advanced settings, and switching to another Creator feature.
+- Component/integration tests cover cross-checkpoint and FinishPoint history, reference/authored safeguards, coordinate/radius validation, confirmation invalidation/restoration, Fit route and Deselect behavior, Signal and Signal Overload save/reopen, notes save/reopen, and preserved research/gameplay metadata.
 
-[Browser geometry and error measurements](browser-measurements.json)
+[Actual browser geometry and errors](browser-measurements.json)
 
 ## Screenshots and limitations
 
-These are **local browser fixture captures, not production visual verification**. The actual Creator page, editor and Mapbox GL renderer run with the existing Signal Overload research fixture. The basemap style is mocked as a neutral background because no usable Mapbox access token is configured in this environment. Search responses and Template API data are also mocked; live Mapbox service/token and authenticated backend behavior require a token-enabled environment. No external Template was written during browser checks.
+These capture the **actual Creator page, RouteEditor, Mapbox GL renderer and search component** using the local Signal Overload fixture. **Map tiles/style, Mapbox search responses and Template API data are mocked.** The neutral map background is deliberate. Live Mapbox token/service behavior and authenticated backend persistence are not verified by these captures. No external Template was written during browser checks.
 
-| Viewport width | Screenshot |
+| Width | Actual layout |
 | --- | --- |
 | Desktop 1440px | [1440.png](1440.png) |
 | Laptop 1280px | [1280.png](1280.png) |
 | Tablet 768px | [768.png](768.png) |
 | Mobile 390px | [390.png](390.png) |
-| Mobile 320px | [320.png](320.png) |
+| Extra mobile 320px | [320.png](320.png) |
 
 Search results: [desktop](search-1440.png) · [320px phone](search-320.png).
 
-Pins can overlap for nearby landmarks at narrow map scales, as in the existing map implementation; the numbered strip provides access to every checkpoint, including FinishPoint. History remains limited to the mounted editor session and is not persisted when leaving/reopening Feature 2. Confirmation does not automatically select the next checkpoint.
+The captures use tall viewports to show the feature hierarchy, including the standard sidebar/title and safety/save controls. Nearby pins may overlap at narrow scales; the list provides access to every checkpoint and FinishPoint. Position history and confirmations retain their existing mounted-editor/session lifetime. Confirm does not save or advance selection.
 
-## Reproduce the browser check
+## Reproduce
 
-The preview harness is isolated in `tests/browser/creatorPositions.html` and `creatorPositions.preview.tsx`; it is not a production application route or build entry. It renders the full Creator page and substitutes only Template data. The verification script intercepts Mapbox style/search requests and runs all responsive/interaction assertions.
-
-With Playwright and Chromium available, start Vite from the repository:
+The existing isolated browser fixture is in `tests/browser/creatorPositions.html` and `creatorPositions.preview.tsx`; it is not a production route or build entry. With Chromium and Playwright available:
 
 ```sh
 VITE_MAPBOX_ACCESS_TOKEN=local-preview-token npm run dev -- --host 127.0.0.1
-```
-
-Then run:
-
-```sh
 node tests/browser/creatorPositions.verify.mjs
 ```
 
-For an externally installed Playwright module or Chromium binary, set `PLAYWRIGHT_MODULE` to the module's absolute `index.mjs` path and `CHROMIUM_PATH` to the executable. The script defaults to the `playwright` package and `/usr/bin/chromium`. It writes the screenshots and measurements above. The fake preview token is used only with intercepted mock service responses.
+Set `PLAYWRIGHT_MODULE` to an externally installed module's absolute `index.mjs` path and `CHROMIUM_PATH` if needed. The fake token is used only with intercepted mock service responses. The verifier writes the screenshots and measurements above.
 
 No merge or deployment performed.

@@ -470,3 +470,14 @@ test('non-position metadata edits remain in place and cannot regain stale confir
   expect(latestVerified.has(1)).toBe(false)
   expect(button('Undo').disabled).toBe(true)
 })
+
+
+test('map precedes compact list and inspector; radius and validation are outside advanced settings', () => {
+  signal(); render()
+  const workspace = container.querySelector('.position-workspace')!
+  expect([...workspace.children].map(child => child.className)).toEqual(['position-map', 'position-checkpoints', 'position-inspector'])
+  expect(workspace.firstElementChild!.querySelector('[role="toolbar"]')).not.toBeNull()
+  expect(container.querySelectorAll('.position-inspector > .grid input[type="number"]')).toHaveLength(1)
+  expect(container.querySelector('.position-advanced')!.textContent).not.toContain('Detection radius')
+  expect(container.querySelector('.position-inspector > [role="status"]')!.textContent).toContain('Reference positions cannot be confirmed')
+})

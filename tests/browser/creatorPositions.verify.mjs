@@ -17,16 +17,20 @@ await page.locator('.mapboxgl-canvas').waitFor()
 await page.waitForTimeout(600)
 const measurements=[]
 for(const width of [1440,1280,768,390,360,320]) {
-  await page.setViewportSize({width,height:width<640?1200:1000})
-  await page.locator('.position-feature-layout').evaluate(el=>el.closest('section').scrollIntoView({block:'start'}))
+  await page.setViewportSize({width,height:width<640?2200:1500})
+  await page.locator('.position-editor').evaluate(el=>el.parentElement.closest('section').scrollIntoView({block:'start'}))
   await page.getByRole('button',{name:'Fit route',exact:true}).click()
   await page.waitForTimeout(150)
   const measure=await page.evaluate(()=>{
     const rect=s=>{const r=document.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height}}
     const main=document.querySelector('main')
-    return {width:innerWidth,pageOverflow:document.documentElement.scrollWidth>innerWidth,mainOverflow:main.scrollWidth>main.clientWidth,map:rect('.position-map'),workspace:rect('.position-workspace'),list:rect('.position-checkpoints'),toolbar:[...document.querySelectorAll('.position-toolbar button')].map(b=>({label:b.textContent,width:b.getBoundingClientRect().width,height:b.getBoundingClientRect().height})),searchCount:document.querySelectorAll('[role="combobox"]').length,confirmCount:[...document.querySelectorAll('button')].filter(b=>b.textContent==='Confirm position').length}
+    return {width:innerWidth,pageOverflow:document.documentElement.scrollWidth>innerWidth,mainOverflow:main.scrollWidth>main.clientWidth,map:rect('.position-map'),workspace:rect('.position-workspace'),list:rect('.position-checkpoints'),inspector:rect('.position-inspector'),featureNavigation:rect('.position-editor').x,toolbar:[...document.querySelectorAll('.position-toolbar button')].map(b=>({label:b.textContent,width:b.getBoundingClientRect().width,height:b.getBoundingClientRect().height})),searchCount:document.querySelectorAll('[role="combobox"]').length,confirmCount:[...document.querySelectorAll('button')].filter(b=>b.textContent==='Confirm position').length}
   })
   measurements.push(measure)
+  assert.ok(measure.list.y >= measure.map.y+measure.map.h-2, 'List is below map')
+  assert.ok(measure.inspector.y >= measure.map.y+measure.map.h-2, 'Inspector is below map')
+  if(width>=640) assert.ok(measure.inspector.x>measure.list.x, 'Inspector is right of list')
+  else assert.ok(measure.inspector.y>measure.list.y, 'Inspector stacks on mobile')
   assert.equal(measure.searchCount, 1)
   assert.equal(measure.confirmCount, 1)
   assert.equal(await page.locator('.position-advanced').getAttribute('open'), null)
@@ -84,8 +88,10 @@ for(const width of [1440,1280,768,390,360,320]) {
   await page.waitForTimeout(100)
   if(measure.pageOverflow||measure.mainOverflow) throw Error(`Overflow at ${width}`)
   if(measure.toolbar.some(b=>b.width<44||b.height<44)) throw Error(`Small target at ${width}`)
-  if(width>=1024&&(measure.map.w/measure.workspace.w<.70||measure.map.w/measure.workspace.w>.76))throw Error(`Map proportion at ${width}`)
+  assert.ok(Math.abs(measure.map.w-measure.workspace.w)<3, 'Map spans the active feature workspace')
+  await page.locator('[data-checkpoint="3"]').click()
   if(width!==360) await page.screenshot({path:`docs/checkpoint-positions/${width}.png`})
+  await page.locator('[data-checkpoint="1"]').click()
 }
 // Verify the phone strip can reach F and the feature menu restores the standard editor.
 await page.locator('[data-checkpoint="F"]').tap()
@@ -95,9 +101,9 @@ await page.locator('.position-advanced summary').first().focus()
 await page.locator('.position-advanced summary').first().press('Enter')
 assert.equal(await page.locator('.position-advanced').getAttribute('open'), '')
 assert.equal(await page.locator('.position-advanced input').first().isVisible(), true)
-await page.locator('.position-feature-navigation summary').click()
-assert.equal(await page.locator('.position-feature-navigation button').count(), 9)
-await page.locator('.position-feature-navigation').getByRole('button',{name:/Personal Challenge/}).click()
+const featureNavigation = page.locator('.position-editor').locator('xpath=ancestor::article/preceding-sibling::nav')
+assert.equal(await featureNavigation.locator('button').count(), 9)
+await featureNavigation.getByRole('button',{name:/Personal Challenge/}).click()
 assert.equal(await page.locator('.position-map').count(), 0)
 assert.equal(await page.locator('main > div.max-w-6xl').count(), 1)
 await fs.writeFile('docs/checkpoint-positions/browser-measurements.json' ,JSON.stringify({measurements,errors},null,2))
