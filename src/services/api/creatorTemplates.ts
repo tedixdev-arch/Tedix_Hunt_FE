@@ -25,6 +25,20 @@ export interface CreatorTemplate {
   submittedVersion?: number | null
 }
 
+export interface StarterTemplate {
+  key: string
+  displayName: string
+  description: string
+  createdAt?: string | null
+  creationPath: string
+}
+
+// This allowlist validates supported operations; the catalog owns availability and presentation.
+export function isSupportedStarter(starter: StarterTemplate): boolean {
+  return ['signal-cluj-napoca', 'signal-overload-cluj-napoca'].includes(starter.key)
+    && starter.creationPath === `/api/creator/templates/starters/${starter.key}`
+}
+
 export class CreatorTemplatesApi {
   private readonly client: ApiClient
 
@@ -35,19 +49,23 @@ export class CreatorTemplatesApi {
   private starterRequest?: Promise<CreatorTemplate>
 
   createSignalClujDraft(): Promise<CreatorTemplate> {
+    return this.createStarterDraft({ key: 'signal-cluj-napoca', creationPath: '/api/creator/templates/starters/signal-cluj-napoca', displayName: '', description: '' })
+  }
+
+  listStarters(): Promise<{ items: StarterTemplate[] }> {
+    return this.client.get('/api/creator/templates/starters')
+  }
+
+  createStarterDraft(starter: StarterTemplate): Promise<CreatorTemplate> {
+    if (!isSupportedStarter(starter)) return Promise.reject(new Error('Unsupported starter creation endpoint.'))
     if (this.starterRequest) return this.starterRequest
-    this.starterRequest = this.client.post<CreatorTemplate>('/api/creator/templates/starters/signal-cluj-napoca')
+    this.starterRequest = this.client.post<CreatorTemplate>(starter.creationPath)
       .finally(() => { this.starterRequest = undefined })
     return this.starterRequest
   }
 
-  private overloadRequest?: Promise<CreatorTemplate>
-
   createSignalOverloadClujDraft(): Promise<CreatorTemplate> {
-    if (this.overloadRequest) return this.overloadRequest
-    this.overloadRequest = this.client.post<CreatorTemplate>('/api/creator/templates/starters/signal-overload-cluj-napoca')
-      .finally(() => { this.overloadRequest = undefined })
-    return this.overloadRequest
+    return this.createStarterDraft({ key: 'signal-overload-cluj-napoca', creationPath: '/api/creator/templates/starters/signal-overload-cluj-napoca', displayName: '', description: '' })
   }
 
   list(): Promise<CreatorTemplate[]> {

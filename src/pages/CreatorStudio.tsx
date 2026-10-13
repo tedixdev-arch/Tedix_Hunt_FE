@@ -15,7 +15,7 @@ import { RouteEditor } from '../features/creator/RouteEditor'
 import { ParticipantPreview } from '../features/creator/ParticipantPreview'
 import { WalkingRouteInspection } from '../features/creator/WalkingRouteValidation'
 import { buildGeographyConfiguration, createCheckpointDrafts, isGeographyComplete, resizeCheckpointDrafts } from '../features/creator/checkpointGeography'
-import { creatorTemplatesApi, type CreatorTemplate, type CreatorTemplateContent } from '../services/api/creatorTemplates'
+import { creatorTemplatesApi, type CreatorTemplate, type CreatorTemplateContent, type StarterTemplate } from '../services/api/creatorTemplates'
 import { creatorTemplateError, hydratePersistedGeography, normalizeTemplateKey, persistCreatorTemplate, templateContentEqual } from '../features/creator/templatePersistence'
 
 const field = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold outline-none focus:border-emerald-500'
@@ -103,13 +103,12 @@ export function CreatorStudioPage() {
   const [choosing, setChoosing] = useState(false)
   const creating = useRef(false)
   const [creatingStarter, setCreatingStarter] = useState(false)
-  const [creatingLabel, setCreatingLabel] = useState('Creating Signal Cluj draft…')
   const [starterError, setStarterError] = useState('')
-  const createStarter = async (overload = false) => {
+  const createStarter = async (starter: StarterTemplate) => {
     if (creating.current) return
-    creating.current = true; setCreatingLabel(overload ? 'Creating Signal Overload draft…' : 'Creating Signal Cluj draft…'); setCreatingStarter(true); setStarterError('')
+    creating.current = true; setCreatingStarter(true); setStarterError('')
     try {
-      const draft = await (overload ? creatorTemplatesApi.createSignalOverloadClujDraft() : creatorTemplatesApi.createSignalClujDraft())
+      const draft = await creatorTemplatesApi.createStarterDraft(starter)
       navigate(`/create?template=${encodeURIComponent(draft.key)}`)
     } catch (reason) { setStarterError(creatorTemplateError(reason, 'starter')) }
     finally { creating.current = false; setCreatingStarter(false) }
@@ -158,8 +157,8 @@ export function CreatorStudioPage() {
   useEffect(() => { void load() }, [])
   const statuses = [['Drafts', 'draft'], ['Changes requested', 'changes_requested'], ['Submitted', 'submitted'], ['Approved', 'approved']] as const
   return <Shell><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Creator Studio</p><div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-4xl font-bold">Competition Templates</h1><p className="mt-3 max-w-2xl text-slate-600">Create complete, safe Hunts that Organizers can adapt in Set the Hunt.</p></div><button type="button" aria-haspopup="dialog" onClick={() => setChoosing(true)} className="flex min-h-12 items-center rounded-xl bg-emerald-500 px-5 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Create Template</button></div>
-    {choosing && <TemplateCreationChooser creating={creatingStarter} creatingLabel={creatingLabel} error={starterError} onScratch={() => { if (!creating.current) navigate('/create') }} onSignal={() => createStarter()} onOverload={() => createStarter(true)} onClose={() => setChoosing(false)} onCheckTemplates={() => { setChoosing(false); load() }} />}
-    {!choosing && creatingStarter && <p role="status" className="mt-3 text-sm font-bold text-emerald-800">{creatingLabel}</p>}
+    {choosing && <TemplateCreationChooser creating={creatingStarter} error={starterError} onScratch={() => { if (!creating.current) navigate('/create') }} onStarter={createStarter} onClose={() => setChoosing(false)} onCheckTemplates={() => { setChoosing(false); load() }} />}
+    {!choosing && creatingStarter && <p role="status" className="mt-3 text-sm font-bold text-emerald-800">Creating Signal Cluj draft…</p>}
     {!choosing && starterError && <p role="alert" className="mt-3 text-sm text-red-800">{starterError}</p>}
     {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">{error}<button type="button" className="ml-3 underline" onClick={load}>Retry</button></div>}
     <h2 ref={templatesHeading} tabIndex={-1} className="mt-8 text-2xl font-bold">My Templates</h2>
