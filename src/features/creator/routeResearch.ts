@@ -4,6 +4,7 @@ export interface RouteCandidate {
   role: 'normal' | 'terminal'
   checkpoint?: number
   terminalRole?: 'FinishPoint'
+  originalProposalPosition?: { order: number; role: 'normal' | 'terminal'; checkpoint?: number; terminalRole?: 'FinishPoint' }
   landmark: string
   address: string
   arrivalArea: string

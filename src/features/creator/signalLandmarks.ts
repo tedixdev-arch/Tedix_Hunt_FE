@@ -51,8 +51,7 @@ export function signalLandmarkReferences(proposal: RouteProposal): LandmarkRefer
         confidence: candidate.confidence, uncertainty: candidate.unresolvedIssues.join(' '), attribution: 'VisitCluj · backend route research',
       } }]
     }
-    const supplement = signalClujReferences.find(item => candidate.role === 'normal'
-      && item.checkpointNumber === candidate.checkpoint && item.landmark === candidate.landmark
+    const supplement = signalClujReferences.find(item => item.landmark === candidate.landmark
       && candidate.sourceIds.includes(item.researchSourceId)
       && proposal.sources.some(source => source.id === item.researchSourceId && (item.sourceUrls as readonly string[]).includes(source.url)))
     // A malformed or conflicting backend coordinate must not be silently replaced.

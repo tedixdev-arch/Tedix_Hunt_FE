@@ -1,3 +1,4 @@
+import { signalOverloadRouteProposal } from './fixtures/signalOverloadRouteProposal'
 import { signalClujRouteProposal } from './fixtures/signalClujRouteProposal'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -9,7 +10,7 @@ import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 import { ApiError } from '../src/services/api/client'
 
 const map = vi.hoisted(() => ({ props: {} as any }))
-const api = vi.hoisted(() => ({ list: vi.fn(), get: vi.fn(), createSignalClujDraft: vi.fn(), createVersion: vi.fn(), create: vi.fn(), submit: vi.fn() }))
+const api = vi.hoisted(() => ({ list: vi.fn(), get: vi.fn(), createSignalClujDraft: vi.fn(), createSignalOverloadClujDraft: vi.fn(), createVersion: vi.fn(), create: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <div /> }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: (props: any) => { map.props = props; return <div aria-label="Shared Mapbox" /> } }))
@@ -263,13 +264,18 @@ async function inputValue(input: HTMLInputElement, text: string) {
   })
 }
 
-test('Creator places six normal points and FinishPoint using the shared map, saves, reloads and previews persisted names', async () => {
-  record.content.routeResearch = { status: 'pending', physicalVerification: 'pending', walkingNavigation: 'pending', proposal: structuredClone(signalClujRouteProposal), unknown: { preserve: true } }
+test.each([false, true])('Creator saves and reopens six authored positions and separate F (Overload: %s)', async overload => {
+  record.content.routeResearch = { status: 'pending', physicalVerification: 'pending', walkingNavigation: 'pending', proposal: structuredClone(overload ? signalOverloadRouteProposal : signalClujRouteProposal), unknown: { preserve: true } }
+  if (overload) record.content.displayName = 'Signal Overload - Cluj Napoca'
   record.content.starterSource = { key: 'signal-cluj-napoca', version: 1, checkpointsSha256: 'original' }
   record.content.fictionalNavigation = { scope: 'puzzle-only', active: false }
   for (const checkpoint of record.content.checkpoints as Record<string, unknown>[]) {
     checkpoint.personalChallenge = { question: 'Saved personal puzzle', answer: '42', hints: ['Personal hint'], solution: 'Personal solution' }
     checkpoint.teamChallenge = { question: 'Saved team puzzle', answer: 'SIGNAL', hints: ['Team hint'], solution: 'Team solution' }
+  }
+  if (overload) {
+    const stages = ['ACCESS', 'TRACE', 'IDENTIFY', 'REPAIR', 'DECODE', 'LOCATE', 'RESTORE']
+    record.content.checkpoints.forEach((entry, index) => Object.assign(entry as object, { storyStage: stages[index], teamRevelation: `Backend revelation ${index}`, nextDestination: `Backend destination ${index}` }))
   }
   const originalContent = structuredClone(record.content)
   const original = structuredClone(record.content.checkpoints)
@@ -280,7 +286,7 @@ test('Creator places six normal points and FinishPoint using the shared map, sav
   expect(container.querySelector('[data-checkpoint="F"]')).not.toBeNull()
   expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(7)
   await click('CP6 ·')
-  expect(map.props.cameraTarget).toMatchObject({ latitude: 46.7683841, longitude: 23.5955112 })
+  expect(map.props.cameraTarget).toMatchObject(overload ? { latitude: 46 + 46 / 60 + 4.13 / 3600, longitude: 23 + 35 / 60 + 25.44 / 3600 } : { latitude: 46.7683841, longitude: 23.5955112 })
   expect(map.props.checkpoints).toHaveLength(0)
   expect(api.createVersion).not.toHaveBeenCalled()
   for (let number = 1; number <= 6; number++) {
@@ -309,7 +315,7 @@ test('Creator places six normal points and FinishPoint using the shared map, sav
   await feature('Checkpoint Positions')
   expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(7)
   await click('CP6 ·')
-  expect(map.props.landmarkReferences.find((point: any) => point.checkpointNumber === 6)).toMatchObject({ name: 'Reformed Church — exterior', selected: true })
+  expect(map.props.landmarkReferences.find((point: any) => point.checkpointNumber === 6)).toMatchObject({ name: overload ? 'Piarist Church — exterior' : 'Reformed Church — exterior', selected: true })
   expect(map.props.checkpoints).toHaveLength(6)
   expect(map.props.checkpoints.every((point: any) => point.verified === false)).toBe(true)
   expect(map.props.checkpoints[5].name).toBe('Real place 6')
@@ -345,4 +351,44 @@ test('hydration prefills seven research names and draft save cannot promote refe
   expect(record.content.checkpoints).toEqual(original.checkpoints)
   expect(original.configuration.checkpointPositions).toEqual([])
   expect(api.submit).not.toHaveBeenCalled()
+})
+
+
+test('Overload is a distinct starter choice and opens its own returned draft', async () => {
+  api.createSignalOverloadClujDraft.mockResolvedValue({ ...record, key: 'overload-owned' })
+  await render(<MemoryRouter initialEntries={['/creator']}><Routes><Route path="/creator" element={<CreatorStudioPage />} /><Route path="/create" element={<Location />} /></Routes></MemoryRouter>)
+  await click('Create Template'); await click('Start from Template')
+  expect(container.textContent).toContain('Signal: Cluj Napoca')
+  await click('Signal Overload - Cluj Napoca')
+  expect(api.createSignalOverloadClujDraft).toHaveBeenCalledTimes(1)
+  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+  expect(container.textContent).toContain('?template=overload-owned')
+  expect(api.submit).not.toHaveBeenCalled()
+})
+
+test('unavailable Overload reports an error without invoking original Signal', async () => {
+  api.createSignalOverloadClujDraft.mockRejectedValue(new ApiError('Missing', 404, 'http'))
+  await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
+  await click('Create Template'); await click('Start from Template'); await click('Signal Overload - Cluj Napoca')
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('starter is unavailable')
+  expect(api.createSignalClujDraft).not.toHaveBeenCalled()
+})
+
+test('Overload shared map editor exposes reversed seven pins and separate F, and backend story preview', async () => {
+  record.content.displayName = 'Signal Overload - Cluj Napoca'
+  record.content.routeResearch = { proposal: signalOverloadRouteProposal }
+  ;(record.content.checkpoints[0] as any).teamRevelation = 'Backend ACCESS revelation'
+  ;(record.content.checkpoints[0] as any).nextDestination = { landmark: 'Backend next destination' }
+  await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
+  await feature('Checkpoint Positions')
+  expect(map.props.landmarkReferences).toHaveLength(7)
+  expect(map.props.landmarkReferences.map((point: any) => point.checkpointNumber)).toEqual([1, 2, 3, 4, 5, 6, 0])
+  expect(map.props.landmarkReferences[0].name).toContain('Tailors')
+  expect(map.props.landmarkReferences[6].name).toContain('Matthias')
+  expect(map.props.checkpoints).toHaveLength(0)
+  expect(map.props.finishPoint).toBeUndefined()
+  expect(map.props.proposedSequence.coordinates).toHaveLength(6)
+  await feature('Personal Challenge')
+  expect(container.querySelector('[aria-label="Checkpoint story preview"]')?.textContent).toContain('Backend ACCESS revelation')
+  expect(container.textContent).toContain('Backend next destination')
 })

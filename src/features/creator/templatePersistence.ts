@@ -54,8 +54,9 @@ export function creatorTemplateError(error: unknown, operation: 'save' | 'submit
     if (error.status === 409 && code === 'template_in_use') return 'This Template is in use by a Hunt or has protected dependencies and cannot be deleted. Cancel and keep this Template, or contact support.'
     return 'Deletion could not be confirmed. Cancel and refresh My Templates to check its current state, or retry.'
   }
+  if (operation === 'starter' && error.status === 404) return 'This starter is unavailable in the deployed backend. No alternative starter was created. Please try again when it is available.'
   if (error.status === 404) return 'This Creator Template could not be found. Return to Creator Studio and reopen it.'
-  if (operation === 'starter' && error.status === 409) return 'The Signal Cluj starter could not be created because of a conflict. Return to the dashboard and check your drafts before retrying.'
+  if (operation === 'starter' && error.status === 409) return 'The selected starter could not be created because of a conflict. Return to the dashboard and check your drafts before retrying.'
   if (operation === 'starter' && (error.status === null || error.status >= 500)) return 'Starter creation could not be confirmed. Check your drafts before retrying to avoid creating a duplicate.'
   if (error.status === 409) return operation === 'save'
     ? 'That Template key is already in use or this version can no longer be changed. Choose a distinct Template name and try again.'

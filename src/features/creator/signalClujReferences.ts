@@ -1,10 +1,10 @@
 /** Provisional map-display supplement only. Never Template configuration or gameplay.
  * Inspected 2026-10-12. Decimal values are conversions of the cited object coordinates,
- * not estimated addresses or surveyed arrival points. CP6/F remain backend authority.
+ * not estimated addresses or surveyed arrival points. Backend coordinates remain authoritative.
  */
 export const signalClujReferences = [
   {
-    checkpointNumber: 1, researchSourceId: 'unirii', landmark: 'Piața Unirii — Matthias Corvinus monument',
+    researchSourceId: 'unirii', landmark: 'Piața Unirii — Matthias Corvinus monument',
     identifier: 'Wikidata Q368963 · heritage CJ-III-m-A-07819',
     latitude: 46 + 46 / 60 + 10.2 / 3600, longitude: 23 + 35 / 60 + 23.3 / 3600,
     sourceUrls: ['https://www.wikidata.org/wiki/Q368963', 'https://visitcluj.ro/tourist_spot/piata-unirii/'],
@@ -14,7 +14,7 @@ export const signalClujReferences = [
     attribution: 'Wikidata contributors (CC0); VisitCluj',
   },
   {
-    checkpointNumber: 2, researchSourceId: 'piarist', landmark: 'Piarist Church — exterior',
+    researchSourceId: 'piarist', landmark: 'Piarist Church — exterior',
     identifier: 'Wikidata Q578767 · heritage CJ-II-m-A-07499 · OSM way 202393309',
     latitude: 46 + 46 / 60 + 4.13 / 3600, longitude: 23 + 35 / 60 + 25.44 / 3600,
     sourceUrls: ['https://www.wikidata.org/wiki/Q578767', 'https://visitcluj.ro/tourist_spot/biserica-romano-catolica-a-piaristilor/', 'https://www.openstreetmap.org/way/202393309'],
@@ -24,7 +24,7 @@ export const signalClujReferences = [
     attribution: 'Wikidata contributors (CC0); © OpenStreetMap contributors; VisitCluj',
   },
   {
-    checkpointNumber: 3, researchSourceId: 'ubb', landmark: 'Babeș-Bolyai University — main building exterior',
+    researchSourceId: 'ubb', landmark: 'Babeș-Bolyai University — main building exterior',
     identifier: 'Wikidata Q42855318 · heritage CJ-II-m-B-07370',
     latitude: 46 + 46 / 60 + 3 / 3600, longitude: 23 + 35 / 60 + 28.7 / 3600,
     sourceUrls: ['https://www.wikidata.org/wiki/Q42855318', 'https://www.cs.ubbcluj.ro/files/orar/2026-1/sali/legenda.html'],
@@ -34,7 +34,7 @@ export const signalClujReferences = [
     attribution: 'Wikidata contributors (CC0); Wiki Loves Monuments; Babeș-Bolyai University',
   },
   {
-    checkpointNumber: 4, researchSourceId: 'academic', landmark: 'Colegiul Academic — exterior',
+    researchSourceId: 'academic', landmark: 'Colegiul Academic — exterior',
     identifier: 'Wikidata Q988141 · heritage CJ-II-m-A-07388',
     latitude: 46 + 46 / 60 + 3.7 / 3600, longitude: 23 + 35 / 60 + 33 / 3600,
     sourceUrls: ['https://www.wikidata.org/wiki/Q988141', 'https://visitcluj.ro/tourist_spot/colegiul-academic/'],
@@ -44,7 +44,7 @@ export const signalClujReferences = [
     attribution: 'Wikidata contributors (CC0); Wiki Loves Monuments; VisitCluj',
   },
   {
-    checkpointNumber: 5, researchSourceId: 'george', landmark: 'Saint George statue',
+    researchSourceId: 'george', landmark: 'Saint George statue',
     identifier: 'Wikimedia Commons Saint George statue category · OSM node 963409421 · heritage CJ-III-m-A-07815',
     latitude: 46 + 46 / 60 + 5.02 / 3600, longitude: 23 + 35 / 60 + 43.01 / 3600,
     sourceUrls: ['https://commons.wikimedia.org/wiki/Category:Statue_of_Saint_George_and_the_Dragon_in_Cluj-Napoca', 'https://www.openstreetmap.org/node/963409421', 'https://mapcarta.com/39154140', 'https://visitcluj.ro/tourist_spot/statuia-sfantul-gheorghe-ucigand-balaurul-2/'],

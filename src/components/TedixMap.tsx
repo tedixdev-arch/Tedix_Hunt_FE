@@ -174,7 +174,20 @@ export function TedixMap({
       // No drag callback or radius: reference data cannot become gameplay geography.
       return new mapboxgl.Marker({ element: button, draggable: false, offset: [24, -24] }).setLngLat([point.longitude, point.latitude]).addTo(map)
     })
-    return () => { markers.forEach(marker => marker.remove()) }
+    // Separate nearby reference badges in screen pixels, retaining their sourced coordinates.
+    const arrange = () => {
+      const placed: { x: number; y: number }[] = []
+      landmarkReferences.forEach((point, index) => {
+        const pixel = map.project([point.longitude, point.latitude])
+        let offsetY = -24
+        while (placed.some(other => Math.abs(other.x - (pixel.x + 24)) < 48 && Math.abs(other.y - (pixel.y + offsetY)) < 48)) offsetY += 52
+        markers[index].setOffset([24, offsetY])
+        placed.push({ x: pixel.x + 24, y: pixel.y + offsetY })
+      })
+    }
+    arrange()
+    map.on('moveend', arrange)
+    return () => { map.off('moveend', arrange); markers.forEach(marker => marker.remove()) }
   }, [landmarkReferences, onLandmarkSelect, accessToken])
 
   useEffect(() => {
@@ -330,9 +343,10 @@ export function TedixMap({
     const bounds = new mapboxgl.LngLatBounds()
     points.forEach(point => bounds.extend([point.longitude, point.latitude]))
     // Runs after the authored overview's initial fit. Selection and editing do not refit references.
-    map.fitBounds(bounds, { padding: 64, maxZoom: 16, duration: 0 })
+    // Keep the northernmost reference clear of the location-search overlay.
+    map.fitBounds(bounds, { padding: locationSearch ? { top: 180, bottom: 64, left: 64, right: 64 } : 64, maxZoom: 16, duration: 0 })
     didFitLandmarks.current = true
-  }, [landmarkReferences, fitLandmarkReferences, accessToken])
+  }, [landmarkReferences, fitLandmarkReferences, locationSearch, accessToken])
 
   return (
     <div className={`relative h-full min-h-[300px] w-full ${className}`}>

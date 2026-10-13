@@ -17,6 +17,7 @@ vi.mock('mapbox-gl', () => ({ default: {
     layers = new Map<string, any>()
     flyTo = vi.fn()
     fitBounds = vi.fn()
+    project = vi.fn(([longitude, latitude]: number[]) => ({ x: longitude * 100000, y: latitude * 100000 }))
     remove = vi.fn()
     resize = vi.fn()
     constructor(public options: any) { mocks.maps.push(this) }
@@ -41,6 +42,7 @@ vi.mock('mapbox-gl', () => ({ default: {
     on(event: string, handler: () => void) { this.handlers.set(event, handler); return this }
     getLngLat() { return { lat: this.coordinates![1], lng: this.coordinates![0] } }
     constructor(public options: { element: HTMLElement; draggable?: boolean }) { this.element = options.element; mocks.markers.push(this) }
+    setOffset = vi.fn()
     setLngLat(coordinates: number[]) { this.coordinates = coordinates; return this }
     addTo() { document.body.append(this.element); return this }
     remove() { this.element.remove() }
@@ -465,7 +467,7 @@ test('all seven sourced references fit initially and expose metadata without net
   expect(pins.every(marker => marker.options.draggable === false && !marker.handlers.has('dragend'))).toBe(true)
   expect(map.fitBounds).toHaveBeenCalledOnce()
   expect(map.fitBounds.mock.calls[0][0].coordinates).toEqual(pins.map(marker => marker.coordinates))
-  expect(map.fitBounds.mock.calls[0][1]).toEqual({ padding: 64, maxZoom: 16, duration: 0 })
+  expect(map.fitBounds.mock.calls[0][1]).toEqual({ padding: { top: 180, bottom: 64, left: 64, right: 64 }, maxZoom: 16, duration: 0 })
   expect(container.querySelector('[data-checkpoint="1"]')!.closest('article')!.textContent).toContain('Wikidata Q368963')
   expect(container.querySelector('a[href="https://www.wikidata.org/wiki/Q368963"]')).not.toBeNull()
   const source = [...container.querySelectorAll('details')].find(detail => detail.querySelector('summary')?.textContent === 'Reference source & uncertainty')!
@@ -490,5 +492,23 @@ test('unidentified replacement landmark remains unresolved and its sequence has 
   expect(container.querySelector('[data-checkpoint="3"]')!.closest('article')!.textContent).toContain('Reference location unavailable')
   expect(container.textContent).toContain('Incomplete sequence')
   expect(mocks.maps[0].sources.get('tedix-proposed-landmarks').data.geometry.coordinates).toHaveLength(4)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+
+test('nearby provisional badges separate on screen without moving sourced coordinates or authoring arrivals', () => {
+  proposal = readRouteProposal({ proposal: signalClujRouteProposal })
+  initial = createCheckpointDrafts(6, [])
+  render()
+  const map = mocks.maps[0]
+  const pins = mocks.markers.filter(marker => marker.element.isConnected)
+  const before = pins.map(marker => [...marker.coordinates])
+  map.project.mockReturnValue({ x: 100, y: 100 })
+  act(() => map.emit('moveend'))
+  expect(pins[0].setOffset).toHaveBeenLastCalledWith([24, -24])
+  expect(pins[1].setOffset).toHaveBeenLastCalledWith([24, 28])
+  expect(pins.map(marker => marker.coordinates)).toEqual(before)
+  expect(pins.every(marker => marker.options.draggable === false)).toBe(true)
+  expect(latest.every(point => point.latitude === undefined)).toBe(true)
   expect(mocks.configuration).not.toHaveBeenCalled()
 })

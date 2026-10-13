@@ -21,9 +21,9 @@ test('seven ordered candidates expose actual details, sources, missing coordinat
   const buttons = [...container.querySelectorAll('ol[aria-label="Ordered route candidates"] button')]
   expect(buttons.map(button => button.textContent!.split(' · ')[0])).toEqual(['CP1', 'CP2', 'CP3', 'CP4', 'CP5', 'CP6', 'FinishPoint'])
   expect(container.textContent).toContain('These are desk-researched landmark candidates, not physically verified arrival locations.')
-  expect(container.textContent).toContain('Piața Unirii pedestrian crossings')
-  expect(container.textContent).toContain('CP5/CP6 proximity and discovery-radius overlap')
-  expect(container.textContent).toContain("Tailors' Tower approach and unnecessary crossings")
+  expect(container.textContent).toContain('Review the backend field checklist')
+  expect(container.textContent).toContain('landmark proximity, discovery-radius overlap')
+  expect(container.textContent).toContain('crossings and approaches')
   expect(container.textContent).toContain('Accessibility and physical inspection remain pending')
   expect(container.textContent).not.toContain('Use suggested GPS')
   for (let index = 0; index < buttons.length; index++) {
