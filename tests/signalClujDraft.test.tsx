@@ -294,7 +294,7 @@ test.each([false, true])('Creator saves and reopens six authored positions and s
     await act(async () => (container.querySelector(`[data-checkpoint="${number}"]`) as HTMLButtonElement).click())
     await act(async () => map.props.onMapClick(46.7 + number / 1000, 23.6 + number / 1000))
     const card = container.querySelector('[aria-label="Selected checkpoint inspector"]')!
-    await inputValue(card.querySelector('input')!, `Real place ${number}`)
+    await inputValue(card.querySelector('.position-advanced input')!, `Real place ${number}`)
     await inputValue(card.querySelector('input[type="number"][max="500"]')!, '25')
     await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Confirm position')!.click())
     await act(async () => map.props.onMapClick(48, 25))
@@ -462,21 +462,38 @@ test('resetting saved checkpoint and FinishPoint geography saves an incomplete d
 })
 
 
-test('Feature 2 expands the workspace and compacts navigation, restoring the previous layout on exit', async () => {
+test('Feature 2 keeps the standard nine-feature navigation and shell', async () => {
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
-  expect(container.querySelector('.position-feature-navigation')).toBeNull()
   await feature('Checkpoint Positions')
-  const navigation = container.querySelector<HTMLDetailsElement>('.position-feature-navigation')!
-  expect(navigation.open).toBe(false)
-  expect(navigation.querySelector('summary')!.textContent).toContain('Hunt features · 2/9')
-  await act(async () => navigation.querySelector('summary')!.click())
-  expect(navigation.open).toBe(true)
-  const options = [...navigation.querySelectorAll('button')]
-  expect(options).toHaveLength(9)
-  expect(options[0].textContent).toContain('Number of Checkpoints')
-  expect(container.querySelector('.max-w-\\[1600px\\]')).not.toBeNull()
-  await feature('Personal Challenge')
+  const editor = container.querySelector('[aria-label="Checkpoint position editor"]')!
+  const article = editor.closest('article')!
+  const navigation = article.previousElementSibling!
+  expect(navigation.tagName).toBe('NAV')
+  expect(navigation.querySelectorAll('button')).toHaveLength(9)
+  expect(navigation.querySelector('button.border-emerald-500')!.textContent).toContain('Checkpoint Positions')
   expect(container.querySelector('.position-feature-navigation')).toBeNull()
+  expect(container.querySelector('.max-w-6xl')).not.toBeNull()
+  await feature('Personal Challenge')
   expect(container.querySelector('[aria-label="Checkpoint position editor"]')).toBeNull()
   expect(container.querySelector('.max-w-6xl')).not.toBeNull()
+})
+
+test('arrival notes edit existing research metadata and survive save/reopen', async () => {
+  record.content.routeResearch = { proposal: structuredClone(signalClujRouteProposal), unknown: { preserve: true } }
+  const research = structuredClone(record.content.routeResearch)
+  await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
+  await feature('Checkpoint Positions')
+  const notes = container.querySelector<HTMLTextAreaElement>('.position-inspector textarea')!
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(notes, 'Inspect the public standing area')
+    notes.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  expect(api.createVersion).not.toHaveBeenCalled()
+  await click('Save draft')
+  expect((record.content.routeResearch as any).proposal.candidates[0].arrivalArea).toBe('Inspect the public standing area')
+  expect((record.content.routeResearch as any).proposal.sources).toEqual((research as any).proposal.sources)
+  await act(async () => root.unmount()); root = createRoot(container)
+  await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
+  await feature('Checkpoint Positions')
+  expect(container.querySelector<HTMLTextAreaElement>('.position-inspector textarea')!.value).toBe('Inspect the public standing area')
 })

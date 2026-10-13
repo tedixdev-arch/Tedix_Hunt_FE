@@ -5,23 +5,30 @@
       "pageOverflow": false,
       "mainOverflow": false,
       "map": {
-        "x": 33,
-        "y": 197.5,
-        "w": 1030.5,
-        "h": 550
+        "x": 498,
+        "y": 225.5,
+        "w": 744,
+        "h": 500
       },
       "workspace": {
-        "x": 32,
-        "y": 139.5,
-        "w": 1376,
-        "h": 747
+        "x": 497,
+        "y": 224.5,
+        "w": 746,
+        "h": 964.09375
       },
       "list": {
-        "x": 1063.5,
-        "y": 197.5,
-        "w": 343.5,
-        "h": 550
+        "x": 498,
+        "y": 725.5,
+        "w": 297.59375,
+        "h": 462.09375
       },
+      "inspector": {
+        "x": 795.59375,
+        "y": 725.5,
+        "w": 446.40625,
+        "h": 462.09375
+      },
+      "featureNavigation": 497,
       "toolbar": [
         {
           "label": "Undo",
@@ -52,23 +59,30 @@
       "pageOverflow": false,
       "mainOverflow": false,
       "map": {
-        "x": 33,
-        "y": 197.5,
-        "w": 910.5,
-        "h": 550
+        "x": 418,
+        "y": 225.5,
+        "w": 744,
+        "h": 500
       },
       "workspace": {
-        "x": 32,
-        "y": 139.5,
-        "w": 1216,
-        "h": 747
+        "x": 417,
+        "y": 224.5,
+        "w": 746,
+        "h": 964.09375
       },
       "list": {
-        "x": 943.5,
-        "y": 197.5,
-        "w": 303.5,
-        "h": 550
+        "x": 418,
+        "y": 725.5,
+        "w": 297.59375,
+        "h": 462.09375
       },
+      "inspector": {
+        "x": 715.59375,
+        "y": 725.5,
+        "w": 446.40625,
+        "h": 462.09375
+      },
+      "featureNavigation": 417,
       "toolbar": [
         {
           "label": "Undo",
@@ -99,23 +113,30 @@
       "pageOverflow": false,
       "mainOverflow": false,
       "map": {
-        "x": 33,
-        "y": 209.5,
-        "w": 702,
-        "h": 480
+        "x": 54,
+        "y": 301.5,
+        "w": 660,
+        "h": 500
       },
       "workspace": {
-        "x": 32,
-        "y": 139.5,
-        "w": 704,
-        "h": 762
+        "x": 53,
+        "y": 300.5,
+        "w": 662,
+        "h": 1014
       },
       "list": {
-        "x": 33,
-        "y": 140.5,
-        "w": 702,
-        "h": 69
+        "x": 54,
+        "y": 801.5,
+        "w": 264,
+        "h": 512
       },
+      "inspector": {
+        "x": 318,
+        "y": 801.5,
+        "w": 396,
+        "h": 512
+      },
+      "featureNavigation": 53,
       "toolbar": [
         {
           "label": "Undo",
@@ -146,42 +167,49 @@
       "pageOverflow": false,
       "mainOverflow": false,
       "map": {
-        "x": 17,
-        "y": 256.5,
-        "w": 356,
+        "x": 38,
+        "y": 416.5,
+        "w": 314,
         "h": 420
       },
       "workspace": {
-        "x": 16,
-        "y": 186.5,
-        "w": 358,
-        "h": 779
+        "x": 37,
+        "y": 415.5,
+        "w": 316,
+        "h": 1413.09375
       },
       "list": {
-        "x": 17,
-        "y": 187.5,
-        "w": 356,
-        "h": 69
+        "x": 38,
+        "y": 836.5,
+        "w": 314,
+        "h": 454.09375
       },
+      "inspector": {
+        "x": 38,
+        "y": 1290.59375,
+        "w": 314,
+        "h": 537
+      },
+      "featureNavigation": 37,
       "toolbar": [
         {
           "label": "Undo",
-          "width": 65.75,
+          "width": 44,
           "height": 44
         },
         {
           "label": "Redo",
-          "width": 64.75,
+          "width": 44,
           "height": 44
         },
         {
           "label": "Fit route",
-          "width": 83.984375,
+          "width": 73.65625,
           "height": 44
         },
         {
           "label": "Deselect",
-          "width": 86.84375,
+          "width": 76.265625,
           "height": 44
         }
       ],
@@ -193,43 +221,50 @@
       "pageOverflow": false,
       "mainOverflow": false,
       "map": {
-        "x": 17,
-        "y": 256.5,
-        "w": 326,
+        "x": 38,
+        "y": 416.5,
+        "w": 284,
         "h": 420
       },
       "workspace": {
-        "x": 16,
-        "y": 186.5,
-        "w": 328,
-        "h": 779
+        "x": 37,
+        "y": 415.5,
+        "w": 286,
+        "h": 1430.6875
       },
       "list": {
-        "x": 17,
-        "y": 187.5,
-        "w": 326,
-        "h": 69
+        "x": 38,
+        "y": 836.5,
+        "w": 284,
+        "h": 471.6875
       },
+      "inspector": {
+        "x": 38,
+        "y": 1308.1875,
+        "w": 284,
+        "h": 537
+      },
+      "featureNavigation": 37,
       "toolbar": [
         {
           "label": "Undo",
-          "width": 65.75,
+          "width": 44,
           "height": 44
         },
         {
           "label": "Redo",
-          "width": 64.75,
+          "width": 44,
           "height": 44
         },
         {
           "label": "Fit route",
-          "width": 83.984375,
-          "height": 44
+          "width": 65.390625,
+          "height": 48
         },
         {
           "label": "Deselect",
-          "width": 86.84375,
-          "height": 44
+          "width": 67.671875,
+          "height": 48
         }
       ],
       "searchCount": 1,
@@ -240,43 +275,50 @@
       "pageOverflow": false,
       "mainOverflow": false,
       "map": {
-        "x": 17,
-        "y": 256.5,
-        "w": 286,
+        "x": 38,
+        "y": 468,
+        "w": 244,
         "h": 420
       },
       "workspace": {
-        "x": 16,
-        "y": 186.5,
-        "w": 288,
-        "h": 825
+        "x": 37,
+        "y": 467,
+        "w": 246,
+        "h": 1486.6875
       },
       "list": {
-        "x": 17,
-        "y": 187.5,
-        "w": 286,
-        "h": 69
+        "x": 38,
+        "y": 888,
+        "w": 244,
+        "h": 471.6875
       },
+      "inspector": {
+        "x": 38,
+        "y": 1359.6875,
+        "w": 244,
+        "h": 593
+      },
+      "featureNavigation": 37,
       "toolbar": [
         {
           "label": "Undo",
-          "width": 65.75,
+          "width": 44,
           "height": 44
         },
         {
           "label": "Redo",
-          "width": 64.75,
+          "width": 44,
           "height": 44
         },
         {
           "label": "Fit route",
-          "width": 83.984375,
-          "height": 44
+          "width": 65.390625,
+          "height": 48
         },
         {
           "label": "Deselect",
-          "width": 86.84375,
-          "height": 44
+          "width": 67.671875,
+          "height": 48
         }
       ],
       "searchCount": 1,
