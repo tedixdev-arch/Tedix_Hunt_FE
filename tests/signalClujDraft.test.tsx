@@ -296,7 +296,13 @@ test.each([false, true])('Creator saves and reopens six authored positions and s
     const card = container.querySelector(`[data-checkpoint="${number}"]`)!.closest('article')!
     await inputValue(card.querySelector('input')!, `Real place ${number}`)
     await inputValue(card.querySelector('input[type="number"][max="500"]')!, '25')
-    await act(async () => [...card.querySelectorAll('button')].find(button => button.textContent === 'Confirm position')!.click())
+    await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Confirm position')!.click())
+    await act(async () => map.props.onMapClick(48, 25))
+    await click('Undo')
+    expect(map.props.positionPins.find((point: any) => point.checkpointNumber === number)).toMatchObject({ latitude: 46.7 + number / 1000, longitude: 23.6 + number / 1000, status: 'confirmed' })
+    await click('Redo')
+    expect(map.props.positionPins.find((point: any) => point.checkpointNumber === number).status).toBe('edited')
+    await click('Undo')
     expect(map.props.positionPins.find((point: any) => point.checkpointNumber === number)?.name).toBe(`Real place ${number}`)
   }
   await feature('Final Checkpoint')

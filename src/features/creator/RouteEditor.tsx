@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { isSignalClujProposal, researchReferences, signalLandmarkReferences } from './signalLandmarks'
 import { ProposedSignalRoute } from './ProposedSignalRoute'
 import { type RouteProposal, candidateReference } from './routeResearch'
@@ -7,6 +7,19 @@ import { CLUJ_NAPOCA_VIEW } from './mapTiles'
 import { TedixMap, type PositionPin } from '../../components/TedixMap'
 import type { CheckpointDraft, CreatorGeographyConfiguration } from './checkpointGeography'
 import { buildGeographyConfiguration, isGeographyComplete, isValidCheckpoint, MAX_RADIUS_METERS, MIN_RADIUS_METERS, updateCheckpointDraft } from './checkpointGeography'
+
+type PositionState = { name: string; radiusMeters: number; latitude?: number; longitude?: number; confirmed: boolean }
+type PositionEdit = { number: number; before: PositionState; after: PositionState }
+
+// Lucide undo-2 geometry; the same path reflected horizontally guarantees a mirrored pair.
+function ToolbarIcon({ kind }: { kind: 'undo' | 'redo' | 'fit' | 'pin' | 'check' }) {
+  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {kind === 'undo' || kind === 'redo' ? <g transform={kind === 'redo' ? 'translate(24 0) scale(-1 1)' : undefined}><path d="M9 14 4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-2" /></g>
+      : kind === 'check' ? <path d="m20 6-11 11-5-5" />
+      : kind === 'fit' ? <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />
+      : <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2" /></>}
+  </svg>
+}
 
 const safetyLabels: Record<string, string> = {
   'Safe standing area': 'Review standing-area safety',
@@ -41,6 +54,48 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
   const active = drafts.find(point => point.checkpointNumber === activeNumber)
   const [finishConfirmed, setFinishConfirmed] = useState(false)
   const finish = finishDraft ?? createFinishPointDraft()
+  const history = useRef<{ undo: PositionEdit[]; redo: PositionEdit[] }>({ undo: [], redo: [] })
+  const [, refreshHistory] = useState(0)
+  const [historyMessage, setHistoryMessage] = useState('')
+  const [fitRequest, setFitRequest] = useState(0)
+  function positionState(number: number): PositionState {
+    const point = number === 0 ? finish : drafts.find(point => point.checkpointNumber === number)!
+    return { name: point.name, radiusMeters: point.radiusMeters, latitude: point.latitude, longitude: point.longitude, confirmed: number === 0 ? finishConfirmed : verified.has(number) }
+  }
+  function recordPosition(number: number, change: Partial<CheckpointDraft>) {
+    const before = positionState(number)
+    const after = { ...before, ...change, confirmed: false }
+    if (Object.is(before.latitude, after.latitude) && Object.is(before.longitude, after.longitude)) return
+    history.current.undo.push({ number, before, after })
+    history.current.redo = []
+    refreshHistory(value => value + 1)
+    setHistoryMessage('')
+  }
+  function restorePosition(direction: 'undo' | 'redo') {
+    const edit = history.current[direction].pop()
+    if (!edit) return
+    // Capture confirmation made since the move, so redo/undo restores that session state too.
+    const current = positionState(edit.number)
+    const target = direction === 'undo' ? edit.before : edit.after
+    if (direction === 'undo') edit.after = current
+    else edit.before = current
+    // Names and radii are not position history; never revive confirmation for a changed definition.
+    const confirmed = target.confirmed && target.name === current.name && target.radiusMeters === current.radiusMeters
+    if (edit.number === 0) {
+      onFinishChange?.({ ...finish, latitude: target.latitude, longitude: target.longitude })
+      setFinishConfirmed(confirmed)
+    } else {
+      const next = drafts.map(point => point.checkpointNumber === edit.number ? { ...point, latitude: target.latitude, longitude: target.longitude } : point)
+      const nextVerified = new Set(verified)
+      confirmed ? nextVerified.add(edit.number) : nextVerified.delete(edit.number)
+      onDraftsChange(next); onVerifiedChange(nextVerified)
+      onConfigurationChange(buildGeographyConfiguration(drafts.length, next))
+    }
+    history.current[direction === 'undo' ? 'redo' : 'undo'].push(edit)
+    setActiveNumber(edit.number)
+    setHistoryMessage(`${direction === 'undo' ? 'Undid' : 'Redid'} position change for ${edit.number === 0 ? 'FinishPoint' : `CP${edit.number}`}.`)
+    refreshHistory(value => value + 1)
+  }
   const finishSelected = activeNumber === 0
   const positioned = drafts.filter(isValidCheckpoint)
   const validFinish = isValidFinishPoint(finish) ? finish : undefined
@@ -63,6 +118,12 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
   }
   function select(number: number) { setActiveNumber(number) }
   function changeFinish(change: Partial<FinishPointDraft>) {
+    if (!onFinishChange) return
+    if ('latitude' in change || 'longitude' in change) {
+      recordPosition(0, change)
+      const next = { ...finish, ...change }
+      if (Object.is(finish.latitude, next.latitude) && Object.is(finish.longitude, next.longitude)) return
+    }
     setFinishConfirmed(false)
     onFinishChange?.({ ...finish, ...change })
   }
@@ -105,6 +166,12 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
   }
   const complete = isGeographyComplete(drafts, verified, safety.size, safetyItems.length)
   function update(number: number, change: Partial<CheckpointDraft>) {
+    if ('latitude' in change || 'longitude' in change) {
+      const before = positionState(number)
+      const after = { ...before, ...change }
+      if (Object.is(before.latitude, after.latitude) && Object.is(before.longitude, after.longitude)) return
+      recordPosition(number, change)
+    }
     const next = updateCheckpointDraft(drafts, verified, number, change)
     onDraftsChange(next.drafts); onVerifiedChange(next.verified)
     onConfigurationChange(buildGeographyConfiguration(drafts.length, next.drafts))
@@ -112,14 +179,26 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
     return <section className="mt-5 min-w-0" aria-label="Checkpoint position editor">
     <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
     <div className="min-w-0 lg:sticky lg:top-24">
+    <div role="toolbar" aria-label="Checkpoint positioning" className="mb-2 min-w-0 rounded-xl border border-slate-200 bg-white p-3">
+      <p className="break-words text-sm font-bold">{activeNumber === undefined ? 'No checkpoint selected' : `${finishSelected ? 'F' : `CP${activeNumber}`} · ${finishSelected ? finish.name || 'FinishPoint' : active?.name}`}</p>
+      <p className="mt-1 break-words text-xs text-slate-600">{locationLabel}</p>
+      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+        <div className="flex gap-1">{(['undo', 'redo'] as const).map(direction => <button key={direction} type="button" aria-label={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} title={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} disabled={!history.current[direction].length} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg border border-slate-300 px-2 text-sm font-bold disabled:opacity-40" onClick={() => restorePosition(direction)}><ToolbarIcon kind={direction} /><span className="hidden sm:inline">{direction === 'undo' ? 'Undo' : 'Redo'}</span></button>)}</div>
+        <div className="flex flex-wrap gap-1"><button type="button" disabled={!pins.length} className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-slate-300 px-2 text-sm font-bold disabled:opacity-40" onClick={() => setFitRequest(value => value + 1)}><ToolbarIcon kind="fit" />Fit route</button>
+        <button type="button" disabled={activeNumber === undefined} className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-slate-300 px-2 text-sm font-bold disabled:opacity-40" onClick={() => setActiveNumber(undefined)}><ToolbarIcon kind="pin" />Deselect</button></div>
+        <button type="button" disabled={finishSelected ? !onFinishChange || !validFinish : !active || !isValidCheckpoint(active)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-500 px-3 text-sm font-bold disabled:bg-slate-300" onClick={() => { if (finishSelected) setFinishConfirmed(true); else if (active) { const next = new Set(verified); next.add(active.checkpointNumber); onVerifiedChange(next) } }}><ToolbarIcon kind="check" />Confirm position</button>
+      </div>
+      <p role="status" className="mt-1 text-xs text-slate-600">{historyMessage}</p>
+    </div>
     <div className="h-[540px] w-full min-w-0 sm:h-[640px]" data-testid="position-map"><TedixMap
       initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
+      fitPositionsRequest={fitRequest} hideFitPositionsControl
       positionPins={pins} initialFitPoints={references} selectedLocationLabel={locationLabel}
       locationSearch className="overflow-hidden rounded-2xl border border-slate-300"
       onCheckpointSelect={select} onCheckpointMove={(number, latitude, longitude) => place(number, latitude, longitude)}
       onMapClick={placeSelected} onSearchPosition={activeNumber === undefined ? undefined : placeSelected}
     /></div>
-    <div className="mt-2 flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-slate-600">Select a checkpoint, then click the map to position it.</p>{activeNumber !== undefined && <button type="button" className="min-h-11 rounded-lg border border-slate-300 px-3 text-sm font-bold" onClick={() => setActiveNumber(undefined)}>Deselect checkpoint</button>}</div>
+    <p className="mt-2 text-sm text-slate-600">Select a checkpoint, then click the map to position it.</p>
     <p className="text-xs text-slate-600" role="status">{locationLabel}. Changes stay local until you save the Template.</p>
     <details className="mt-3 rounded-xl border border-slate-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">How to position checkpoints</summary><ol className="grid gap-3 sm:grid-cols-3">{[['⌖', '1. Select', 'Choose a checkpoint.'], ['⌕', '2. Position', 'Click the map or choose a search result.'], ['✓', '3. Confirm & Save', 'Confirm the arrival area and save the Template.']].map(([icon, title, text]) => <li key={title} className="rounded-lg bg-slate-50 p-3"><span aria-hidden="true" className="text-2xl">{icon}</span><strong className="block text-sm">{title}</strong><p className="mt-1 text-xs">{text}</p></li>)}</ol></details>
     </div>
@@ -129,10 +208,10 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, savedCo
       const selected = !finishSelected && active?.checkpointNumber === point.checkpointNumber
       return <li key={point.checkpointNumber}><article className={`min-w-0 rounded-xl border p-3 ${selected ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'}`}>
         <button data-checkpoint={point.checkpointNumber} aria-expanded={selected} aria-pressed={selected} onClick={() => select(point.checkpointNumber)} className="flex min-h-12 w-full flex-wrap items-center gap-3 text-left" type="button"><strong>{point.checkpointNumber} · {point.name}</strong><span className="text-xs">{status(point, savedConfiguration?.checkpointPositions.find(saved => saved.checkpointNumber === point.checkpointNumber))}</span><span className="ml-auto text-sm font-bold">{point.latitude === undefined ? 'Place on map' : 'Edit position'}</span></button>{context(point.checkpointNumber)}
-        {selected && <div><div className="flex items-center justify-between gap-2 text-xs"><span>{selectedPin ? `${selectedPin.latitude.toFixed(5)}, ${selectedPin.longitude.toFixed(5)}` : 'No location yet'}</span>{resetControl(point.checkpointNumber)}</div>{fields(point, change => update(point.checkpointNumber, change))}<p className="mt-2 text-xs">Confirm only after inspecting the arrival area. Session confirmation: {verified.has(point.checkpointNumber) ? 'Position confirmed' : 'Not confirmed'}</p><button className="mt-3 min-h-11 rounded-lg bg-emerald-500 px-4 text-sm font-bold disabled:bg-slate-300" disabled={!isValidCheckpoint(point)} type="button" onClick={() => { const next = new Set(verified); next.add(point.checkpointNumber); onVerifiedChange(next) }}>Confirm position</button></div>}
+        {selected && <div><div className="flex items-center justify-between gap-2 text-xs"><span>{selectedPin ? `${selectedPin.latitude.toFixed(5)}, ${selectedPin.longitude.toFixed(5)}` : 'No location yet'}</span>{resetControl(point.checkpointNumber)}</div>{fields(point, change => update(point.checkpointNumber, change))}<p className="mt-2 text-xs">Confirm only after inspecting the arrival area. Session confirmation: {verified.has(point.checkpointNumber) ? 'Position confirmed' : 'Not confirmed'}</p></div>}
       </article></li>
     })}
-    {onFinishChange && <li><article className={`rounded-xl border p-3 ${finishSelected ? 'border-violet-500 bg-violet-50' : 'border-slate-200'}`}><button type="button" data-checkpoint="F" aria-expanded={finishSelected} aria-pressed={finishSelected} className="flex min-h-12 w-full flex-wrap items-center gap-3 text-left" onClick={() => select(0)}><strong>F · {finish.name || 'FinishPoint'}</strong><span className="text-xs">{status(finish, savedConfiguration?.finishPoint)}</span><span className="ml-auto text-sm font-bold">{finish.latitude === undefined ? 'Place on map' : 'Edit position'}</span></button>{context(0)}{finishSelected && <><div className="flex items-center justify-between gap-2 text-xs"><span>{locationLabel}</span>{resetControl(0)}</div>{fields(finish, changeFinish)}<p className="mt-2 text-xs">{finishConfirmed ? 'Position confirmed' : 'Not confirmed'}</p><button type="button" disabled={!validFinish} className="mt-3 min-h-11 rounded-lg bg-emerald-500 px-4 text-sm font-bold disabled:bg-slate-300" onClick={() => setFinishConfirmed(true)}>Confirm FinishPoint position</button><p className="mt-2 text-xs">Terminal FinishPoint · separate from the normal checkpoint count. FinishPoint gameplay remains in Feature 6.</p>{!validFinish && <p role="status">Enter a name, valid coordinates and an integer radius from 5 to 500 metres.</p>}</>}</article></li>}
+    {onFinishChange && <li><article className={`rounded-xl border p-3 ${finishSelected ? 'border-violet-500 bg-violet-50' : 'border-slate-200'}`}><button type="button" data-checkpoint="F" aria-expanded={finishSelected} aria-pressed={finishSelected} className="flex min-h-12 w-full flex-wrap items-center gap-3 text-left" onClick={() => select(0)}><strong>F · {finish.name || 'FinishPoint'}</strong><span className="text-xs">{status(finish, savedConfiguration?.finishPoint)}</span><span className="ml-auto text-sm font-bold">{finish.latitude === undefined ? 'Place on map' : 'Edit position'}</span></button>{context(0)}{finishSelected && <><div className="flex items-center justify-between gap-2 text-xs"><span>{locationLabel}</span>{resetControl(0)}</div>{fields(finish, changeFinish)}<p className="mt-2 text-xs">{finishConfirmed ? 'Position confirmed' : 'Not confirmed'}</p><p className="mt-2 text-xs">Terminal FinishPoint · separate from the normal checkpoint count. FinishPoint gameplay remains in Feature 6.</p>{!validFinish && <p role="status">Enter a name, valid coordinates and an integer radius from 5 to 500 metres.</p>}</>}</article></li>}
     </ol>
     </div></div>
     <details className="mt-4 rounded-xl border border-slate-200 p-3"><summary className="min-h-11 cursor-pointer py-3 font-bold">Arrival verification &amp; safety reminders</summary>

@@ -224,7 +224,7 @@ test('Reset without a research coordinate is disabled with an explanation', () =
 test('FinishPoint placement, confirmation and Reset remain separate from normal checkpoints', () => {
   signal(); render(); select('F'); clickMap(47, 24)
   expect(latestFinish).toMatchObject({ latitude: 47, longitude: 24, radiusMeters: 17 })
-  act(() => button('Confirm FinishPoint position').click())
+  act(() => button('Confirm position').click())
   expect(pin('F').element.getAttribute('aria-label')).toContain('Creator-confirmed')
   act(() => container.querySelector<HTMLButtonElement>('[aria-label="Reset checkpoint position"]')!.click())
   expect(latestFinish).toEqual({ name: 'Finish', radiusMeters: 17, latitude: undefined, longitude: undefined })
@@ -249,7 +249,7 @@ test('camera fits references initially, remains stable after selection, move and
 })
 
 test('deselecting makes clicks inert and turns off marker drag', () => {
-  render(); act(() => button('Deselect checkpoint').click()); clickMap(47, 24)
+  render(); act(() => button('Deselect').click()); clickMap(47, 24)
   expect(latest[0]).toEqual(saved)
   expect(pin('1').options.draggable).toBe(false)
   expect(mocks.configuration).not.toHaveBeenCalled()
@@ -281,7 +281,7 @@ test('typing never changes GPS; selected search result positions only the active
 })
 
 test('general search moves only the camera', async () => {
-  render(); act(() => button('Deselect checkpoint').click()); await searchResult()
+  render(); act(() => button('Deselect').click()); await searchResult()
   expect(latest[0]).toEqual(saved)
   expect(mocks.maps[0].flyTo).toHaveBeenCalledExactlyOnceWith({ center: [24, 47], zoom: 14 })
   expect(mocks.configuration).not.toHaveBeenCalled()
@@ -301,4 +301,162 @@ test('map-first responsive layout uses one form, 44px controls and collapsed acc
   act(() => how.querySelector('summary')!.click()); expect(how.open).toBe(false)
   expect(pin('1').element.className).toContain('h-11 w-11')
   expect(container.querySelector<HTMLInputElement>('[role="combobox"]')!.value).toBe('')
+})
+
+function undo() { act(() => button('Undo').click()) }
+function redo() { act(() => button('Redo').click()) }
+async function coordinate(label: string, value: string) {
+  const input = container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+test('toolbar centralizes five actions, has mirrored equally styled icons and empty disabled history', () => {
+  render()
+  const toolbar = container.querySelector('[role="toolbar"]')!
+  expect([...toolbar.querySelectorAll('button')].map(button => button.textContent)).toEqual(['Undo', 'Redo', 'Fit route', 'Deselect', 'Confirm position'])
+  expect(button('Undo').disabled).toBe(true)
+  expect(button('Redo').disabled).toBe(true)
+  expect(button('Undo').title).toBe('Undo last position change')
+  expect(button('Redo').getAttribute('aria-label')).toBe('Redo last position change')
+  expect(button('Undo').className).toBe(button('Redo').className)
+  expect(button('Undo').parentElement).toBe(button('Redo').parentElement)
+  const undoIcon = button('Undo').querySelector('svg')!
+  const redoIcon = button('Redo').querySelector('svg')!
+  expect(undoIcon.getAttribute('width')).toBe(redoIcon.getAttribute('width'))
+  expect(undoIcon.getAttribute('stroke-width')).toBe(redoIcon.getAttribute('stroke-width'))
+  expect(undoIcon.querySelector('g')!.innerHTML).toBe(redoIcon.querySelector('g')!.innerHTML)
+  expect(redoIcon.querySelector('g')!.getAttribute('transform')).toBe('translate(24 0) scale(-1 1)')
+  expect([...container.querySelectorAll('button')].filter(button => button.textContent === 'Confirm position')).toHaveLength(1)
+  expect([...container.querySelectorAll('button')].filter(button => button.textContent === 'Fit route')).toHaveLength(1)
+  expect(toolbar.querySelector('[aria-label="Reset checkpoint position"]')).toBeNull()
+  expect(toolbar.className).toContain('min-w-0')
+  expect(toolbar.querySelectorAll('button').length).toBe(5)
+  expect([...toolbar.querySelectorAll('button')].every(button => button.className.includes('min-h-11'))).toBe(true)
+})
+
+test('successive map edits undo to provisional reference and redo authored positions across CP1–CP6 and FinishPoint', () => {
+  signal(); render()
+  const originalReferences = pins().map(marker => [...marker.coordinates])
+  for (const number of ['1', '2', '3', '4', '5', '6', 'F']) {
+    select(number); clickMap(47, 24); clickMap(48, 25)
+  }
+  expect(latest.every(point => point.latitude === 48)).toBe(true)
+  expect(latestFinish!.latitude).toBe(48)
+  for (const number of ['F', '6', '5', '4', '3', '2', '1']) {
+    undo()
+    expect(pin(number).coordinates).toEqual([24, 47])
+    expect(container.querySelector(`[data-checkpoint="${number}"]`)!.getAttribute('aria-pressed')).toBe('true')
+    expect(container.textContent).toContain(`Undid position change for ${number === 'F' ? 'FinishPoint' : `CP${number}`}`)
+    undo()
+    expect(pin(number).element.getAttribute('aria-label')).toContain('Reference position')
+    expect(button('Confirm position').disabled).toBe(true)
+  }
+  expect(button('Undo').disabled).toBe(true)
+  expect(pins().map(marker => marker.coordinates)).toEqual(originalReferences)
+  expect(latest.every(point => point.latitude === undefined)).toBe(true)
+  expect(latestFinish!.latitude).toBeUndefined()
+  expect(mocks.configuration).toHaveBeenLastCalledWith({ normalCheckpointCount: 6, checkpointPositions: [] })
+  for (let index = 0; index < 14; index++) redo()
+  expect(button('Redo').disabled).toBe(true)
+  expect(latest.every(point => point.latitude === 48 && point.longitude === 25)).toBe(true)
+  expect(latestFinish).toMatchObject({ latitude: 48, longitude: 25 })
+})
+
+test('undo restores confirmation; redo restores later confirmation; new edit discards redo', () => {
+  render(); act(() => button('Confirm position').click())
+  clickMap(47, 24)
+  expect(latestVerified.has(1)).toBe(false)
+  undo(); expect(latest[0]).toEqual(saved); expect(latestVerified.has(1)).toBe(true)
+  redo(); expect(latestVerified.has(1)).toBe(false)
+  act(() => button('Confirm position').click())
+  undo(); redo(); expect(latestVerified.has(1)).toBe(true)
+  undo(); select('2'); clickMap(48, 25)
+  expect(button('Redo').disabled).toBe(true)
+  undo(); expect(latest[1].latitude).toBeUndefined()
+  expect(latest[0]).toEqual(saved)
+})
+
+test('dragend records exactly one edit and duplicate placement preserves confirmation without history', () => {
+  render(); act(() => button('Confirm position').click())
+  clickMap(saved.latitude, saved.longitude)
+  expect(button('Undo').disabled).toBe(true)
+  expect(latestVerified.has(1)).toBe(true)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  const marker = pin('1'); marker.coordinates = [24, 47]
+  act(() => marker.handlers.get('dragend')!())
+  clickMap(48, 25)
+  undo()
+  expect(latest[0]).toEqual(saved)
+  expect(latestVerified.has(1)).toBe(true)
+  expect(button('Undo').disabled).toBe(true)
+  redo(); expect(latest[0]).toMatchObject({ latitude: 47, longitude: 24 })
+})
+
+test('search result creates exactly one history step', async () => {
+  render(); select('2'); await searchResult()
+  undo(); expect(latest[1].latitude).toBeUndefined()
+  expect(button('Undo').disabled).toBe(true)
+  redo(); expect(latest[1]).toMatchObject({ latitude: 47, longitude: 24 })
+})
+
+test('coordinate editing including empty or invalid coordinates is reversible and keeps names/radii', async () => {
+  render(); act(() => button('Confirm position').click())
+  await coordinate('Latitude', '47')
+  await coordinate('Longitude', '24')
+  await coordinate('Latitude', '')
+  expect(button('Confirm position').disabled).toBe(true)
+  undo(); expect(latest[0]).toMatchObject({ latitude: 47, longitude: 24 })
+  undo(); expect(latest[0]).toMatchObject({ latitude: 47, longitude: saved.longitude })
+  undo(); expect(latest[0]).toEqual(saved); expect(latestVerified.has(1)).toBe(true)
+  redo(); redo(); redo(); expect(latest[0].latitude).toBeUndefined()
+  await coordinate('Latitude', '999'); expect(button('Confirm position').disabled).toBe(true)
+  undo(); expect(latest[0].latitude).toBeUndefined()
+  expect(latest[0]).toMatchObject({ name: 'Museum', radiusMeters: 30 })
+})
+
+test('selection, pan, zoom, fit and deselect preserve geography, confirmation and history; general search stays camera-only', async () => {
+  render(); clickMap(48, 25); act(() => button('Confirm position').click())
+  const geography = structuredClone(latest)
+  select('2'); select('1')
+  act(() => { mocks.maps[0].emit('moveend'); mocks.maps[0].emit('zoomend'); button('Fit route').click(); button('Deselect').click() })
+  expect(latest).toEqual(geography)
+  expect(latestVerified.has(1)).toBe(true)
+  expect(button('Deselect').disabled).toBe(true)
+  expect(button('Confirm position').disabled).toBe(true)
+  await searchResult()
+  expect(latest).toEqual(geography)
+  undo(); expect(latest[0]).toEqual(saved); expect(button('Undo').disabled).toBe(true)
+  redo(); expect(latest).toEqual(geography); expect(latestVerified.has(1)).toBe(true)
+  expect(mocks.maps[0].fitBounds).toHaveBeenCalledOnce()
+  expect(mocks.maps[0].fitBounds.mock.calls[0][0].coordinates).toEqual([[25, 48]])
+})
+
+test('FinishPoint confirmation follows its position history without modifying normal checkpoints', async () => {
+  signal(); render(); select('F')
+  expect(button('Confirm position').disabled).toBe(true)
+  clickMap(47, 24); act(() => button('Confirm position').click()); clickMap(48, 25)
+  expect(pin('F').element.getAttribute('aria-label')).toContain('Locally edited')
+  undo(); expect(pin('F').element.getAttribute('aria-label')).toContain('Creator-confirmed')
+  redo(); expect(pin('F').element.getAttribute('aria-label')).toContain('Locally edited')
+  undo(); undo(); expect(latestFinish!.latitude).toBeUndefined()
+  expect(button('Confirm position').disabled).toBe(true)
+  redo(); expect(pin('F').element.getAttribute('aria-label')).toContain('Creator-confirmed')
+  expect(latest.every(point => point.latitude === undefined)).toBe(true)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+test('non-position metadata edits remain in place and cannot regain stale confirmation through undo', async () => {
+  render(); act(() => button('Confirm position').click()); clickMap(47, 24)
+  const radius = container.querySelector<HTMLInputElement>('input[max="500"]')!
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(radius, '45')
+    radius.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  undo()
+  expect(latest[0]).toEqual({ ...saved, radiusMeters: 45 })
+  expect(latestVerified.has(1)).toBe(false)
+  expect(button('Undo').disabled).toBe(true)
 })
