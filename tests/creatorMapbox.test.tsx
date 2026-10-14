@@ -262,6 +262,7 @@ async function searchResult() {
     .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [{ geometry: { coordinates: [24, 47] } }] }) }))
   const before = structuredClone(latest)
   const input = container.querySelector('input[role="combobox"]')!
+  act(() => (input as HTMLInputElement).focus())
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Park')
     input.dispatchEvent(new Event('input', { bubbles: true }))
@@ -271,18 +272,38 @@ async function searchResult() {
   await act(async () => container.querySelector<HTMLButtonElement>('[role="option"] button')!.click())
 }
 
-test('typing never changes GPS; selected search result positions only the active checkpoint and moves the camera', async () => {
-  render(); select('2'); await searchResult()
-  expect(latest[0]).toEqual(saved)
-  expect(latest[1]).toMatchObject({ latitude: 47, longitude: 24 })
-  expect(mocks.maps[0].flyTo).toHaveBeenCalledExactlyOnceWith({ center: [24, 47], zoom: 14 })
-  expect(mocks.configuration).toHaveBeenCalledOnce()
+test('focused search navigates without changing selected checkpoint, confirmation or history', async () => {
+  signal(); initial[0] = { ...saved }; render()
+  act(() => button('Confirm position').click())
+  const before = structuredClone(latest)
+  const references = pins().map(marker => [...marker.coordinates])
+  const map = mocks.maps[0]
+  const initialFits = map.fitBounds.mock.calls.length
+  await searchResult()
+  expect(latest).toEqual(before)
+  expect(latestVerified.has(1)).toBe(true)
+  expect(pins().map(marker => marker.coordinates)).toEqual(references)
+  expect(container.querySelector('[data-checkpoint="1"]')!.getAttribute('aria-pressed')).toBe('true')
+  expect(map.flyTo).toHaveBeenCalledExactlyOnceWith({ center: [24, 47], zoom: 16 })
+  expect(map.fitBounds).toHaveBeenCalledTimes(initialFits)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  expect(button('Undo').disabled).toBe(true)
+  expect(container.querySelector('[role="listbox"]')).toBeNull()
+  expect(container.textContent).toContain('Location selected.')
+  select('2'); select('1')
+  expect(map.flyTo).toHaveBeenCalledOnce()
+  expect(map.fitBounds).toHaveBeenCalledTimes(initialFits)
+  clickMap(47.01, 24.01)
+  expect(latest[0]).toMatchObject({ latitude: 47.01, longitude: 24.01 })
+  expect(latestVerified.has(1)).toBe(false)
+  undo(); expect(latest).toEqual(before); expect(latestVerified.has(1)).toBe(true)
+  expect(button('Undo').disabled).toBe(true)
 })
 
 test('general search moves only the camera', async () => {
   render(); act(() => button('Deselect').click()); await searchResult()
   expect(latest[0]).toEqual(saved)
-  expect(mocks.maps[0].flyTo).toHaveBeenCalledExactlyOnceWith({ center: [24, 47], zoom: 14 })
+  expect(mocks.maps[0].flyTo).toHaveBeenCalledExactlyOnceWith({ center: [24, 47], zoom: 16 })
   expect(mocks.configuration).not.toHaveBeenCalled()
 })
 
@@ -397,11 +418,17 @@ test('dragend records exactly one edit and duplicate placement preserves confirm
   redo(); expect(latest[0]).toMatchObject({ latitude: 47, longitude: 24 })
 })
 
-test('search result creates exactly one history step', async () => {
-  render(); select('2'); await searchResult()
-  undo(); expect(latest[1].latitude).toBeUndefined()
+test.each(['1', '2', '3', '4', '5', '6', 'F'])('search preserves unconfirmed reference %s without history', async number => {
+  signal(); render(); select(number)
+  const before = structuredClone(latest)
+  const finish = structuredClone(latestFinish)
+  await searchResult()
+  expect(latest).toEqual(before); expect(latestFinish).toEqual(finish)
+  expect(latestVerified.size).toBe(0)
   expect(button('Undo').disabled).toBe(true)
-  redo(); expect(latest[1]).toMatchObject({ latitude: 47, longitude: 24 })
+  expect(button('Confirm position').disabled).toBe(true)
+  expect(container.querySelector(`[data-checkpoint="${number}"]`)!.getAttribute('aria-pressed')).toBe('true')
+  expect(mocks.configuration).not.toHaveBeenCalled()
 })
 
 test('local edit Save applies one history entry, Cancel restores draft, invalid inputs never apply', async () => {
@@ -536,4 +563,25 @@ test('selected reference pins use blue outlining; green fill means session confi
   act(() => button('Deselect').click())
   expect(pin('1').element.querySelector('path')!.getAttribute('stroke')).toBe('#ffffff')
   expect(latestVerified.has(1)).toBe(true)
+})
+
+test('search bounds use a constrained inspection zoom without positioning', async () => {
+  render()
+  vi.useFakeTimers()
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ suggestions: [{ mapbox_id: 'landmark', name: 'Landmark' }] }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [{ geometry: { coordinates: [23.59, 46.77] }, bbox: [23.58, 46.76, 23.60, 46.78] }] }) }))
+  const input = container.querySelector<HTMLInputElement>('[role="combobox"]')!
+  await act(async () => {
+    input.focus()
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Landmark')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await vi.advanceTimersByTimeAsync(300)
+  })
+  await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+  await act(async () => container.querySelector<HTMLButtonElement>('[role="option"] button')!.click())
+  expect(mocks.maps[0].fitBounds).toHaveBeenCalledExactlyOnceWith([[23.58, 46.76], [23.60, 46.78]], { padding: 64, minZoom: 15, maxZoom: 16, duration: 1200 })
+  expect(mocks.maps[0].flyTo).not.toHaveBeenCalled()
+  expect(latest[0]).toEqual(saved)
+  expect(button('Undo').disabled).toBe(true)
 })
