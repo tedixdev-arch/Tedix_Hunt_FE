@@ -92,7 +92,7 @@ test('missing geographic FinishPoint remains an incomplete draft without default
   expect(mocks.createVersion.mock.calls[0][1].configuration).not.toHaveProperty('finishPoint')
   expect(container.textContent).toContain('Place one FinishPoint in Feature 6')
   await click('6.')
-  expect((container.querySelector('input[type="number"][min="5"]') as HTMLInputElement).value).toBe('5')
+  expect((container.querySelector('input[type="number"][min="5"]') as HTMLInputElement).value).toBe('15')
   expect(mocks.submit).not.toHaveBeenCalled()
 })
 test('legacy non-geographic drafts load and save without introducing geographic defaults', async () => {

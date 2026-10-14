@@ -7,8 +7,8 @@ const valid = { checkpointNumber: 1, name: 'Museum entrance', latitude: 46.77, l
 test('unpositioned normal checkpoints have no invented coordinates or FinishPoint', () => {
   const drafts = createCheckpointDrafts(2, ['One', 'Two'])
   assert.deepEqual(drafts, [
-    { checkpointNumber: 1, name: 'One', radiusMeters: 5 },
-    { checkpointNumber: 2, name: 'Two', radiusMeters: 5 },
+    { checkpointNumber: 1, name: 'One', radiusMeters: 15 },
+    { checkpointNumber: 2, name: 'Two', radiusMeters: 15 },
   ])
   assert.equal(JSON.stringify(drafts).includes('FinishPoint'), false)
 })
@@ -23,6 +23,7 @@ test('map placement maps only backend geography fields into Template content', (
 test('count changes preserve in-range positions, add unpositioned drafts, and remove out-of-range positions', () => {
   const increased = resizeCheckpointDrafts([valid], 3, ['One', 'Two', 'Three'])
   assert.deepEqual(increased[0], valid)
+  assert.equal(increased[1].radiusMeters, 15)
   assert.equal('latitude' in increased[1], false)
   assert.equal('longitude' in increased[2], false)
   assert.deepEqual(resizeCheckpointDrafts(increased, 1, ['One']), [valid])
@@ -49,4 +50,13 @@ test('repositioning, radius changes and name changes invalidate verification', (
 test('radius validation accepts the inclusive 5..500 metre range', () => {
   for (let radiusMeters = 5; radiusMeters <= 500; radiusMeters++) assert.equal(isValidCheckpoint({ ...valid, radiusMeters }), true)
   for (const radiusMeters of [4, 501, 5.5, NaN]) assert.equal(isValidCheckpoint({ ...valid, radiusMeters }), false)
+})
+
+ test('stored radii survive resizing, editing and serialization', () => {
+  for (const radiusMeters of [5, 17, 30, 500]) {
+    const stored = { ...valid, radiusMeters }
+    const resized = resizeCheckpointDrafts([stored], 2, [])
+    const edited = updateCheckpointDraft(resized, new Set(), 1, { name: 'Edited' }).drafts
+    assert.equal(buildGeographyConfiguration(2, edited).checkpointPositions[0].radiusMeters, radiusMeters)
+  }
 })

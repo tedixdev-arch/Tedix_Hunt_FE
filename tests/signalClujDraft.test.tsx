@@ -318,7 +318,7 @@ test.each([false, true])('Creator saves and reopens six authored positions and s
   expect(api.createVersion, container.querySelector('[role="alert"]')?.textContent ?? '').toHaveBeenCalledTimes(1)
   expect(record.content.configuration.checkpointPositions).toHaveLength(6)
   expect(record.content.configuration.checkpointPositions[5]).toEqual({ checkpointNumber: 6, name: 'Real place 6', latitude: 46.706, longitude: 23.606, radiusMeters: 25 })
-  expect(record.content.configuration.finishPoint).toEqual({ name: 'Real finish', latitude: 46.8, longitude: 23.7, radiusMeters: 5 })
+  expect(record.content.configuration.finishPoint).toEqual({ name: 'Real finish', latitude: 46.8, longitude: 23.7, radiusMeters: 15 })
   expect(record.content.checkpoints).toEqual(original)
   for (const key of ['mission', 'scoring', 'fictionalNavigation', 'starterSource', 'routeResearch']) expect(record.content[key]).toEqual(originalContent[key])
   expect(record.version).toBe(2)

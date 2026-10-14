@@ -10,7 +10,7 @@ const checkpoint = { checkpointNumber: 1, name: 'Museum', latitude: 46.77, longi
 const configuration = { normalCheckpointCount: 1, checkpointPositions: [checkpoint], finishPoint }
 
 test('new FinishPoint has radius 5 and no invented coordinates', () => {
-  assert.deepEqual(createFinishPointDraft(), { name: '', radiusMeters: 5 })
+  assert.deepEqual(createFinishPointDraft(), { name: '', radiusMeters: 15 })
 })
 
 test('draft omission is allowed, geographic submission requires FinishPoint, legacy omission remains allowed', () => {

@@ -2,7 +2,7 @@ import type { FinishPoint } from './finishPoint.ts'
 
 export const MIN_RADIUS_METERS = 5
 export const MAX_RADIUS_METERS = 500
-export const DEFAULT_RADIUS_METERS = 5
+export const DEFAULT_RADIUS_METERS = 15
 
 export interface CheckpointPosition {
   checkpointNumber: number
