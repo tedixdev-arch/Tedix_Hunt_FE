@@ -17,6 +17,7 @@ vi.mock('mapbox-gl', () => ({ default: {
     layers = new Map<string, any>()
     flyTo = vi.fn()
     fitBounds = vi.fn()
+    setStyle = vi.fn(() => { this.sources.clear(); this.layers.clear(); this.emit('style.load') })
     project = vi.fn(([longitude, latitude]: number[]) => ({ x: longitude * 100000, y: latitude * 100000 }))
     remove = vi.fn()
     resize = vi.fn()
@@ -180,7 +181,7 @@ test('selection is synchronized, suppresses bubbling placement, and only the sel
 
 test('selected pin drag places once, clears confirmation and suppresses its follow-up click', () => {
   render()
-  act(() => button('Confirm position').click())
+  act(() => button('Confirm position').click()); select('1')
   const marker = pin('1')
   expect(marker.options.draggable).toBe(true)
   marker.coordinates = [24, 47]
@@ -203,7 +204,7 @@ test('saved positions, custom labels and radii take precedence over research wit
 
 test('Reset restores reference display, clears authored coordinates and confirmation, and preserves other content', () => {
   signal(); initial[0] = { ...saved }; initial[1] = { ...saved, checkpointNumber: 2 }; render()
-  act(() => button('Confirm position').click())
+  act(() => button('Confirm position').click()); select('1')
   const original = structuredClone(latest[1])
   act(() => button('Reset position').click())
   expect(latest[0]).toEqual({ checkpointNumber: 1, name: 'Museum', radiusMeters: 30, latitude: undefined, longitude: undefined })
@@ -225,7 +226,7 @@ test('Reset without research clears saved authored coordinates after explicit co
 test('FinishPoint placement, confirmation and Reset remain separate from normal checkpoints', () => {
   signal(); render(); select('F'); clickMap(47, 24)
   expect(latestFinish).toMatchObject({ latitude: 47, longitude: 24, radiusMeters: 17 })
-  act(() => button('Confirm position').click())
+  act(() => button('Confirm position').click()); select('F')
   expect(pin('F').element.getAttribute('aria-label')).toContain('Creator-confirmed')
   act(() => button('Reset position').click())
   expect(latestFinish).toEqual({ name: 'Finish', radiusMeters: 17, latitude: undefined, longitude: undefined })
@@ -239,7 +240,7 @@ test('camera fits references initially, remains stable after selection, move and
   const map = mocks.maps[0]
   expect(map.fitBounds).toHaveBeenCalledOnce()
   expect(map.fitBounds.mock.calls[0][0].coordinates).toEqual(pins().map(marker => marker.coordinates))
-  select('2'); clickMap(47, 24); act(() => button('Confirm position').click()); select('F')
+  select('2'); clickMap(47, 24); act(() => button('Confirm position').click()); select('1'); select('F')
   expect(map.fitBounds).toHaveBeenCalledOnce()
   expect(map.flyTo).not.toHaveBeenCalled()
   expect(mocks.maps).toHaveLength(1)
@@ -264,7 +265,7 @@ async function searchResult() {
   const input = container.querySelector('input[role="combobox"]')!
   act(() => (input as HTMLInputElement).focus())
   await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Park')
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Park landmark')
     input.dispatchEvent(new Event('input', { bubbles: true }))
   })
   await act(async () => { await vi.advanceTimersByTimeAsync(300) })
@@ -274,7 +275,7 @@ async function searchResult() {
 
 test('focused search navigates without changing selected checkpoint, confirmation or history', async () => {
   signal(); initial[0] = { ...saved }; render()
-  act(() => button('Confirm position').click())
+  act(() => button('Confirm position').click()); select('1')
   const before = structuredClone(latest)
   const references = pins().map(marker => [...marker.coordinates])
   const map = mocks.maps[0]
@@ -335,10 +336,10 @@ async function coordinate(label: string, value: string) {
   })
 }
 
-test('toolbar keeps four map actions separate from contextual confirmation, has mirrored equally styled icons and empty disabled history', () => {
+test('toolbar adds map modes alongside existing map actions separate from contextual confirmation, has mirrored equally styled icons and empty disabled history', () => {
   render()
   const toolbar = container.querySelector('[role="toolbar"]')!
-  expect([...toolbar.querySelectorAll('button')].map(button => button.textContent)).toEqual(['', '', 'Deselect'])
+  expect([...toolbar.querySelectorAll('button')].map(button => button.textContent)).toEqual(['', '', 'Deselect', 'Map', 'Satellite'])
   expect(button('Undo').disabled).toBe(true)
   expect(button('Redo').disabled).toBe(true)
   expect(button('Undo').title).toBe('Undo last position change')
@@ -355,7 +356,7 @@ test('toolbar keeps four map actions separate from contextual confirmation, has 
   expect([...container.querySelectorAll('button')].filter(button => button.textContent === 'Fit route')).toHaveLength(0)
   expect(toolbar.querySelector('[aria-label="Reset checkpoint position"]')).toBeNull()
   expect(toolbar.className).toContain('min-w-0')
-  expect(toolbar.querySelectorAll('button').length).toBe(3)
+  expect(toolbar.querySelectorAll('button').length).toBe(5)
   expect(button('Confirm position').closest('[aria-label="Selected checkpoint inspector"]')).not.toBeNull()
   expect([...toolbar.querySelectorAll('button')].every(button => button.className.includes('min-h-11'))).toBe(true)
 })
@@ -389,12 +390,12 @@ test('successive map edits undo to provisional reference and redo authored posit
 })
 
 test('undo restores confirmation; redo restores later confirmation; new edit discards redo', () => {
-  render(); act(() => button('Confirm position').click())
+  render(); act(() => button('Confirm position').click()); select('1')
   clickMap(47, 24)
   expect(latestVerified.has(1)).toBe(false)
   undo(); expect(latest[0]).toEqual(saved); expect(latestVerified.has(1)).toBe(true)
   redo(); expect(latestVerified.has(1)).toBe(false)
-  act(() => button('Confirm position').click())
+  act(() => button('Confirm position').click()); select('1')
   undo(); redo(); expect(latestVerified.has(1)).toBe(true)
   undo(); select('2'); clickMap(48, 25)
   expect(button('Redo').disabled).toBe(true)
@@ -403,7 +404,7 @@ test('undo restores confirmation; redo restores later confirmation; new edit dis
 })
 
 test('dragend records exactly one edit and duplicate placement preserves confirmation without history', () => {
-  render(); act(() => button('Confirm position').click())
+  render(); act(() => button('Confirm position').click()); select('1')
   clickMap(saved.latitude, saved.longitude)
   expect(button('Undo').disabled).toBe(true)
   expect(latestVerified.has(1)).toBe(true)
@@ -432,7 +433,7 @@ test.each(['1', '2', '3', '4', '5', '6', 'F'])('search preserves unconfirmed ref
 })
 
 test('local edit Save applies one history entry, Cancel restores draft, invalid inputs never apply', async () => {
-  render(); act(() => button('Confirm position').click())
+  render(); act(() => button('Confirm position').click()); select('1')
   act(() => button('Edit').click())
   await coordinate('Latitude', '47'); await coordinate('Longitude', '24')
   expect(latest[0]).toEqual(saved)
@@ -449,7 +450,7 @@ test('local edit Save applies one history entry, Cancel restores draft, invalid 
 })
 
 test('selection, pan, zoom, fit and deselect preserve geography, confirmation and history; general search stays camera-only', async () => {
-  render(); clickMap(48, 25); act(() => button('Confirm position').click())
+  render(); clickMap(48, 25); act(() => button('Confirm position').click()); select('1')
   const geography = structuredClone(latest)
   select('2'); select('1')
   act(() => { mocks.maps[0].emit('moveend'); mocks.maps[0].emit('zoomend'); button('Deselect').click() })
@@ -467,7 +468,7 @@ test('selection, pan, zoom, fit and deselect preserve geography, confirmation an
 test('FinishPoint confirmation follows its position history without modifying normal checkpoints', async () => {
   signal(); render(); select('F')
   expect(button('Confirm position').disabled).toBe(true)
-  clickMap(47, 24); act(() => button('Confirm position').click()); clickMap(48, 25)
+  clickMap(47, 24); act(() => button('Confirm position').click()); select('F'); clickMap(48, 25)
   expect(pin('F').element.getAttribute('aria-label')).toContain('Locally edited')
   undo(); expect(pin('F').element.getAttribute('aria-label')).toContain('Creator-confirmed')
   redo(); expect(pin('F').element.getAttribute('aria-label')).toContain('Locally edited')
@@ -479,7 +480,7 @@ test('FinishPoint confirmation follows its position history without modifying no
 })
 
 test('non-position metadata edits remain in place and cannot regain stale confirmation through undo', async () => {
-  render(); act(() => button('Confirm position').click()); clickMap(47, 24)
+  render(); act(() => button('Confirm position').click()); select('1'); clickMap(47, 24)
   act(() => button('Edit').click())
   const radius = container.querySelector<HTMLInputElement>('input[max="500"]')!
   await act(async () => {
@@ -503,7 +504,7 @@ test('map precedes list and inspector and reference coordinates cannot be confir
 })
 
 test('canceled reset preserves saved position and confirmation; reset undo/redo restores confirmation', () => {
-  render(); act(() => button('Confirm position').click())
+  render(); act(() => button('Confirm position').click()); select('1')
   vi.mocked(window.confirm).mockReturnValueOnce(false)
   act(() => button('Reset position').click()); expect(latest[0]).toEqual(saved)
   expect(latestVerified.has(1)).toBe(true)
@@ -513,7 +514,7 @@ test('canceled reset preserves saved position and confirmation; reset undo/redo 
 })
 
 test('reset of an unsaved local placement is immediate and reversible', () => {
-  signal(); render(); clickMap(47, 24); act(() => button('Confirm position').click())
+  signal(); render(); clickMap(47, 24); act(() => button('Confirm position').click()); select('1')
   act(() => button('Reset position').click())
   expect(window.confirm).not.toHaveBeenCalled()
   expect(latest[0].latitude).toBeUndefined()
@@ -557,7 +558,7 @@ test('selected reference pins use blue outlining; green fill means session confi
   let path = pin('1').element.querySelector('path')!
   expect(path.getAttribute('stroke')).toBe('#2563eb')
   expect(path.getAttribute('fill')).toBe('#475569')
-  clickMap(47, 24); act(() => button('Confirm position').click())
+  clickMap(47, 24); act(() => button('Confirm position').click()); select('1')
   path = pin('1').element.querySelector('path')!
   expect(path.getAttribute('fill')).toBe('#047857')
   act(() => button('Deselect').click())
@@ -584,4 +585,94 @@ test('search bounds use a constrained inspection zoom without positioning', asyn
   expect(mocks.maps[0].flyTo).not.toHaveBeenCalled()
   expect(latest[0]).toEqual(saved)
   expect(button('Undo').disabled).toBe(true)
+})
+
+
+test.each(['1', '2', '3', '4', '5', '6', 'F'])('confirm %s deselects, preserves its visible pin/history, and requires explicit re-selection', number => {
+  signal(); render(); select(number); clickMap(47, 24)
+  const before = structuredClone(latest)
+  const finishBefore = structuredClone(latestFinish)
+  mocks.configuration.mockClear()
+  act(() => button('Confirm position').click())
+  expect(container.querySelectorAll('[data-checkpoint][aria-pressed="true"]')).toHaveLength(0)
+  expect(button('Deselect').disabled).toBe(true)
+  expect(button('Confirm position')).toBeUndefined()
+  expect(pin(number).coordinates).toEqual([24, 47])
+  expect(pin(number).element.getAttribute('aria-label')).toContain('Creator-confirmed')
+  expect(pin(number).options.draggable).toBe(false)
+  expect(button('Undo').disabled).toBe(false)
+  clickMap(48, 25)
+  expect(latest).toEqual(before)
+  expect(latestFinish).toEqual(finishBefore)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+  undo(); expect(pin(number).element.getAttribute('aria-label')).toContain('Reference position')
+  expect(container.querySelectorAll('[data-checkpoint][aria-pressed="true"]')).toHaveLength(0)
+  redo(); expect(pin(number).coordinates).toEqual([24, 47])
+  expect(pin(number).element.getAttribute('aria-label')).toContain('Creator-confirmed')
+  expect(container.querySelectorAll('[data-checkpoint][aria-pressed="true"]')).toHaveLength(0)
+  clickMap(48, 25); expect(pin(number).coordinates).toEqual([24, 47])
+  select(number); clickMap(48, 25)
+  expect(pin(number).coordinates).toEqual([25, 48])
+  expect(pin(number).element.getAttribute('aria-label')).toContain('Locally edited')
+})
+
+test('switching map modes preserves pins, confirmation, selection and history, with search and positioning in both modes', async () => {
+  signal(); render(); select('F'); clickMap(47, 24)
+  act(() => button('Confirm position').click())
+  select('2'); clickMap(48, 25)
+  const before = structuredClone(latest)
+  const finishBefore = structuredClone(latestFinish)
+  const coordinates = pins().map(marker => marker.coordinates)
+  const map = mocks.maps[0]
+  const listeners = [...map.handlers].map(([event, handlers]: [string, Set<unknown>]) => [event, handlers.size])
+  const fits = map.fitBounds.mock.calls.length
+  const mode = (text: string) => [...container.querySelectorAll<HTMLButtonElement>('[aria-label="Map view"] button')].find(node => node.textContent === text)!
+  for (const [label, style] of [['Satellite', 'satellite-streets-v12'], ['Map', 'streets-v12']]) {
+    act(() => mode(label).click())
+    expect(map.setStyle).toHaveBeenLastCalledWith(`mapbox://styles/mapbox/${style}`)
+    expect(mode(label).getAttribute('aria-pressed')).toBe('true')
+    expect(latest).toEqual(before); expect(latestFinish).toEqual(finishBefore)
+    expect(pins().map(marker => marker.coordinates)).toEqual(coordinates)
+    expect(pin('F').element.getAttribute('aria-label')).toContain('Creator-confirmed')
+    expect(container.querySelector('[data-checkpoint="2"]')!.getAttribute('aria-pressed')).toBe('true')
+    await searchResult()
+    expect(latest).toEqual(before); expect(latestFinish).toEqual(finishBefore)
+    clickMap(49, 26); undo(); expect(latest).toEqual(before)
+    redo(); expect(latest[1]).toMatchObject({ latitude: 49, longitude: 26 })
+    undo()
+    expect([...map.handlers].map(([event, handlers]: [string, Set<unknown>]) => [event, handlers.size])).toEqual(listeners)
+  }
+  expect(map.fitBounds).toHaveBeenCalledTimes(fits)
+  expect(mocks.maps).toHaveLength(1)
+  expect(map.remove).not.toHaveBeenCalled()
+  act(() => root.unmount())
+  expect([...map.handlers.values()].every((handlers: Set<unknown>) => handlers.size === 0)).toBe(true)
+  expect(pins()).toHaveLength(0)
+  expect(map.remove).toHaveBeenCalledOnce()
+  root = createRoot(container)
+})
+
+test('style changes restore custom sources/layers without fitting the camera or duplicating markers/listeners', () => {
+  const props = {
+    initialLatitude: 46.77, initialLongitude: 23.59,
+    checkpoints: [{ ...saved, selected: true }],
+    finishPoint: { name: 'Finish', latitude: 46.8, longitude: 23.6, radiusMeters: 25 },
+    walkingRoute: { type: 'LineString' as const, coordinates: [[23.59, 46.77], [23.6, 46.8]] },
+    routeOverview: { type: 'LineString' as const, coordinates: [[23.59, 46.77], [23.6, 46.8]] },
+  }
+  act(() => root.render(<TedixMap {...props} />))
+  const map = mocks.maps[0]
+  const sources = [...map.sources.keys()]
+  const layers = [...map.layers.keys()]
+  const listenerCount = [...map.handlers.values()].map((handlers: Set<unknown>) => handlers.size)
+  const fits = map.fitBounds.mock.calls.length
+  for (const style of ['satellite-streets-v12', 'streets-v12']) {
+    act(() => root.render(<TedixMap {...props} mapStyle={`mapbox://styles/mapbox/${style}`} />))
+    expect([...map.sources.keys()]).toEqual(sources)
+    expect([...map.layers.keys()]).toEqual(layers)
+    expect([...map.handlers.values()].map((handlers: Set<unknown>) => handlers.size)).toEqual(listenerCount)
+    expect(mocks.markers.filter(marker => marker.element.isConnected)).toHaveLength(2)
+  }
+  expect(map.fitBounds).toHaveBeenCalledTimes(fits)
+  expect(mocks.maps).toHaveLength(1)
 })

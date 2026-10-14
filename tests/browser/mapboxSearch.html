@@ -1,6 +1,14 @@
 <div id="root"></div><script type="module">
 import mapboxgl from 'mapbox-gl'
 const OriginalMap = mapboxgl.Map
-mapboxgl.Map = class extends OriginalMap { constructor(options) { super(options); window.testMap = this } }
+const OriginalMarker = mapboxgl.Marker
+window.testMaps = []
+window.testMarkers = []
+mapboxgl.Map = class extends OriginalMap {
+  constructor(options) { super(options); window.testMap = this; window.testMaps.push(this) }
+}
+mapboxgl.Marker = class extends OriginalMarker {
+  constructor(options) { super(options); window.testMarkers.push(this) }
+}
 await import('/tests/browser/creatorPositions.preview.tsx')
 </script>

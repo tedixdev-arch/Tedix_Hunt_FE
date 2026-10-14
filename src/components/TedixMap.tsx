@@ -416,7 +416,7 @@ export function TedixMap({
       {mapError && <p role="alert" className={`absolute left-2 right-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-3 text-sm text-red-700`}>{mapError}</p>}
       {accessToken && locationSearch && <MapboxLocationSearch compact={!!positionPins} proximity={[initialLongitude, initialLatitude]} inline={false} accessToken={accessToken} locationLabel={positionPins ? undefined : selectedLocationLabel} onSelect={({ center, bbox }) => {
         const map = mapRef.current
-        if (!map) return
+        if (!map) throw new Error('Map unavailable. Please try again.')
         if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 64, minZoom: 15, maxZoom: 16, duration: 1200 })
         else map.flyTo({ center, zoom: 16 })
       }} />}
