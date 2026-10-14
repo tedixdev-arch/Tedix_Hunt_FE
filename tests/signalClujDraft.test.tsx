@@ -37,7 +37,7 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); container.remove(); Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal'); Reflect.deleteProperty(HTMLDialogElement.prototype, 'close'); vi.unstubAllGlobals() })
 async function render(node: React.ReactNode) { await act(async () => root.render(node)) }
 async function click(text: string) {
-  const button = [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith(text) || (text === 'Back' && button.getAttribute('aria-label') === 'Back to Create Template choices') || (text === 'Close' && button.getAttribute('aria-label') === 'Close template creation chooser'))!
+  const button = [...container.querySelectorAll('button')].find(button => button.textContent?.trim().startsWith(text) || button.getAttribute('aria-label')?.startsWith(text) || (text === 'Back' && button.getAttribute('aria-label') === 'Back to Create Template choices') || (text === 'Close' && button.getAttribute('aria-label') === 'Close template creation chooser'))!
   expect(button, text).toBeDefined(); await act(async () => button.click())
 }
 function Location() { return <p aria-label="Navigated location">{useLocation().search}</p> }
@@ -285,8 +285,8 @@ test.each([false, true])('Creator saves and reopens six authored positions and s
   expect(map.props).toMatchObject({ initialLatitude: 46.7712, initialLongitude: 23.6236, initialZoom: 14 })
   expect(container.querySelectorAll('[data-checkpoint]:not([data-checkpoint="F"])')).toHaveLength(6)
   expect(container.querySelector('[data-checkpoint="F"]')).not.toBeNull()
-  expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(7)
-  await click('CP6 ·')
+  expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(0)
+  await act(async () => container.querySelector<HTMLButtonElement>('[data-checkpoint="6"]')!.click())
   expect(map.props.cameraTarget).toBeUndefined()
   expect(map.props.positionPins.filter((point: any) => point.status !== 'reference')).toHaveLength(0)
   expect(api.createVersion).not.toHaveBeenCalled()
@@ -294,8 +294,10 @@ test.each([false, true])('Creator saves and reopens six authored positions and s
     await act(async () => (container.querySelector(`[data-checkpoint="${number}"]`) as HTMLButtonElement).click())
     await act(async () => map.props.onMapClick(46.7 + number / 1000, 23.6 + number / 1000))
     const card = container.querySelector('[aria-label="Selected checkpoint inspector"]')!
-    await inputValue(card.querySelector('.position-advanced input')!, `Real place ${number}`)
+    await click('Edit')
+    await inputValue(card.querySelector('input')!, `Real place ${number}`)
     await inputValue(card.querySelector('input[type="number"][max="500"]')!, '25')
+    await click('Save changes')
     await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Confirm position')!.click())
     await act(async () => map.props.onMapClick(48, 25))
     await click('Undo')
@@ -321,8 +323,8 @@ test.each([false, true])('Creator saves and reopens six authored positions and s
   await act(async () => root.unmount()); root = createRoot(container)
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
   await feature('Checkpoint Positions')
-  expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(7)
-  await click('CP6 ·')
+  expect(container.querySelectorAll('[aria-label="Ordered route candidates"] > li')).toHaveLength(0)
+  await act(async () => container.querySelector<HTMLButtonElement>('[data-checkpoint="6"]')!.click())
   expect(map.props.positionPins.find((point: any) => point.checkpointNumber === 6)).toMatchObject({ name: 'Real place 6', selected: true })
   expect(map.props.positionPins).toHaveLength(7)
   expect(map.props.positionPins.every((point: any) => point.status === 'edited')).toBe(true)
@@ -345,7 +347,7 @@ test('hydration prefills seven research names and draft save cannot promote refe
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
   await feature('Checkpoint Positions')
   const cards = [...container.querySelectorAll('[data-checkpoint] strong')]
-  expect(cards.map(card => card.textContent)).toEqual(signalClujRouteProposal.candidates.map((candidate, index) => `${index === 6 ? 'F' : index + 1} · ${candidate.landmark}`))
+  expect(cards.map(card => card.textContent)).toEqual(signalClujRouteProposal.candidates.map((candidate, index) => `${index === 6 ? 'FinishPoint' : `CP${index + 1}`} · ${candidate.landmark}`))
   expect(map.props.positionPins.map((point: any) => point.checkpointNumber)).toEqual([1, 2, 3, 4, 5, 6, 0])
   expect(map.props.positionPins.filter((point: any) => point.status !== 'reference')).toHaveLength(0)
   expect(map.props.finishPoint).toBeUndefined()
@@ -439,6 +441,7 @@ test('backend names, descriptions, dates and order render inside selectable rows
 
 
 test('resetting saved checkpoint and FinishPoint geography saves an incomplete draft without promoting references', async () => {
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
   record.content.routeResearch = { proposal: structuredClone(signalClujRouteProposal) }
   record.content.configuration.checkpointPositions = [{ checkpointNumber: 1, name: 'Custom arrival', latitude: 47, longitude: 24, radiusMeters: 31 }]
   record.content.configuration.finishPoint = { name: 'Custom finish', latitude: 48, longitude: 25, radiusMeters: 17 }
@@ -446,11 +449,11 @@ test('resetting saved checkpoint and FinishPoint geography saves an incomplete d
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
   await feature('Checkpoint Positions')
   await click('Confirm position')
-  await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Reset checkpoint position"]')!.click())
+  await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Reset position')!.click())
   expect(map.props.positionPins[0].status).toBe('reference')
   expect(map.props.positionPins[0].name).toBe('Custom arrival')
   await act(async () => container.querySelector<HTMLButtonElement>('[data-checkpoint="F"]')!.click())
-  await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Reset checkpoint position"]')!.click())
+  await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Reset position')!.click())
   expect(map.props.positionPins[6].name).toBe('Custom finish')
   expect(api.createVersion).not.toHaveBeenCalled()
   await click('Save draft')
@@ -483,17 +486,19 @@ test('arrival notes edit existing research metadata and survive save/reopen', as
   const research = structuredClone(record.content.routeResearch)
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
   await feature('Checkpoint Positions')
+  await click('Edit')
   const notes = container.querySelector<HTMLTextAreaElement>('.position-inspector textarea')!
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(notes, 'Inspect the public standing area')
     notes.dispatchEvent(new Event('input', { bubbles: true }))
   })
   expect(api.createVersion).not.toHaveBeenCalled()
+  await click('Save changes')
   await click('Save draft')
   expect((record.content.routeResearch as any).proposal.candidates[0].arrivalArea).toBe('Inspect the public standing area')
   expect((record.content.routeResearch as any).proposal.sources).toEqual((research as any).proposal.sources)
   await act(async () => root.unmount()); root = createRoot(container)
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
   await feature('Checkpoint Positions')
-  expect(container.querySelector<HTMLTextAreaElement>('.position-inspector textarea')!.value).toBe('Inspect the public standing area')
+  expect(container.querySelector('.position-values')!.textContent).toContain('Inspect the public standing area')
 })

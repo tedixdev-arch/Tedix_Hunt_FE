@@ -173,7 +173,7 @@ export function TedixMap({
       button.dataset.positionPin = label
       button.className = 'h-11 w-11 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700'
       // The SVG tip ends at the bottom-center anchor, exactly on the coordinate.
-      button.innerHTML = `<svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true"><path d="M22 43 C18 35 8 27 8 17 A14 14 0 1 1 36 17 C36 27 26 35 22 43Z" fill="${point.status === 'confirmed' ? '#047857' : '#475569'}" stroke="${point.selected ? '#34d399' : '#ffffff'}" stroke-width="${point.selected ? 3 : 2}"/><text x="22" y="22" text-anchor="middle" fill="white" font-size="14" font-weight="700"></text></svg>`
+      button.innerHTML = `<svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true"><path d="M22 43 C18 35 8 27 8 17 A14 14 0 1 1 36 17 C36 27 26 35 22 43Z" fill="${point.status === 'confirmed' ? '#047857' : '#475569'}" stroke="${point.selected ? '#2563eb' : '#ffffff'}" stroke-width="${point.selected ? 3 : 2}"/><text x="22" y="22" text-anchor="middle" fill="white" font-size="14" font-weight="700"></text></svg>`
       button.querySelector('text')!.textContent = label
       button.onclick = event => {
         event.stopPropagation()
@@ -415,9 +415,9 @@ export function TedixMap({
       {landmarkReference && <p className="absolute bottom-3 left-3 right-3 z-10 rounded-lg bg-white p-2 text-xs font-bold text-blue-900">R · Landmark reference only: {landmarkReference.name}. Not an arrival location.</p>}
       {accessToken && mapLoading && !mapError && <p role="status" className={`absolute left-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-2 text-sm`}>Loading map…</p>}
       {mapError && <p role="alert" className={`absolute left-2 right-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-3 text-sm text-red-700`}>{mapError}</p>}
-      {accessToken && locationSearch && <MapboxLocationSearch compact={!!positionPins} inline={false} accessToken={accessToken} locationLabel={positionPins ? undefined : selectedLocationLabel} onSelect={({ center }) => {
+      {accessToken && locationSearch && <MapboxLocationSearch compact={!!positionPins} proximity={[initialLongitude, initialLatitude]} inline={false} accessToken={accessToken} locationLabel={positionPins ? undefined : selectedLocationLabel} onSelect={({ center }) => {
         if (onSearchPosition) onSearchPosition(center[1], center[0])
-        else mapRef.current?.flyTo({ center, zoom: 14 })
+        mapRef.current?.flyTo({ center, zoom: 14 })
       }} />}
       {positionPins && !hideFitPositionsControl && <button type="button" disabled={!positionPins.length} className="absolute bottom-10 right-3 z-10 min-h-11 rounded-lg bg-white px-3 text-sm font-bold shadow disabled:opacity-50" onClick={() => fitPositions()}>Fit route</button>}
       {accessToken ? (
