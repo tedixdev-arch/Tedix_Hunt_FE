@@ -15,7 +15,8 @@ type Props = {
 export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inline = false, compact = false, proximity }: Props) {
   const id = useId()
   const session = useRef(crypto.randomUUID())
-  const request = useRef<AbortController | null>(null)
+  const suggestRequest = useRef<AbortController | null>(null)
+  const retrieveRequest = useRef<AbortController | null>(null)
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [active, setActive] = useState(-1)
@@ -27,7 +28,7 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
   useEffect(() => {
     if (!open || query.trim().length < 2) return
     const controller = new AbortController()
-    request.current = controller
+    suggestRequest.current = controller
     const timer = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ q: query.trim(), access_token: accessToken, session_token: session.current, limit: '5' })
@@ -49,16 +50,19 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
     return () => { clearTimeout(timer); controller.abort() }
   }, [query, open, accessToken, proximity?.[0], proximity?.[1]])
 
-  useEffect(() => () => request.current?.abort(), [])
+  useEffect(() => () => { suggestRequest.current?.abort(); retrieveRequest.current?.abort() }, [])
 
   async function select(suggestion: Suggestion) {
     if (selectionPending.current) return
     selectionPending.current = true
-    request.current?.abort()
+    suggestRequest.current?.abort()
     const controller = new AbortController()
-    request.current = controller
+    retrieveRequest.current = controller
     setRetrieving(true)
     setStatus('Loading location…')
+    setActive(-1)
+    setOpen(false)
+    setSuggestions([])
     try {
       const params = new URLSearchParams({ access_token: accessToken, session_token: session.current })
       const response = await fetch(`https://api.mapbox.com/search/searchbox/v1/retrieve/${encodeURIComponent(suggestion.mapbox_id)}?${params}`, { signal: controller.signal })
@@ -83,30 +87,34 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
     } catch (error) {
       if (!controller.signal.aborted) setStatus(error instanceof Error && error.message.startsWith('Mapbox') ? error.message : 'Location search unavailable. Please try again.')
     } finally {
-      if (request.current === controller) { selectionPending.current = false; setRetrieving(false) }
+      if (retrieveRequest.current === controller && !controller.signal.aborted) { selectionPending.current = false; setRetrieving(false) }
     }
   }
 
-  function dismiss() {
-    request.current?.abort()
+  function dismiss(cancelSelection = false) {
+    suggestRequest.current?.abort()
     setOpen(false)
     setActive(-1)
-    selectionPending.current = false
-    setRetrieving(false)
-    setStatus('')
+    // Blur closes suggestions, but an explicitly selected result must finish.
+    if (cancelSelection) {
+      retrieveRequest.current?.abort()
+      selectionPending.current = false
+      setRetrieving(false)
+      setStatus('')
+    } else if (!selectionPending.current) setStatus(current => current === 'Searching…' ? '' : current)
   }
 
   return (
-    <div className={inline ? "relative z-30 w-full shrink-0 bg-white p-2 text-gray-900 shadow" : `absolute left-3 top-3 z-30 ${compact ? 'w-[calc(100%_-_1.5rem)]' : 'w-[calc(100%_-_6rem)]'} max-w-sm rounded bg-white p-2 text-gray-900 shadow`}>
+    <div onClick={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()} className={inline ? "relative z-30 w-full shrink-0 bg-white p-2 text-gray-900 shadow" : `absolute left-3 top-3 z-30 ${compact ? 'w-[calc(100%_-_1.5rem)]' : 'w-[calc(100%_-_6rem)]'} max-w-sm rounded bg-white p-2 text-gray-900 shadow`}>
       <label htmlFor={id} className={compact ? "sr-only" : undefined}>Search locations</label>
       {locationLabel && <p className="my-1 break-words text-xs" aria-live="polite">{locationLabel}</p>}
-      {/* Keep focus during retrieval: leaving the search dismisses and aborts the request. */}
+      {/* Keep focus during retrieval: blur dismisses suggestions without canceling a selected result. */}
       <input id={id} role="combobox" aria-autocomplete="list" aria-expanded={open && suggestions.length > 0}
         aria-controls={`${id}-results`} aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined}
         placeholder={compact ? "Search landmark or address…" : "City, street, address or landmark"} value={query} readOnly={retrieving} aria-busy={retrieving}
         className="min-h-11 w-full rounded border p-2"
         onChange={(event) => {
-          request.current?.abort()
+          suggestRequest.current?.abort()
           setQuery(event.target.value)
           setSuggestions([])
           setActive(-1)
@@ -115,7 +123,7 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
         }}
         onBlur={(event) => { if (!event.currentTarget.parentElement?.contains(event.relatedTarget)) dismiss() }}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') dismiss()
+          if (event.key === 'Escape') dismiss(true)
           if (open && suggestions.length && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault()
             setActive(index => index < 0 ? (event.key === 'ArrowDown' ? 0 : suggestions.length - 1) : (index + (event.key === 'ArrowDown' ? 1 : -1) + suggestions.length) % suggestions.length)

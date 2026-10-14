@@ -269,3 +269,57 @@ test('pending selection keeps focus and ignores repeated Enter before retrieval 
   expect(mocks.flyTo).toHaveBeenCalledExactlyOnceWith({ center: [23.6, 46.8], zoom: 16 })
   expect(container.querySelector('[role="listbox"]')).toBeNull()
 })
+
+
+test.each(['click', 'keyboard'])('selected retrieval survives blur, proximity changes and suggest cleanup (%s)', async interaction => {
+  let resolve: (value: unknown) => void = () => {}
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ suggestions }) })
+    .mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  vi.stubGlobal('fetch', fetchMock)
+  render({ locationSearch: true })
+  const input = await search('Statuia Mihai Viteazul, Cluj-Napoca')
+  if (interaction === 'click') act(() => container.querySelector('button')!.click())
+  else {
+    act(() => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })))
+    act(() => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
+  }
+  act(() => input.blur())
+  render({ locationSearch: true, initialLongitude: 24, initialLatitude: 47 })
+  expect(fetchMock.mock.calls[1][1].signal.aborted).toBe(false)
+  expect(container.textContent).toContain('Loading location')
+  await act(async () => resolve({ ok: true, json: async () => ({ features: [{ geometry: { coordinates: [23.5905, 46.7742] } }] }) }))
+  expect(mocks.flyTo).toHaveBeenCalledExactlyOnceWith({ center: [23.5905, 46.7742], zoom: 16 })
+  expect(container.textContent).toContain('Location selected.')
+  expect(mocks.createMap).toHaveBeenCalledOnce()
+})
+
+test.each([401, 403, 500])('retrieve HTTP %s remains visibly reported after blur and permits retry', async status => {
+  let resolve: (value: unknown) => void = () => {}
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ suggestions }) })
+    .mockImplementationOnce(() => new Promise(done => { resolve = done })))
+  render({ locationSearch: true })
+  const input = await search('statuia')
+  act(() => container.querySelector('button')!.click())
+  act(() => input.blur())
+  await act(async () => resolve({ ok: false, status }))
+  expect(container.textContent).toContain(status === 500 ? 'Location search unavailable' : 'Mapbox search authorization failed')
+  expect(input.readOnly).toBe(false)
+  expect(mocks.flyTo).not.toHaveBeenCalled()
+})
+
+test.each(['Escape', 'unmount'])('explicit %s cancels pending retrieval and ignores late results', async action => {
+  let resolve: (value: unknown) => void = () => {}
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ suggestions }) })
+    .mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  vi.stubGlobal('fetch', fetchMock)
+  render({ locationSearch: true }); const input = await search('statuia')
+  act(() => container.querySelector('button')!.click())
+  if (action === 'Escape') act(() => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+  else render({ locationSearch: false })
+  expect(fetchMock.mock.calls[1][1].signal.aborted).toBe(true)
+  await act(async () => resolve({ ok: true, json: async () => ({ features: [{ geometry: { coordinates: [23.5905, 46.7742] } }] }) }))
+  expect(mocks.flyTo).not.toHaveBeenCalled()
+})
