@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 
-export type MapboxLocation = { center: [number, number] }
+export type MapboxLocation = { center: [number, number]; bbox?: [number, number, number, number] }
 type Suggestion = { mapbox_id: string; name: string; full_address?: string; place_formatted?: string }
 type Props = {
   proximity?: [number, number]
@@ -22,6 +22,7 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
   const [status, setStatus] = useState('')
   const [open, setOpen] = useState(false)
   const [retrieving, setRetrieving] = useState(false)
+  const selectionPending = useRef(false)
 
   useEffect(() => {
     if (!open || query.trim().length < 2) return
@@ -51,6 +52,8 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
   useEffect(() => () => request.current?.abort(), [])
 
   async function select(suggestion: Suggestion) {
+    if (selectionPending.current) return
+    selectionPending.current = true
     request.current?.abort()
     const controller = new AbortController()
     request.current = controller
@@ -60,11 +63,17 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
       const params = new URLSearchParams({ access_token: accessToken, session_token: session.current })
       const response = await fetch(`https://api.mapbox.com/search/searchbox/v1/retrieve/${encodeURIComponent(suggestion.mapbox_id)}?${params}`, { signal: controller.signal })
       if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'Mapbox search authorization failed. Check the configured token and allowed URLs.' : 'Location search unavailable. Please try again.')
-      const data = await response.json() as { features: { geometry: { coordinates: number[] } }[] }
-      const coordinates = data.features[0]?.geometry.coordinates
+      const data = await response.json() as { features?: { geometry?: { coordinates?: number[] }; bbox?: number[] }[] }
+      const feature = data.features?.[0]
+      const coordinates = feature?.geometry?.coordinates
       if (!coordinates || coordinates.length < 2 || !coordinates.slice(0, 2).every(Number.isFinite) || Math.abs(coordinates[0]) > 180 || Math.abs(coordinates[1]) > 90) throw new Error('Missing coordinates')
       if (controller.signal.aborted) return
-      onSelect({ center: [coordinates[0], coordinates[1]] })
+      const bounds = feature?.bbox
+      const bbox = bounds?.length === 4 && bounds.every(Number.isFinite)
+        && bounds[0] >= -180 && bounds[2] <= 180 && bounds[1] >= -90 && bounds[3] <= 90
+        && bounds[0] <= bounds[2] && bounds[1] <= bounds[3]
+        ? bounds as MapboxLocation['bbox'] : undefined
+      onSelect({ center: [coordinates[0], coordinates[1]], bbox })
       session.current = crypto.randomUUID()
       setActive(-1)
       setQuery(suggestion.name)
@@ -74,7 +83,7 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
     } catch (error) {
       if (!controller.signal.aborted) setStatus(error instanceof Error && error.message.startsWith('Mapbox') ? error.message : 'Location search unavailable. Please try again.')
     } finally {
-      if (!controller.signal.aborted) setRetrieving(false)
+      if (request.current === controller) { selectionPending.current = false; setRetrieving(false) }
     }
   }
 
@@ -82,6 +91,7 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
     request.current?.abort()
     setOpen(false)
     setActive(-1)
+    selectionPending.current = false
     setRetrieving(false)
     setStatus('')
   }
@@ -90,9 +100,10 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
     <div className={inline ? "relative z-30 w-full shrink-0 bg-white p-2 text-gray-900 shadow" : `absolute left-3 top-3 z-30 ${compact ? 'w-[calc(100%_-_1.5rem)]' : 'w-[calc(100%_-_6rem)]'} max-w-sm rounded bg-white p-2 text-gray-900 shadow`}>
       <label htmlFor={id} className={compact ? "sr-only" : undefined}>Search locations</label>
       {locationLabel && <p className="my-1 break-words text-xs" aria-live="polite">{locationLabel}</p>}
+      {/* Keep focus during retrieval: leaving the search dismisses and aborts the request. */}
       <input id={id} role="combobox" aria-autocomplete="list" aria-expanded={open && suggestions.length > 0}
         aria-controls={`${id}-results`} aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined}
-        placeholder={compact ? "Search landmark or address…" : "City, street, address or landmark"} value={query} disabled={retrieving}
+        placeholder={compact ? "Search landmark or address…" : "City, street, address or landmark"} value={query} readOnly={retrieving} aria-busy={retrieving}
         className="min-h-11 w-full rounded border p-2"
         onChange={(event) => {
           request.current?.abort()
@@ -109,7 +120,7 @@ export function MapboxLocationSearch({ accessToken, onSelect, locationLabel, inl
             event.preventDefault()
             setActive(index => index < 0 ? (event.key === 'ArrowDown' ? 0 : suggestions.length - 1) : (index + (event.key === 'ArrowDown' ? 1 : -1) + suggestions.length) % suggestions.length)
           }
-          if (event.key === 'Enter' && open && active >= 0) { event.preventDefault(); void select(suggestions[active]) }
+          if (!retrieving && event.key === 'Enter' && open && active >= 0) { event.preventDefault(); void select(suggestions[active]) }
         }} />
       {status && <p className="text-xs" role="status" aria-live="polite">{status}</p>}
       {open && suggestions.length > 0 && <ul id={`${id}-results`} role="listbox" aria-label="Locations" className="max-h-64 overflow-y-auto overscroll-contain">

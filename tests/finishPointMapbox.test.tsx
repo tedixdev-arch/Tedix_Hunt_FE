@@ -125,7 +125,7 @@ test.each([false, true])('search moves camera only with placed FinishPoint %s', 
   input('input[role="combobox"]', 'Park')
   await act(async () => { await vi.advanceTimersByTimeAsync(300) })
   await act(async () => container.querySelector<HTMLButtonElement>('[role="option"] button')!.click())
-  expect(mocks.maps[0].flyTo).toHaveBeenCalledWith({ center: [23.7, 46.9], zoom: 14 })
+  expect(mocks.maps[0].flyTo).toHaveBeenCalledWith({ center: [23.7, 46.9], zoom: 16 })
   expect(latest).toEqual(before)
   expect(mocks.configuration).not.toHaveBeenCalled()
   expect(mocks.maps).toHaveLength(1)

@@ -124,6 +124,7 @@ test('cleans up each map instance during StrictMode remounts', () => {
 
 async function search(query: string) {
   const input = container.querySelector('input')!
+  act(() => input.focus())
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, query)
     input.dispatchEvent(new Event('input', { bubbles: true }))
@@ -144,7 +145,7 @@ test.each(['city', 'street', 'address', 'landmark'])('searches %s and selects by
   expect(fetchMock.mock.calls[0][0]).toContain(`q=${query}`)
   expect(container.textContent).toContain('Romania')
   await act(async () => container.querySelector('button')!.click())
-  expect(mocks.flyTo).toHaveBeenCalledExactlyOnceWith({ center: [23.6, 46.8], zoom: 14 })
+  expect(mocks.flyTo).toHaveBeenCalledExactlyOnceWith({ center: [23.6, 46.8], zoom: 16 })
   expect(mocks.createMap).toHaveBeenCalledTimes(1)
   expect(mocks.remove).not.toHaveBeenCalled()
   expect(input.value).toBe('Cluj')
@@ -165,7 +166,7 @@ test('selects a location with arrow keys and Enter', async () => {
   act(() => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })))
   expect(input.getAttribute('aria-activedescendant')).toBeTruthy()
   await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
-  expect(mocks.flyTo).toHaveBeenCalledWith({ center: [1, 2], zoom: 14 })
+  expect(mocks.flyTo).toHaveBeenCalledWith({ center: [1, 2], zoom: 16 })
 })
 
 test.each([
@@ -175,6 +176,7 @@ test.each([
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
   render({ locationSearch: true })
   const input = container.querySelector('input')!
+  act(() => input.focus())
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'unknown')
     input.dispatchEvent(new Event('input', { bubbles: true }))
@@ -232,4 +234,38 @@ test('invalid retrieved coordinates never move the camera', async () => {
   await act(async () => container.querySelector('button')!.click())
   expect(container.textContent).toContain('Location search unavailable')
   expect(mocks.flyTo).not.toHaveBeenCalled()
+})
+
+test.each([{}, { features: [] }, { features: [{}] }, { features: [{ geometry: { coordinates: [null, 2] } }] }])('missing or invalid geometry fails safely: %j', async response => {
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ suggestions }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => response }))
+  render({ locationSearch: true }); await search('Cluj')
+  await act(async () => container.querySelector('button')!.click())
+  expect(mocks.flyTo).not.toHaveBeenCalled()
+  expect(container.textContent).toContain('Location search unavailable')
+  expect(container.querySelector('input')!.readOnly).toBe(false)
+})
+
+test('pending selection keeps focus and ignores repeated Enter before retrieval completes', async () => {
+  let resolve: (value: unknown) => void = () => {}
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ suggestions }) })
+    .mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  vi.stubGlobal('fetch', fetchMock)
+  render({ locationSearch: true })
+  const input = await search('Cluj')
+  act(() => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })))
+  await act(async () => {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  })
+  expect(fetchMock).toHaveBeenCalledTimes(2)
+  expect(document.activeElement).toBe(input)
+  expect(input.disabled).toBe(false)
+  expect(input.readOnly).toBe(true)
+  expect(container.textContent).toContain('Loading location')
+  await act(async () => resolve({ ok: true, json: async () => ({ features: [{ geometry: { coordinates: [23.6, 46.8] } }] }) }))
+  expect(mocks.flyTo).toHaveBeenCalledExactlyOnceWith({ center: [23.6, 46.8], zoom: 16 })
+  expect(container.querySelector('[role="listbox"]')).toBeNull()
 })

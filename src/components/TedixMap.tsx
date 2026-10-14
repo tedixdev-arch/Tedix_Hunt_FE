@@ -43,12 +43,11 @@ export type TedixMapProps = {
   positionPins?: PositionPin[]
   initialFitPoints?: Pick<PositionPin, 'latitude' | 'longitude'>[]
   selectedLocationLabel?: string
-  onSearchPosition?: (latitude: number, longitude: number) => void
   initialLongitude: number
   initialLatitude: number
   initialZoom?: number
   mapStyle?: string
-  /** Search explores the camera unless onSearchPosition handles selected checkpoint placement. */
+  /** Search navigates the camera only; checkpoint placement is always explicit. */
   locationSearch?: boolean
   finishPoint?: FinishPoint
   /** Move the existing camera to a read-only destination without recreating the map. */
@@ -74,7 +73,7 @@ export type TedixMapProps = {
 }
 
 export function TedixMap({
-  fitPositionsRequest, hideFitPositionsControl = false, positionPins, initialFitPoints, selectedLocationLabel, onSearchPosition,
+  fitPositionsRequest, hideFitPositionsControl = false, positionPins, initialFitPoints, selectedLocationLabel,
   initialLongitude,
   initialLatitude,
   initialZoom = 12,
@@ -415,9 +414,11 @@ export function TedixMap({
       {landmarkReference && <p className="absolute bottom-3 left-3 right-3 z-10 rounded-lg bg-white p-2 text-xs font-bold text-blue-900">R · Landmark reference only: {landmarkReference.name}. Not an arrival location.</p>}
       {accessToken && mapLoading && !mapError && <p role="status" className={`absolute left-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-2 text-sm`}>Loading map…</p>}
       {mapError && <p role="alert" className={`absolute left-2 right-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-3 text-sm text-red-700`}>{mapError}</p>}
-      {accessToken && locationSearch && <MapboxLocationSearch compact={!!positionPins} proximity={[initialLongitude, initialLatitude]} inline={false} accessToken={accessToken} locationLabel={positionPins ? undefined : selectedLocationLabel} onSelect={({ center }) => {
-        if (onSearchPosition) onSearchPosition(center[1], center[0])
-        mapRef.current?.flyTo({ center, zoom: 14 })
+      {accessToken && locationSearch && <MapboxLocationSearch compact={!!positionPins} proximity={[initialLongitude, initialLatitude]} inline={false} accessToken={accessToken} locationLabel={positionPins ? undefined : selectedLocationLabel} onSelect={({ center, bbox }) => {
+        const map = mapRef.current
+        if (!map) return
+        if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 64, minZoom: 15, maxZoom: 16, duration: 1200 })
+        else map.flyTo({ center, zoom: 16 })
       }} />}
       {positionPins && !hideFitPositionsControl && <button type="button" disabled={!positionPins.length} className="absolute bottom-10 right-3 z-10 min-h-11 rounded-lg bg-white px-3 text-sm font-bold shadow disabled:opacity-50" onClick={() => fitPositions()}>Fit route</button>}
       {accessToken ? (

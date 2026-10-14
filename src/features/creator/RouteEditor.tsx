@@ -188,7 +188,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
     onConfigurationChange(buildGeographyConfiguration(drafts.length, next.drafts))
   }
   return <section className="position-editor" aria-label="Checkpoint position editor">
-    <div className="position-progress"><p>Select a checkpoint, then tap the map, drag its pin or search to position it.</p><span>{verified.size}/{drafts.length} confirmed</span></div>
+    <div className="position-progress"><p>Search to explore, then select a checkpoint and tap the map or drag its pin to position it.</p><span>{verified.size}/{drafts.length} confirmed</span></div>
     <div className="position-workspace">
       <div className="position-map" data-testid="position-map">
         <div role="toolbar" aria-label="Checkpoint positioning" className="position-toolbar min-w-0">
@@ -202,7 +202,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
         positionPins={pins} initialFitPoints={references}
         locationSearch
         onCheckpointSelect={select} onCheckpointMove={(number, latitude, longitude) => place(number, latitude, longitude)}
-        onMapClick={placeSelected} onSearchPosition={activeNumber === undefined ? undefined : placeSelected}
+        onMapClick={placeSelected}
       /></div>
       <nav className="position-checkpoints" aria-label="Checkpoint selection">
         <h4>Checkpoints</h4>
