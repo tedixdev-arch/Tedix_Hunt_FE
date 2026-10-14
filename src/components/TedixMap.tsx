@@ -41,8 +41,10 @@ function validPosition(point: { latitude?: number; longitude?: number }): point 
 }
 
 export type TedixMapProps = {
-  /** Explicit Creator selection only; never uses provisional reference coordinates. */
+  /** Explicit Creator selection of a display location; never authors geography. */
   focusPosition?: Partial<Pick<FinishPoint, 'latitude' | 'longitude'>>
+  /** Known Template area only, used when no checkpoint locations are available. */
+  positionArea?: Pick<FinishPoint, 'latitude' | 'longitude'> & { zoom: number }
   /** Increment only for an explicit camera fit from an external toolbar. */
   fitPositionsRequest?: number
   hideFitPositionsControl?: boolean
@@ -80,7 +82,7 @@ export type TedixMapProps = {
 }
 
 export function TedixMap({
-  focusPosition, fitPositionsRequest, hideFitPositionsControl = false, positionPins, initialFitPoints, selectedLocationLabel,
+  focusPosition, positionArea, fitPositionsRequest, hideFitPositionsControl = false, positionPins, initialFitPoints, selectedLocationLabel,
   initialLongitude,
   initialLatitude,
   initialZoom = 12,
@@ -107,6 +109,7 @@ export function TedixMap({
   const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN?.trim()
   const [mapError, setMapError] = useState('')
   const [mapLoading, setMapLoading] = useState(true)
+  const [cameraReadyRevision, setCameraReadyRevision] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const initialOptions = useRef({
@@ -116,6 +119,8 @@ export function TedixMap({
   })
   const currentStyle = useRef(mapStyle)
   const didFitLandmarks = useRef(false)
+  const handledFocus = useRef<typeof focusPosition>(undefined)
+  const handledFit = useRef(0)
   const suppressClickUntil = useRef(0)
   const clickHandler = useRef(onMapClick)
   clickHandler.current = onMapClick
@@ -132,9 +137,13 @@ export function TedixMap({
     }) } catch { setMapError('Map unavailable. Check browser WebGL support and Mapbox configuration.'); setMapLoading(false); return }
     const failed = () => { setMapError('Map could not load. Check the Mapbox token and network access. Saved stop details remain available.'); setMapLoading(false) }
     const loaded = () => { setMapLoading(false); setMapError('') }
+    const styleLoaded = () => setCameraReadyRevision(value => value + 1)
     map.on?.('error', failed)
     map.on?.('load', loaded)
+    map.on?.('style.load', styleLoaded)
     mapRef.current = map
+    handledFocus.current = undefined
+    handledFit.current = 0
     didFitLandmarks.current = false
     currentStyle.current = initialOptions.current.style
     const observer = new ResizeObserver(() => map.resize())
@@ -143,6 +152,7 @@ export function TedixMap({
     return () => {
       map.off?.('error', failed)
       map.off?.('load', loaded)
+      map.off?.('style.load', styleLoaded)
       observer.disconnect()
       map.remove()
       mapRef.current = null
@@ -169,34 +179,36 @@ export function TedixMap({
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !focusPosition || !validPosition(focusPosition)) return
+    if (!focusPosition || !validPosition(focusPosition) || !map || !map.isStyleLoaded() || handledFocus.current === focusPosition) return
+    handledFocus.current = focusPosition
     const center: [number, number] = [focusPosition.longitude, focusPosition.latitude]
     const padding = positionCameraPadding()
-    const pixel = map.project(center)
-    const width = containerRef.current?.clientWidth ?? 0
-    const height = containerRef.current?.clientHeight ?? 0
     const zoom = map.getZoom()
-    if (zoom >= 16 && zoom <= 17.5 && pixel.x >= padding.left + 24 && pixel.x <= width - padding.right - 24
-      && pixel.y >= padding.top + 44 && pixel.y <= height - padding.bottom - 24) return
     map.flyTo({ center, zoom: zoom >= 16 && zoom <= 17 ? zoom : 16.5, padding, retainPadding: false, duration: cameraDuration() })
     // Only an explicit selection request moves the camera, never coordinate edits or style changes.
-  }, [focusPosition, accessToken])
+  }, [focusPosition, accessToken, mapLoading, cameraReadyRevision])
 
   useEffect(() => {
     const map = mapRef.current
-    const points = positionPins?.filter(point => point.status !== 'reference' && validPosition(point)) ?? []
-    if (!fitPositionsRequest || !map || !points.length) return
+    const points = positionPins?.filter(validPosition) ?? []
+    if (!fitPositionsRequest || !map || !map.isStyleLoaded() || handledFit.current === fitPositionsRequest) return
+    handledFit.current = fitPositionsRequest
+    if (!points.length) {
+      if (positionArea && validPosition(positionArea)) map.flyTo({ center: [positionArea.longitude, positionArea.latitude], zoom: positionArea.zoom, padding: positionCameraPadding(), retainPadding: false, duration: cameraDuration() })
+      return
+    }
     const bounds = new mapboxgl.LngLatBounds()
     points.forEach(point => bounds.extend([point.longitude, point.latitude]))
     map.fitBounds(bounds, { padding: positionCameraPadding(), maxZoom: 16.5, retainPadding: false, duration: cameraDuration() })
     // Request changes alone fit the camera; edits and selection never trigger this effect.
-  }, [fitPositionsRequest])
+  }, [fitPositionsRequest, accessToken, mapLoading, cameraReadyRevision])
 
   useEffect(() => {
-    if (!mapRef.current || didFitLandmarks.current || !initialFitPoints?.length) return
+    if (!initialFitPoints?.length || !mapRef.current || !mapRef.current.isStyleLoaded() || didFitLandmarks.current) return
+    if (focusPosition || fitPositionsRequest) { didFitLandmarks.current = true; return }
     fitPositions(initialFitPoints)
     didFitLandmarks.current = true
-  }, [initialFitPoints, accessToken])
+  }, [initialFitPoints, accessToken, mapLoading, cameraReadyRevision])
 
   useEffect(() => {
     const map = mapRef.current
@@ -210,7 +222,7 @@ export function TedixMap({
       button.dataset.positionPin = label
       button.className = 'h-11 w-11 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700'
       // The SVG tip ends at the bottom-center anchor, exactly on the coordinate.
-      button.innerHTML = `<svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true"><path d="M22 43 C18 35 8 27 8 17 A14 14 0 1 1 36 17 C36 27 26 35 22 43Z" fill="${point.status === 'confirmed' ? '#047857' : '#475569'}" stroke="${point.selected ? '#2563eb' : '#ffffff'}" stroke-width="${point.selected ? 3 : 2}"/><text x="22" y="22" text-anchor="middle" fill="white" font-size="14" font-weight="700"></text></svg>`
+      button.innerHTML = `<svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true"><path d="M22 43 C18 35 8 27 8 17 A14 14 0 1 1 36 17 C36 27 26 35 22 43Z" fill="${point.status === 'confirmed' ? '#047857' : point.status === 'reference' ? '#b45309' : '#475569'}" stroke="${point.selected ? '#2563eb' : '#ffffff'}" stroke-width="${point.selected ? 3 : 2}"/><text x="22" y="22" text-anchor="middle" fill="white" font-size="14" font-weight="700"></text></svg>`
       button.querySelector('text')!.textContent = label
       button.onclick = event => {
         event.stopPropagation()
