@@ -12,9 +12,10 @@ type PositionState = { name: string; radiusMeters: number; latitude?: number; lo
 type PositionEdit = { number: number; before: PositionState; after: PositionState }
 
 // Lucide undo-2 geometry; the same path reflected horizontally guarantees a mirrored pair.
-function ToolbarIcon({ kind }: { kind: 'undo' | 'redo' | 'pin' | 'check' }) {
+function ToolbarIcon({ kind }: { kind: 'undo' | 'redo' | 'pin' | 'check' | 'maximize' }) {
   return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     {kind === 'undo' || kind === 'redo' ? <g transform={kind === 'redo' ? 'translate(24 0) scale(-1 1)' : undefined}><path d="M9 14 4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-2" /></g>
+      : kind === 'maximize' ? <path d="M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5" />
       : kind === 'check' ? <path d="m20 6-11 11-5-5" />
       : <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2" /></>}
   </svg>
@@ -54,6 +55,8 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
   const active = drafts.find(point => point.checkpointNumber === activeNumber)
   const [finishConfirmed, setFinishConfirmed] = useState(false)
   const [mapMode, setMapMode] = useState<'map' | 'satellite'>('map')
+  const [focusPosition, setFocusPosition] = useState<{ latitude?: number; longitude?: number }>()
+  const [fitPositionsRequest, setFitPositionsRequest] = useState(0)
   const finish = finishDraft ?? createFinishPointDraft()
   const history = useRef<{ undo: PositionEdit[]; redo: PositionEdit[] }>({ undo: [], redo: [] })
   const [, refreshHistory] = useState(0)
@@ -116,7 +119,13 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
   const initialLongitude = center?.longitude ?? researchContext?.longitude ?? CLUJ_NAPOCA_VIEW.center[1]
   // Without geographic context, show a regional overview around the existing app default.
   const initialZoom = center || researchContext || isSignalCluj ? CLUJ_NAPOCA_VIEW.zoom : 3
-  function select(number: number) { setEditing(current => current?.number === number ? current : undefined); setEditError(''); setActiveNumber(number) }
+  function select(number: number) {
+    setEditing(current => current?.number === number ? current : undefined); setEditError(''); setActiveNumber(number)
+    const point = number === 0 ? finish : drafts.find(point => point.checkpointNumber === number)
+    // Explicit selection uses authored coordinates only. Edits never refocus.
+    // A fresh request also permits reselecting after panning away.
+    setFocusPosition(point ? { latitude: point.latitude, longitude: point.longitude } : undefined)
+  }
   function changeFinish(change: Partial<FinishPointDraft>) {
     if (!onFinishChange) return
     if ('latitude' in change || 'longitude' in change) {
@@ -207,7 +216,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
       <div className="position-map" data-testid="position-map">
         <div role="toolbar" aria-label="Checkpoint positioning" className="position-toolbar min-w-0">
           <div className="flex gap-1">{(['undo', 'redo'] as const).map(direction => <button key={direction} type="button" aria-label={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} title={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} disabled={!history.current[direction].length} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg px-2 text-sm font-bold disabled:opacity-40" onClick={() => restorePosition(direction)}><ToolbarIcon kind={direction} /></button>)}</div>
-          <div className="position-camera-actions"><button type="button" disabled={activeNumber === undefined} className="position-deselect inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm font-bold disabled:opacity-40" onClick={() => setActiveNumber(undefined)}><ToolbarIcon kind="pin" />Deselect</button></div>
+          <div className="position-camera-actions"><button type="button" aria-label="Show all checkpoints" title="Show all checkpoints" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg" onClick={() => setFitPositionsRequest(value => value + 1)}><ToolbarIcon kind="maximize" /></button><button type="button" disabled={activeNumber === undefined} className="position-deselect inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm font-bold disabled:opacity-40" onClick={() => setActiveNumber(undefined)}><ToolbarIcon kind="pin" />Deselect</button></div>
           <div className="position-map-mode" role="group" aria-label="Map view">
             {(['map', 'satellite'] as const).map(mode => <button key={mode} type="button" aria-pressed={mapMode === mode} className="min-h-11 rounded-lg px-2 text-sm font-bold" onClick={() => setMapMode(mode)}>{mode === 'map' ? 'Map' : 'Satellite'}</button>)}
           </div>
@@ -216,7 +225,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
         <TedixMap
         initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
         mapStyle={mapMode === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/streets-v12'}
-        hideFitPositionsControl
+        hideFitPositionsControl fitPositionsRequest={fitPositionsRequest} focusPosition={focusPosition}
         positionPins={pins} initialFitPoints={references}
         locationSearch
         onCheckpointSelect={select} onCheckpointMove={(number, latitude, longitude) => place(number, latitude, longitude)}

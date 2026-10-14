@@ -32,6 +32,7 @@
   .position-map div:has(> input[role="combobox"]) { top: 12px; width: 260px; }
 }
 @media (max-width: 639px) {
+  .position-map div:has(> input[role="combobox"]) { top: 116px; }
   .position-workspace { grid-template-columns: minmax(0, 1fr); }
   .position-map { height: 420px; }
   .position-toolbar { right: 8px; max-width: calc(100% - 16px); gap: 0; flex-wrap: wrap; }

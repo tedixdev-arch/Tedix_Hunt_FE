@@ -35,7 +35,14 @@ export type PositionPin = Pick<TedixMapCheckpoint, 'checkpointNumber' | 'name' |
   status: 'reference' | 'edited' | 'confirmed'
 }
 
+function validPosition(point: { latitude?: number; longitude?: number }): point is { latitude: number; longitude: number } {
+  return typeof point.latitude === 'number' && Number.isFinite(point.latitude) && Math.abs(point.latitude) <= 90
+    && typeof point.longitude === 'number' && Number.isFinite(point.longitude) && Math.abs(point.longitude) <= 180
+}
+
 export type TedixMapProps = {
+  /** Explicit Creator selection only; never uses provisional reference coordinates. */
+  focusPosition?: Partial<Pick<FinishPoint, 'latitude' | 'longitude'>>
   /** Increment only for an explicit camera fit from an external toolbar. */
   fitPositionsRequest?: number
   hideFitPositionsControl?: boolean
@@ -73,7 +80,7 @@ export type TedixMapProps = {
 }
 
 export function TedixMap({
-  fitPositionsRequest, hideFitPositionsControl = false, positionPins, initialFitPoints, selectedLocationLabel,
+  focusPosition, fitPositionsRequest, hideFitPositionsControl = false, positionPins, initialFitPoints, selectedLocationLabel,
   initialLongitude,
   initialLatitude,
   initialZoom = 12,
@@ -149,8 +156,39 @@ export function TedixMap({
     mapRef.current.fitBounds(bounds, { padding: 64, maxZoom: 16, duration: 0 })
   }
 
+  function positionCameraPadding() {
+    const width = containerRef.current?.clientWidth ?? 0
+    const side = Math.min(64, Math.max(24, width * 0.12))
+    // Keep pins below the toolbar/search and above attribution on small screens.
+    return { top: width < 700 ? 254 : 150, bottom: 64, left: side, right: side }
+  }
+
+  function cameraDuration() {
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : 900
+  }
+
   useEffect(() => {
-    if (fitPositionsRequest) fitPositions()
+    const map = mapRef.current
+    if (!map || !focusPosition || !validPosition(focusPosition)) return
+    const center: [number, number] = [focusPosition.longitude, focusPosition.latitude]
+    const padding = positionCameraPadding()
+    const pixel = map.project(center)
+    const width = containerRef.current?.clientWidth ?? 0
+    const height = containerRef.current?.clientHeight ?? 0
+    const zoom = map.getZoom()
+    if (zoom >= 16 && zoom <= 17.5 && pixel.x >= padding.left + 24 && pixel.x <= width - padding.right - 24
+      && pixel.y >= padding.top + 44 && pixel.y <= height - padding.bottom - 24) return
+    map.flyTo({ center, zoom: zoom >= 16 && zoom <= 17 ? zoom : 16.5, padding, retainPadding: false, duration: cameraDuration() })
+    // Only an explicit selection request moves the camera, never coordinate edits or style changes.
+  }, [focusPosition, accessToken])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const points = positionPins?.filter(point => point.status !== 'reference' && validPosition(point)) ?? []
+    if (!fitPositionsRequest || !map || !points.length) return
+    const bounds = new mapboxgl.LngLatBounds()
+    points.forEach(point => bounds.extend([point.longitude, point.latitude]))
+    map.fitBounds(bounds, { padding: positionCameraPadding(), maxZoom: 16.5, retainPadding: false, duration: cameraDuration() })
     // Request changes alone fit the camera; edits and selection never trigger this effect.
   }, [fitPositionsRequest])
 
