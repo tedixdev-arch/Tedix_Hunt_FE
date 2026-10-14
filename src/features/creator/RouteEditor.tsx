@@ -57,6 +57,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
   const [mapMode, setMapMode] = useState<'map' | 'satellite'>('map')
   const [focusPosition, setFocusPosition] = useState<{ latitude?: number; longitude?: number }>()
   const [fitPositionsRequest, setFitPositionsRequest] = useState(0)
+  const fitRequestSequence = useRef(0)
   const finish = finishDraft ?? createFinishPointDraft()
   const history = useRef<{ undo: PositionEdit[]; redo: PositionEdit[] }>({ undo: [], redo: [] })
   const [, refreshHistory] = useState(0)
@@ -121,10 +122,16 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
   const initialZoom = center || researchContext || isSignalCluj ? CLUJ_NAPOCA_VIEW.zoom : 3
   function select(number: number) {
     setEditing(current => current?.number === number ? current : undefined); setEditError(''); setActiveNumber(number)
-    const point = number === 0 ? finish : drafts.find(point => point.checkpointNumber === number)
-    // Explicit selection uses authored coordinates only. Edits never refocus.
+    // The latest explicit action wins while Mapbox is still loading.
+    setFitPositionsRequest(0)
+    const point = pins.find(point => point.checkpointNumber === number)
+    // Navigate to the displayed authored or reference location without editing it.
     // A fresh request also permits reselecting after panning away.
     setFocusPosition(point ? { latitude: point.latitude, longitude: point.longitude } : undefined)
+  }
+  function showAllPositions() {
+    setFocusPosition(undefined)
+    setFitPositionsRequest(++fitRequestSequence.current)
   }
   function changeFinish(change: Partial<FinishPointDraft>) {
     if (!onFinishChange) return
@@ -216,7 +223,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
       <div className="position-map" data-testid="position-map">
         <div role="toolbar" aria-label="Checkpoint positioning" className="position-toolbar min-w-0">
           <div className="flex gap-1">{(['undo', 'redo'] as const).map(direction => <button key={direction} type="button" aria-label={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} title={`${direction === 'undo' ? 'Undo' : 'Redo'} last position change`} disabled={!history.current[direction].length} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg px-2 text-sm font-bold disabled:opacity-40" onClick={() => restorePosition(direction)}><ToolbarIcon kind={direction} /></button>)}</div>
-          <div className="position-camera-actions"><button type="button" aria-label="Show all checkpoints" title="Show all checkpoints" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg" onClick={() => setFitPositionsRequest(value => value + 1)}><ToolbarIcon kind="maximize" /></button><button type="button" disabled={activeNumber === undefined} className="position-deselect inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm font-bold disabled:opacity-40" onClick={() => setActiveNumber(undefined)}><ToolbarIcon kind="pin" />Deselect</button></div>
+          <div className="position-camera-actions"><button type="button" aria-label="Show all checkpoints" title="Show all checkpoints" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg" onClick={showAllPositions}><ToolbarIcon kind="maximize" /></button><button type="button" disabled={activeNumber === undefined} className="position-deselect inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm font-bold disabled:opacity-40" onClick={() => setActiveNumber(undefined)}><ToolbarIcon kind="pin" />Deselect</button></div>
           <div className="position-map-mode" role="group" aria-label="Map view">
             {(['map', 'satellite'] as const).map(mode => <button key={mode} type="button" aria-pressed={mapMode === mode} className="min-h-11 rounded-lg px-2 text-sm font-bold" onClick={() => setMapMode(mode)}>{mode === 'map' ? 'Map' : 'Satellite'}</button>)}
           </div>
@@ -226,6 +233,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
         initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
         mapStyle={mapMode === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/streets-v12'}
         hideFitPositionsControl fitPositionsRequest={fitPositionsRequest} focusPosition={focusPosition}
+        positionArea={isSignalCluj ? { latitude: CLUJ_NAPOCA_VIEW.center[0], longitude: CLUJ_NAPOCA_VIEW.center[1], zoom: CLUJ_NAPOCA_VIEW.zoom } : undefined}
         positionPins={pins} initialFitPoints={references}
         locationSearch
         onCheckpointSelect={select} onCheckpointMove={(number, latitude, longitude) => place(number, latitude, longitude)}

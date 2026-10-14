@@ -22,8 +22,8 @@ try {
     const snapshot = () => page.evaluate(() => ({ camera: window.testMap.getCenter().toArray(), zoom: window.testMap.getZoom(), pins: window.testMarkers.filter(m => m.getElement().isConnected).map(m => ({ number: m.getElement().dataset.positionPin, coordinates: m.getLngLat().toArray(), confirmed: m.getElement().getAttribute('aria-label').includes('Creator-confirmed') })), selection: [...document.querySelectorAll('[data-checkpoint][aria-pressed="true"]')].map(el => el.dataset.checkpoint), undo: document.querySelector('[aria-label="Undo last position change"]').disabled, redo: document.querySelector('[aria-label="Redo last position change"]').disabled }))
     const original = await snapshot()
     await select('2'); await showAll()
-    assert.deepEqual((await snapshot()).camera, original.camera)
-    assert.equal((await snapshot()).zoom, original.zoom)
+    await page.waitForFunction(() => !window.testMap.isMoving())
+    assert.deepEqual((await snapshot()).pins, original.pins)
     // Author coordinates deliberately through the existing map-click handler.
     for (const [number, longitude, latitude] of [['1', 23.5905, 46.7742], ['2', 23.596, 46.777], ['F', 23.599, 46.771]]) {
       await select(number)
@@ -53,9 +53,9 @@ try {
       assert.ok(focused.clear && !focused.overflow && !focused.overlap, JSON.stringify({ width, focused }))
       assert.ok(focused.x > 24 && focused.x < focused.width - 24 && focused.y < focused.height - 64)
       if ([1280, 390].includes(width)) await page.locator('.position-workspace').screenshot({ path: `${output}/${width}-${mode.toLowerCase()}-focus.png` })
-      // The point is comfortably visible now: reselecting must preserve the camera.
+      // Repeated selection recenters; references also navigate without editing.
       await select('1'); assert.deepEqual((await snapshot()).camera, after.camera)
-      await select('3'); assert.deepEqual((await snapshot()).camera, after.camera)
+      await select('3'); assert.deepEqual((await snapshot()).pins, before.pins)
       await select('F'); assert.deepEqual((await snapshot()).pins, before.pins)
       await showAll()
       await page.waitForFunction(() => !window.testMap.isMoving())

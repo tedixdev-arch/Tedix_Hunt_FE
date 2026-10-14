@@ -1,3 +1,5 @@
+import { signalOverloadRouteProposal } from './fixtures/signalOverloadRouteProposal'
+import { signalLandmarkReferences } from '../src/features/creator/signalLandmarks'
 import { signalClujRouteProposal } from './fixtures/signalClujRouteProposal'
 import { candidateReference, readRouteProposal, type RouteProposal } from '../src/features/creator/routeResearch'
 import { act, useState } from 'react'
@@ -236,14 +238,14 @@ test('FinishPoint placement, confirmation and Reset remain separate from normal 
   expect(mocks.configuration).not.toHaveBeenCalled()
 })
 
-test('camera fits references initially, remains stable after selection, move and confirmation, and fits only on request', () => {
+test('camera initially fits references and only explicit selection moves it during editing', () => {
   signal(); render()
   const map = mocks.maps[0]
   expect(map.fitBounds).toHaveBeenCalledOnce()
   expect(map.fitBounds.mock.calls[0][0].coordinates).toEqual(pins().map(marker => marker.coordinates))
   select('2'); clickMap(47, 24); act(() => button('Confirm position').click()); select('1'); select('F')
   expect(map.fitBounds).toHaveBeenCalledOnce()
-  expect(map.flyTo).not.toHaveBeenCalled()
+  expect(map.flyTo).toHaveBeenCalledTimes(3)
   expect(mocks.maps).toHaveLength(1)
   expect(map.remove).not.toHaveBeenCalled()
   expect(button('Fit route')).toBeUndefined()
@@ -293,7 +295,7 @@ test('focused search navigates without changing selected checkpoint, confirmatio
   expect(container.querySelector('[role="listbox"]')).toBeNull()
   expect(container.textContent).toContain('Location selected.')
   select('2'); select('1')
-  expect(map.flyTo).toHaveBeenCalledTimes(3)
+  expect(map.flyTo).toHaveBeenCalledTimes(4)
   expect(map.fitBounds).toHaveBeenCalledTimes(initialFits)
   clickMap(47.01, 24.01)
   expect(latest[0]).toMatchObject({ latitude: 47.01, longitude: 24.01 })
@@ -558,7 +560,7 @@ test('selected reference pins use blue outlining; green fill means session confi
   signal(); render()
   let path = pin('1').element.querySelector('path')!
   expect(path.getAttribute('stroke')).toBe('#2563eb')
-  expect(path.getAttribute('fill')).toBe('#475569')
+  expect(path.getAttribute('fill')).toBe('#b45309')
   clickMap(47, 24); act(() => button('Confirm position').click()); select('1')
   path = pin('1').element.querySelector('path')!
   expect(path.getAttribute('fill')).toBe('#047857')
@@ -696,29 +698,29 @@ test.each(['Map', 'Satellite'])('explicit checkpoint and FinishPoint selection f
   expect(mocks.configuration).not.toHaveBeenCalled()
 })
 
-test('unpositioned and provisional-reference selection never moves the camera', () => {
+test('unpositioned Signal reference selection navigates without authoring coordinates', () => {
   signal(); render()
   const map = mocks.maps[0]
   map.fitBounds.mockClear()
   for (const number of ['1', '2', '3', '4', '5', '6', 'F']) select(number)
-  expect(map.flyTo).not.toHaveBeenCalled(); expect(map.fitBounds).not.toHaveBeenCalled()
+  expect(map.flyTo).toHaveBeenCalledTimes(7); expect(map.fitBounds).not.toHaveBeenCalled()
   expect(latest.every(point => point.latitude === undefined)).toBe(true)
   expect(latestFinish!.latitude).toBeUndefined()
   expect(button('Undo').disabled).toBe(true)
 })
 
-test('comfortable visibility avoids camera movement; reselecting after pan focuses; ordinary edits never refocus', () => {
+test('explicit selection always recenters; ordinary edits never refocus', () => {
   render()
   const map = mocks.maps[0]
   const element = container.querySelector('[aria-label="Map"]')!
   Object.defineProperties(element, { clientWidth: { value: 800 }, clientHeight: { value: 500 } })
   map.getZoom.mockReturnValue(16.7); map.project.mockReturnValue({ x: 400, y: 280 })
-  select('1'); expect(map.flyTo).not.toHaveBeenCalled()
-  map.project.mockReturnValue({ x: -50, y: 280 })
   select('1'); expect(map.flyTo).toHaveBeenCalledOnce()
+  map.project.mockReturnValue({ x: -50, y: 280 })
+  select('1'); expect(map.flyTo).toHaveBeenCalledTimes(2)
   expect(map.flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ zoom: 16.7 }))
   clickMap(48, 25); undo(); redo()
-  expect(map.flyTo).toHaveBeenCalledOnce()
+  expect(map.flyTo).toHaveBeenCalledTimes(2)
 })
 
 test('focus clears top overlays and respects reduced motion', () => {
@@ -729,7 +731,7 @@ test('focus clears top overlays and respects reduced motion', () => {
 
 function showAll() { act(() => container.querySelector<HTMLButtonElement>('[aria-label="Show all checkpoints"]')!.click()) }
 
-test.each(['Map', 'Satellite'])('Show all fits only valid authored checkpoints and FinishPoint in %s without changing state', mode => {
+test.each(['Map', 'Satellite'])('Show all fits authored and reference checkpoints and FinishPoint in %s without changing state', mode => {
   signal(); initial[0] = { ...saved }; initial[1] = { ...saved, checkpointNumber: 2, latitude: 48, longitude: 25 }
   initial[2] = { ...saved, checkpointNumber: 3, latitude: NaN }
   finishInitial = { name: 'Finish', radiusMeters: 17, latitude: 47, longitude: 24 }
@@ -737,7 +739,7 @@ test.each(['Map', 'Satellite'])('Show all fits only valid authored checkpoints a
   const before = structuredClone(latest); const finishBefore = structuredClone(latestFinish)
   showAll()
   const map = mocks.maps[0]
-  expect(map.fitBounds.mock.calls.at(-1)[0].coordinates).toEqual([[23.59, 46.77], [25, 48], [24, 47]])
+  expect(map.fitBounds.mock.calls.at(-1)[0].coordinates).toEqual([[23.59, 46.77], [25, 48], ...signalLandmarkReferences(proposal!).filter(point => point.checkpointNumber >= 3 && point.checkpointNumber <= 6).map(point => [point.longitude, point.latitude]), [24, 47]])
   expect(map.fitBounds.mock.calls.at(-1)[1]).toMatchObject({ maxZoom: 16.5, retainPadding: false })
   expect(latest).toEqual(before); expect(latestFinish).toEqual(finishBefore)
   expect(latestVerified.has(1)).toBe(true)
@@ -746,10 +748,10 @@ test.each(['Map', 'Satellite'])('Show all fits only valid authored checkpoints a
   expect(container.querySelector<HTMLButtonElement>('[aria-label="Show all checkpoints"]')!.title).toBe('Show all checkpoints')
 })
 
-test('Show all with no authored coordinates is inert, including provisional references', () => {
+test('Show all fits every reference-only Signal location', () => {
   signal(); render()
   const map = mocks.maps[0]; map.fitBounds.mockClear()
-  showAll(); expect(map.fitBounds).not.toHaveBeenCalled(); expect(map.flyTo).not.toHaveBeenCalled()
+  showAll(); expect(map.fitBounds.mock.calls.at(-1)[0].coordinates).toEqual(signalLandmarkReferences(proposal!).map(point => [point.longitude, point.latitude])); expect(map.flyTo).not.toHaveBeenCalled()
 })
 
 test('Show all with one point uses capped zoom and reduced motion, and can repeat', () => {
@@ -760,4 +762,93 @@ test('Show all with one point uses capped zoom and reduced motion, and can repea
   expect(map.fitBounds.mock.calls[0][0].coordinates).toEqual([[23.59, 46.77]])
   expect(map.fitBounds.mock.calls[0][1]).toMatchObject({ maxZoom: 16.5, duration: 0 })
   expect(latest[0]).toEqual(saved); expect(button('Undo').disabled).toBe(true)
+})
+
+test.each(['Map', 'Satellite'])('Signal Template CP1, CP3 and FinishPoint use their actual reference structure in %s', mode => {
+  proposal = readRouteProposal({ proposal: signalOverloadRouteProposal })
+  initial = createCheckpointDrafts(6, [])
+  finishInitial = createFinishPointDraft()
+  render(); act(() => button(mode).click())
+  const references = signalLandmarkReferences(proposal!)
+  expect(references.find(point => point.checkpointNumber === 1)!.name).toContain("Tailors' Tower")
+  expect(references.find(point => point.checkpointNumber === 3)!.name).toBe('Saint George statue')
+  const map = mocks.maps[0]
+  const before = structuredClone(latest); const finishBefore = structuredClone(latestFinish)
+  for (const number of [3, 1, 0, 3]) {
+    const reference = references.find(point => point.checkpointNumber === number)!
+    select(number === 0 ? 'F' : String(number))
+    expect(map.flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [reference.longitude, reference.latitude], zoom: 16.5 }))
+  }
+  showAll(); showAll()
+  expect(map.fitBounds.mock.calls.at(-1)[0].coordinates).toEqual(references.map(point => [point.longitude, point.latitude]))
+  expect(latest).toEqual(before); expect(latestFinish).toEqual(finishBefore)
+  expect(latestVerified.size).toBe(0); expect(mocks.configuration).not.toHaveBeenCalled()
+  expect(button('Undo').disabled).toBe(true); expect(button('Redo').disabled).toBe(true)
+  expect(latest.every(point => point.radiusMeters === 15)).toBe(true)
+  expect(latestFinish!.radiusMeters).toBe(15)
+})
+
+test('authored coordinates override Signal references independently of confirmation and definition validity', () => {
+  proposal = readRouteProposal({ proposal: signalOverloadRouteProposal })
+  initial = createCheckpointDrafts(6, [])
+  initial[2] = { ...initial[2], name: '', radiusMeters: 4, latitude: 46.8, longitude: 23.6 }
+  finishInitial = { ...createFinishPointDraft(), latitude: 46.81, longitude: 23.61 }
+  render(); select('3')
+  const map = mocks.maps[0]
+  expect(map.flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [23.6, 46.8] }))
+  select('F'); expect(map.flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [23.61, 46.81] }))
+  showAll(); expect(map.fitBounds.mock.calls.at(-1)[0].coordinates[2]).toEqual([23.6, 46.8])
+  expect(map.fitBounds.mock.calls.at(-1)[0].coordinates[6]).toEqual([23.61, 46.81])
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+
+test('unknown unpositioned checkpoint and empty Show all preserve camera; known Template area is available as fallback', () => {
+  initial = createCheckpointDrafts(2, [])
+  render(); select('2'); showAll()
+  expect(mocks.maps[0].flyTo).not.toHaveBeenCalled(); expect(mocks.maps[0].fitBounds).not.toHaveBeenCalled()
+  act(() => root.render(<TedixMap initialLatitude={0} initialLongitude={0} positionPins={[]} fitPositionsRequest={1}
+    positionArea={{ latitude: 46.77, longitude: 23.59, zoom: 13 }} />))
+  expect(mocks.maps.at(-1).flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [23.59, 46.77], zoom: 13 }))
+})
+
+test.each(['focus', 'fit'])('pending %s request survives map initialization and subsequent style reload does not replay it', action => {
+  vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', '')
+  const props = { initialLatitude: 0, initialLongitude: 0, positionPins: [{ checkpointNumber: 3, name: 'Saint George', latitude: 46.76806111111111, longitude: 23.595280555555554, status: 'reference' as const }],
+    initialFitPoints: [{ latitude: 40, longitude: 10 }],
+    ...(action === 'focus' ? { focusPosition: { latitude: 46.76806111111111, longitude: 23.595280555555554 } } : { fitPositionsRequest: 1 }) }
+  act(() => root.render(<TedixMap {...props} />))
+  expect(mocks.maps).toHaveLength(0)
+  vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-public-token')
+  act(() => root.render(<TedixMap {...props} />))
+  const map = mocks.maps[0]
+  expect(action === 'focus' ? map.flyTo : map.fitBounds).toHaveBeenCalledOnce()
+  act(() => map.emit('style.load'))
+  expect(action === 'focus' ? map.flyTo : map.fitBounds).toHaveBeenCalledOnce()
+})
+
+test.each(['focus', 'fit'])('latest %s request waits for style readiness and uses fresh checkpoint data', action => {
+  render()
+  const map = mocks.maps[0]
+  map.isStyleLoaded = () => false
+  select('1')
+  clickMap(48, 25)
+  select('1')
+  if (action === 'fit') showAll()
+  expect(map.flyTo).not.toHaveBeenCalled(); expect(map.fitBounds).not.toHaveBeenCalled()
+  map.isStyleLoaded = () => true
+  act(() => map.emit('style.load'))
+  if (action === 'focus') expect(map.flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [25, 48] }))
+  else { expect(map.flyTo).not.toHaveBeenCalled(); expect(map.fitBounds.mock.calls.at(-1)[0].coordinates).toEqual([[25, 48]]) }
+})
+
+test('selection supersedes a pending Show all; another Show all remains repeatable', () => {
+  signal(); render()
+  const map = mocks.maps[0]
+  map.fitBounds.mockClear()
+  map.isStyleLoaded = () => false
+  showAll(); select('3')
+  map.isStyleLoaded = () => true
+  act(() => map.emit('style.load'))
+  expect(map.flyTo).toHaveBeenCalledOnce(); expect(map.fitBounds).not.toHaveBeenCalled()
+  showAll(); expect(map.fitBounds).toHaveBeenCalledOnce()
 })
