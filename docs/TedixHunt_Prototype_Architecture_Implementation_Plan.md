@@ -24,6 +24,8 @@ Diagram-extension note (3.5): adds Phase J live operations, Phase K results/rewa
 
 Diagram-extension note (3.5): adds Phase A platform, Phase B identity/authorization and Phase C Hunt-domain context diagrams. Preserves implementation evidence, exact lifecycle states, planned B6/runtime boundaries and unresolved dependencies; no implementation or deployed verification is claimed.
 
+Diagram-extension note (3.5): adds Phase E professional lifecycle, Phase L Admin operations, Phase M long-term Participant systems and Phase N custom-request context diagrams. Preserves existing statuses, historical evidence, credential/authority boundaries and unresolved dependencies; no implementation or new deployed verification is claimed.
+
 The implementation strategy is:
 
 Existing approved mockup
@@ -989,6 +991,63 @@ Target order within General Setup:
 Status: ✅ Implemented and deployed/verified for E1–E17
 
 The professional-account lifecycle is completed foundation; it is no longer the immediate implementation phase.
+
+### Phase E context — Professional identity and capability lifecycle
+
+E1–E17 are implemented for the scopes and deployed evidence recorded below. Self-registration and Admin provisioning establish credentials at different points; approval is an authorization decision.
+
+```mermaid
+flowchart TB
+  subgraph applications["FOCUS — Phase E: self-registration / application"]
+    organizer["[I] Organizer application<br/>Choose credentials before review"]
+    creator["[I] Creator application<br/>Choose credentials before review"]
+    pending["[I] Pending application<br/>No requested professional capability"]
+    review{"[I] Admin application review"}
+    rejected["[I] Rejected application<br/>No requested capability granted"]
+    approved["[I] Approved application<br/>Grant requested capability on same User"]
+    organizer -->|"Submit identity / application and password"| pending
+    creator -->|"Submit identity / application and password"| pending
+    pending -->|"Admin inspects application"| review
+    review -->|"Reject"| rejected
+    review -->|"Approve; preserve credentials and existing roles"| approved
+  end
+  subgraph provisioning["FOCUS — Phase E: distinct Admin provisioning"]
+    direct["[I] Admin provisions Organizer / Creator<br/>Identity + capability; Organization if Organizer"]
+    invite["[I] Existing Admin invites / grants Admin<br/>Additional-Admin product path"]
+    password{"[I] Identity already password-backed?"}
+    activation["[I] One-time activation when required<br/>New / passwordless User chooses password"]
+    direct -->|"Reuse identity or create passwordless User"| password
+    invite -->|"Reuse identity or create passwordless User"| password
+    password -->|"No: role-specific activation handoff"| activation
+  end
+  subgraph neighbors["NEIGHBOR — Phases A / B / L: technical authority"]
+    identity["[I] B: one User / user_roles<br/>Multiple professional capabilities"]
+    session["[I] A: normal login / shared session<br/>BE authenticates and authorizes"]
+    security["[I] E9 / A: own-password change<br/>Current password; revoke refresh sessions"]
+    controls["[I] L1 / B: account and role controls<br/>Last-active-Admin safeguards"]
+    approved -.->|"BE adds authoritative capability; Organizer also gets Organization / membership"| identity
+    direct -.->|"BE provisions capability transactionally"| identity
+    invite -.->|"BE adds Admin without removing other roles"| identity
+    password -->|"Yes: preserve password; activation not required"| session
+    activation -->|"Establish credentials; normal session / sign-in"| session
+    approved -->|"Normal sign-in with established application password"| session
+    identity -.->|"Current capability and account state constrain access"| session
+    session -->|"Authenticated identity requests own-password change"| security
+    security -.->|"BE updates bcrypt hash; FE clears local session; fresh login"| session
+    controls -.->|"BE protects final active Admin on removal / block / role removal"| identity
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class organizer,creator,pending,review,rejected,approved,direct,invite,password,activation focus;
+  class identity,session,security,controls neighbor;
+```
+
+**What this diagram tells us:** Organizer and Creator applications establish credentials before review and remain Pending without the requested capability. Approval adds only the authoritative capability to the same User; existing password-backed identities keep their password and other roles, while passwordless applicants establish credentials on that identity. Self-registration has no post-approval activation. Direct Organizer/Creator provisioning and additional-Admin invitations instead use one-time activation for new/passwordless identities; existing password-backed identities need none. Provisioning preserves identity/roles and cannot promote guests or revive retired accounts.
+
+A/B provide authentication, sessions and authoritative capabilities; L1 provides ongoing account controls. E9's shared authenticated self-service password change verifies the current password, stores a bcrypt hash and atomically revokes refresh sessions without replacement tokens; the FE clears its local session and requires fresh login. L1's distinct non-Admin password replacement is shown in Phase L. Blocking denies authenticated access and revokes refresh sessions; final-active-Admin safeguards apply to role removal, blocking and permanent removal. Trusted E6 bootstrap is first-Admin/recovery only (section 13), with no public Register as Admin path. E7/E8 use real login/guards, not fake 2FA. E10's historical “no Admin-removal UI yet” note predates L1's later implemented controls.
+
+Traceability: E1–E17 (E1–E4/E11–E13 Organizer application; E5–E8 login/bootstrap/guards; E9 security; E10 additional Admin; E14–E17 Creator paths), A4–A6, B1–B4, L1.2–L1.5 and sections 6, 12–13/20. Existing deployed verification is retained below; this extension claims no new E2E.
 
 ### E1. Registered Organizer application
 Status: ✅ Complete
@@ -2283,6 +2342,60 @@ Status: 🟣 Prototype only
 
 Implement each subsystem only when the underlying domain exists.
 
+### Phase L context — Distinct Admin operational responsibilities
+
+L1's core account-management integration is implemented, with deployed end-to-end verification pending. The other subsystems remain planned or prototype-only; an Admin navigation entry does not establish a real operational system.
+
+```mermaid
+flowchart TB
+  subgraph console["FOCUS — Phase L: Admin Console responsibilities"]
+    users["[I] L1 Users and Roles<br/>Profile / capabilities / block-unblock<br/>Non-Admin password / permanent removal"]
+    oversight["[P] L2 Hunt oversight"]
+    alerts["[P] L3 Safety Alerts"]
+    inventory["[P] L4 Physical Reward Inventory<br/>Prototype UI; authoritative system planned"]
+    settings["[P] L5 Platform Settings"]
+    audit["[P] L6 Audit Log<br/>L1.6 privileged-action audit"]
+  end
+  subgraph authority["NEIGHBOR — Phases A / B / E: backend authority"]
+    admin["[I] Active authenticated Admin<br/>Authoritative user_roles capability"]
+    accounts["[I] BE L1 account controls<br/>Last-active-Admin / self-action guards<br/>History-preserving removal"]
+    own["[I] E9 own-password self-service<br/>Verify current password"]
+    sessions["[I] A / E: session responsibilities<br/>Revoke refresh sessions; fresh login"]
+    hunts["[Mixed] B: Hunt relationships I<br/>B6 effective operational authority P"]
+    operations["[P] Operational BE checks / persistence<br/>Identity, operation, Hunt scope / privacy"]
+    admin -->|"Manage accounts through Users and Roles"| users
+    admin -->|"Change own password through Account Security"| own
+    users -.->|"Requests checked by backend, never UI authority"| accounts
+    own -.->|"Password change revokes refresh sessions; FE clears local session"| sessions
+    accounts -.->|"Block / password replacement revokes refresh sessions"| sessions
+    hunts -.->|"Context and effective authority constrain future operations"| operations
+    oversight -.->|"Future oversight requires supported BE authority"| operations
+    alerts -.->|"Future incident actions require supported BE authority"| operations
+    inventory -.->|"Future stock / reservation / fulfillment controls"| operations
+    settings -.->|"Future global-configuration controls"| operations
+    audit -.->|"Future authorized audit reads / retention"| operations
+    accounts -.->|"Planned privileged-action events; not implemented audit"| audit
+  end
+  subgraph neighbors["NEIGHBOR — Phases D / J / K"]
+    incidents["[P] J HELP / PANIC<br/>Authorized incident data"]
+    rewards["[Mixed] D4 reward configuration I<br/>K eligibility / awarding / fulfillment P"]
+    incidents -->|"Feeds future safety handling"| alerts
+    rewards -.->|"Platform-prize constraints / fulfillment; not Organizer configuration"| inventory
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class users,oversight,alerts,inventory,settings,audit focus;
+  class admin,accounts,own,sessions,hunts,operations,incidents,rewards neighbor;
+  class oversight,alerts,inventory,settings,audit,operations,incidents planned;
+```
+
+**What this diagram tells us:** L1 manages identity/profile, global professional capabilities, block/unblock, non-Admin password replacement and permanent account removal. Admin cannot replace another Admin-capable identity's password through Users & Roles, even when that identity also has other roles; their own password changes through E9's authenticated self-service path. Both password paths revoke refresh sessions. Blocking also denies current authenticated requests and refresh; unblocking does not restore revoked sessions. Removal transactionally hard-deletes an unused account or retires/anonymizes a history-bearing identity, retaining required UUID references and platform history. Last-active-Admin and self-action safeguards remain backend responsibilities.
+
+Global Organizer/Creator/Admin capabilities differ from Hunt-scoped Participant membership and Supervisor relationships. L2's planned oversight depends on B6/backend operational authorization, not an unrestricted-access inference from the console or existing L1 authority. L3 depends on J HELP/PANIC. L4's physical stock/reservation/hidden-prize/fulfillment responsibility is separate from Organizer reward configuration and K's eligibility/actual awards. L5 contains only global settings; L6/L1.6 audit remains planned. Operational payloads must preserve Participant privacy; live-location policy remains unresolved under J9.
+
+Traceability: L1.1–L1.6/L2–L6; E9/E10; A4/B1/B5/B6; D4; J5–J9; K4–K6; sections 6, 16 and 20.3. The implemented L1 node covers core actions only, not future auditability, broader L subsystems or a new deployed-verification claim.
+
 ### L1. Users & Roles
 Status: 🟡 Core implementation complete / deployed end-to-end verification pending
 
@@ -2450,6 +2563,53 @@ Audit important privileged actions:
 
 Status: 🟣 Prototype only
 
+### Phase M context — Long-term Participant value from real results
+
+All M1–M5 remain planned. The Passport preview and sample achievement are prototype presentation, not persisted completion or long-term progression.
+
+```mermaid
+flowchart TB
+  subgraph inputs["NEIGHBOR — Phases B / I / K"]
+    completed["[P] I: real completed Hunts<br/>BE validates required terminal activities"]
+    results["[P] K: authoritative results<br/>Competition scores / rankings"]
+    awards["[P] K: actual eligible virtual grants<br/>Configuration alone is not an award"]
+    identity["[I] B: one User identity<br/>Hunt-specific Participant relationships"]
+    completed -.->|"Validated completion informs results"| results
+  end
+  subgraph longterm["FOCUS — Phase M: planned long-term systems"]
+    derive["[P] BE long-term records<br/>Derive from real completed Hunts / results"]
+    passport["[P] M1 Hunt Passport"]
+    history["[P] M2 Mission History"]
+    achievements["[P] M3 Achievements"]
+    collectibles["[P] M4 Collectibles / virtual rewards"]
+    profile["[P] M5 Long-term Participant profile"]
+    completed -.->|"Real completion evidence"| derive
+    results -.->|"Authoritative results; no browser totals"| derive
+    identity -.->|"Authorize identity and permitted history"| derive
+    derive -.->|"Completed-Hunt records"| passport
+    derive -.->|"Mission and results history"| history
+    derive -.->|"Future achievement rules required"| achievements
+    derive -.->|"Future collectible rules required"| collectibles
+    awards -.->|"Actual grant evidence where applicable; no automatic collectible"| collectibles
+    passport -->|"Presents long-term Hunt record"| profile
+    history -->|"Presents mission history"| profile
+    achievements -->|"Presents earned achievements under future rules"| profile
+    collectibles -->|"Presents permitted virtual records"| profile
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class derive,passport,history,achievements,collectibles,profile focus;
+  class completed,results,awards,identity neighbor;
+  class completed,results,awards,derive,passport,history,achievements,collectibles,profile planned;
+```
+
+**What this diagram tells us:** Passport, Mission History, Achievements, collectibles/virtual rewards and the long-term Participant profile depend on real backend-validated completed Hunts and authoritative results. Competition-level scoring/ranking belongs to I/K; it is not a long-term progression balance or an achievement award. The arrows identify inputs and presentation responsibilities, not automatic awards, achievement thresholds, new currencies or an inventory mechanic. M3/M4 rules and persistence contracts remain future design work; K reward eligibility, actual grants and fulfillment remain distinct from M records and D4 configuration.
+
+Long-term responses require backend authorization for the identity and permitted history. A profile or Passport must not expose hidden objectives, other Participants' sensitive information or live GPS trails. Existing identity/Hunt membership and preview screens do not implement M1–M5; the Mapbox M1–M6 aliases in section 20.3 are unrelated item IDs.
+
+Traceability: M1–M5; B1/B5; I7–I11; K1–K6; L4; sections 6, 15–16 and 20.3. Completion and authoritative results are still upstream dependencies, with suspension fairness/terminal policy unresolved under I13.
+
 ### M1. Hunt Passport
 Status: ⬜ Not started
 
@@ -2484,6 +2644,62 @@ Organizer
 → Organizer receives it
 
 Implement after Creator/Admin template lifecycle exists.
+
+### Phase N context — Requested content through the existing supply chain
+
+N1–N6 remain planned. Custom-request persistence, triage and assignment will use the existing F/G/D boundaries; the current form's local “received” screen is not an implemented workflow.
+
+```mermaid
+flowchart TB
+  subgraph request["FOCUS — Phase N: requested Hunt workflow"]
+    organizer["[P] N1 Organizer request"]
+    triage["[P] N2 Admin triage"]
+    assign["[P] N3 Admin assigns Creator"]
+    build["[P] N4 Creator builds requested Template"]
+    review{"[P] N5 Admin reviews exact submitted version"}
+    available["[P] N6 Approved Template<br/>Available to requesting Organizer"]
+    organizer -->|"Asks for requested content"| triage
+    triage -->|"Admin chooses to assign"| assign
+    assign -->|"Creator receives requested work"| build
+    build -->|"Pins and submits exact version"| review
+    review -->|"Approve exact eligible version"| available
+    review -->|"Request changes; new version / renewed review"| build
+  end
+  subgraph supply["NEIGHBOR — Phases F / G / D: reusable foundations"]
+    studio["[Mixed] F Creator Studio<br/>Versioning / submission I; categories P"]
+    governance["[Mixed] G Admin governance<br/>Pinned review I; Local evidence gates P"]
+    setup["[Mixed] D Organizer setup<br/>Generic selection / snapshot I<br/>Approved Local-only target P"]
+    studio -.->|"Supports Creator-owned authoring; no self-approval"| build
+    governance -.->|"Supports exact review; separate Local approval required"| review
+    available -->|"Location-based target: approved Local version"| setup
+  end
+  subgraph authority["NEIGHBOR — Backend / PostgreSQL"]
+    be["[Mixed] Scoped F/G/D contracts I<br/>N workflow and category contracts P"]
+    snapshot["[I] Immutable Hunt snapshot<br/>Exact approved key / version / content"]
+    organizer -.->|"Future authenticated request; no independent-mode bypass"| be
+    assign -.->|"Future authorized assignment / workflow persistence"| be
+    review -.->|"BE enforces version / approval authority"| be
+    setup -.->|"BE resolves approved content and persists"| snapshot
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class organizer,triage,assign,build,review,available focus;
+  class studio,governance,setup,be,snapshot neighbor;
+  class organizer,triage,assign,build,review,available planned;
+```
+
+**What this diagram tells us:** Organizer requests, Admin triages and assigns, Creator authors through F, Admin reviews the exact submitted version through G, and approved content returns to Organizer setup in D. The requested workflow remains planned even though generic authoring/review/catalog/snapshot foundations exist. A Creator cannot approve their own work; enforcement for identities holding both Creator and Admin capabilities remains an unresolved BE contract output (20.2), not an implemented self-review guard.
+
+For an ordinary location-based Hunt, the target requires an independently approved Local Template. Universal approval alone enables Creator reuse, never Organizer location-based selection or automatic Local approval. A Local may be created independently or copied from an exact approved Universal source with provenance; either path requires its own submission/review. These details reuse F7/G4 and do not invent request pricing, deadlines, automatic approval, assignment algorithms, statuses or APIs.
+
+Section 14's explicit legacy/unclassified compatibility transition still applies: canonical Signal v1, Signal Overload, historical versions/approvals and existing snapshots remain intact; no Local classification is inferred from names or coordinates. New edits/adaptations create separately reviewed immutable versions, and later source edits/approvals never rewrite saved Hunt snapshots. Participant payload privacy remains governed by Phase I, independently of privileged authoring/review inspection.
+
+Traceability: N1–N6; F1/F2/F7; G1–G4; D2/D8/D10; sections 6, 11–14 and 20.1–20.3. N workflow contracts and F7/G4 category, copy, evidence, combined-capability review and legacy-rollout decisions remain dependencies.
+
+Remaining-phase diagram audit (24 October 2026): read the full plan on FE main `2c486928b044863228d27af5a3c9c9a6fc028d97` (merged #111), including A–N, sections 11–16 and 20. BE main is `4b45c2d8af15e39e049e2069c37b9e29b5ecfbf8`. Inspected FE `AdminUsers.tsx`, `AdminAccountSecurity.tsx`, `AdminConsole.tsx`, `DiscoveryFlow.tsx`, `OrganizerSetupFlow.tsx` and `services/api/adminUsers.ts`; BE `OrganizerApplication.ts`, `CreatorApplication.ts`, `AdminProvisioning.ts`, `ProfessionalProvisioning.ts`, `User.ts`, `UserRole.ts`, `HuntTemplate.ts`, `middleware/auth.ts`, `routes/auth.ts`, `routes/adminUsers.ts`, `routes/adminTemplateReviews.ts`, app route registration and migrations 015–016. These support the named account/lifecycle foundations and prototype-versus-planned boundaries, not new deployed E2E or blanket operational completeness. Source/plan discrepancies are reported in the accompanying PR rather than changing historical requirements/statuses.
+
+Validation: four context views follow section 3.1; source checks cover Mermaid fences/subgraphs, node definitions, labeled relationships, focus/neighbor classes and planned-node styling. Cross-phase review covers one identity, authentication versus authorization, Hunt scope, Creator/Admin separation, exact approved versions, immutable snapshots, legacy Signal compatibility, Participant privacy and results versus reward eligibility/fulfillment. Mermaid parser/rendering and actual GitHub desktop/mobile readability remain unverified: no installed renderer was found and shell network access fails at the environment proxy. Use expanded diagrams where needed. No application tests, deployment or deployed E2E were run for this Markdown-only extension.
 
 ### N1. Persist custom request
 Status: ⬜ Not started
