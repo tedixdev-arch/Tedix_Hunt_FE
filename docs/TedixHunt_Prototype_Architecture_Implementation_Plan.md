@@ -20,6 +20,8 @@ Refinement note (3.5): adds Phase G and Phase D logical context diagrams, separa
 
 Diagram-extension note (3.5): adds Phase H entry/enrollment, Phase I gameplay and Participant information-visibility diagrams. Existing foundations remain distinct from planned runtime and unresolved contracts; no implementation or deployed verification is claimed.
 
+Diagram-extension note (3.5): adds Phase J live operations, Phase K results/rewards and a cross-phase checkpoint-suspension lifecycle. Preserves authority, privacy, fairness, planned-runtime boundaries and unresolved policies; no implementation or deployed verification is claimed.
+
 The implementation strategy is:
 
 Existing approved mockup
@@ -1856,6 +1858,117 @@ Status: ⬜ Deferred until core gameplay and J9 operate reliably
 
 Status: 🟣 Prototype only
 
+### Phase J context — Live Hunt operations within the platform
+
+The active-Hunt view below is planned runtime, not the current Monitor prototype. Business authority and backend execution are separate; B6/D9 authority/allocation must precede J4/J9.
+
+```mermaid
+flowchart TB
+  subgraph business["FOCUS — Phase J: operational responsibility"]
+    organizer["[P] Responsible Organizer<br/>Automatic default Supervisor via B6"]
+    supervisor["[P] Additional Hunt-scoped Supervisors<br/>Approved allocation / operational subset"]
+    admin["[P] Admin<br/>Platform operational authority"]
+    monitor["[P] Live monitoring<br/>Participant / team progress and incidents"]
+    decision["[P] Organizer / Admin decision<br/>Lifecycle controls / checkpoint suspension"]
+    organizer -->|"Views own Hunt"| monitor
+    supervisor -->|"Views assigned Hunt within effective authority"| monitor
+    admin -->|"Views Hunts under platform authority"| monitor
+    organizer -->|"Decides authorized own-Hunt action"| decision
+    admin -->|"Decides authorized platform action"| decision
+    supervisor -->|"Reports issue / requests suspension only"| decision
+  end
+  subgraph technical["FOCUS — Phase J: backend execution"]
+    contracts{"[P] Operational BE contracts<br/>Validate identity, role, Hunt and event state"}
+    runtime[("[P] Active Hunt runtime / PostgreSQL<br/>Authoritative lifecycle, incidents<br/>Checkpoint active / suspended state")]
+    decision -.->|"Requests privileged execution; UI cannot execute alone"| contracts
+    contracts -.->|"Accepted: persist authorized action / event"| runtime
+    runtime -.->|"Authorized live projection; age / accuracy if permitted"| monitor
+  end
+  subgraph neighbors["NEIGHBOR — Phases D / H / I / K"]
+    setup["[Mixed] D: Hunt setup / snapshot I<br/>B6/D9 authority and allocation P"]
+    membership["[P] H: Participant / team membership<br/>Start and recovery context"]
+    player["[P] I: Participant gameplay<br/>HELP / PANIC access"]
+    progress["[P] I: BE progression / score events<br/>Suspension consequences under I13"]
+    results["[P] K: results / scoring consumers"]
+    setup -.->|"Supplies immutable context; effective authority gates operations"| contracts
+    membership -.->|"Supplies authorized Participant / team context"| contracts
+    player -.->|"Submits help / incident; optional permitted location"| contracts
+    runtime -.->|"Participant-specific state / incident status; filtered by BE"| player
+    runtime -.->|"Validated suspension updates progression; see lifecycle below"| progress
+    progress -.->|"Authoritative progress for authorized monitoring"| monitor
+    progress -.->|"Preserved scores and operational event history"| results
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class organizer,supervisor,admin,monitor,decision,contracts,runtime focus;
+  class setup,membership,player,progress,results neighbor;
+  class organizer,supervisor,admin,monitor,decision,contracts,runtime,membership,player,progress,results planned;
+```
+
+**What this diagram tells us:** the responsible Organizer is the target default Supervisor for their own Hunt, additional Supervisors receive only the approved Hunt-scoped operational subset, and Admin retains platform operational authority. Viewing progress, reporting/requesting suspension and deciding an authorized action are distinct from backend execution. Generic contextual records exist, but B6/D9 automatic supervision, allocation/revocation and effective-authority enforcement remain planned; J4's reuse requirement is not evidence of completed assignment APIs.
+
+All live actions, including acknowledge/resolve and lifecycle controls, require backend authorization and current-state validation. Participant HELP/PANIC records feed planned incident handling; neither replaces emergency services nor promises emergency response, continuous tracking or disconnected safety coverage. J8 fallback remains to be defined. An operational end/finish control must not fabricate successful Participant FinishPoint completion.
+
+J9 location collection is gated on explicit TTL, consent/permission, audience and deletion rules; incident evidence needs separate minimal retention. Use only authorized latest location/age/accuracy, mark stale/missing data, expire it on TTL/Hunt end and avoid permanent trails, analytics copies and raw GPS logs. Participant-specific responses must not expose other Participants' sensitive locations or hidden route data. Mapbox renders permitted information; it owns no operational authority.
+
+Traceability: B5/B6, D7/D9, H2–H8, I2/I7–I9/I11–I13, J1–J9, K1–K3 and sections 6, 11, 14–16 and 20.3. Global Organizer capability and the unresolved Independent Organizer prototype grant no arbitrary-Hunt access or authorization exception.
+
+### Cross-phase operational event lifecycle — checkpoint suspension
+
+This logical lifecycle focuses on an authorized normal-checkpoint suspension. It describes required behavior, not an implemented API, schema or transport.
+
+```mermaid
+flowchart TB
+  subgraph issue["NEIGHBOR — Phase J: business decision"]
+    report["[P] Issue reported / detected<br/>Participant, Supervisor or monitoring"]
+    decide["[P] Responsible Organizer / Admin<br/>Decides checkpoint suspension"]
+    report -->|"Reports evidence / requests action; no automatic suspension"| decide
+  end
+  subgraph execution["FOCUS — Cross-phase backend lifecycle: I13 / J / K"]
+    validate{"[P] BE validates active identity / authority<br/>Hunt context and current event state"}
+    reject["[P] Reject unauthorized / invalid request<br/>No runtime transition"]
+    event[("[P] Authoritative operational event<br/>Actor, time, reason, checkpoint identity<br/>Idempotent processing")]
+    state["[P] Runtime checkpoint becomes suspended<br/>Immutable Hunt snapshot unchanged"]
+    role{"[P] Normal or terminal checkpoint?"}
+    normal["[P] Atomic normal-checkpoint bypass<br/>Update current / future progression<br/>No penalty; bypass is not completion"]
+    terminal["[P] Terminal policy unresolved<br/>No inferred FinishPoint completion"]
+    history[("[P] Preserve earned points<br/>Completed activities and event history")]
+    decide -.->|"Requests authorized execution"| validate
+    validate -.->|"Denied / invalid"| reject
+    validate -.->|"Accepted; retries must not duplicate effects"| event
+    event -.->|"Apply authoritative runtime transition"| state
+    state -.->|"Evaluate checkpoint role before progression"| role
+    role -.->|"Normal; approved I13 rules"| normal
+    role -.->|"FinishPoint; policy required before implementation"| terminal
+    normal -.->|"Retain prior achievements / scores without marking bypass solved"| history
+    event -.->|"Retain event evidence alongside progress / score history"| history
+  end
+  subgraph consumers["NEIGHBOR — Phases I / J / K"]
+    participant["[P] I: Participant-specific state<br/>Updated permitted objective / recovery"]
+    monitoring["[P] J: authorized Monitor<br/>Authoritative checkpoint and progress state"]
+    results["[P] K: aggregation / results<br/>Authoritative progress, scoring and event history"]
+    normal -.->|"Refresh permitted targets across sessions"| participant
+    state -.->|"Reflect authoritative operational change"| monitoring
+    normal -.->|"Reflect recalculated progress"| monitoring
+    history -.->|"Consume idempotently under approved fairness rules"| results
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class validate,reject,event,state,role,normal,terminal,history focus;
+  class report,decide,participant,monitoring,results neighbor;
+  class report,decide,validate,reject,event,state,role,normal,terminal,history,participant,monitoring,results planned;
+```
+
+**What this diagram tells us:** a report is evidence for a decision, not authority to suspend. Only the backend validates and applies the authorized runtime change; approved Template versions and the immutable Hunt snapshot remain unchanged. Normal-checkpoint suspension bypasses current/future objectives atomically without blocking or automatic penalty, preserves earned points and completed activities, and never counts bypass as successful completion.
+
+Fairness must cover Participants who already completed, are currently attempting or have not yet reached the checkpoint. Serialize/validate concurrent answer and suspension transitions, make retries and downstream scoring idempotent, and refresh stale clients/reconnects from authoritative state. The diagram specifies responsibilities, not a transaction/event-delivery implementation. Reactivation, if later permitted, must not cause retroactive penalties or progression rollback.
+
+Still unresolved before implementation: score eligibility and timers after suspension; behavior when **all normal checkpoints are suspended**; and suspended terminal FinishPoint required activities, bypass, scoring/timers and Hunt completion. No branch settles those policies, invents completion rewards or infers completion from GPS arrival or a terminal bypass. Results must use authoritative history under explicitly approved rules, not browser totals or an invented fairness formula.
+
+Traceability: B6/D9, H8, I7–I9/I11–I13, J1–J4/J9, K1–K6 and sections 6, 14–16 and 20.3. I13 BE rules and Participant handling precede J9 controls; terminal policy resolution precedes terminal suspension implementation.
+
 ### J1. Shared Hunt live state
 Status: ⬜ Not started
 
@@ -1911,6 +2024,65 @@ Status: ⬜ Not started; follows I12–I13
 ## Phase K — Results and rewards runtime
 
 Status: 🟡 Reward configuration complete / runtime pending
+
+### Phase K context — Results and rewards within the platform
+
+Configured rewards are implemented; every results, eligibility and awarding step below remains planned. Competition scoring and long-term Participant achievements are separate responsibilities.
+
+```mermaid
+flowchart TB
+  subgraph inputs["NEIGHBOR — Phases D / I / J"]
+    progress["[P] I: authoritative checkpoint progress<br/>Individual / team contributions and score events"]
+    completion["[P] I: FinishPoint completion<br/>BE confirms required terminal activities"]
+    operations["[P] J / I13: operational event history<br/>Suspension and preserved earned points"]
+    config["[I] D4: Organizer reward configuration<br/>Provider, kind, quantity / Special Award definitions"]
+  end
+  subgraph technical["FOCUS — Phase K: backend results / reward authority"]
+    aggregate["[P] BE aggregation / persistence<br/>Idempotent event processing<br/>Individual / team scores per supported rules"]
+    rankings["[P] Leaderboard / final rankings<br/>Final results"]
+    eligibility{"[P] Calculate winners / Special Awards<br/>Check reward / physical-prize eligibility"}
+    assignment["[P] Assign / grant eligible reward<br/>Record actual award separately"]
+    fulfillment["[P] Award fulfillment<br/>Physical delivery / virtual grant"]
+    progress -.->|"Authoritative scoring inputs; no browser totals"| aggregate
+    completion -.->|"Authoritative Hunt completion input"| aggregate
+    operations -.->|"Apply approved suspension fairness; no invented policy"| aggregate
+    aggregate -.->|"Derived competition standings and results"| rankings
+    rankings -.->|"Results for eligibility calculation"| eligibility
+    config -.->|"Possible rewards / definitions; configuration is not a grant"| eligibility
+    eligibility -.->|"Eligible calculated winner only"| assignment
+    assignment -.->|"Authorized awarded entitlement; not configuration alone"| fulfillment
+  end
+  subgraph consumers["NEIGHBOR — Participant / Organizer / Phases L / M"]
+    participant["[P] Participant results<br/>Permitted standings / award status"]
+    monitor["[P] Organizer monitoring<br/>Authorized scores / results"]
+    inventory["[P] L4: platform-controlled physical inventory<br/>Stock, reservation, hidden prize identity / quantities"]
+    passport["[P] M: Hunt Passport / history / achievements<br/>Derived from real completed Hunts / results"]
+    rankings -.->|"Backend-filtered results / configured display"| participant
+    rankings -.->|"Authorized monitoring projection"| monitor
+    fulfillment -.->|"Actual grant / fulfillment status"| participant
+    inventory -.->|"Platform stock / reservation / fulfillment constraints"| assignment
+    fulfillment -.->|"Platform-prize fulfillment through inventory authority"| inventory
+    aggregate -.->|"Real completed Hunt / results data; separate long-term rules"| passport
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class aggregate,rankings,eligibility,assignment,fulfillment focus;
+  class progress,completion,operations,config,participant,monitor,inventory,passport neighbor;
+  class progress,completion,operations,aggregate,rankings,eligibility,assignment,fulfillment,participant,monitor,inventory,passport planned;
+```
+
+**What this diagram tells us:** backend-owned checkpoint progress, score events, FinishPoint completion and operational history feed idempotent aggregation. Individual/team contributions and scores follow supported rules; the diagram introduces no scoring formula, ranking tie-break, eligibility threshold or new competition mode. Arrival alone never completes a Hunt. Suspension must preserve earned points and completed activities, apply no automatic penalty, and keep bypass distinct from successful completion; unresolved I13 policies cannot be silently resolved by aggregation.
+
+A configured reward, calculated winner, actually granted reward and fulfilled award are separate states/responsibilities. D4 persists possible leaderboard rewards and predefined personal/team Special Awards; existing definition metadata does not implement calculation or eligibility enforcement. K4–K6 must validate eligibility before assignment, including physical-prize eligibility. Rewards remain optional; results are not conditional on configuring a prize.
+
+Organizer-provided rewards remain distinct from Tedix/platform-controlled physical inventory. Selecting the inventory provider or a quantity does not reserve stock, reveal a hidden prize, grant an award or prove fulfillment. L4 stock/reservation/quantity and fulfillment controls are planned, and the diagram does not invent their API or allocation policy. FE presents authorized results; it cannot calculate authoritative scores or grant prizes.
+
+M1–M5 Passport, history, achievements and collectibles derive from real completed Hunt/results data under their own planned rules. Competition-level score is not a long-term achievement balance, and selecting a virtual reward category does not create an achievement or Passport record. Traceability: D4, I6–I9/I11–I13, J2/J9, K1–K6, L4, M1–M5 and sections 6, 14–16 and 20.3.
+
+Diagram-extension audit (24 October 2026): based on FE main `f7cacb7d135e5da42f2d3b2ad1ddbec7403fe8fe`, including merged PR #109; read the complete plan, especially D/H/I/J/K and sections 6, 11, 14–16 and 20. Inspected FE `src/pages/OrganizerMonitor.tsx` (mock teams/local controls), `src/data/competitionResults.ts` (prototype results) and `src/services/api/rewards.ts` (configuration CRUD). Inspected BE main `4b45c2d8af15e39e049e2069c37b9e29b5ecfbf8`: `src/models/HuntRole.ts`, `src/models/HuntReward.ts`, `src/routes/huntRewards.ts` and `src/domain/rewards.ts`. Contextual role storage and draft-only reward configuration exist; these do not establish B6 effective supervision, live operations, authoritative runtime scoring, eligibility calculation or fulfillment. Existing reward-route authorization must not be mistaken for implemented B6 Admin operational authority.
+
+Validation: the three added diagrams preserve version 3.5 and existing phase requirements/statuses, historical evidence and unresolved contracts. Source checks cover fences/subgraphs, defined nodes, labeled relationships, implementation markers and planned styling; architecture review covers backend authority, privacy, immutable snapshots, suspension fairness and configuration-versus-awarding. Mermaid parser/rendering and actual GitHub desktop/mobile readability remain unverified: no installed renderer and shell network access fails at the environment proxy. GitHub connector supplies current-source access. No application tests, deployment or deployed E2E were run for this Markdown-only extension.
 
 ### K1. Final score aggregation
 Status: ⬜ Not started
