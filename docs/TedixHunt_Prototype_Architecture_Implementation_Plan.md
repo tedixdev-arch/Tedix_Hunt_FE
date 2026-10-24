@@ -16,6 +16,8 @@ Revision note (3.5): documentation-only architecture visualization pilot. Adds a
 
 Refinement note (3.5): separates business and technical authority, splits category submission/review paths, and adds explicit source-eligibility and review decisions. Documentation only; version, implementation statuses and Phase A–N scope remain unchanged.
 
+Refinement note (3.5): adds Phase G and Phase D logical context diagrams, separating implemented generic foundations from planned category/safety, Personal Hunt and operational capabilities. Preserves historical status, legacy compatibility and unresolved contracts; no implementation or deployed verification is claimed.
+
 The implementation strategy is:
 
 Existing approved mockup
@@ -663,6 +665,67 @@ Backend validates persisted configuration before publication.
 ## Phase D — Organizer Hunt setup
 
 Status: ✅ Existing setup baseline and D8 implementation complete; D9/D10 remain planned; D8 deployed E2E unverified
+
+### Phase D context — Organizer within the platform
+
+The two conceptual paths share backend authority and the same downstream gameplay engine. Path A extends the implemented generic setup; Path B remains deferred. Status/focus and arrow conventions follow section 3.1.
+
+```mermaid
+flowchart TB
+  subgraph catalog["NEIGHBOR — Phases F / G: governed content"]
+    approved["[P] Approved Local catalog<br/>Separate exact-version Admin approval"]
+  end
+  subgraph setup["FOCUS — Phase D: Organizer configuration"]
+    choice{"[Mixed] Hunt origin?<br/>Generic Template I; Personal P"}
+    location["[P] Path A: Country → Locality<br/>Select approved Local version"]
+    preview["[Mixed] Read-only Mapbox preview<br/>Explicit Inspect I; automatic P"]
+    settings["[Mixed] Hunt settings and rewards I<br/>Allowed Personal Challenge options P"]
+    personal["[P] Path B: Personal Hunt<br/>Organizer configures permitted<br/>checkpoints and challenges"]
+    limits["[P] Personal configuration limits<br/>Team Challenge opt-out and rewards<br/>only within approved rules"]
+    supervision["[P] Organizer defaults to Supervisor<br/>Optional additional Hunt-scoped Supervisors"]
+    publish["[I] Review / Publish / access code<br/>Existing setup baseline"]
+    choice -->|"A: approved Template"| location
+    location -->|"Inspect exact approved geography"| preview
+    preview -->|"Configure permitted Hunt variables"| settings
+    choice -->|"B: deferred Personal Hunt"| personal
+    personal -->|"Organizer responsible for configuration"| limits
+    settings -->|"Prepare Hunt-scoped operations"| supervision
+    limits -->|"Same supervision model"| supervision
+  end
+  approved -->|"Only approved Local candidates for location"| location
+  subgraph authority["NEIGHBOR — Backend / PostgreSQL authority"]
+    be["[Mixed] BE authorization and validation<br/>Generic snapshot/readiness I<br/>Local safety and Personal gates P"]
+    saved[("[Mixed] PostgreSQL Hunt<br/>Exact immutable Template snapshot I<br/>Personal persisted configuration P")]
+    be -.->|"Resolves approved key/version/content; persists"| saved
+  end
+  settings -.->|"Explicit save; FE never manufactures snapshot"| be
+  limits -.->|"Validate permissions, safety and readiness"| be
+  supervision -.->|"B6/D9 authority required; no extra Supervisor required"| be
+  be -.->|"Accept only valid authorized publication"| publish
+  subgraph runtime["NEIGHBOR — Phases H / I / J / K"]
+    play["[P] Participant enrollment and gameplay<br/>BE-filtered visibility and progression"]
+    monitor["[P] Organizer / Supervisor monitoring<br/>Hunt-scoped checkpoint suspension"]
+    results["[P] Results and reward awarding"]
+    play -->|"Authoritative live state"| monitor
+    monitor -->|"Authorized suspension; I13 fairness rules"| play
+    play -->|"Backend completion and scores"| results
+  end
+  publish -->|"Code/link enables access flow"| play
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class choice,location,preview,settings,personal,limits,supervision,publish focus;
+  class approved,be,saved,play,monitor,results neighbor;
+  class approved,location,personal,limits,supervision,play,monitor,results planned;
+```
+
+**What this diagram tells us:** approved-Template selection and future Personal authoring converge on backend validation, persistence and publication. Path A's backend creates the exact immutable Template snapshot; later Template edits/approvals cannot replace it. Organizer may configure only supported Hunt variables and allowed Personal Challenges; fixed Template geography/content stays read-only. Path B assigns configuration responsibility to Organizer without granting a safety or authorization bypass, and reuses the shared checkpoint/FinishPoint engine.
+
+**Status and policy boundaries:** D1–D7 implement generic setup, supported pilot options, reward configuration and publication; D8 implements explicit read-only inspection, not D10's location selectors or automatic preview. Personal Hunt authoring, Personal Challenge configuration and Team Challenge opt-out are conceptual planned capabilities, not claims of current support or new permission to disable required activities. Their precise permitted scope and safety/readiness contracts still require decisions; opt-out and rewards must stay within approved rules. Reward configuration never implies implemented awarding (section 16 / Phase K). Personal Hunt is not the unresolved Independent Organizer authorization model (section 11).
+
+B6/D9's target makes the responsible Organizer the automatic Supervisor and allows additional eligible Hunt-scoped allocations; neither allocation UI nor effective-authority extension is claimed implemented. H/I/J remain planned authoritative access, gameplay and live operations. Full setup preview does not become a Participant payload: hidden checkpoint positions and undiscovered routes must remain undisclosed under I12. I13/J9 suspension requires backend authorization and agreed bypass/fairness rules; terminal suspension/completion policy remains unresolved.
+
+Traceability: D2–D4, D6–D10; B6; F1/F7; G2/G4; H; I11–I13; J2/J4/J9; K; sections 6, 11, 14, 16 and 20.1–20.3. Generic catalog legacy compatibility remains governed by section 14; no automatic Local classification or premature catalog filtering is implied.
 
 ### D1. General Setup
 Status: ✅ Existing baseline complete; future map-first ordering is D10, not yet implemented
@@ -1346,6 +1409,67 @@ Acceptance: Creators can distinguish Mechanics Library, Universal Templates and 
 ## Phase G — Admin Template governance and approved authority
 
 Status: ✅ Backend/DB, Admin FE review, Organizer integration and G3 preview implemented; G4 location/review evolution planned
+
+### Phase G context — Admin within the platform
+
+Generic exact-version review is implemented; the two category decisions below are planned G4 extensions. Admin is responsible for human review, with separate downstream catalogs and no Creator self-approval.
+
+```mermaid
+flowchart TB
+  subgraph creator["NEIGHBOR — Phase F: Creator"]
+    submission["[Mixed] Creator submits exact version<br/>Generic I; Universal/Local categories P"]
+    revise["[P] Creator revises new version<br/>and resubmits"]
+    evidence["[P] Local route and safety evidence<br/>Sources, reviewer, dates and access conditions"]
+    reuse["[P] Creator reuse<br/>Independent copy with provenance"]
+    revise -->|"Pins new submitted version"| submission
+  end
+  subgraph governance["FOCUS — Phase G: Admin Template governance"]
+    universal{"[P] Universal review<br/>Structure, content, supported mechanics"}
+    local{"[P] Separate Local review<br/>Every stop, segment and adaptation<br/>Human evidence/safety judgment"}
+    changes["[Mixed] Request changes I<br/>Category review loop P"]
+    uc["[P] Approved Universal catalog<br/>Creator reuse only"]
+    lc["[P] Approved Local catalog<br/>Organizer selection"]
+    inspect["[I] G3 read-only geographic inspection<br/>Exact submitted content"]
+    submission -->|"Universal submission"| universal
+    submission -->|"Local submission; source approval is insufficient"| local
+    evidence -->|"Advisories / required evidence / unresolved blockers"| local
+    inspect -->|"Supports human inspection; no certification"| local
+    universal -->|"Approve exact Universal version"| uc
+    local -->|"Approve exact Local version; gates satisfied"| lc
+    universal -->|"Request changes"| changes
+    local -->|"Request changes / unresolved blockers"| changes
+  end
+  changes -->|"Preserve reviewed artifact; target revision UI P"| revise
+  uc -->|"Approved exact source offered to active Creator"| reuse
+  reuse -->|"Local copy requires its own submission"| submission
+  subgraph organizer["NEIGHBOR — Phase D"]
+    selection["[P] Country / Locality selection<br/>Approved Local versions only"]
+  end
+  lc -->|"Makes eligible Local version selectable"| selection
+  subgraph authority["NEIGHBOR — Backend / PostgreSQL authority"]
+    be["[Mixed] Admin-only authorization and pinned review I<br/>Category/evidence/self-review gates P"]
+    records[("[Mixed] PostgreSQL<br/>Immutable version + approval pin I<br/>Version-bound evidence/approval records P")]
+    be -.->|"Persists decisions without rewriting content"| records
+  end
+  universal -.->|"Decision through authorized BE"| be
+  local -.->|"Decision through authorized BE"| be
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class universal,local,changes,uc,lc,inspect focus;
+  class submission,revise,evidence,reuse,selection,be,records neighbor;
+  class universal,local,uc,lc,revise,evidence,reuse,selection planned;
+```
+
+**What this diagram tells us:** Universal approval enables Creator reuse; Local approval independently enables Organizer selection. Universal approval never approves Local geography. Request changes preserves the exact reviewed artifact, while the target revision/resubmission path creates a new immutable version. Creator cannot approve their own submissions; combined Creator/Admin identity enforcement is an unresolved BE contract output, not an implemented guard asserted here.
+
+G1/G2 implement generic review, approve/request-changes, pinned Creator catalog resolution and immutable Hunt snapshots. G3 supplies inspection, not safety certification. G4/F7 must add version-bound human evidence and category-specific gates: acknowledgment may address an advisory, required evidence needs review, and unresolved blocking hazards prevent approval. Mapbox, AI and automated checks cannot certify geographic safety; responsible Creators supply evidence and Admin reviews the actual route, including local/on-site checks where desk evidence is insufficient.
+
+**Technical and secondary authority:** every business arrow is subject to backend authorization. Existing immutable content and the submitted-version approval pin are not a completed immutable approval audit log. Evidence representation, reviewer/decision history, validity, expiry/re-review, withdrawal, combined-capability self-review enforcement and publish-readiness remain planned contract decisions (20.2); L6 audit remains unimplemented. No new API or schema is specified.
+
+Account governance is a separate, secondary context: Admin → Creator/Organizer application approval, provisioning and account controls (Phases E/L1, implemented named scopes) → backend authorization and PostgreSQL. Account actions govern identity/capability access, not Template approval; blocking/removal preserves durable Template versions, Hunt snapshots and required provenance (section 6). This relationship is kept outside the Template graph for readability.
+
+Traceability: F1/F2/F7; G1–G4; D2/D8/D10; E3/E14/E17 and L1/L6; sections 6, 14 and 20.1–20.2. Preserve section 14's explicit legacy/unclassified transition; the planned catalogs do not silently reclassify or remove today's approved content.
 
 ### G1. Admin Template review
 
