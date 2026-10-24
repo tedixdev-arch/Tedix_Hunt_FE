@@ -22,6 +22,8 @@ Diagram-extension note (3.5): adds Phase H entry/enrollment, Phase I gameplay an
 
 Diagram-extension note (3.5): adds Phase J live operations, Phase K results/rewards and a cross-phase checkpoint-suspension lifecycle. Preserves authority, privacy, fairness, planned-runtime boundaries and unresolved policies; no implementation or deployed verification is claimed.
 
+Diagram-extension note (3.5): adds Phase A platform, Phase B identity/authorization and Phase C Hunt-domain context diagrams. Preserves implementation evidence, exact lifecycle states, planned B6/runtime boundaries and unresolved dependencies; no implementation or deployed verification is claimed.
+
 The implementation strategy is:
 
 Existing approved mockup
@@ -490,6 +492,51 @@ Participant runtime, live operations, and long-term systems remain to be built.
 
 Status: 🟡 Mostly complete
 
+### Phase A context — Platform foundation
+
+The foundation connects browser experiences to backend authority and persistence. Supporting infrastructure is a responsibility boundary, not another application orchestrator.
+
+```mermaid
+flowchart TB
+  subgraph browser["NEIGHBOR — Creator / Admin / Organizer / Participant"]
+    experiences["[Mixed] React / TypeScript FE<br/>Professional flows I; gameplay P"]
+  end
+  subgraph foundation["FOCUS — Phase A: API, session and persistence"]
+    client["[I] FE API / session layer<br/>Bearer requests, refresh, session storage"]
+    auth["[I] Node.js / Express authentication<br/>JWT access, refresh rotation, logout<br/>Existing guest sessions"]
+    api["[Mixed] Node.js / Express domain APIs<br/>Current authorization I; B6/runtime P"]
+    db[("[I] PostgreSQL<br/>Identity, roles, Hunts and snapshots")]
+    client -.->|"HTTPS / REST JSON: authenticate, refresh or logout"| auth
+    auth -.->|"Issues / rotates session credentials; no Hunt enrollment"| client
+    client -.->|"Bearer request; BE checks identity and operation authority"| api
+    auth -.->|"Persists identity / refresh credentials"| db
+    api -.->|"Authorized domain reads / writes only"| db
+  end
+  subgraph support["FOCUS — Phase A: supporting responsibilities"]
+    migration["[I] Migration / readiness foundation<br/>History, drift checks, DB readiness"]
+    delivery["[Mixed] Deployment infrastructure<br/>Dev URLs / Actions I<br/>Rollback / backup verification outstanding"]
+    migration -.->|"Applies ordered schema changes / checks DB readiness"| db
+    delivery -.->|"Builds / serves FE"| experiences
+    delivery -.->|"Deploys backend; readiness supports checks"| api
+  end
+  subgraph context["NEIGHBOR — Phases B / C / H / I / J / K"]
+    domain["[Mixed] B/C identity and Hunt setup I<br/>B6 and H/I/J/K runtime P"]
+    domain -.->|"Supplies domain rules; login alone grants no Hunt access"| api
+  end
+  experiences -.->|"Uses shared request / session handling"| client
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class client,auth,api,db,migration,delivery focus;
+  class experiences,domain neighbor;
+```
+
+**What this diagram tells us:** React/TypeScript experiences use the FE API/session layer to call Node.js/Express; only the backend accesses PostgreSQL. Authentication establishes a session, while each protected domain action requires backend authorization. Existing guest authentication does not settle future guest enrollment eligibility. Node.js hosts the backend, not a separate wrapper around FE and BE; Swagger documents contracts and is not a runtime API implementation.
+
+A1's development deployment foundation is implemented for its recorded scope, not proof of new deployed E2E, formal rollback readiness or verified backup/restore. A2 readiness/migrations support operation; they do not certify user journeys. Section 5.1's direct cross-origin HTTPS/CORS topology remains current; section 5.2's same-origin reverse proxy is intended production direction only.
+
+Traceability: A1–A6; B1–B6; C1–C4; H2/I/J/K; sections 2, 3.1–3.2, 5–6, 17 and 20. Authentication, global capability and Hunt membership remain separate.
+
 ### A1. Deployment topology and verification
 Status: ✅ Complete enough for prototype
 
@@ -554,6 +601,69 @@ Admin authentication uses the real backend session flow. Fake Admin 2FA is no lo
 ## Phase B — Identity, organizations and authorization
 
 Status: 🟡 Mostly complete
+
+### Phase B context — Identity and effective authorization
+
+One identity can hold several global capabilities and Hunt relationships. B1–B5 supply the current foundation; B6 extends effective authority and assignment contracts.
+
+```mermaid
+flowchart TB
+  subgraph global["FOCUS — Phase B: identity / global capabilities"]
+    identity["[I] One User identity<br/>Active authenticated account required"]
+    roles["[I] user_roles<br/>Organizer / Creator / Admin"]
+    compatibility["[I] Global Participant compatibility<br/>Never proof of Hunt access"]
+    identity -->|"May hold multiple capabilities"| roles
+    identity -->|"Retains transitional compatibility"| compatibility
+  end
+  subgraph hunts["FOCUS — Phase B: Hunt-specific relationships"]
+    participant["[I] hunt_participants<br/>Participant membership foundation"]
+    organizer["[I] Responsible Hunt Organizer<br/>Existing Hunt organizer relationship"]
+    assigned["[Mixed] hunt_roles supervisor rows I<br/>Assignment / runtime use P"]
+    automatic["[P] B6: automatic effective Supervisor<br/>Responsible Organizer's own Hunt only"]
+    contexts["[Mixed] B1.1 context read model I<br/>Participant + Supervisor may coexist<br/>B6 automatic context extension P"]
+    identity -->|"Has membership in a specific Hunt"| participant
+    identity -->|"Responsible for a specific Hunt"| organizer
+    identity -->|"May hold additional Hunt-scoped assignment"| assigned
+    organizer -->|"B6 target; derive or invariant row undecided"| automatic
+    participant -.->|"Supplies Participant flag"| contexts
+    assigned -.->|"Supplies current Supervisor flag"| contexts
+    automatic -.->|"Planned effective Supervisor projection"| contexts
+  end
+  subgraph authority["FOCUS — Phase B: effective backend authorization"]
+    enforce{"[Mixed] BE checks identity + operation<br/>Current role / Hunt checks I<br/>B6 effective authority P"}
+    permitted["[Mixed] Permitted operations only<br/>Existing endpoint scopes I<br/>B6 operational extensions P"]
+    identity -.->|"Reject blocked / retired / unauthenticated identity"| enforce
+    roles -.->|"Capability / Admin authority within supported scope"| enforce
+    participant -.->|"Membership for contextual decisions; runtime P"| enforce
+    organizer -.->|"Own-Hunt authority; no unrelated-Hunt access"| enforce
+    assigned -.->|"Assigned Hunt scope; no unrestricted Organizer/Admin powers"| enforce
+    automatic -.->|"Planned own-Hunt operational authority"| enforce
+    enforce -.->|"Allow only authorized operation in current scope"| permitted
+  end
+  subgraph neighbors["NEIGHBOR — FE / Organizations / Phases D H I J"]
+    guards["[I] FE route guards / workspaces<br/>UX and navigation only"]
+    organization["[Mixed] Organization ownership / membership I<br/>Future stewardship-transfer design unresolved"]
+    runtime["[P] D9 allocation / H enrollment<br/>I gameplay / J operations"]
+    contexts -.->|"Authenticated Hunt choices; same session"| guards
+    guards -.->|"Requests still require BE authorization"| enforce
+    organization -.->|"Owner / member checks where required; provenance retained"| enforce
+    permitted -->|"Future runtime consumes effective authority"| runtime
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class identity,roles,compatibility,participant,organizer,assigned,automatic,contexts,enforce,permitted focus;
+  class guards,organization,runtime neighbor;
+  class automatic,runtime planned;
+```
+
+**What this diagram tells us:** Organizer, Creator and Admin are authoritative global professional capabilities; global Participant is compatibility-only. Participant Hunt access comes from `hunt_participants`, additional Supervisor context from `hunt_roles(role='supervisor')`. The same identity can be both in one Hunt. Current B1.1 exposes those records, not automatic supervision. Global capability alone grants neither unrelated-Hunt access nor enrollment.
+
+B6 is not implemented: responsible Organizer automatic effective supervision, consistent context projection, additional assignment list/add/remove and revocation contracts, and extended Admin operational enforcement/tests remain planned. Additional Supervisors receive only Hunt-scoped operational powers, with no Organizer configuration, Template editing or checkpoint suspension by default. Admin's target platform/domain authority remains subject to active authentication, secret protection, last-active-Admin safeguards, referential integrity and immutable provenance; corrections require explicit versions/overrides. Existing endpoint checks must not be presented as already implementing all B6 authority.
+
+B4's `organizations.owner_id` currently mixes operational ownership with provenance. It provides operational authority only while its referenced owner is a normal active identity. Retirement preserves the Organization and owner UUID, denies the retired identity authentication, and leaves the narrow authoritative-Admin platform-management fallback without replacing `owner_id`. Future separation of origin attribution from current stewardship/ownership and any transfer schema/API remain unresolved.
+
+Traceability: B1–B6; A4–A5; D9; H2; J4/J9; E/L1; sections 6, 11 and 20.2–20.3. FE guards support UX only. Neither public lookup nor the Independent Organizer prototype creates membership or an authorization exception.
 
 ### B1. Multi-role identity
 Status: ✅ Complete for global capabilities
@@ -641,6 +751,64 @@ Backend / DB first; Frontend follows in D9.
 ## Phase C — Hunt domain foundation
 
 Status: ✅ Complete for current setup scope
+
+### Phase C context — Hunt domain foundation
+
+Phase C is complete for current setup scope. The Hunt record connects approved content and Organizer configuration to future enrollment, gameplay, operations and results.
+
+```mermaid
+flowchart TB
+  subgraph inputs["NEIGHBOR — Phases B / D / F / G"]
+    organizer["[I] Responsible Organizer<br/>Own-Hunt setup through BE"]
+    approved["[I] Approved Template version<br/>Exact key / version / content"]
+    categories["[P] F7 / G4 / D10 category / safety gates<br/>Legacy compatibility and policy unresolved"]
+  end
+  subgraph domain["FOCUS — Phase C: authoritative Hunt domain"]
+    hunt[("[I] Organizer-owned Hunt record<br/>Organization / creator references<br/>Persisted configuration")]
+    snapshot["[I] Immutable Hunt snapshot<br/>Selected approved Template content"]
+    readiness{"[Mixed] BE publish-readiness<br/>Persisted setup / snapshot / options I<br/>Future category / safety gates P"}
+    transition{"[I] BE lifecycle validation<br/>Authorized operation + permitted transition"}
+    lifecycle["[I] Authoritative Hunt lifecycle<br/>draft / published / active<br/>paused / cancelled / finished"]
+    organizer -->|"Configures and requests lifecycle actions"| transition
+    organizer -->|"Saves permitted setup via authorized BE"| hunt
+    approved -->|"BE resolves and pins exact approved content"| snapshot
+    snapshot -.->|"Stored with Hunt; later source edits do not propagate"| hunt
+    hunt -.->|"Persisted configuration is readiness input"| readiness
+    categories -.->|"Planned additional publication constraints"| readiness
+    readiness -.->|"Publication requires readiness; no new policy inferred"| transition
+    hunt -.->|"Current persisted state constrains action"| transition
+    transition -.->|"Accepted: persist permitted lifecycle state"| lifecycle
+    lifecycle -.->|"Status stored independently of immutable content"| hunt
+  end
+  subgraph downstream["NEIGHBOR — Phases D / H / I / J / K"]
+    access["[Mixed] D7 code / public lookup I<br/>H enrollment / eligibility P"]
+    gameplay["[P] I gameplay / progress / FinishPoint<br/>J operations / K results"]
+    runtimestate["[P] Mutable gameplay / operational state<br/>Separate from immutable snapshot content"]
+    lifecycle -.->|"Current Hunt status constrains access flow"| access
+    access -->|"Authenticated enrollment required before play"| gameplay
+    snapshot -.->|"Defines fixed content; authorized payload filtering required"| gameplay
+    lifecycle -.->|"Supplies lifecycle context; publication proves no runtime readiness"| gameplay
+    gameplay -.->|"BE owns progress, events, scoring and completion"| runtimestate
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class hunt,snapshot,readiness,transition,lifecycle focus;
+  class organizer,approved,categories,access,gameplay,runtimestate neighbor;
+  class categories,gameplay,runtimestate planned;
+```
+
+**What this diagram tells us:** the Organizer-owned Hunt persists configuration, an approved Template snapshot and an authoritative lifecycle. Backend checks authorize actions, validate allowed source states and evaluate persisted readiness before publication. The six lifecycle values are exactly `draft`, `published`, `active`, `paused`, `cancelled` and `finished`; the diagram is a context view, not additional transition or publication policy.
+
+C4 currently checks saved General Setup, matching Template key/version/snapshot and supported pilot options. Future category, geographic safety/evidence, approval-availability and legacy rollout policies remain F7/G4/D10/20.2 decisions. Section 14 governs exact-version approval and immutable snapshots; later Template edits, classification changes or approval withdrawal never silently mutate existing Hunt content.
+
+D7 code generation/minimal public lookup is not enrollment. H's membership/eligibility workflow and I/J/K authoritative runtime remain planned; existing lifecycle endpoints, including start/finish, do not prove Participant gameplay or terminal completion is implemented. Mutable lifecycle/progress/operational state is distinct from immutable Template/Hunt content. Future FinishPoint completion must follow I11's backend-validated required activities, never arrival alone or an inferred publication guarantee.
+
+Traceability: C1–C4; B5/B6; D1–D7/D10; F2/F7; G2/G4; H1–H8; I11–I13; J/K; sections 6, 11, 14–15 and 20.1–20.3. No new state, transition, access permission or publication policy is introduced.
+
+Foundation diagram-extension audit (24 October 2026): source baseline is FE main `68978c5e756568148e78cc3635ed7f486ca668bb` (merged #110) and BE main `4b45c2d8af15e39e049e2069c37b9e29b5ecfbf8`. Read the plan's conventions/master map, runtime/authority principles, A–C, neighboring D/G/H/I/J/K views, sections 11/14 and section 20 dependencies. Inspected FE `src/services/api/client.ts`, `session.ts`, `huntContexts.ts` and `src/features/auth/access.ts`; BE `src/routes/auth.ts`, `src/middleware/auth.ts`, `src/routes/me.ts`, `src/models/HuntContext.ts`, `HuntRole.ts`, `Organization.ts`, `Hunt.ts`, `src/routes/hunts.ts` and `src/domain/huntReadiness.ts`. These confirm session handling, authenticated contextual records, current scoped Hunt checks, lifecycle validation and persisted readiness. They do not establish B6 effective supervision/assignment APIs, broad Admin operational enforcement or Participant runtime.
+
+Validation: only these three context views, their captions/traceability, this audit and the brief revision note are added; version 3.5, all existing requirements/statuses, historical evidence and unresolved decisions remain intact. Source checks cover fences/subgraphs, defined nodes, labeled arrows, status/focus classes and planned-node styling. Architecture review checks authentication versus membership, unrelated-Hunt denial, limited Supervisor scope, immutable provenance, FE/BE authority, public lookup versus enrollment and publication versus gameplay. Mermaid parser/rendering and GitHub desktop/mobile readability remain unverified: no installed Mermaid renderer was found and shell network access fails at the environment proxy. No application tests, deployment or deployed E2E were run for this Markdown-only extension.
 
 ### C1. Core Hunt records
 Status: ✅ Complete
