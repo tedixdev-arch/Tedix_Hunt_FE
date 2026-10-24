@@ -1,6 +1,10 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 3.5 | Updated 24 October 2026
+Version 3.6 | Updated 24 October 2026
+
+Revision note (3.6): Participation Architecture v1, documentation only. Adds approved Solo/Team selection, Template compatibility and adaptive fragment mechanics, and reconciles D/F/H/I/J/K with the controlled internal pilot. Historical implementation/evidence notes remain scoped to their original revisions; no new runtime capability, API, migration, deployment or E2E result is claimed. Security remediation priorities in the companion audit remain prerequisites.
+
+Participation clarification (PR #114): individual required Team activity completion is independent of fixed fragment allocation/disclosure. All active members complete required activities, including members receiving no fragment; required progression also needs all fragments available and backend-valid collective solution. Optional challenges never block. This is an approved documentation correction, not implemented runtime; existing evidence/statuses and unresolved membership/intervention policies remain unchanged.
 
 This revision preserves Phase A–N and the existing identity, credential and account-retirement architecture. The Creator phase is complete for its agreed baseline before the Mapbox evolution. Merged geographic authoring/preview capabilities are audited below; new Universal/Local, Country/Locality and map-first setup work does not reopen that baseline.
 
@@ -161,6 +165,53 @@ flowchart TB
 Mapbox supplies presentation/search/advisory estimates, never approval, arrival, scores or persistence authority. Admin and Organizer also reuse read-only TedixMap previews (G3/D8); those edges are omitted for clarity. Geographic catalog provider choice is **unresolved** and is not inferred to be Mapbox. Participant payload visibility and authoritative gameplay remain planned Phase I work.
 
 Traceability and validation: these three views were checked against F1/F2/F7, G1–G4, D10, section 14 and section 20.2 for exact-version authority, both Local creation paths, separate approval, legacy compatibility and snapshot isolation. Phase text/statuses and historical evidence are unchanged. Source-level structure and relationship checks passed. Mermaid parser/rendering and actual GitHub desktop/mobile readability remain unverified: no Mermaid renderer is installed, and shell network access failed because the environment proxy is unavailable.
+
+---
+
+### 3.3 Participation Architecture v1 — approved target, planned implementation
+
+Organizer selects **Solo OR Team** for each Hunt. Solo Participants progress independently. Team Hunts support different member counts; eligible Participants must not be excluded solely because the total is odd or not divisible by a fixed team size. Participation mode is separate from Personal/Team activity types and from the deferred Personal Hunt authoring path.
+
+Creator Templates declare compatible participation mechanics. Backend must validate the selected mode against the exact approved Template version and immutable Hunt snapshot at configuration/publication/start. Organizer cannot select an unsupported mode; FE explains compatibility but is not the enforcement boundary. Existing setup validators and Template vocabulary do not implement this target. Historical fixed-size settings remain evidence of the baseline, not the approved future rule. Legacy compatibility needs an explicit reviewed path; never rewrite historical Signal Templates, approvals or snapshots or infer Solo support by skipping required Team activities.
+
+Creator defines the challenge activities, required information fragments, puzzle solution and direction-unlock conditions. Team Challenge completion and fragment allocation are separate concepts: every active Team Participant must complete their required Team Challenge activity, whether they receive multiple fragments, one fragment or no fragment. Fragment possession alone is not evidence of challenge completion.
+
+Backend distributes the fixed set of Creator-defined fragments according to actual team membership. Fewer Participants than fragments means some receive multiple fragments; equal counts may give each one; more Participants than fragments means some receive none. Four fragments can be allocated **2+2**, **2+1+1** or **1+1+1+1** to two, three or four Participants. With **six Participants and four fragments**, four Participants receive one fragment each, two receive none, and all six complete their required activities. Never generate unnecessary fragments or artificial roles to match team size. Allocation must not depend on who finishes first and should rotate fairly between Participants across checkpoints where feasible; the precise rotation algorithm remains a future contract detail.
+
+For required Team Challenges, the backend unlocks the next direction only when **every active Team Participant has completed their required activity**, **all required information fragments are available**, and **the backend validates the collective puzzle solution**. Optional challenges must not block progression. A disconnected Participant is not automatically complete and is not silently removed from active membership; leave, replacement, timeout and Organizer intervention remain unresolved policies. Never trust client-side scoring or progression.
+
+Persist snapshot/challenge identity, membership/allocation revision, individual challenge completion, per-member fragment allocation and disclosure (including no-fragment assignments), submissions, collective puzzle validation, Team progression/unlock and score effects as distinct persisted state. Fragment disclosure and fragment availability must not substitute for individual completion. Recovery reads reconstruct the same authorized state after refresh, reconnect or backend restart, without exposing another member's private fragments or server-held solutions, while permitting only the information sharing explicitly authorized by the challenge. Exact storage/API design is future BE contract work. Retry identity must be scoped to actor/Hunt/activity and payload: duplicate/lost-response requests return the prior outcome, conflicting replays are rejected, and concurrent final submissions commit unlock and score effects once. Membership changes and allocations must be serialized/version-checked with submissions; stale members cannot act or trigger an unlock using obsolete assignments.
+
+Variable-size acceptance must prove every active member completes their required activity independently of fragment possession, including uneven allocations and the six-Participant/four-fragment case. Unsupported mechanic/member-count combinations need explicit compatibility validation and a viable formation path, not arbitrary exclusion by divisibility. Disconnections must preserve accepted contributions and recoverable allocations; a browser disconnect must not silently redefine active membership. Leave/rejoin, replacement and reallocation must preserve audit history and prevent duplicate credit or unintended answer disclosure. Their exact rules remain open.
+
+**Remaining Product Owner decisions:** formation and supported size bounds (including one-member/incomplete Teams); start/readiness thresholds; definition of active member and the Creator-configured required activity/validation details by mechanic; disconnect grace/timeouts, leave/rejoin, late join, replacement, Organizer intervention and redistribution rules; disposition of accepted contributions after membership changes; scoring normalization/comparability across sizes and Solo/Team, penalties, timers, rankings/ties and award eligibility. Do not default to summing per-member points, averaging or inventing cross-mode rankings. Also retain open GPS/fallback, guest recovery, suspension/terminal, global closure, privacy and legacy/category staging decisions in audit P1–P12. Mode choice, variable sizes, adaptive allocation and the pilot stages below are approved; these detailed policies are not.
+
+Solo and Team use the same checkpoint and FinishPoint engine. Normal checkpoints advance progression; FinishPoint has the terminal role and triggers backend-authoritative completion only after required activities resolve. Per-Solo-Participant or per-Team success must remain distinct from global Hunt closure; arrival, suspension bypass or a different team's finish cannot fabricate successful completion.
+
+```mermaid
+flowchart TB
+  template["[P] Creator: exact-version compatible mechanics<br/>Activities, fixed fragments, solution, unlock conditions"]
+  mode{"[P] BE validates Organizer choice"}
+  solo["[P] Solo: independent Participant state"]
+  team["[P] Team: actual variable membership<br/>Individual activity completion; separate fragment allocation"]
+  engine["[P] Shared BE checkpoint engine<br/>Persist attempts, scores, progress and recovery"]
+  role{"[P] Required activities resolved: role?"}
+  next["[P] Normal: unlock next direction"]
+  finish["[P] FinishPoint: terminal completion<br/>Global closure is a separate policy"]
+  template -->|"Compatibility gate; reject unsupported mode"| mode
+  mode -->|"Solo"| solo
+  mode -->|"Team"| team
+  solo -->|"Authorized actions"| engine
+  team -->|"Authorized actions"| engine
+  engine -->|"Team: all required member activities, fragments available and valid collective solution; optional never blocks"| role
+  role -->|"Normal"| next
+  next -->|"Next checkpoint"| engine
+  role -->|"Terminal"| finish
+  classDef planned fill:#F3EFFF,stroke:#7157B8,stroke-dasharray:6 4,color:#211638;
+  class template,mode,solo,team,engine,role,next,finish planned;
+```
+
+All nodes above are planned. Existing phase context diagrams retain their foundation/planned distinction; H team paths apply only to Team mode, and I/J/K participant/team references include independent Solo state. See section 20.4 for acceptance stages and the companion audit sections 6–9 for prerequisites.
 
 ---
 
@@ -910,6 +961,8 @@ Status: ✅ Complete
 ### D3. Supported pilot options
 Status: ✅ Complete
 
+Planned extension (not covered by this completed baseline): persist Organizer Solo/Team choice, explain exact-version Template compatibility and enforce it on the backend. Remove fixed-four restrictions in future contracts without weakening capacity/eligibility checks; verify save/reopen, stale selection, unsupported mode and publication/start races. Depends on F compatibility declarations and H/I runtime contracts (section 3.3).
+
 ### D4. Rewards configuration
 Status: ✅ Complete
 
@@ -1439,6 +1492,8 @@ flowchart TB
 
 ### F1. Authoritative Template hierarchy
 
+Participation extension — planned: declare Solo/Team-compatible mechanics per version, including supported variable-size contribution/allocation conditions. Author activities/fixed fragments/solution/unlock rules independently of team count, including required versus optional activities; validate complete playable mode paths before approval. Acceptance covers Solo-only, Team-only and dual-compatible examples, unsupported selections, uneven/no-fragment allocation, required activity completion for all members, optional non-blocking behavior and immutable copies/snapshots. Existing authoring baseline completion does not imply these fields or runtime evaluators exist. See section 3.3; no legacy content rewrite.
+
 1. **Creator Framework / Component Catalog** — the general authoring system defining what Creators can build. Its Creator-facing entry is the **Mechanics Library**, where Creators explore platform-supported components and their capabilities. It is not copied wholesale into every Template version.
 2. **Competition Template** — a concrete reusable implementation/configuration produced with the Creator Framework. The planned Universal and Local categories below remain within this hierarchy. A Template version records **what was built**.
 3. **Hunt instance** — an Organizer instantiates an approved Template and configures permitted Hunt-level variables.
@@ -1793,7 +1848,7 @@ flowchart TB
     identity{"[Mixed] New or returning Participant?<br/>Identity/session I; Hunt binding P"}
     auth["[I] Participant authentication<br/>Register new / sign in returning<br/>Reuse valid authenticated session"]
     enroll["[P] Enrollment / access request<br/>Idempotent Hunt membership"]
-    ready["[P] Team formation / lobby<br/>Readiness and start gate"]
+    ready["[P] Solo readiness OR variable-Team lobby<br/>Compatible mode and start gate"]
     recover["[P] Resume / reconnect<br/>Restore authorized Hunt state"]
     failure["[Mixed] Lookup error I<br/>Eligibility / access failure handling P"]
     home -->|"Enter Hunt code"| code
@@ -1812,7 +1867,7 @@ flowchart TB
   end
   subgraph authority["NEIGHBOR — Backend authority: A / B / C / H"]
     lookup["[I] Minimal public lookup<br/>Hunt identity and lifecycle status only"]
-    validate{"[P] Validate active identity, Hunt eligibility<br/>Enrollment, capacity and contextual access"}
+    validate{"[P] Validate active identity, Hunt eligibility<br/>Enrollment, capacity, mode compatibility and contextual access"}
     records[("[Mixed] PostgreSQL membership foundation I<br/>Enrollment / team / recovery workflow P")]
     code -.->|"Resolve code/link"| lookup
     lookup -.->|"Invalid / unknown code"| failure
@@ -1863,6 +1918,8 @@ Handle:
 ### H4. Team creation/assignment
 Status: ⬜ Not started
 
+Team mode only: backend-managed variable membership; preserve eligibility for odd totals and non-divisible group counts. Solo enrollment needs no synthetic Team. Formation, bounds and incomplete-team handling require P2 policy before implementation; acceptance includes cross-Hunt denial, concurrent assignments and actual members, never simulated readiness.
+
 ### H5. Team lobby
 Status: ⬜ Not started
 
@@ -1872,8 +1929,12 @@ Status: ⬜ Not started
 ### H7. Start gate
 Status: ⬜ Not started
 
+Validate mode compatibility, eligibility, lifecycle and mode-specific readiness atomically. Stage A has one Solo Participant; Stage B has two independent Team accounts. Do not impose full-four readiness. Team thresholds and membership-change races depend on explicit P2 policy.
+
 ### H8. Session recovery/reconnect
 Status: ⬜ Not started
+
+Restore Solo progress or actual Team membership, allocation revision and accepted contributions from backend state. Test disconnect/rejoin and stale sessions without silently dropping contribution requirements; exact grace/reallocation policy remains open (section 3.3).
 
 ---
 
@@ -2017,7 +2078,7 @@ Status: ⬜ Not started
 ### I6. Personal/team contribution
 Status: ⬜ Not started
 
-Replace simulated teammates/readiness.
+Replace simulated teammates/readiness. Implement section 3.3 adaptive fragments: separate individual activity completion, fragment allocation/disclosure, collective puzzle validation and Team unlock. Test 2+2, 2+1+1, 1+1+1+1 and six Participants/four fragments (two receive none; all six complete required activities). Require all member activities, all fragments available and valid collective solution for unlock; optional activities never block. Reject impersonation, stale allocations and possession-as-completion. Solo uses its compatible activities in the same engine, progressing independently.
 
 ### I7. Score events
 Status: ⬜ Not started
@@ -2027,6 +2088,8 @@ Use auditable score events rather than opaque browser-only totals.
 ### I8. Idempotency
 Status: ⬜ Not started
 
+Persist replay identity/outcome and allocation revision; serialize individual completion, fragment allocation/disclosure, collective validation, reallocation and unlock/score effects. Test concurrent final submissions, lost responses, retries, membership changes and restart recovery with no double award or progression rollback.
+
 Prevent duplicate scoring on retries/double taps/concurrent team actions.
 
 ### I9. Restore progress
@@ -2035,7 +2098,7 @@ Status: ⬜ Not started
 ### I10. Extend to all Signal checkpoints
 Status: ⬜ Not started
 
-Only after one checkpoint works across independent sessions.
+Only after the shared normal-plus-FinishPoint pilot passes Solo Stage A, two-account Team Stage B and automated variable-size/recovery/concurrency Stage C (20.4). Preserve historical Signal content; expansion uses reviewed versions.
 
 ### I11. FinishPoint terminal checkpoint completion
 Status: ⬜ Not started
@@ -2202,6 +2265,8 @@ Status: ⬜ Not started
 Participant and Organizer read the same start/pause/resume/cancel/finish state.
 
 ### J2. Real Organizer Monitor
+
+Planned participation requirement: show backend Solo Participant or Team progress, actual membership, individual activity completion, separate fragment disclosure/availability, collective validation/unlock and disconnected/recovery state without exposing private fragments/solutions. Membership intervention needs explicit authorization and P2 rules; operators cannot fabricate contributions or completion. Test concurrent operations/reallocation and truthful stale/pending state.
 Status: ⬜ Not started
 
 Replace mock:
@@ -2313,6 +2378,8 @@ Validation: the three added diagrams preserve version 3.5 and existing phase req
 
 ### K1. Final score aggregation
 Status: ⬜ Not started
+
+Depend on approved variable-size fairness and P10 ranking rules plus I authoritative events/completion. Verify two-, three-, four- and six-member uneven/no-fragment-allocation results, retries, disconnects, membership changes and incomplete Teams. Define Solo/Team comparability, normalization, tie/time/eligibility policies before competitive ranking; do not derive extra points merely from additional members/fragments.
 
 ### K2. Leaderboard
 Status: ⬜ Not started
@@ -2982,16 +3049,28 @@ Unresolved BE design outputs: classification storage/versioning, exact provenanc
 Mapbox aliases M1–M6 are not Phase M Passport/history item IDs. M1/F4–F6 and M2/G3/D8 implementation are merged as audited above; their deployed verification remains outstanding.
 
 1. [ ] M3 / B6 then D9 — BE effective authority/assignment APIs, then Allocate Supervisors FE.
-2. [ ] H / Step 8 — Participant enrollment/team formation/start/recovery; Step 7 deployed verification gates this phase.
+2. [ ] H / Step 8 — compatible Solo enrollment/readiness/start/recovery for Stage A; variable-Team formation/lobby follows for Stage B. Step 7 deployed verification gates this phase.
 3. [ ] M4 / I1–I9 + I12 — one authoritative checkpoint first, with persistent map background, popup/overlay interactions, Signal story and Personal/Team Challenges, GPS/navigation/Arrival Engine. BE contracts before FE; Creator simulation is not runtime completion.
 4. [ ] I13 — BE suspension/bypass rules, then Participant handling; prove before live suspension controls.
-5. [ ] I10–I11 — expand proven shared gameplay to Signal's seven stops, including terminal FinishPoint; BE completes Hunt only after required terminal activities resolve. Resolve terminal suspension/fairness policy first.
-6. [ ] M5 / J — backend live state/minimal GPS, then shared Operations Map, suspension controls and HELP/PANIC.
-7. [ ] K — results and reward awarding; retain suspension fairness.
+5. [ ] I11 — apply the shared engine to the pilot FinishPoint for Stage A, then Stage B. BE completes only after required terminal activities resolve; settle terminal suspension/global closure policies. I10 full seven-stop expansion follows completed A–C and their operations/results gates.
+6. [ ] M5 / J — minimal backend live state, safe controls and truthful HELP/PANIC gate each live pilot stage; full Operations Map/latest GPS follows explicit privacy policy.
+7. [ ] K — authoritative core results complete Stage A, then repeat Team proof in B and variable-size tests in C; retain size/suspension fairness. Reward awarding/fulfillment remains separately scoped.
 8. [ ] M6 / I14 — advanced geographic gamification after core rules and operations are proven; this does not defer I12's basic gamified map presentation.
 9. [ ] Outstanding L Admin operations/audit, M long-term records and N custom requests as scoped steps; resolve Independent Organizer separately.
 
 Each entry is a sequence container, not one large PR. Follow review → user merge → deployment → explicit verification, keeping implementation status and E2E status separate.
+
+## 20.4 Controlled internal pilot — approved participation stages
+
+This pilot is controlled and non-public. All stages retain audit D01–D07 security priorities, independent exact-version route/access/safety review, operating validity, truthful HELP/PANIC, privacy and explicit GPS/fallback policy. Create new reviewed pilot versions; historical Signal Templates and immutable snapshots stay unchanged. Approval of these stages does not settle the separate P1 legacy/category shortcut or authorize merge/deployment.
+
+| Stage | Scope and dependencies | Acceptance |
+| --- | --- | --- |
+| A — Solo | One test Participant, one normal checkpoint plus FinishPoint; F compatible content, D mode validation, H enrollment/start/recovery, I shared engine, J safety/operations and K core results | Independent Solo progress; normal advances, terminal completes only after required activities; backend scores/state survive retry/reconnect/restart. No Team dependency or simulated members. |
+| B — Team | After A; two independent test accounts, reviewed Team-compatible content, H membership/readiness and I adaptive allocation/contributions | Backend distributes fragments (four-fragment example 2+2); both accounts complete required activities, all required fragments become available and backend validates the collective solution; no single client impersonation; separately persisted completion/allocation/disclosure/collective-validation/unlock and replay-safe terminal/results recovery. |
+| C — Variable sizes | After B; automated BE/DB and integrated recovery/concurrency tests for teams of two, three, four and six | Exercise 2+2, 2+1+1, 1+1+1+1 and six Participants/four fragments: four receive one each, two receive none, all six complete required activities. Verify no artificial fragments/roles, allocation independent of finish order, fair rotation across checkpoints where feasible, and no unlock when any required activity is incomplete, fragment unavailable or collective solution invalid; optional challenges do not block. Test disconnected members are not auto-completed, independent state recovery, odd enrollment totals, incomplete-team policy, disconnect/rejoin, membership/reallocation races, stale requests, duplicate/lost-response submissions and concurrent final unlock/completion. Fairness expectations follow explicit approved rules; no invented formula. |
+
+Section 20.3 sequence containers are refined by these gates: deliver one normal checkpoint and terminal/results in A before B; add Team mechanics in B, then C coverage before I10 full Signal expansion. J safety/minimal operations must precede each live stage; continuous location monitoring and full reward fulfillment remain separate. Audit PR sequence 08–32 supplies scoped dependencies; its E2E-A–D evidence labels are distinct from pilot Stages A–C. Full F7/G4/D10 prerequisites remain unless P1 explicitly approves the bounded parallel path.
 
 # 21. Next-step planning gate — no implementation prompt yet
 
@@ -3022,8 +3101,8 @@ Creator creates template
 
 ## Milestone 3 — Real participant Hunt
 
-Participant joins
-→ team forms
+Participant joins in the compatible Solo or Team mode
+→ Solo readiness or actual Team formation
 → Hunt starts
 → one checkpoint works
 → progress/scoring persists
@@ -3056,3 +3135,6 @@ Creator creates
 → Backend records truth
 
 Every new implementation step should strengthen that chain without bypassing backend authority or replacing real persistence with frontend simulation.
+
+
+Participation revision validation: checked changed Markdown structure, Mermaid fences and labeled flow, D/F/H/I/J/K dependencies, fixed-four wording and historical evidence preservation. Mermaid rendering and GitHub desktop/mobile readability remain unverified; no application tests or deployed E2E were run for this documentation-only revision.
