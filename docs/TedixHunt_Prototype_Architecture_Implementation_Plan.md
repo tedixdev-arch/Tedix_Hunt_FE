@@ -1,14 +1,16 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 3.3 | Updated 10 October 2026
+Version 3.4 | Updated 24 October 2026
 
-This revision preserves Phase A–N and the existing identity, credential and account-retirement architecture. The Creator phase is complete for its agreed baseline before the Mapbox evolution. Merged geographic authoring/preview capabilities are audited below; new Country/City and map-first setup work does not reopen that baseline.
+This revision preserves Phase A–N and the existing identity, credential and account-retirement architecture. The Creator phase is complete for its agreed baseline before the Mapbox evolution. Merged geographic authoring/preview capabilities are audited below; new Universal/Local, Country/Locality and map-first setup work does not reopen that baseline.
 
 Revision note (3.1): corrects B1.1 using merged FE #61 and G1 using merged FE #70; incorporates the finalized geographic architecture and subsequent Admin/Organizer corrections; integrates Mapbox M1–M6 into existing phases. Merged implementation is distinct from deployed E2E evidence; this revision does not claim a new deployment test.
 
 Revision note (3.2): defines FinishPoint as a terminal checkpoint using the shared gameplay engine; clarifies geographic compatibility, Feature 6 authoring, backend-authoritative Hunt completion and the existing-phase implementation sequence. Documentation only: existing implementation statuses are preserved; no new implementation or deployed E2E verification is claimed.
 
 Revision note (3.3): documentation only, before implementation prompts. Adds AI-assisted Country/City Templates (F7/G4) and Organizer map-first General Setup (D10); audits merged F4–F6/G3/D8 without claiming deployed E2E. Preserves Signal story, Personal/Team Challenges, the Creator/Admin approval chain and immutable snapshots. No application code, content generation, migrations or deployment are part of this revision.
+
+Revision note (3.4): introduces planned Universal/Local Templates, Creator community reuse by independent versioned copies, separate Admin approval, a hybrid Country/Locality catalog, proportional geographic safety evidence and clue-based Participant navigation. Preserves legacy Signal content, exact-version approval and immutable Hunt snapshots. Audits current FE/BE main and recent merged implementation separately from deployment and independent E2E evidence. Phase A–N and historical revision/evidence notes remain intact; newly agreed architecture is not implemented by this documentation change.
 
 The implementation strategy is:
 
@@ -71,9 +73,9 @@ Participant joins and plays
 
 The target supply chain is:
 
-Creator creates template
-→ Admin reviews and approves
-→ Organizer selects approved version
+Creator creates Universal or Local Template
+→ Admin reviews and approves each exact version separately
+→ Organizer selects an approved Local version for an ordinary location-based Hunt
 → Hunt stores an immutable template snapshot
 → Organizer configures and publishes
 → Participant joins and plays
@@ -81,7 +83,7 @@ Creator creates template
 → Organizer/Admin monitor
 → Passport/history/achievements preserve long-term value
 
-This dependency chain drives implementation order.
+This dependency chain drives implementation order. The governing architecture remains **Creator creates → Admin governs → Organizer configures → Participant plays → Backend records authoritative state**. Universal/Local is the planned v3.4 evolution; the existing unclassified catalog remains subject to the explicit compatibility strategy in F7 and section 14.
 
 ---
 
@@ -306,13 +308,19 @@ Each change should be narrowly scoped, reviewable, tested, deployable and verifi
 
 ### Shared geographic architecture and V1 boundary
 
-Mapbox is the shared geographic presentation, search and navigation provider behind a provider-neutral TedixMap boundary. PostgreSQL/TedixHunt remains authoritative for content, rules, permissions, visibility, arrival, progression, scores and runtime state. Mapbox is not the game database.
+Mapbox is the shared geographic presentation, search and authorized inspection provider behind a provider-neutral TedixMap boundary. Geographic catalog provider selection remains a separate BE contract decision. PostgreSQL/TedixHunt remains authoritative for content, rules, permissions, visibility, arrival, progression, scores and runtime state. Mapbox is not the game database.
 
 TedixMap grows only as needed: Mapbox adapter/base, search, checkpoint/FinishPoint/route/radius layers, player/team layers, GPS controller and camera utilities. HuntMapEditor, HuntMapPreview, HuntGameMap and LiveHuntMap reuse those foundations. Creator, Operations and Participant are three experiences; Admin/Organizer previews reuse the same platform.
 
 Preserve `configuration.normalCheckpointCount`, `configuration.checkpointPositions[]` and `configuration.finishPoint` as the compatible geographic persistence contract. Extend gameplay/navigation/visibility or later game-object fields only through specific BE contracts. The terminal gameplay role does not require an immediate database migration or rewriting immutable Template versions or Hunt snapshots. Do not introduce a giant generic mapObjects schema. Provider route estimates are advisory and cannot establish route safety or arrival.
 
 V1 excludes AR, background geofencing, permanent GPS history, complex GIS tooling and unnecessary 3D. Exact arrival mathematics remains a Participant-runtime design/real-phone validation task; 5 m is a discovery target, not a promise of device precision.
+
+### Participant discovery and authoring inspection
+
+TedixHunt is a clue-based discovery game, not a turn-by-turn navigation application. Universal Templates define discovery/navigation mechanics; Local Templates supply corresponding geographic clues and checkpoint positions. Backend-authoritative runtime rules determine which information each Participant may access. Normal play must not automatically expose walking directions, route lines, hidden coordinates, destination markers or distances to undiscovered/locked objectives. Enforce this in authorized payloads as well as UI layers. Deliberately authorized hints follow the selected mechanics.
+
+Creator/Admin may inspect complete routes for authoring and review; Organizer inspection is read-only setup confirmation. Existing walking-route tools and Creator Participant simulation are historical authoring capabilities, not authorization to show the complete route in Participant runtime. Preserve the persistent Mapbox map, popups/overlays, Personal and Team Challenges, shared checkpoint engine, terminal FinishPoint and backend-authoritative progression/completion.
 
 ### Shared checkpoint gameplay and terminal role
 
@@ -378,10 +386,10 @@ Already-real frontend foundations include:
 - organizations, Hunt, options, rewards, and access-code API integration
 - Hunt draft create/reopen/edit and publish flow
 - Organizer Quick Setup backed by `GET /api/hunt-templates`, with loading/error/empty handling
-- Creator Studio geographic editing with Leaflet + React-Leaflet and OpenStreetMap prototype tiles
+- Creator Studio geographic editing now uses shared Mapbox/TedixMap and the map-first positioning workspace (F5); earlier Leaflet + React-Leaflet/OpenStreetMap editing remains historical prototype evidence
 - Creator Studio real persistence/submission integration from FE PR #68
 
-Admin Template Review is connected to the real list/detail/approve/request-changes APIs (merged FE PR #70). It reviews the exact submitted version. Geographic Mapbox preview is a new G3 enhancement.
+Admin Template Review is connected to the real list/detail/approve/request-changes APIs (merged FE PR #70). It reviews the exact submitted version. Geographic Mapbox preview is implemented in merged G3; deployed authenticated/provider E2E remains unverified.
 
 The active application uses `src/main.tsx` and `src/routes/router.tsx`.
 
@@ -399,6 +407,7 @@ Implemented Creator/Template backend foundation includes:
 - approved DB-backed Template catalog
 - approved Template resolution and immutable Hunt key/version/content snapshots
 - geographic configuration validation and submission completeness
+- Creator-owned unused-draft deletion (BE #66), separate Signal Overload draft starter (BE #67) and ordered fixed Creator starter registry (BE #68); these do not implement Universal/Local classification or community reuse
 
 Participant runtime, live operations, and long-term systems remain to be built.
 
@@ -658,8 +667,8 @@ Status: ⬜ Not started; depends on F7/G4 location, review and approved-catalog 
 Target order within General Setup:
 
 1. Country.
-2. City, restricted to the selected Country.
-3. Approved Template, restricted to that Country/City and exact approved version.
+2. Locality, restricted to the selected Country.
+3. Approved Local Template, restricted to that Country/Locality and exact approved version.
 4. Automatic read-only real Mapbox route preview immediately on Template selection.
 5. Hunt details.
 6. Participants/access.
@@ -667,11 +676,11 @@ Target order within General Setup:
 
 - [ ] Reuse D8 approved geography, HuntMapPreview and TedixMap. Selection automatically fetches and displays valid saved geography; no extra Inspect click. This is a deliberate future change from merged FE #84's independent, explicitly opened inspection.
 - [ ] Show saved ordered normal checkpoints and terminal FinishPoint, names/radii and a clearly labelled route overview. A straight-line connection is not a walkable route. Mapbox walking geometry/distance/time remains a provider estimate; define request/cost/cancellation behavior in the scoped FE step and never invent metrics on failure.
-- [ ] Changing Country clears City/Template/preview; changing City clears Template/preview. Cancel stale requests; reject key/version mismatches and require fresh approval selection. Loading, no approved Templates, withdrawn approval, incomplete legacy geography and provider failure need explicit states; never show the previous route as the new choice.
+- [ ] Changing Country clears Locality/Template/preview; changing Locality clears Template/preview. Cancel stale requests; reject key/version mismatches and require fresh approval selection. Loading, no approved Local Templates, withdrawn approval, incomplete legacy geography and provider failure need explicit states; never show the previous route as the new choice.
 - [ ] Preview is visual confirmation, not a save/create/publish action. Keep explicit persistence and backend publish-readiness. After creation, read only the exact saved Hunt snapshot; newer catalog content must not replace it.
 - [ ] For fixed Templates, remove the simulated checkpoint editor from the **future Organizer UX plan**: no dragging, coordinate/radius/gameplay edits, fake placement or local geography overrides. Authoring stays with Creator and Admin governance. This documentation change removes no existing implementation.
 - [ ] Preserve Hunt details, access/Participants, supported Experience defaults, rewards, Review and Publish. Editable defaults cannot override immutable Template content or backend rules.
-- [ ] E2E: Country → City → approved Template automatically shows its actual route; switch locations rapidly; handle missing data; save/reopen and verify exact snapshot stability after later Template approval changes.
+- [ ] E2E: Country → Locality → approved Local Template automatically shows its actual route; switch locations rapidly; handle missing data; save/reopen and verify exact snapshot stability after later Template approval changes.
 
 ## Phase E — Professional account lifecycle
 
@@ -969,14 +978,57 @@ Status: ✅ Creator baseline and F4–F6 implementation merged; geographic deplo
 
 ### F1. Authoritative Template hierarchy
 
-1. **Creator Framework / Component Catalog** — the general authoring system defining what Creators can build. It is not copied wholesale into every Template version.
-2. **Competition Template** — a concrete reusable implementation/configuration produced with the Creator Framework. A Template version records **what was built**.
+1. **Creator Framework / Component Catalog** — the general authoring system defining what Creators can build. Its Creator-facing entry is the **Mechanics Library**, where Creators explore platform-supported components and their capabilities. It is not copied wholesale into every Template version.
+2. **Competition Template** — a concrete reusable implementation/configuration produced with the Creator Framework. The planned Universal and Local categories below remain within this hierarchy. A Template version records **what was built**.
 3. **Hunt instance** — an Organizer instantiates an approved Template and configures permitted Hunt-level variables.
 4. **Hunt runtime/results** — Participant progress, answers, scores, awards, and history.
 
 **Governing rule:** Creator Framework defines what can be built. Template version records what was built. Hunt records what was instantiated. Adding Creator Studio options later must not mutate existing Template versions.
 
 Canonical Signal v1 is persisted platform Template content and is one concrete Competition Template implementation; it is not the Creator Framework. Legacy `eventData` is not canonical Template authority. This plan intentionally does not duplicate the complete Signal dataset.
+
+#### Universal and Local categories — agreed target, not implemented
+
+| Category | Content and validation boundary | Approval and consumption |
+| --- | --- | --- |
+| Universal Template | Reusable story/narrative progression, Personal Challenges, Team Challenge content/mechanics, scoring/penalties, settings/defaults, discovery/navigation mechanics and supported Shadows/Shields or other framework elements. Requires neither fixed coordinates nor a city. Distinguish reusable mechanics from challenge content that needs local adaptation. | Admin reviews structure, narrative/challenges, allowed mechanics, reusability, content consistency, required gameplay components and Creator Framework compliance. Approval does not certify geographic safety. Approved versions may be reused by other Creators. |
+| Local Template | Country/Locality, real checkpoint/FinishPoint positions, ordered route, local clues/directions, local challenge content/adaptations, applicable settings/supported overrides, geographic review evidence and access conditions. Geographic completeness validation differs from Universal validation. | Admin separately reviews exact route/positions, clues, adaptations, geographic access/safety evidence and operational restrictions. Only approved Local versions are selectable for ordinary location-based Hunts in V1, following the explicit legacy transition in section 14. |
+
+Every Creator with an approved, active Creator capability may create and submit both categories, reuse approved Universal Templates from other Creators, or create Local Templates independently. The proposed dashboard exposes **Mechanics Library**, **My Templates**, **Create Universal Template** and **Create Local Template** as visible, clearly labeled entry points; Local creation offers **Start from an approved Universal Template / Start from scratch**. No Universal source is required for a Local Template. Preserve owner-scoped drafts, backend authorization, immutable versions and exact submission. A Creator cannot directly approve or publish their own Template; Admin governs approval and Organizer configures/publishes Hunts.
+
+**V1: copy on creation, not live inheritance.** Selecting an approved Universal version creates an independent Creator-owned Local draft containing a snapshot of that exact source version. Retain source Template identity, exact version and provenance. Validate source approval and copy atomically under the future BE contract; no access to another Creator's private drafts or editing rights is implied. Local adaptations belong to new immutable Local versions and require their own submission/review.
+
+Later Universal changes never automatically change Local drafts, approved Local versions, published Hunts or immutable Hunt snapshots. Explicit update-from-Universal is a possible future workflow, outside V1. The shipped starter registry (BE #68) is not yet a community Universal catalog or an implemented Universal/Local classifier.
+
+#### Creator Studio information architecture and editor UX — planned F7 guidance
+
+Creators must be able to distinguish three concepts throughout Studio:
+
+- **Mechanics Library** — reusable platform-supported components: Personal Challenges, Team Challenges, scoring, hints, progression, discovery, GPS arrival and FinishPoint mechanics. Explain each component's capabilities, supported configuration and availability. Distinguish implemented support from planned components; the Library does not make a planned runtime capability available.
+- **Universal Templates** — reusable competition experiences assembled from supported mechanics and reusable content, without fixed geography.
+- **Local Templates** — location-bound implementations using the same mechanics, created independently or adapted from an approved Universal version.
+
+Universal and Local Templates share the checkpoint/gameplay engine, including Personal/Team Challenges and terminal FinishPoint. Geographic content and configuration differ; do not introduce separate Universal and Local gameplay engines. Creators configure existing platform-supported mechanics and author content within their contracts; they cannot create arbitrary executable gameplay mechanics, upload gameplay code or define a new engine through the editor.
+
+The Creator dashboard must show these clearly labeled entry points:
+
+| Entry point | Purpose and destination |
+| --- | --- |
+| **Mechanics Library** | Explore supported components, capabilities and configuration limits, with contextual explanations of where each can be used. Browsing does not create or approve a Template. |
+| **My Templates** | Manage owned drafts, submitted and approved Templates, showing type where explicitly classified, lifecycle status and version. Preserve owner-scoped access and the current lifecycle actions/limitations; submitted or approved content is not directly editable. Historical unclassified content remains readable without inferred classification. |
+| **Create Universal Template** | Start an experience with reusable content and supported mechanics, without Country/Locality or a fixed-route requirement. |
+| **Create Local Template** | Offer **Start from an approved Universal Template** and **Start from scratch**. The first opens approved Universal discovery, shows the selected exact source version/provenance and creates an independent Local draft; the second requires no Universal source. |
+
+The Template editor visibly identifies the selected type and separates these sections:
+
+| Editor area | Sections | Visibility and explanation |
+| --- | --- | --- |
+| **Universal / Reusable** | Story and narrative; challenge mechanics and reusable content; scoring and progression; discovery rules and general settings. | Available for both types where supported. For Universal authoring, explain that mechanics/content can be reused without geography. For Local authoring, explain which copied content can be adapted in this independent draft. This label describes reusable concerns, not a live link to a Universal source. |
+| **Local / Location-specific** | Country and Locality; map, route and checkpoints; geographic clues and adaptations; access conditions and geographic review evidence. | Shown only for Local authoring. Explain how geography implements shared discovery/arrival mechanics and how local adaptations and evidence affect the exact Local version's separate review. A Local created from scratch still has both relevant editor areas. |
+
+Use progressive disclosure: show relevant sections for the selected Template type and reveal component settings, geographic exception evidence and advanced options only in context. Universal authoring must not present irrelevant map/location requirements; Local authoring must make its geographic requirements discoverable without forcing every exception field into ordinary authoring. Provide short contextual explanations beside type choice, reusable mechanics/content, source provenance and location/evidence controls. Separate reusable discovery rules from local clues/positions, and explain that inspecting the full authoring route does not reveal it to Participants. Progressive disclosure must not hide missing required fields or bypass backend validation.
+
+This UX is planned, not a claim that the dashboard, Mechanics Library or type-specific editors are implemented. Reuse existing draft/version persistence, explicit save/submit, separate Admin approval, compatibility rules and immutable snapshots. F7 and section 20.2 stage delivery after the necessary BE contracts; no new mechanics runtime is part of this UX work.
 
 ### F2. Creator Template persistence and immutable versioning
 
@@ -995,6 +1047,7 @@ Responsibilities / implemented work:
 - approved Creator catalog resolves the exact pinned submitted version
 - Hunt Template selection resolves an approved persisted Template
 - Hunt stores the exact Template key/version/content snapshot
+- [BE #66](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/66): owner-scoped deletion of unused draft/changes_requested Templates and their versions is transactional; submitted/approved or Hunt-dependent content is protected. This lifecycle exception deletes unused drafts, never rewrites immutable content.
 
 Template-version content is immutable JSONB. As an accepted current limitation, rows are treated as immutable through model/API behavior; the schema does not currently use a database trigger that prohibits direct `UPDATE` of version content.
 
@@ -1073,8 +1126,10 @@ Status: ✅ Backend implementation merged in [BE #60](https://github.com/tedixde
 ### F5. Shared TedixMap and Creator Hunt Map Editor — Mapbox M1b
 Status: ✅ FE implementation merged in [#74](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/74), [#75](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/75), [#76](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/76); deployed Mapbox E2E unverified.
 - [x] Shared Mapbox foundation, temporary location/POI search, camera-only search selection and explicit checkpoint placement.
-- [x] Numbered markers, discovery circles, 5 m new-position default, saved-value preservation and provider lifecycle/error handling.
+- [x] Numbered markers, discovery circles, the historical 5 m new-position default in this initial slice, saved-value preservation and provider lifecycle/error handling. FE #103 later changes new-draft initialization to 15 m; saved values and 5–500 m validation remain unchanged.
 - [ ] Verify live token/search/placement/save/reopen/submit and mobile behavior. Mocked provider tests do not establish live behavior.
+
+Recent merged authoring evolution (see section 20.1): FE #86–#104 adds starter/research workflows and map-first positioning. FE #102 fixes confirmation/deselection and search retrieval after blur, preserving camera-only search and one Map/Satellite instance. FE #103 adds focus/overview and a 15 m new-draft radius while preserving stored radii and 5–500 m validation. FE #104 supersedes authored-only camera eligibility: selection and Show all resolve authored coordinates first, then sourced references, including FinishPoint. Repeated actions and pending map/style readiness are handled without authoring, confirmation or persistence. Amber reference pins remain provisional. Live provider/deployed authoring E2E is still unverified.
 
 ### F6. FinishPoint configuration, route validation and Participant Preview — Mapbox M1c
 Status: ✅ Scoped BE/FE authoring and preview implementation merged; deployed E2E unverified.
@@ -1086,18 +1141,40 @@ Status: ✅ Scoped BE/FE authoring and preview implementation merged; deployed E
 - [ ] Authoritative visibility, navigation, Arrival Engine, actual challenge interactions and completion remain Phase I. The Creator simulation does not complete I12 or the planned popup UX.
 Validation limits: BE #62 reported 21 database tests skipped; later BE #63 reports a full PostgreSQL suite of 712 passing tests, zero skipped. Neither is deployed E2E evidence. FE provider tests are mocked; FE #81's mobile smoke used the missing-token fallback. Temporary custom challenge controls in FE #79 are not persisted authoring support.
 
-### F7. AI-assisted Templates per Country/City — planned workstream
-Status: ⬜ Not started. Reuse the existing Creator draft/version/submission architecture; AI is assistance, not an approver or a new platform role.
+### F7. Universal/Local creation, reuse and Country/Locality — planned workstreams
+Status: ⬜ Universal/Local classification, community reuse, hybrid location identity and approval-evidence contracts are not implemented. Existing Signal starters/research tools are merged baseline capabilities (section 20.1), not completion of F7.
 
-- [ ] Begin with Signal: preserve its story, Personal Challenges and Team Challenges while proposing real location-specific routes. Preserve the seven-stop journey (six normal checkpoints plus terminal FinishPoint); do not silently create seven normal checkpoints plus an eighth finish or rewrite canonical Signal v1.
-- [ ] Proposed content target: three distinct Templates/routes per city. This is a curation target, not a hard database cardinality, approval requirement, automated generation quota or reason to publish weak routes.
-- [ ] AI proposes location candidates, route order, narrative fit and draft content with sources, uncertainties and review notes. Candidate coordinates must be checked against real places; generated claims are not verified facts.
-- [ ] A responsible Creator explicitly reviews/edits and saves proposals as ordinary Creator-owned drafts. No direct AI publication, approval, bypass of submitted_version, or writes to approved versions/Hunt snapshots.
-- [ ] Human safety/accessibility review covers every stop AND connecting walk: pedestrian/legal access, crossings/traffic, opening hours/closures, terrain/steps, step-free alternatives and audience suitability. Record evidence, reviewer, date, limitations and unresolved issues against the exact version; use local/on-site checking where desk evidence is insufficient. AI/Mapbox cannot certify safety or accessibility.
-- [ ] BE contract first: define canonical Country/City identity, city-country validation, draft location metadata, AI provenance and version-bound review evidence/status; define required submission/approval gates and compatibility for legacy content. Field names/endpoints and any tracked migrations are design outputs of the later contract step, not invented APIs in this plan.
-- [ ] Preserve configuration.normalCheckpointCount, checkpointPositions[] and finishPoint, immutable versioning, progressive draft authoring and existing capability enforcement. Existing approved content/snapshots are not backfilled or relabelled silently.
-- [ ] Creator FE follows the contract: Country/City, AI-assisted draft intake/editing, clear unverified proposals, human review evidence and normal save/submit. Provider integration, if needed, stays behind backend authorization; no provider secret in FE.
-- [ ] Acceptance: one city pilot through Creator draft → human review → exact submission → Admin approval → location-filtered catalog → Organizer snapshot; reject missing required evidence/invalid location at the backend and preserve historical content.
+- [ ] BE contract/design first: define classification, exact Universal-source provenance/copy semantics, per-category versioned validation, separate approval gates, location identity and legacy adaptation (sections F1, G4 and 14). Specify schemas/API contracts in that step; no new endpoint is asserted here.
+- [ ] BE implementation follows as narrow tracked migrations, model/validation, authorized reuse, location lookup/persistence and review/catalog PRs; dependencies and acceptance are in section 20.2.
+- [ ] Creator FE follows F1 information architecture: first expose the four labeled dashboard entries and Mechanics Library capability explanations; then integrate My Templates type/status/version context, the reusable editor and approved community Universal copying or independent Local creation in separate reviewable slices. Depend on agreed supported-mechanic configuration/availability and category/reuse contracts; do not add a second gameplay engine or arbitrary executable mechanics. Follow with a separate Country/Locality and Local-geography integration slice, preserving progressive drafts, explicit persistence and exact submission.
+- [ ] Retain AI-assisted proposals as optional Creator assistance. AI may propose candidates, order, narrative fit, content, sources and uncertainties; responsible Creators review/edit ordinary drafts. No AI approval/publication, invented verification, provider secrets in FE, or mutation of approved content/snapshots.
+- [ ] Preserve canonical Signal v1 and Signal Overload Cluj-Napoca, their story, puzzles, Personal/Team Challenges and seven-stop journey: six normal checkpoints plus terminal FinishPoint. Three routes per locality remains an optional curation target, never a database cardinality or approval quota. Existing starter provenance is not Universal-source provenance.
+
+#### Hybrid Country/Locality catalog
+
+Do not import a worldwide city database into PostgreSQL for V1. Search an external geographic provider, reuse TedixHunt records when available, and persist newly selected locations only when needed. The domain term is **Locality**, with friendly City / Town / Village labels and support for other valid localities. Country-wide imports are only an optional future optimization.
+
+Intended identity principles: TedixHunt-owned stable internal UUID, ISO country code, provider identity when available, canonical display name, administrative region/context, geographic coordinates and provider provenance. Free-text names alone are not identity; same-name localities in different regions must remain distinguishable. Provider identity is a reference, not the platform primary key.
+
+Resolve known internal/provider matches before creating a record; check country/administrative context and coordinates for potential duplicates. Ambiguous matches require explicit selection or manual review, not automatic merging by name or proximity. Provider changes/aliases must preserve stable internal references and provenance. Final uniqueness, reconciliation and merge rules belong to the BE contract.
+
+On provider failure, retain usable existing locations, show lookup failure/retry and do not invent results or silently substitute another location. Missing localities require a documented manual proposal/review path with country, context, coordinates and evidence before authoritative acceptance. Unresolved proposals cannot bypass Local submission/approval gates. Legacy country/region/city strings remain readable until explicitly mapped and reviewed; do not treat them as canonical UUID identities or mutate snapshots. Provider choice, coverage/licensing, request/caching/failure behavior and exact APIs are unresolved BE design outputs.
+
+#### Geographic safety and review evidence
+
+Avoid blanket rejection of every checkpoint classified as a road. Automated classifications can be uncertain; Mapbox, AI and automated checks cannot certify route safety. Keep ordinary-location review simple and make exception details conditional.
+
+| Category | Examples | Required action |
+| --- | --- | --- |
+| Advisory | Potential traffic proximity, uncertain map classification or other non-blocking concerns | Creator may acknowledge the warning; preserve the concern for human review. |
+| Evidence required | Temporary pedestrian streets, festivals/events, conditional access, temporary closures or other exceptions | Creator supplies explanation, supporting evidence and applicable dates/conditions. Admin reviews whether the exception actually resolves the concern. |
+| Blocking | Known prohibited access, unacceptable traffic exposure or another established unresolved hazard | Correct the location or demonstrably resolve the restriction before approval. Acknowledgment alone cannot clear it. |
+
+Human review covers every checkpoint and FinishPoint, connecting pedestrian segments, crossings/traffic, legal/public access, opening hours/closures, terrain/accessibility limitations and step-free alternatives where applicable. Record evidence source, reviewer, review date, validity dates/conditions and unresolved concerns against the exact version. Use local/on-site checks where desk evidence is insufficient. Prior walking research may describe an earlier order; review the actual submitted route.
+
+Backend-authoritative submission/approval requirements must distinguish acknowledged advisories, required reviewed evidence and unresolved blockers; client checkboxes are not authoritative certification. Approval must respect applicable operating dates/conditions. Define evidence invalidation, expiry/re-review, withdrawal and Hunt publish-readiness behavior in the BE contract without retroactively changing approved content or saved snapshots. Universal approval carries no geographic certification.
+
+Acceptance: Creators can distinguish Mechanics Library, Universal Templates and Local Templates, reach all four dashboard entries, and find both Local creation options. Verify type-relevant editor sections, visible reusable/location separation, contextual explanations and progressive disclosure without hidden validation failures; only supported mechanic configuration is offered. Then prove both standalone Local creation and cross-Creator approved Universal reuse, followed by one reviewed locality pilot through exact Local submission → separate Admin approval → filtered catalog → immutable Hunt snapshot. Backend rejects unauthorized copying, invalid country/locality, missing required evidence and unresolved blockers; prior versions remain unchanged.
 
 ## Phase G — Admin Template governance and approved authority
 
@@ -1164,13 +1241,15 @@ This read-only review mode does not restrict Admin platform authority; any expli
 
 - [ ] Record deployed exact-version review → approve → Organizer selection verification and real Mapbox/mobile checks.
 
-### G4. Country/City Template governance — planned extension
-Status: ⬜ Not started; paired with F7 contract work.
-- [ ] Extend existing Admin review to inspect Country/City, AI provenance, proposed route and version-bound human safety/accessibility evidence.
-- [ ] Admin retains explicit approve/request-changes authority for the exact submitted version. Human review is a prerequisite for approval, not replaced by an AI score or map rendering.
-- [ ] Backend catalog filtering exposes only approved Templates for the requested Country/City; approval withdrawal and version changes remain authoritative. Reuse BE #63 geography projection and its key/version checks.
-- [ ] Define explicit legacy/unclassified behavior before FE filtering; do not infer a city from a display name or silently classify historical Signal content. Existing Hunt snapshots remain usable and unchanged.
-- [ ] Keep review evidence scoped to the reviewed version; edited routes require renewed review before approval. Existing G1/G2 lifecycle and Creator/Admin permissions remain intact.
+### G4. Separate Universal/Local governance — planned extension
+Status: ⬜ Not started; depends on F7 BE contracts/implementation and Creator integration.
+
+- [ ] Implement separate Universal and Local review using F1's criteria in the existing Admin workflow. Both decisions apply only to the exact submitted immutable version; approved Universal provenance never grants automatic Local approval.
+- [ ] Local review exposes Country/Locality identity, complete route, local adaptations, AI/provider provenance where applicable, safety category, evidence and validity/access conditions. Inspect every stop and connecting segment; a rendered map or AI score cannot replace human review.
+- [ ] Backend enforces category-specific validation and evidence requirements, including unresolved blocking hazards. Edited routes/adaptations require a new version and renewed review. Creator cannot directly approve/publish their own content.
+- [ ] Approved Universal discovery is for Creator reuse; Organizer's ordinary V1 location-based catalog exposes only approved Local versions for the selected Country/Locality. Preserve exact-version selection, withdrawal handling and BE #63's allowlisted geographic projection/key/version checks. Final API/filter shapes remain unresolved.
+- [ ] Define and test explicit legacy/unclassified behavior before activating filtering. No inference from names/coordinates, automatic Signal conversion or mutation of old approval states/snapshots (section 14).
+- [ ] Acceptance: Universal approval without geography succeeds under its own contract; derived Local still requires independent review; invalid/expired required Local evidence or unresolved blockers prevent approval; approval/withdrawal and stale-version handling preserve immutable history.
 
 ## Phase H — Participant enrollment and team formation
 
@@ -1283,7 +1362,7 @@ The terminal suspension/fairness policy remains explicitly unresolved under I13;
 ### I12. Participant geographic runtime — Mapbox M4
 Status: ⬜ Not started; depends on H enrollment/start/recovery and B6
 Backend / DB first, then separate FE integration slices.
-- [ ] Define authorized objective projections, discovery and progression APIs, navigation rules, FinishPoint unlock and idempotent transitions using the shared checkpoint model. FinishPoint uses the same navigation and Arrival Engine; arrival/discovery is distinct from checkpoint completion and never independently completes the Hunt.
+- [ ] Enforce the clue-based discovery boundary in section 6: no automatic walking guidance, locked route lines, hidden coordinates, destination markers or distances to undiscovered objectives. Define authorized objective projections, discovery and progression APIs, navigation rules, FinishPoint unlock and idempotent transitions using the shared checkpoint model. FinishPoint uses the same navigation and Arrival Engine; arrival/discovery is distinct from checkpoint completion and never independently completes the Hunt.
 - [ ] Build one persistent Hunt Game Map per active Participant Hunt session. Persistent means the map remains mounted during normal in-Hunt navigation; it does not mean the map is always visible. Challenges, Score / Results, Mission History, Help and other Hunt interfaces may cover or hide the map without destroying it. When the map becomes visible again, preserve its camera, zoom, location, objective, navigation and Hunt context as appropriate. Refresh, close/reopen or session recovery may create a new map instance and must restore authoritative Hunt state from the backend.
 - [ ] Preserve Signal story and Personal/Team Challenges over the persistent route-map background. Use popups/overlays for story, checkpoint activities, scores and help without remounting the map; support focus return, keyboard access, mobile sheets and reduced motion. Show the seven-stop journey only as authorized by runtime visibility; do not expose locked coordinates/answers. Basic game-state map styling belongs here; advanced geographic mechanics remain I14.
 - [ ] Browser Geolocation API supplies latitude, longitude, accuracy and timestamp; TedixHunt interprets readings and Mapbox renders them. Handle denied/unavailable/stale location and reconnect.
@@ -1698,6 +1777,14 @@ Request changes returns the submitted Template to `changes_requested` while pres
 
 Never let an edited Template retroactively change a published/active Hunt.
 
+Planned v3.4 extension: Universal Draft → exact submission → Admin Universal approval → another active Creator copies that exact approved version into an independent Local Draft (or creates Local from scratch) → exact Local submission → separate Admin Local approval → Organizer selects approved Local → backend snapshots exact key/version/content. Universal approval alone never authorizes Organizer location-based selection or Local approval.
+
+Compatibility gate: canonical Signal v1, Signal Overload Cluj-Napoca, all existing Template versions/approval states, Hunt snapshots and geographic contracts remain intact. Historical Templates without classification remain readable. Never infer Local status from a name, a city label or coordinates. Inventory legacy records and consumers, define explicit unclassified read/catalog behavior and a controlled reviewed classification/adaptation process before enforcing the new catalog rules. New Local-only filtering must not strand existing Hunts or silently remove the existing catalog before that transition is approved.
+
+Where new category/provenance or location metadata affects immutable content, create an explicitly reviewed new version/adapted artifact; do not backfill old immutable JSONB or retrospectively alter its approval. Decide storage, mapping and rollout in the BE contract. Existing `country`/`region`/`city` Hunt fields need explicit compatibility mapping; they do not already establish canonical Locality identity.
+
+Preserve `configuration.normalCheckpointCount`, `checkpointPositions[]` and separate `finishPoint` for Local geography. Universal validation must allow reusable structure without fixed geographic completeness. Current geographic submission rules and their pre-contract compatibility branch are existing behavior, not an implemented category distinction. Preserve existing snapshots independently of later classification, source edits, catalog changes or approval withdrawal; changes to future availability/readiness require explicit policy, never snapshot mutation.
+
 ## 15. Participant runtime implementation rule
 
 Do not implement all seven checkpoints at once.
@@ -1818,7 +1905,9 @@ Implement only this step. Keep the existing structure, avoid unnecessary abstrac
 
 Completed foundation: A–E baseline, B1.1 contextual workspace integration, F Creator baseline, G1 real Admin review and G2 approved catalog/snapshot integration. FE #61 and #70 correct stale v3.0 status. Preserve those accepted baselines.
 
-## 20.1 Merged implementation audit — 10 October 2026
+## 20.1 Merged implementation audit — 24 October 2026
+
+Historical 10 October baseline (retained):
 
 Audit source: GitHub PR merge metadata and PR scope/validation reports, checked against FE main `e3a6668bde6e55a8e7392d608a413a1586067a72` (includes #84). “Merged” below is repository evidence, not a deployed E2E result.
 
@@ -1832,19 +1921,41 @@ Audit source: GitHub PR merge metadata and PR scope/validation reports, checked 
 | G3, Admin map preview | [FE #82](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/82) | Exact-version deployed review/approval + real provider verification |
 | D8, saved snapshot + approved Template preview | [FE #83](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/83), [BE #63](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/63), [FE #84](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/84) | Explicit Inspect action is implemented; Country/City and automatic selection preview are future D10 |
 
-All listed PRs have `merged = true`; their descriptions may retain historical “draft only” instructions. Those descriptions are scope/test evidence, while merge metadata establishes status. No new deployment or browser E2E was run for this documentation change. A deployed Swagger response, passing CI or a successful deployment job alone does not verify the user journey.
+Current audit checked GitHub main refs on 24 October 2026: FE `398287f8aa4aeae0824f7c022c7b59513f9669bb` (#104), BE `4b45c2d8af15e39e049e2069c37b9e29b5ecfbf8` (#68). Recent merged PR lists and the six named PR merge metadata/diffs were inspected. Source inspection covered FE `RouteEditor.tsx`, `TedixMap.tsx`, `MapboxLocationSearch.tsx`, search/camera verification reports and existing integration documentation; BE `HuntTemplate.ts`, `Hunt.ts`, `creatorTemplates.ts` domain/routes, `adminTemplateReviews.ts`, `huntTemplates.ts`, starter factory/registry and Overload review documentation. These confirm implementation beyond PR descriptions; no deployment was performed or independently verified here.
+
+| Plan scope | Implemented and merged evidence | Deployment / independent E2E boundary |
+| --- | --- | --- |
+| F5 interaction/search | [FE #102](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/102), merge `3f23d51` | Confirm/deselect, camera-only search retrieval survives blur, one Map/Satellite instance. Reported real Chromium/GL tests use mocked HTTP styles/search; live search/token/imagery and deployed fixes remain unverified. |
+| F5 focus/overview/default | [FE #103](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/103), merge `54993f3` | Focus/Show all and 15 m new positions implemented; stored radii unchanged, bounds remain 5–500 m. Original authored-only camera behavior is superseded by #104. Local browser reports are not deployed E2E. |
+| F5 reference/authored camera | [FE #104](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/104), merge `398287f` | Authored-first/reference-fallback selection/overview includes FinishPoint; repeated/readiness-safe actions do not save or confirm. [Current verification report](https://github.com/tedixdev-arch/Tedix_Hunt_FE/blob/398287f8aa4aeae0824f7c022c7b59513f9669bb/docs/reference-checkpoint-camera/README.md) records fixture-based GL/browser evidence, not live imagery/deployed data verification. |
+| F2 unused-draft deletion | [BE #66](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/66), merge `c34a66e` | Creator owner/status/dependency guards, transactional cascade and rollback are implemented; Hunt key and snapshot references block deletion. PR reports nine real PostgreSQL deletion tests and 773 full-suite passes, zero skips. Tests were not rerun here; deployment/E2E not established. |
+| F2/F6 Overload starter | [BE #67](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/67), merge `82c7a6b` | Separate seven-scene Creator-owned draft source preserves puzzles/scoring; empty authored GPS, no geographic finishPoint, walking disabled, research/physical checks pending. Not an approved or geographically certified Local Template. Reported 770 passes/33 skips; no deployed/physical E2E established. |
+| F2 Creator starter discovery | [BE #68](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/68), merge `4b45c2d` | Creator-authorized read-only fixed registry, not community reuse. Known creation dates newest-first, unknown last, stable-key tie-break; both shipped dates null. No migration/approval/publication. Reported 786 passes/33 DB-dependent skips; deployment/E2E unverified. |
+| Supporting post-v3.3 work | BE #64–#65; FE #86–#101 (merged history) | Signal Cluj starter/research, deletion/starter UI, Overload and map-first positioning/search evolution. Current source/verification docs are the baseline; none establishes Universal/Local classification, canonical worldwide location identity or the full deployed supply chain. |
+| F7/G4/D10 target | Architecture agreed in v3.4; not implemented | Separate BE/FE slices and recorded deployed E2E remain required. |
+
+The existing BE approved-catalog model pins Creator `submitted_version`; platform lookup retains its current latest-version behavior. The approved-geography projection allowlists fields and re-resolves approval; current models expose no Universal/Local distinction or canonical Locality UUID. The fixed starters must not be described as an already implemented community Universal catalog.
+
+All named six PRs have `merged = true`; their descriptions may retain historical “draft only” instructions. Those descriptions are scope/test evidence, while merge metadata establishes status. No new deployment or browser E2E was run for this documentation change. A deployed Swagger response, passing CI or a successful deployment job alone does not verify the user journey.
 
 Step 7A is implemented (FE #70), not the next task. Preserve Step 7 supply-chain E2E as a release gate: Creator persists/submits → Admin reviews exact version/approves → catalog resolves it → Organizer selects → exact Hunt snapshot persists. Record environment, deployed FE/BE revisions, date, cases and results; do not relabel absent evidence as passed.
 
 ## 20.2 Staged workstreams before Participant runtime
 
-The following are planned slices, not implementation prompts or authorization to implement now. Keep one repository and one reviewable step per Draft PR; split further where necessary.
+These are planned workstreams, each split into small reviewable tasks, not single large implementation PRs. Keep one repository and one scoped slice per Draft PR. Review and merge BE contract decisions before dependent implementation; record deployment separately from verification.
 
-1. [ ] **BE contract — F7/G4:** settle Country/City identity and catalog filtering, draft metadata/provenance, version-bound human review evidence and approval gates, legacy compatibility and exact-version behavior. Reuse existing Creator/Admin lifecycle and BE #63 geography; add tracked migrations only if the agreed schema requires them. Validate authorization, invalid locations, approval withdrawal and snapshot preservation.
-2. [ ] **Creator FE — F7:** integrate Country/City and AI-assisted proposals into ordinary drafts; retain story/Personal/Team content and explicit human review. AI generation/intake must follow the agreed BE contract. Pilot one reviewed city route before working toward three distinct approved routes per city.
-3. [ ] **Admin FE — G4:** expose required location/provenance/review evidence in existing exact-version review, using the established approve/request-changes workflow.
-4. [ ] **Organizer FE — D10:** Country → City → approved Template → automatic read-only real Mapbox preview → Hunt details → Participants/access → Experience defaults. Replace the future fixed-Template simulated-editor UX with read-only inspection; preserve explicit saves and snapshots.
-5. [ ] **Deployed supply-chain verification:** use reviewed real geography and record evidence through AI-assisted draft → human review → Admin approval → automatic Organizer preview → saved Hunt snapshot. Verify empty/error/stale-version/provider failures and immutable history; merge does not satisfy this gate.
+| Order / workstream | Dependencies and small tasks | Acceptance criteria |
+| --- | --- | --- |
+| 1. BE contract/design — F7/G4 | First BE-only step: document category/provenance and copy semantics; then location identity/provider and failure/manual-review decisions; then validation/approval/evidence gates and legacy rollout. Review API/schema proposals before implementation. | Contract examples cover Universal without GPS, standalone Local, approved cross-Creator copy, exact source version, separate Local approval, invalid locations, unresolved blockers, immutable legacy/snapshots and authorization. Explicitly settle API/schema questions without deploying code. |
+| 2. BE implementation — F7/G4 | After agreed contract: separate tracked migration/model PRs where needed; per-category draft/submission validation; authorized approved-Universal discovery/copy; hybrid location resolution/persistence; review/evidence and Local-only catalog/selection gates with controlled legacy rollout. Split further as needed. | Test ownership/capabilities, source approval races, provenance, duplicate/manual/provider failure, category gates, approval withdrawal/expiry, exact versions and snapshot stability. No world import, automatic classification or live inheritance. |
+| 3. Creator FE categories/reuse — F7 | After supported-mechanic configuration/availability contracts are agreed and relevant BE APIs are available: four labeled dashboard entries and Mechanics Library guidance; My Templates type/status/version context; reusable editor; approved Universal chooser/copy and independent Local creation; normal save/submit in separate slices (F1). | Creators distinguish all three concepts, reach every dashboard entry and both Local start options, configure only supported mechanics and see only type-relevant sections with contextual explanations. Active Creators can create/submit both; cross-Creator reuse preserves exact source version/privacy and independent Local review. No separate engines or executable-mechanic authoring. |
+| 4. Creator FE locations/geography — F7 | After identity/evidence APIs and category flow: Country/Locality lookup; existing/new/manual-location states; Local route authoring/adaptation; the distinct Local / Location-specific editor area with progressive disclosure and proportional evidence input, sharing mechanics with the reusable area. | Universal editors have no fixed-geography requirements; Local editors expose Country/Locality, map/route/checkpoints, local clues/adaptations and access/review evidence. Required validation remains discoverable. Cities/towns/villages/other valid localities retain UUID/context; failures/duplicates explicit; save/reopen geography using existing boundary; advisories, exceptions and blockers handled without false certification. |
+| 5. Admin FE review — G4 | After BE gates and representative Creator submissions: separate category review; exact-version route/evidence inspection; approve/request changes with validity/operational conditions. | Universal approval requires no route; Local approval checks its own route/adaptations/evidence. Missing required evidence/blockers cannot bypass BE; edits require renewed version review. |
+| 6. Organizer FE — D10 | After reviewed Local catalog, compatibility rollout and geography contracts: dependent location selectors; automatic preview; setup/save/reopen checks as small slices. | Country → Locality → approved Local Template → automatic read-only Mapbox preview → Hunt setup. Clear stale selections, handle missing/withdrawn data/provider errors, preserve permitted setup options and exact immutable snapshot. |
+| 7. Deployed supply-chain E2E | After BE/FE deployment with recorded revisions: test both Local-from-Universal and standalone Local, cross-Creator reuse, separate Admin approvals, catalog/preview and Hunt persistence. | Record environment/date/revisions/cases/results; source edits, new approvals, withdrawal and legacy transition never mutate existing Local versions or Hunt snapshots. Verify failure states, real provider/mobile behavior and review conditions. No claim of passed E2E from merge/CI alone. |
+| 8. Continue existing phases | After the content supply-chain gate, follow section 20.3: B6/D9, H, I, J, K and subsequent L–N work in scoped steps. | Prove authoritative enrollment and one checkpoint before expansion; no Participant runtime implementation pulled into F7/G4/D10. |
+
+Unresolved BE design outputs: classification storage/versioning, exact provenance/copy transaction, community catalog authorization, provider choice/coverage/licensing, identity deduplication/manual reconciliation, lookup/caching/error contracts, evidence representation/validity/re-review and publish-readiness, self-review enforcement for combined capabilities, approval withdrawal and staged legacy catalog compatibility. These are contract decisions, not invented existing endpoints.
 
 ## 20.3 Remaining existing-phase sequence
 
@@ -1866,7 +1977,7 @@ Each entry is a sequence container, not one large PR. Follow review → user mer
 
 The obsolete “implement F4 / 5 m radius” prompt is retired: BE #60 already merged, followed by the dependent FE work. Do not reissue it.
 
-First review this v3.3 documentation-only FE Draft PR in the existing project workflow. After user merge, the next scoped planning target is the **F7/G4 Backend contract** in section 20.2, including the unresolved field/API and legacy/review-gate decisions. Only then write a separate implementation prompt for that one repository/slice.
+First review this v3.4 documentation-only FE Draft PR in the existing project workflow. After user merge, the next scoped planning target is the **F7/G4 Backend contract** in section 20.2, starting with a BE-only contract/design documentation slice for Universal/Local classification, exact-version copy provenance, category validation/approval and legacy compatibility. Follow with location/provider and evidence contracts as small reviewed tasks; no application code or migrations in that first contract slice. Only then write a separate implementation prompt for that one repository/slice.
 
 No implementation prompts, AI-generated routes, application changes, automatic merge or deployment are included in this plan update. Preserve the existing architecture and verify deployed evidence independently.
 
