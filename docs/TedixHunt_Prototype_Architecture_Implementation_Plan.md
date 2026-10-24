@@ -1,6 +1,6 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 3.4 | Updated 24 October 2026
+Version 3.5 | Updated 24 October 2026
 
 This revision preserves Phase A–N and the existing identity, credential and account-retirement architecture. The Creator phase is complete for its agreed baseline before the Mapbox evolution. Merged geographic authoring/preview capabilities are audited below; new Universal/Local, Country/Locality and map-first setup work does not reopen that baseline.
 
@@ -11,6 +11,8 @@ Revision note (3.2): defines FinishPoint as a terminal checkpoint using the shar
 Revision note (3.3): documentation only, before implementation prompts. Adds AI-assisted Country/City Templates (F7/G4) and Organizer map-first General Setup (D10); audits merged F4–F6/G3/D8 without claiming deployed E2E. Preserves Signal story, Personal/Team Challenges, the Creator/Admin approval chain and immutable snapshots. No application code, content generation, migrations or deployment are part of this revision.
 
 Revision note (3.4): introduces planned Universal/Local Templates, Creator community reuse by independent versioned copies, separate Admin approval, a hybrid Country/Locality catalog, proportional geographic safety evidence and clue-based Participant navigation. Preserves legacy Signal content, exact-version approval and immutable Hunt snapshots. Audits current FE/BE main and recent merged implementation separately from deployment and independent E2E evidence. Phase A–N and historical revision/evidence notes remain intact; newly agreed architecture is not implemented by this documentation change.
+
+Revision note (3.5): documentation-only architecture visualization pilot. Adds a master system-context map, a Phase F context view and a focused Universal-to-Local lifecycle, with shared status/focus/relationship conventions. Preserves all architecture decisions, phase statuses, historical evidence and roadmap dependencies; no implementation or deployed verification is claimed.
 
 The implementation strategy is:
 
@@ -84,6 +86,76 @@ Creator creates Universal or Local Template
 → Passport/history/achievements preserve long-term value
 
 This dependency chain drives implementation order. The governing architecture remains **Creator creates → Admin governs → Organizer configures → Participant plays → Backend records authoritative state**. Universal/Local is the planned v3.4 evolution; the existing unclassified catalog remains subject to the explicit compatibility strategy in F7 and section 14.
+
+### 3.1 Architecture visualization pilot — conventions
+
+These three Mermaid views describe the existing baseline and agreed target together; they do not change implementation status or authorize implementation. Read them with F1–F7, G1–G4, D2/D10, section 14 and the evidence audit in 20.1.
+
+| Visual cue | Meaning |
+| --- | --- |
+| Purple fill + thick border; named focus subgraph | Current subject: the supply chain in the master view, Phase F in the other views. |
+| Neutral gray + thin border | Neighboring role, phase or technical service. |
+| `[I]` + solid border | Implemented only for the named scope; deployment/E2E remains as recorded in the phase. |
+| `[P]` + dashed border | Planned functionality, including Universal/Local classification and reuse. |
+| `[Mixed]` | Implemented foundation plus planned extension; both are stated in the label/caption. |
+| Solid labeled arrow | Business action or content handoff; a logical relationship, not a direct network call. |
+| Dotted labeled arrow | Technical responsibility, API exchange or persistence through backend authority. |
+
+Every arrow points from the actor/source to the action's recipient or information destination. Arrow style distinguishes relationship type, not implementation status; node text and borders carry status without depending on color. Subgraphs name responsibility boundaries. Diagrams flow top to bottom with short, wrapped labels for narrow screens; use GitHub's expanded diagram view when needed.
+
+### 3.2 Master Architecture Map
+
+The emphasized supply chain is the target for ordinary location-based Hunts. Universal approval enables Creator reuse; only separately approved Local versions enter the future Organizer catalog. Existing unclassified Templates retain section 14's explicit compatibility path. All business handoffs below remain subject to backend authorization; there is no browser-to-database path.
+
+```mermaid
+flowchart TB
+  subgraph supply["FOCUS — Template supply chain: F / G / D"]
+    framework["[Mixed] Creator Framework<br/>Mechanics Library entry: P"]
+    studio["[Mixed] Creator Studio<br/>Baseline I; type-specific UX P"]
+    universal["[P] Universal Templates<br/>Reusable content, no fixed geography"]
+    reviewU["[P] Admin Universal approval<br/>Exact submitted version"]
+    local["[P] Local Templates<br/>Independent geographic content"]
+    reviewL["[P] Admin Local approval<br/>Separate exact-version review"]
+    organizer["[Mixed] Organizer Hunt setup<br/>Snapshot I; Local-only selection P"]
+    framework -->|"Defines supported authoring choices"| studio
+    studio -->|"Authors reusable experience"| universal
+    universal -->|"Submits exact version"| reviewU
+    reviewU -->|"Creator copies approved exact version"| local
+    studio -->|"Authors Local from scratch"| local
+    local -->|"Submits route and adaptations"| reviewL
+    reviewL -->|"Offers approved Local version"| organizer
+  end
+  subgraph play["Participant — H / I"]
+    participant["[P] Hunt gameplay<br/>Enrollment, progress and scoring"]
+  end
+  subgraph authority["Technical authority — Backend / DB"]
+    backend["[Mixed] Backend authority<br/>Lifecycle I; new gates/runtime P"]
+    postgres[("[I] PostgreSQL<br/>Versions and Hunt snapshots")]
+  end
+  subgraph geo["External geographic services"]
+    mapbox["[Mixed] Mapbox via TedixMap<br/>Authoring I; gameplay P"]
+  end
+  organizer -->|"Configures and publishes Hunt"| participant
+  studio -.->|"Saves and submits content"| backend
+  reviewU -.->|"Requests approval decision"| backend
+  reviewL -.->|"Requests approval decision"| backend
+  organizer -.->|"Requests exact Hunt snapshot"| backend
+  participant -.->|"Sends gameplay actions for validation"| backend
+  backend -.->|"Returns authorized runtime state"| participant
+  backend -.->|"Persists authoritative records"| postgres
+  studio -.->|"Requests maps, search and estimates"| mapbox
+  participant -.->|"Requests permitted map presentation"| mapbox
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class framework,studio,universal,reviewU,local,reviewL,organizer focus;
+  class participant,backend,postgres,mapbox neighbor;
+  class universal,reviewU,local,reviewL,participant planned;
+```
+
+Mapbox supplies presentation/search/advisory estimates, never approval, arrival, scores or persistence authority. Admin and Organizer also reuse read-only TedixMap previews (G3/D8); those edges are omitted for clarity. Geographic catalog provider choice is **unresolved** and is not inferred to be Mapbox. Participant payload visibility and authoritative gameplay remain planned Phase I work.
+
+Pilot validation: checked the three views against v3.4 F1/F2/F7, G1–G4, D2/D10, section 14 and 20.2 for exact-version authority, both Local creation paths, separate approvals, legacy compatibility and snapshot isolation. Existing phase text/statuses and historical references are preserved. Short wrapped labels and top-to-bottom layout were reviewed in source for desktop/narrow-screen use. Mermaid syntax/rendering and actual GitHub desktop/mobile readability could not be verified: no Mermaid renderer is installed, and the execution environment's network proxy is unavailable. These remain visual review checks for this pilot.
 
 ---
 
@@ -975,6 +1047,105 @@ This credential lifecycle remains distinct from E14–E16 Admin provisioning.
 ## Phase F — Creator Template system
 
 Status: ✅ Creator baseline and F4–F6 implementation merged; geographic deployed E2E remains unverified; F7 is planned
+
+### Phase F context — Creator within the platform
+
+Phase F's baseline persistence, submission and geographic authoring are implemented; the emphasized Universal/Local paths and Mechanics Library entry are planned F7 work. G1/G2's generic exact-version review/catalog/snapshot foundations are implemented, while their category-specific gates are planned G4/D10 extensions.
+
+```mermaid
+flowchart TB
+  subgraph creator["FOCUS — Phase F: authorized active Creator"]
+    library["[Mixed] Creator Framework<br/>Mechanics Library entry: P"]
+    author["[Mixed] Creator authoring<br/>Baseline I; category editors P"]
+    universal["[P] Universal Template<br/>Reusable content"]
+    copy["[P] Exact-version copying<br/>Approved source only"]
+    scratch["[P] Independent Local creation<br/>No Universal required"]
+    local["[P] Independent Local draft<br/>Geography and adaptations"]
+    version["[Mixed] Versioned draft / submission<br/>Lifecycle I; category validation P"]
+    library -->|"Explains supported components"| author
+    author -->|"Builds reusable experience"| universal
+    author -->|"Starts Local from scratch"| scratch
+    scratch -->|"Creates independent content"| local
+    copy -->|"Creates independent source snapshot"| local
+    universal -->|"Saves and pins exact version"| version
+    local -->|"Saves and pins exact version"| version
+  end
+  subgraph governance["Neighbor — Admin: Phase G"]
+    review["[Mixed] Separate Admin review<br/>Exact version I; category gates P"]
+    approvedU["[P] Approved Universal version<br/>Creator discovery and reuse"]
+    catalog["[P] Approved Local catalog<br/>Country / Locality selection"]
+  end
+  subgraph setup["Neighbor — Organizer: Phase D"]
+    hunt["[Mixed] Hunt creation<br/>Snapshot I; Local selection P"]
+  end
+  subgraph storage["Technical authority — Backend / PostgreSQL"]
+    persistence["[Mixed] Authorized persistence<br/>Immutable versions I; copy contract P"]
+  end
+  version -->|"Submits exact artifact for decision"| review
+  review -->|"Approves Universal separately"| approvedU
+  approvedU -->|"Other authorized Creator selects source"| copy
+  review -->|"Approves Local separately"| catalog
+  catalog -->|"Offers exact approved Local version"| hunt
+  version -.->|"Requests save / submit"| persistence
+  review -.->|"Requests authoritative review transition"| persistence
+  copy -.->|"Requires atomic source approval and provenance"| persistence
+  hunt -.->|"Stores immutable key/version/content snapshot"| persistence
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class library,author,universal,copy,scratch,local,version focus;
+  class review,approvedU,catalog,hunt,persistence neighbor;
+  class universal,copy,scratch,local,approvedU,catalog planned;
+```
+
+Approval arrows show successful decisions only; request-changes behavior and the current Creator resubmission UI limitation remain in F2/G1/section 14. No Creator approval/publication right or private-draft access is implied. Backend authorization governs every handoff, including cross-Creator copy and both review decisions. Category storage, copy transaction, catalog authorization, evidence/withdrawal gates, combined-capability self-review enforcement and legacy rollout remain **unresolved BE contract outputs** (20.2), not newly specified APIs.
+
+### Universal-to-Local lifecycle — focused target process
+
+This is the **planned F7/G4/D10 category workflow**, built on the implemented generic lifecycle and snapshot baseline. All numbered category steps are planned; `[I]` at the end identifies only today's generic Hunt snapshot mechanism. Approval of Universal content does not certify geography or approve a derived Local.
+
+```mermaid
+flowchart TB
+  subgraph universalFlow["FOCUS — Phase F: source Creator"]
+    u1["[P] 1. Build Universal Template<br/>Supported mechanics and content"]
+    u2["[P] 2. Submit exact Universal version"]
+    u1 -->|"Creator pins authored version"| u2
+  end
+  subgraph universalReview["Neighbor — Admin: Phase G"]
+    u3["[P] 3. Approve exact Universal version<br/>No geographic certification"]
+  end
+  subgraph localFlow["FOCUS — Phase F: another authorized Creator"]
+    u4["[P] 4. Discover approved source version"]
+    u5["[P] 5. Copy exact source version<br/>Independent Local draft + provenance"]
+    independent["[P] Start Local from scratch<br/>No Universal prerequisite"]
+    u6["[P] 6. Supply geography<br/>Local clues, adaptations and evidence"]
+    u7["[P] 7. Submit exact Local version"]
+    u4 -->|"Selects approved exact version"| u5
+    u5 -->|"Adapts independent draft"| u6
+    independent -->|"Authors independent Local content"| u6
+    u6 -->|"Pins complete Local artifact"| u7
+  end
+  subgraph localReview["Neighbor — Admin: Phase G"]
+    u8["[P] 8. Review and approve Local separately<br/>Route, content and evidence gates"]
+  end
+  subgraph instantiate["Neighbor — Organizer / Backend: Phase D"]
+    u9["[P] 9. Select approved Local version<br/>Organizer creates Hunt"]
+    u10["[I] 10. Store immutable Hunt snapshot<br/>Backend writes PostgreSQL"]
+    u9 -.->|"Backend resolves approved key/version/content"| u10
+  end
+  u2 -->|"Requests review of pinned version"| u3
+  u3 -->|"Makes approved source discoverable"| u4
+  u7 -->|"Requests separate review"| u8
+  u8 -->|"Makes exact approved Local selectable"| u9
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class u1,u2,u4,u5,independent,u6,u7 focus;
+  class u3,u8,u9,u10 neighbor;
+  class u1,u2,u3,u4,u5,independent,u6,u7,u8,u9 planned;
+```
+
+**No live inheritance:** later Universal changes never automatically modify Local drafts, approved Local versions or Hunt snapshots. Local edits produce new immutable versions requiring their own submission and Admin review; later approvals never replace an existing Hunt snapshot. Explicit update-from-Universal is outside V1. The independent path joins the same Local validation/review gates and provides no approval bypass.
 
 ### F1. Authoritative Template hierarchy
 
