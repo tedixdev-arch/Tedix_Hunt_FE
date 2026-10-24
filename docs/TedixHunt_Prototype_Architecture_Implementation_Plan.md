@@ -18,6 +18,8 @@ Refinement note (3.5): separates business and technical authority, splits catego
 
 Refinement note (3.5): adds Phase G and Phase D logical context diagrams, separating implemented generic foundations from planned category/safety, Personal Hunt and operational capabilities. Preserves historical status, legacy compatibility and unresolved contracts; no implementation or deployed verification is claimed.
 
+Diagram-extension note (3.5): adds Phase H entry/enrollment, Phase I gameplay and Participant information-visibility diagrams. Existing foundations remain distinct from planned runtime and unresolved contracts; no implementation or deployed verification is claimed.
+
 The implementation strategy is:
 
 Existing approved mockup
@@ -1550,6 +1552,63 @@ Backend / DB: 🟡 Structural foundation only; enrollment/team runtime pending
 
 Frontend: ⬜ Runtime integration not started
 
+### Phase H context — Participant entry within the platform
+
+Public entry and identity/session foundations are implemented; the protected enrollment-to-play path below is planned. A resolved code identifies a Hunt, not membership or permission to play.
+
+```mermaid
+flowchart TB
+  subgraph entry["FOCUS — Phase H: Participant entry and enrollment"]
+    home["[I] Participant-first Home<br/>Join a Hunt /join"]
+    code["[Mixed] Hunt code / link<br/>Public lookup I; join integration P"]
+    identity{"[Mixed] New or returning Participant?<br/>Identity/session I; Hunt binding P"}
+    auth["[I] Participant authentication<br/>Register new / sign in returning<br/>Reuse valid authenticated session"]
+    enroll["[P] Enrollment / access request<br/>Idempotent Hunt membership"]
+    ready["[P] Team formation / lobby<br/>Readiness and start gate"]
+    recover["[P] Resume / reconnect<br/>Restore authorized Hunt state"]
+    failure["[Mixed] Lookup error I<br/>Eligibility / access failure handling P"]
+    home -->|"Enter Hunt code"| code
+    code -->|"Continue with resolved Hunt; integration P"| identity
+    identity -->|"New identity or sign-in required"| auth
+    identity -->|"Returning with valid session"| enroll
+    auth -->|"Authenticated request; never grants Hunt access alone"| enroll
+    ready -->|"Reconnect / return to Hunt"| recover
+  end
+  subgraph neighbors["NEIGHBOR — Phases F / G / D / I"]
+    setup["[Mixed] D: approved snapshot / setup / publish I<br/>F/G category and safety gates P"]
+    play["[P] I: Participant gameplay"]
+    setup -->|"Shares code/link; supplies access and Hunt configuration"| code
+    ready -->|"Backend permits start"| play
+    recover -->|"Backend permits resume"| play
+  end
+  subgraph authority["NEIGHBOR — Backend authority: A / B / C / H"]
+    lookup["[I] Minimal public lookup<br/>Hunt identity and lifecycle status only"]
+    validate{"[P] Validate active identity, Hunt eligibility<br/>Enrollment, capacity and contextual access"}
+    records[("[Mixed] PostgreSQL membership foundation I<br/>Enrollment / team / recovery workflow P")]
+    code -.->|"Resolve code/link"| lookup
+    lookup -.->|"Invalid / unknown code"| failure
+    enroll -.->|"Protected action requires authentication"| validate
+    recover -.->|"Revalidate session, access and current state"| validate
+    setup -.->|"Persisted lifecycle / access configuration constrains join"| validate
+    validate -.->|"Eligible: persist / read Hunt membership"| records
+    validate -.->|"Allowed enrollment / start state"| ready
+    validate -.->|"Unavailable, full, expired access or ineligible"| failure
+    failure -->|"Expired session: authenticate, then revalidate"| auth
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class home,code,identity,auth,enroll,ready,recover,failure focus;
+  class setup,play,lookup,validate,records neighbor;
+  class enroll,ready,recover,play,validate planned;
+```
+
+**What this diagram tells us:** H connects Organizer publication/configuration to Participant gameplay through backend-owned eligibility and Hunt membership. New Participants establish identity; returning Participants reuse a valid session or sign in again. Neither authentication nor a public code lookup enrolls a Participant. H4–H7 team/lobby/readiness/start and H8/I9 runtime recovery remain planned; existing token persistence/refresh and B1.1 context switching are foundations, not evidence of saved gameplay.
+
+H3 must handle unknown code, closed enrollment, cancelled/finished Hunt and full capacity. Expired authentication returns through authentication and access revalidation; expired Hunt access, where an agreed contract defines it, must fail without inventing a code-expiry duration or credential policy. Existing guest-session authentication is real (A4), but H2's participant/guest enrollment eligibility and access-mode rules still need a BE contract. This diagram grants no anonymous protected action or universal guest entitlement. Section 11's unresolved Independent Organizer flow grants no Participant authorization exception.
+
+Traceability: sections 6, 11, 14–15 and 20.1–20.3; A4–A5, B1.1/B5/B6, C4, D2/D6/D7/D10, F7/G4, H1–H8 and I2/I9/I12. Generic publication and snapshots are implemented; future category/safety readiness gates and deployed supply-chain verification remain separate prerequisites.
+
 ### H1. Resolve Hunt access code
 Status: ✅ Complete
 
@@ -1594,6 +1653,120 @@ Status: ⬜ Not started
 Status: 🟣 Prototype only
 
 Implement one complete checkpoint before scaling to the full mission.
+
+### Phase I context — Participant gameplay within the platform
+
+This is the planned authoritative runtime, using existing authoring/map foundations. The two challenge branches describe supported activity types, not a fixed Personal-before-Team order.
+
+```mermaid
+flowchart TB
+  subgraph gameplay["FOCUS — Phase I: Participant gameplay"]
+    map["[P] Persistent Hunt Game Map<br/>Mapbox via shared TedixMap"]
+    clue["[P] Currently permitted clue<br/>Clue-based checkpoint discovery"]
+    overlay["[P] Story / challenge / score / help overlays<br/>Map stays mounted during normal Hunt navigation"]
+    personal["[P] Personal Challenges"]
+    team["[P] Team Challenges"]
+    map -->|"Presents authorized objective context"| clue
+    clue -->|"Discover objective; open permitted activities"| overlay
+    overlay -->|"As required by configured checkpoint rules"| personal
+    overlay -->|"As required by configured checkpoint rules"| team
+  end
+  subgraph authority["FOCUS — Phase I: Backend gameplay authority"]
+    arrival{"[P] Accuracy-aware arrival validation<br/>Target radius, distance, accuracy, time/window"}
+    progress{"[P] Shared checkpoint engine<br/>Validate required activities / progression"}
+    score["[P] Idempotent score events<br/>Saved Participant / team progress"]
+    next["[P] Normal completion<br/>Unlock next permitted clue"]
+    terminal["[P] FinishPoint: terminal role<br/>Required activities resolved → Hunt completion"]
+    personal -.->|"Submit answers / hints / contributions"| progress
+    team -.->|"Submit team actions; validate concurrency"| progress
+    map -.->|"Browser GPS readings; client is not authority"| arrival
+    arrival -.->|"Validated arrival/discovery; not completion"| progress
+    arrival -.->|"Not arrived / uncertain: no arrival award; recover"| map
+    progress -.->|"Accepted transitions and scoring through BE"| score
+    progress -->|"Normal checkpoint complete"| next
+    next -.->|"Only newly authorized information"| clue
+    progress -->|"Terminal checkpoint complete; all required activities resolved"| terminal
+  end
+  subgraph neighbors["NEIGHBOR — Phases D / F / G / H / J / K"]
+    source["[Mixed] F/G/D: approved content and Hunt snapshot I<br/>New gates / runtime rule integration P"]
+    entry["[P] H: enrollment, start and recovery"]
+    ops["[P] J: shared lifecycle / operations<br/>HELP/PANIC; I13 suspension constraints"]
+    results["[P] K: final aggregation / leaderboard<br/>Results and award calculation"]
+    entry -->|"Authorized start / restored progress"| map
+    source -.->|"Snapshot mechanics / allowed Hunt configuration"| progress
+    ops -.->|"Backend live state / authorized suspension"| progress
+    overlay -->|"Help / safety request"| ops
+    score -.->|"Authoritative progress and scores for monitoring"| ops
+    score -.->|"Authoritative scoring inputs"| results
+    terminal -->|"Authoritative completion handoff"| results
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class map,clue,overlay,personal,team,arrival,progress,score,next,terminal focus;
+  class source,entry,ops,results neighbor;
+  class map,clue,overlay,personal,team,arrival,progress,score,next,terminal,entry,ops,results planned;
+```
+
+**What this diagram tells us:** H authorizes entry, F/G/D supply approved immutable content and permitted configuration, and I executes one shared checkpoint engine. Backend rules validate GPS evidence and activities, persist progress and score events, reveal the next allowed clue and complete the Hunt through FinishPoint's terminal role. Mapbox presents the map; it never decides arrival, progression, scoring or completion. Client GPS alone cannot complete a checkpoint or Hunt. Arrival mathematics and poor-accuracy fallback still require BE design and real-phone validation.
+
+Personal/Team requirements, availability and ordering follow supported snapshot mechanics and permitted Hunt configuration; arrows do not impose a new fixed activity order or new opt-out policy. FinishPoint uses the same discovery, arrival, challenges and scoring engine. K results/awards are planned consumers of authoritative completion and scores; implemented reward configuration is not awarding.
+
+I13/J9 safety and fairness remain constraints: suspend runtime checkpoint state without rewriting snapshots, bypass suspended normal checkpoints atomically without penalty/blocking, preserve history/earned scores, and do not mark bypass as solved. Score eligibility, timers, all-normal-suspended behavior and terminal suspension/completion policy remain unresolved. Additional Supervisors may report/request suspension only by default. No new suspension or safety policy is decided by these arrows.
+
+Traceability: section 6 discovery/shared-engine rules, F3–F7, D3/D10, G3–G4, H7–H8, I1–I13, J1/J5–J9, K1–K6 and sections 14–16/20.3. Prove one checkpoint across independent sessions, idempotent retries and recovery before I10/I11 expansion. I14 advanced mechanics remain deferred.
+
+### Participant information visibility — payload and authority boundary
+
+This focused technical view applies across H/I and neighboring authoring/operations phases. Full-route inspection is a role-scoped capability, never a Participant payload permission.
+
+```mermaid
+flowchart TB
+  subgraph backend["FOCUS — Backend authority / PostgreSQL"]
+    full[("[Mixed] Full immutable Hunt snapshot / route I<br/>Undiscovered coordinates and clues retained server-side")]
+    rules["[P] Authoritative runtime<br/>Progression, arrival validation, scoring and completion"]
+    projection["[P] Participant API projection<br/>Authorize identity + Hunt context + current state<br/>Exclude hidden information before response"]
+    full -.->|"Read exact snapshot; never mutate for runtime state"| rules
+    rules -.->|"Determine current information entitlement"| projection
+  end
+  subgraph participant["FOCUS — Participant FE: H / I"]
+    allowed["[P] Currently permitted clues<br/>Authorized map information<br/>Participant-specific progress<br/>Allowed checkpoint / challenge information"]
+    mounted["[P] Persistent Mapbox / TedixMap instance<br/>Authorized layers only"]
+    panels["[P] Gameplay / results / help overlays<br/>May cover map without destroying it"]
+    projection -.->|"Return allowed fields only; no full snapshot"| allowed
+    allowed -.->|"Render only authorized coordinates / objectives"| mounted
+    allowed -.->|"Render permitted story and activities"| panels
+    panels -.->|"Keep map mounted; preserve context on return"| mounted
+    allowed -.->|"Requests / answers / GPS evidence; no authority"| rules
+  end
+  subgraph privileged["NEIGHBOR — Creator / Admin / Organizer"]
+    inspect["[I] Authorized full-route inspection<br/>Creator owned authoring F<br/>Admin exact-version review G3<br/>Organizer read-only setup D8"]
+    access["[Mixed] Backend role / ownership / Hunt scope I<br/>B6 effective authority and J9 operations P"]
+    live["[P] Authorized operational access<br/>Admin / responsible Organizer<br/>Assigned Supervisor operational subset"]
+    inspect -.->|"Request under separate privileged authorization"| access
+    live -.->|"Hunt-scoped operations; limited location policy"| access
+    full -.->|"Authorized artifact only; not arbitrary Hunt access"| access
+    access -.->|"Scoped full-route inspection response"| inspect
+    rules -.->|"Authorized live state via operational access checks"| access
+    access -.->|"Permitted operational state only"| live
+  end
+  classDef focus fill:#F3EFFF,stroke:#7157B8,stroke-width:3px,color:#211638;
+  classDef neighbor fill:#F6F7F9,stroke:#667085,stroke-width:1px,color:#182230;
+  classDef planned stroke-dasharray:6 4;
+  class full,rules,projection,allowed,mounted,panels focus;
+  class inspect,access,live neighbor;
+  class rules,projection,allowed,mounted,panels,live planned;
+```
+
+**What this diagram tells us:** Participant visibility is enforced before serialization, not by hiding markers after downloading the route. Full undiscovered coordinates/clues and locked route geometry must be excluded from Participant responses and client map layers. No automatic turn-by-turn directions, hidden destination markers or distances to undiscovered objectives are authorized. Deliberately permitted hints follow explicit backend mechanics. Persistent mounting preserves presentation state without exposing hidden objectives or route lines.
+
+Creator ownership, Admin review/platform authority and Organizer read-only setup inspection have distinct scopes; Creator access does not imply access to every live Hunt, and global Organizer capability grants no arbitrary Hunt access. Planned J9 operational access reuses B6/D9 context authority and minimal, expiring location data; GPS TTL, consent/audience/deletion and incident retention decisions remain open. A privileged view must not become the Participant API projection.
+
+All Participant projection/runtime nodes are planned. Existing full-content persistence, inspection, token/session and contextual-membership foundations do not prove hidden-data-safe gameplay. Refresh/reopen/recovery may create a new map and must re-fetch authorized backend state (H8/I9/I12). Traceability: sections 6, 14–15 and 20; B1.1/B5/B6, D8/D9, F5/F6, G3, H2/H8, I2–I4/I7–I9/I12–I13, J9 and K.
+
+Diagram-extension audit (24 October 2026): read the complete current plan on FE main `5c1d580d8b11444989a1b880ecc269cb1af5c6de`, including merged D/G diagram PR #108. Checked FE `HomePage.tsx`, `routes/router.tsx`, `ParticipantJoinFlow.tsx`, `PublicHuntAccessPage.tsx`, `services/api/huntAccess.ts` and `services/api/session.ts`; BE main `routes/huntAccess.ts`, `routes/auth.ts` and `models/Hunt.ts`. Public lookup returns only Hunt identity/code/name/status and does not enroll; the current join form authenticates but does not bind its code to Hunt membership. Guest authentication issues a short-lived token without refresh, not a guaranteed recoverable enrollment. Existing Hunt setup/snapshot persistence and contextual foundations remain distinct from planned H2–H8 and Phase I authority.
+
+Validation: additions preserve existing phase text/statuses and version 3.5. Source checks cover balanced fences/subgraphs, defined nodes, labeled relationships and planned-node styling; architecture review covers authentication, hidden payloads, map authority, configurable activities, terminal completion and suspension fairness. No Mermaid renderer is installed and shell network access fails at the environment proxy, so parser/render validation and GitHub desktop/mobile readability remain unverified. No application tests, deployment or deployed E2E were run for this Markdown-only extension.
 
 ### I1. Checkpoint runtime model
 Status: ⬜ Not started
