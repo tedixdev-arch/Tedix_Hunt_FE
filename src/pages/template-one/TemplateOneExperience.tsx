@@ -84,7 +84,7 @@ function SafetyControl({ onOpen }: { onOpen: () => void }) {
 
 function SafetyDialog({ phase, checkpoint, location, onClose }: { phase: MissionState['phase']; checkpoint: number; location: string; onClose: () => void }) {
   const [progress, setProgress] = useState(0)
-  const [sent, setSent] = useState(false)
+  const [simulationComplete, setSimulationComplete] = useState(false)
   const holdStart = useRef<number | null>(null)
   const holdTimer = useRef<number | null>(null)
   const progressTimer = useRef<number | null>(null)
@@ -95,11 +95,11 @@ function SafetyDialog({ phase, checkpoint, location, onClose }: { phase: Mission
     holdTimer.current = null
     progressTimer.current = null
     holdStart.current = null
-    if (!sent) setProgress(0)
+    if (!simulationComplete) setProgress(0)
   }
 
   function startHold() {
-    if (sent || holdStart.current !== null) return
+    if (simulationComplete || holdStart.current !== null) return
     holdStart.current = Date.now()
     setProgress(1)
     progressTimer.current = window.setInterval(() => {
@@ -111,7 +111,7 @@ function SafetyDialog({ phase, checkpoint, location, onClose }: { phase: Mission
       holdTimer.current = null
       progressTimer.current = null
       setProgress(100)
-      setSent(true)
+      setSimulationComplete(true)
     }, 2000)
   }
 
@@ -120,19 +120,18 @@ function SafetyDialog({ phase, checkpoint, location, onClose }: { phase: Mission
     if (progressTimer.current !== null) window.clearInterval(progressTimer.current)
   }, [])
 
-  return <div className="safety-backdrop" role="dialog" aria-modal="true" aria-labelledby="safety-title"><section className="safety-sheet">
-    {!sent ? <>
-      <div className="safety-sheet-heading"><span aria-hidden="true">!</span><div><p>Organizer support</p><h2 id="safety-title">Safety or operational problem?</h2></div></div>
-      <p>Your location, team, and current Hunt step will be sent to the Organizer.</p>
+  return <div className="safety-backdrop" role="dialog" aria-modal="true" aria-labelledby="safety-title" aria-describedby="safety-notice"><section className="safety-sheet">
+    <p id="safety-notice"><strong>Prototype / simulation only.</strong> HELP/PANIC does not send requests, location or Hunt status, and does not notify an Organizer, Supervisor or emergency service. It provides no emergency assistance.</p>
+    <p>For help, contact your Organizer or Supervisor directly using your own contact details. If you need immediate assistance, contact local emergency services.</p>
+    {!simulationComplete ? <>
+      <div className="safety-sheet-heading"><span aria-hidden="true">!</span><div><p>HELP/PANIC prototype</p><h2 id="safety-title">Safety or operational problem?</h2></div></div>
       <dl><div><dt>Team</dt><dd>Aurora</dd></div><div><dt>Location</dt><dd>{location}</dd></div><div><dt>Hunt step</dt><dd>{phase} · checkpoint {checkpoint}</dd></div></dl>
-      <button className="safety-hold" onKeyDown={event => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); startHold() } }} onKeyUp={event => { if (event.key === ' ' || event.key === 'Enter') stopHold() }} onPointerCancel={stopHold} onPointerDown={event => { event.currentTarget.setPointerCapture(event.pointerId); startHold() }} onPointerLeave={stopHold} onPointerUp={stopHold} type="button"><i style={{ width: `${progress}%` }} /><span>{progress ? `Hold to send · ${progress}%` : 'Press and hold to send'}</span></button>
+      <button className="safety-hold" onKeyDown={event => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); startHold() } }} onKeyUp={event => { if (event.key === ' ' || event.key === 'Enter') stopHold() }} onBlur={stopHold} onPointerCancel={stopHold} onPointerDown={event => { event.currentTarget.setPointerCapture(event.pointerId); startHold() }} onPointerLeave={stopHold} onPointerUp={stopHold} type="button"><i style={{ width: `${progress}%` }} /><span>{progress ? `Hold to simulate · ${progress}%` : 'Press and hold to simulate'}</span></button>
       <button className="safety-cancel" onClick={onClose} type="button">Cancel</button>
     </> : <>
-      <div className="safety-sent-mark" aria-hidden="true">✓</div>
-      <h2 id="safety-title">Request sent</h2>
-      <p>The Organizer received your location and current Hunt step.</p>
-      <div className="safety-contact"><span>Organizer contact</span><strong>+40 700 123 456</strong></div>
-      <button className="safety-cancel-request" onClick={() => { setSent(false); setProgress(0) }} type="button">Cancel request</button>
+      <h2 id="safety-title">Simulation ended — nothing was sent</h2>
+      <p role="status">This was a local hold demonstration only. Nobody was notified.</p>
+      <button className="safety-cancel-request" onClick={() => { setSimulationComplete(false); setProgress(0) }} type="button">Try simulation again</button>
       <button className="safety-close" onClick={onClose} type="button">Return to the Hunt</button>
     </>}
   </section></div>
