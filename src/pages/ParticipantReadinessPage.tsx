@@ -37,7 +37,7 @@ export function ParticipantReadinessPage() {
               <li>• Contact the Organizer if you need help.</li>
             </ul>
             <div className="mt-3 border-t border-red-300/15 pt-3 text-sm leading-6 text-slate-300">
-              <strong className="text-red-300">Panic Button:</strong> use it for a safety or operational problem. It sends your location and hunt status to the Organizer.
+              <strong className="text-red-300">Panic Button:</strong> prototype / simulation only. It does not send HELP/PANIC requests, location or hunt status, or notify an Organizer, Supervisor or emergency service. Contact your Organizer or Supervisor directly for help. For immediate assistance, contact local emergency services.
             </div>
           </div>
 
