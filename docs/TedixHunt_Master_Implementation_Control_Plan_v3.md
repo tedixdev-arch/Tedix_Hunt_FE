@@ -2,7 +2,7 @@
 
 # Master Implementation Control Plan — v3
 
-26 October 2026  \|  Product Owner control checklist  \|  Baseline: merged architecture v3.6 and PRs \#114–\#116
+26 October 2026 baseline; reconciled 28 October 2026  \|  Product Owner control checklist  \|  Baseline: merged architecture v3.6 and PRs \#114–\#116
 
 Purpose: trace every Phase A–N item in the Master Prototype Architecture Plan, distinguish existing foundation from missing implementation, and track small approved PRs. This is a planning/control document, not proof of deployed functionality.
 
@@ -17,9 +17,13 @@ Minimum necessary implementation. Keep interfaces clear, ergonomic and simple; k
 | Verify / repair | Existing foundation reported in architecture/audit; inspect current FE/BE and test before marking complete. |
 | Build | Missing runtime or planned extension; implement only when its dependency/milestone is approved. |
 | Decision / defer | Not yet approved in detail or not needed for the first controlled pilot. Track, do not silently implement. |
-| Complete | Only after PR merged AND relevant tests/verification recorded. No item in this v3 is newly marked complete. |
+| Complete — merged and verified | Exact bounded implementation is merged; source and relevant tests inspected. This does not assert deployment or E2E. |
+| Partially implemented | Some foundation exists, but the named task/workflow still has missing behavior or verification. |
+| Not started | No implementation of the required behavior found; a prototype or schema alone does not count. |
+| Blocked | Explicit prerequisite prevents the specified slice from proceeding. |
+| Decision/deferred | Product/technical decision or separately approved later scope; no implied implementation. |
 
-Status labels below are planning classifications, not fresh source-code verification. Historical architecture statuses must remain the evidence source until a new review updates them.
+The original Current action and Priority / gate columns retain the 26 October planning baseline. The added Reconciled status column and sections 6, 8 and 9 record the 28 October source review and supersede stale progress claims. Historical architecture checkmarks are baseline evidence, not proof of deployed or end-to-end behavior. “Partially implemented — verification pending” does not assert a known code defect; it withholds full completion where this review lacks sufficient acceptance evidence.
 
 # 3. Milestones and dependency gates
 
@@ -39,188 +43,190 @@ Important sequencing choice: architecture §20.2 currently orders F7/G4/D10 befo
 
 ## A — Platform foundation
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| A1 | Deployment topology and verification | Verify / repair | Foundation audit |
-| A2 | PostgreSQL migration foundation | Verify / repair | Foundation audit |
-| A3 | User normalization and compatibility | Verify / repair | Foundation audit |
-| A4 | Core authentication | Verify / repair (security) | Foundation audit |
-| A5 | Frontend API/session layer | Verify / repair | Foundation audit |
-| A6 | Existing real login flows | Verify / repair | Foundation audit |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| A1 | Deployment topology and verification | Verify / repair | Foundation audit | Partially implemented — deployment diagnostics exist; rollback/backup and current deployment verification pending (§9). |
+| A2 | PostgreSQL migration foundation | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| A3 | User normalization and compatibility | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| A4 | Core authentication | Verify / repair (security) | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| A5 | Frontend API/session layer | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| A6 | Existing real login flows | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
 
 ## B — Identity and authorization
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| B1 | Multi-role identity | Verify / repair | Foundation audit |
-| B1.1 | Workspace/context model | Verify / repair | Foundation audit |
-| B2 | Backend role authorization | Verify / repair (security) | Foundation audit |
-| B3 | Frontend role guards | Verify / repair | Foundation audit |
-| B4 | Organizations and membership | Verify / repair | Foundation audit |
-| B5 | Hunt-context roles | Verify / repair | Foundation audit |
-| B6 | Effective Hunt authority | Verify / repair | Foundation audit |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| B1 | Multi-role identity | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| B1.1 | Workspace/context model | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| B2 | Backend role authorization | Verify / repair (security) | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| B3 | Frontend role guards | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| B4 | Organizations and membership | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| B5 | Hunt-context roles | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| B6 | Effective Hunt authority | Verify / repair | Foundation audit | Not started — required runtime/extension absent (§9). |
 
 ## C — Hunt domain
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| C1 | Core Hunt records | Verify / repair | Foundation audit |
-| C2 | Hunt lifecycle | Verify / repair | Foundation audit |
-| C3 | Organizer Hunt list | Verify / repair | Foundation audit |
-| C4 | Publish-readiness authority | Verify / repair | Foundation audit |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| C1 | Core Hunt records | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| C2 | Hunt lifecycle | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| C3 | Organizer Hunt list | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| C4 | Publish-readiness authority | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
 
 ## D — Organizer setup
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| D1 | General Setup | Verify / repair | Foundation audit |
-| D2 | Template selection and snapshot | Verify / repair | Foundation audit |
-| D3 | Supported pilot options | Verify / repair | Foundation audit |
-| D4 | Rewards configuration | Verify / repair | Foundation audit |
-| D5 | Review | Verify / repair | Foundation audit |
-| D6 | Publish | Verify / repair | Foundation audit |
-| D7 | Access code/link | Verify / repair | Foundation audit |
-| D8 | Organizer geographic preview | Verify / repair | Foundation audit |
-| D9 | Allocate Supervisors | Verify / repair | Foundation audit |
-| D10 | Map-first General Setup | Build (separate track) | Architecture dependency |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| D1 | General Setup | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| D2 | Template selection and snapshot | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| D3 | Supported pilot options | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| D4 | Rewards configuration | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| D5 | Review | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| D6 | Publish | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| D7 | Access code/link | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| D8 | Organizer geographic preview | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| D9 | Allocate Supervisors | Verify / repair | Foundation audit | Not started — required runtime/extension absent (§9). |
+| D10 | Map-first General Setup | Build (separate track) | Architecture dependency | Not started — required runtime/extension absent (§9). |
 
 ## E — Professional accounts
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| E1 | Organizer application | Verify / repair | Foundation audit |
-| E2 | Organizer login | Verify / repair | Foundation audit |
-| E3 | Organizer approval backend | Verify / repair | Foundation audit |
-| E4 | Organizer credential boundary | Verify / repair (security) | Foundation audit |
-| E5 | Admin backend login | Verify / repair | Foundation audit |
-| E6 | Bootstrap first Admin | Verify / repair | Foundation audit |
-| E7 | Admin frontend login | Verify / repair | Foundation audit |
-| E8 | Protect Admin routes | Verify / repair | Foundation audit |
-| E9 | Admin account security | Verify / repair (security) | Foundation audit |
-| E10 | Additional Admin provisioning | Verify / repair | Foundation audit |
-| E11 | Organizer Applications Admin UI | Verify / repair | Foundation audit |
-| E12 | Organizer self-registration credentials | Verify / repair | Foundation audit |
-| E13 | Organizer onboarding E2E | Verify / repair | Foundation audit |
-| E14 | Creator provisioning | Verify / repair | Foundation audit |
-| E15 | Creator activation | Verify / repair | Foundation audit |
-| E16 | Creator onboarding verification | Verify / repair | Foundation audit |
-| E17 | Creator self-registration/application | Verify / repair | Foundation audit |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| E1 | Organizer application | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E2 | Organizer login | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E3 | Organizer approval backend | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E4 | Organizer credential boundary | Verify / repair (security) | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E5 | Admin backend login | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E6 | Bootstrap first Admin | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E7 | Admin frontend login | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E8 | Protect Admin routes | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E9 | Admin account security | Verify / repair (security) | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E10 | Additional Admin provisioning | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E11 | Organizer Applications Admin UI | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E12 | Organizer self-registration credentials | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E13 | Organizer onboarding E2E | Verify / repair | Foundation audit | Partially implemented — onboarding foundation exists; deployed onboarding E2E not verified (§9). |
+| E14 | Creator provisioning | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E15 | Creator activation | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| E16 | Creator onboarding verification | Verify / repair | Foundation audit | Partially implemented — Creator onboarding foundation exists; deployed verification pending (§9). |
+| E17 | Creator self-registration/application | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
 
 ## F — Creator Templates
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| F1 | Template hierarchy and Mechanics Library | Verify / repair | Foundation audit |
-| F2 | Template persistence and immutable versions | Verify / repair | Foundation audit |
-| F3 | Geographic checkpoint architecture | Verify / repair | Foundation audit |
-| F4 | Radius contract compatibility | Verify / repair | Foundation audit |
-| F5 | Shared map and Creator Map Editor | Verify / repair | Foundation audit |
-| F6 | FinishPoint authoring and route validation | Verify / repair | Foundation audit |
-| F7 | Universal/Local creation, community reuse and Country/Locality | Build (separate track) | Architecture dependency |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| F1 | Template hierarchy and Mechanics Library | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| F2 | Template persistence and immutable versions | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| F3 | Geographic checkpoint architecture | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| F4 | Radius contract compatibility | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| F5 | Shared map and Creator Map Editor | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| F6 | FinishPoint authoring and route validation | Verify / repair | Foundation audit | Partially implemented — authoring/route estimates/preview exist; deployed/provider/device verification pending; no runtime completion (§9). |
+| F7 | Universal/Local creation, community reuse and Country/Locality | Build (separate track) | Architecture dependency | Partially implemented — BE C1–C5, C6b-1 and C6b-3; FE/community supply chain pending (§6/§9). |
 
 ## G — Admin Template governance
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| G1 | Admin Template review | Verify / repair | Foundation audit |
-| G2 | Approved Template authority | Verify / repair | Foundation audit |
-| G3 | Admin geographic preview | Verify / repair | Foundation audit |
-| G4 | Separate Universal/Local governance | Build (separate track) | Architecture dependency |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| G1 | Admin Template review | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| G2 | Approved Template authority | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| G3 | Admin geographic preview | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
+| G4 | Separate Universal/Local governance | Build (separate track) | Architecture dependency | Partially implemented — classified exact review and locality foundation; evidence/validity/eligibility pending (§6/§9). |
 
 ## H — Participant enrollment
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| H1 | Resolve access code | Build | Post-pilot / verify |
-| H2 | Persist Participant enrollment | Build | Pilot critical |
-| H3 | Enrollment availability rules | Build | Post-pilot / verify |
-| H4 | Team creation/assignment | Build | Post-pilot / verify |
-| H5 | Team lobby | Build | Post-pilot / verify |
-| H6 | Readiness | Build | Post-pilot / verify |
-| H7 | Start gate | Build | Post-pilot / verify |
-| H8 | Session recovery/reconnect | Build | Post-pilot / verify |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| H1 | Resolve access code | Build | Post-pilot / verify | Complete — merged and verified for public code resolution only; FE #17 / BE #24 (§9). |
+| H2 | Persist Participant enrollment | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
+| H3 | Enrollment availability rules | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| H4 | Team creation/assignment | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| H5 | Team lobby | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| H6 | Readiness | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| H7 | Start gate | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| H8 | Session recovery/reconnect | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
 
 ## I — Checkpoint gameplay
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| I1 | Checkpoint runtime model | Build | Pilot critical |
-| I2 | Participant progress state | Build | Post-pilot / verify |
-| I3 | Answer submission | Build | Pilot critical |
-| I4 | Backend validation | Build | Pilot critical |
-| I5 | Hint use | Build | Post-pilot / verify |
-| I6 | Personal and Team contribution | Build | Pilot critical |
-| I7 | Score events | Build | Pilot critical |
-| I8 | Idempotency | Build | Pilot critical |
-| I9 | Restore progress | Build | Post-pilot / verify |
-| I10 | All Signal checkpoints | Build | Post-pilot / verify |
-| I11 | FinishPoint completion | Build | Pilot critical |
-| I12 | Participant map | Build | Post-pilot / verify |
-| I13 | Checkpoint suspension | Build | Post-pilot / verify |
-| I14 | Geographic gamification | Decision / defer | Later / decision |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| I1 | Checkpoint runtime model | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
+| I2 | Participant progress state | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| I3 | Answer submission | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
+| I4 | Backend validation | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
+| I5 | Hint use | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| I6 | Personal and Team contribution | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
+| I7 | Score events | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
+| I8 | Idempotency | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
+| I9 | Restore progress | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| I10 | All Signal checkpoints | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| I11 | FinishPoint completion | Build | Pilot critical | Not started — terminal authoring exists; authoritative completion runtime absent (§9). |
+| I12 | Participant map | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| I13 | Checkpoint suspension | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| I14 | Geographic gamification | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
 
 ## J — Live operations
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| J1 | Shared Hunt live state | Build | Post-pilot / verify |
-| J2 | Organizer Monitor | Build | Post-pilot / verify |
-| J3 | Lifecycle controls | Build | Post-pilot / verify |
-| J4 | Supervisor access | Build | Post-pilot / verify |
-| J5 | Help request | Build | Pilot critical |
-| J6 | PANIC incident | Build | Pilot critical |
-| J7 | Acknowledge/resolve | Build | Pilot critical |
-| J8 | Network-loss fallback | Build | Post-pilot / verify |
-| J9 | Live Operations Map | Decision / defer | Later / decision |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| J1 | Shared Hunt live state | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| J2 | Organizer Monitor | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| J3 | Lifecycle controls | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| J4 | Supervisor access | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| J5 | Help request | Build | Pilot critical | Not started — real delivery absent; FE #117 fixes simulation truthfulness only. |
+| J6 | PANIC incident | Build | Pilot critical | Not started — persisted real PANIC lifecycle absent; FE #117 is a simulation correction. |
+| J7 | Acknowledge/resolve | Build | Pilot critical | Not started — demo dismissal is not real acknowledgement/resolution. |
+| J8 | Network-loss fallback | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| J9 | Live Operations Map | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
 
 ## K — Results and rewards
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| K1 | Final score aggregation | Build | Pilot critical |
-| K2 | Leaderboard | Build | Post-pilot / verify |
-| K3 | Final results | Build | Pilot critical |
-| K4 | Special Awards | Decision / defer | Later / decision |
-| K5 | Reward assignment | Decision / defer | Later / decision |
-| K6 | Physical-prize eligibility | Decision / defer | Later / decision |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| K1 | Final score aggregation | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
+| K2 | Leaderboard | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| K3 | Final results | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
+| K4 | Special Awards | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| K5 | Reward assignment | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| K6 | Physical-prize eligibility | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
 
 ## L — Admin operations
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| L1 | Users and Roles | Verify / repair (security) | Post-pilot / verify |
-| L2 | Hunt oversight | Verify / repair | Post-pilot / verify |
-| L3 | Safety Alerts | Verify / repair | Post-pilot / verify |
-| L4 | Physical Reward Inventory | Verify / repair | Post-pilot / verify |
-| L5 | Platform Settings | Verify / repair | Post-pilot / verify |
-| L6 | Audit Log | Verify / repair | Post-pilot / verify |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| L1 | Users and Roles | Verify / repair (security) | Post-pilot / verify | Partially implemented — real Users & Roles controls; full operational auditability remains pending (§9). |
+| L2 | Hunt oversight | Verify / repair | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| L3 | Safety Alerts | Verify / repair | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| L4 | Physical Reward Inventory | Verify / repair | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| L5 | Platform Settings | Verify / repair | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
+| L6 | Audit Log | Verify / repair | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
 
 ## M — Long-term Participant
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| M1 | Hunt Passport | Decision / defer | Later / decision |
-| M2 | Mission History | Decision / defer | Later / decision |
-| M3 | Achievements | Decision / defer | Later / decision |
-| M4 | Collectibles and virtual rewards | Decision / defer | Later / decision |
-| M5 | Long-term profile | Decision / defer | Later / decision |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| M1 | Hunt Passport | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| M2 | Mission History | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| M3 | Achievements | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| M4 | Collectibles and virtual rewards | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| M5 | Long-term profile | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
 
 ## N — Custom Hunt requests
 
-| ID | Master architecture task | Current action | Priority / gate |
-| --- | --- | --- | --- |
-| N1 | Persist custom request | Decision / defer | Later / decision |
-| N2 | Admin triage | Decision / defer | Later / decision |
-| N3 | Assign Creator | Decision / defer | Later / decision |
-| N4 | Creator builds Template | Decision / defer | Later / decision |
-| N5 | Admin review | Decision / defer | Later / decision |
-| N6 | Return approved Template to Organizer | Decision / defer | Later / decision |
+| ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
+| --- | --- | --- | --- | --- |
+| N1 | Persist custom request | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| N2 | Admin triage | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| N3 | Assign Creator | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| N4 | Creator builds Template | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| N5 | Admin review | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
+| N6 | Return approved Template to Organizer | Decision / defer | Later / decision | Decision/deferred — original scope decision retained. |
 
 # 5. Cross-cutting decisions and exceptions
 
 - Independent Organizer (§11): unresolved identity/access and Personal Hunt authoring; keep isolated prototype, no bypass or invented launch path.
 
 - Universal vs Local (§F1/F7/G4): categories of Template, not two gameplay engines. Universal approved source may be copied into Creator-owned version with provenance; Local has geography, independent review and exact-version approval. Organizer sees approved Local for selected Country/Locality.
+
+- Approved Local continuity (Product Owner policy, reaffirmed 28 October 2026): an existing approved Local Template version remains eligible while its replacement is under review, unless Admin explicitly suspends it. Revision must preserve the prior exact approval independently of candidate state; no implicit withdrawal on draft/submission/request-changes. This is required future behavior, not implemented Local selection. C6a §7/U2 temporary-removal recommendation conflicts with this approved policy and is not adopted. Universal C5 continuity is an implemented precedent, not proof of Local support.
 
 - Organizer map-first (§D10): Country → Locality → approved Template → read-only preview; do not treat a map as safety certification.
 
@@ -236,34 +242,41 @@ Important sequencing choice: architecture §20.2 currently orders F7/G4/D10 befo
 
 # 6. Implementation PR control register
 
-Use one row per actual PR. Update this register after every merge and verification; do not infer status from a Draft PR or green CI alone.
+Use one row per actual PR. Status below refers only to each bounded slice, not completion of its parent A–N workflow. FE and BE PR numbers are repository-specific. Merge metadata and source were checked at the pinned heads in §9; test totals below are historical PR reports, not fresh runs in this reconciliation.
 
-| Order | PR / task IDs | Scope | State | Verified evidence |
-| --- | --- | --- | --- | --- |
-| 01 | D01 credential claim | BE-only: block claiming existing passwordless identities | Done | — |
-| 02 | D02 external identity | Fail closed on unverified Tedix ID | Done | — |
-| 03 | D03–D07 security/integrity | Scoped authorization, self-review, JWT, deletion and truthful safety fixes | Done | — |
-|  | D03 Account Deletion Integrity |  | Done |  |
-|  | D04 — Hidden geography access control |  | Done |  |
-|  | D05 — Independent Template review |  | Done |  |
-|  | D06 — HELP/PANIC safety UI |  | Done |  |
-|  | D07 — JWT signing configuration security |  | Done |  |
-| 04 | F7/G4/D10 decision | Choose full upstream track or explicitly approved pilot parallel track | Started | — |
-|  | F7 — Creator-owned Universal/Local Template versions and provenance. |  |  |  |
-|  | Universal/Local classification, database foundation |  | Done |  |
-|  | Creator creates Universal or Local from scratch |  | Done |  |
-|  | Admin approval and published Universal library |  | Done |  |
-|  | Create independent Local draft from published Universal |  | Done |  |
-|  | Creator Template Revisions and Republication |  | Done |  |
-|  | Hybrid Country/Locality Contract |  | Done |  |
-|  | Local approval, locality and evidence requirements |  | Done |  |
-|  | Legacy compatibility and Organizer selection |  |  |  |
-|  |  |  |  |  |
-| 05 | H1–H3 | Real Hunt invitation, eligibility and enrollment | Not started | — |
-| 06 | H4–H8 | Team membership, lobby, readiness and session restore | Not started | — |
-| 07 | I1–I9 | One authoritative checkpoint, Solo/Team, recovery, idempotency | Not started | — |
-| 08 | I11, J, K | FinishPoint, safety/operations and final results | Not started | — |
-| 09 | I10, I12–I14; L–N | Full route and later product work as separately approved | Deferred / staged | — |
+| PR / task IDs | Implemented scope | Reconciled state | Source/test evidence and limits |
+| --- | --- | --- | --- |
+| BE #69 / D01; E4/E12/E17 | Public applications refuse existing passwordless identities | Complete — merged and verified | CreatorApplication.ts, OrganizerApplication.ts; ApplicationCredentials.integration.test.ts (ownership, activation races, rollback). Deployed verification pending. |
+| BE #70 / D02; A4/A6 | Fail closed on unverified Tedix ID | Complete — merged and verified | routes/auth.ts; TedixAuthentication.integration.test.ts. No upstream identity-verification integration; native auth retained. |
+| BE #71 / D03; L1 | Account Deletion Integrity | Complete — merged and verified | models/User.ts; UserDeletion.integration.test.ts. Creator dependencies retained through retirement; no general history deletion. |
+| BE #72 / D04; B2/D8/G3 | Hidden geography access control | Complete — merged and verified | routes/huntTemplates.ts; huntTemplates.integration.test.ts (professional capability, guest/Participant denial, role revocation). |
+| BE #73 / D05; G1/G2 | Independent Template review | Complete — merged and verified | HuntTemplate.approveCreatorTemplate and adminTemplateReviews.integration.test.ts: self-approval denial, exact submitted pin, rollback. |
+| FE #117 / D06; J5–J7/L3 | Truthful HELP/PANIC safety UI | Complete — merged and verified | SafetyDialog/readiness/Monitor/Admin demo labels; safetyPrototype.test.tsx. Real incident transport and lifecycle are absent; manual browser/device check pending. |
+| BE #74 / D07; A4/E9 | JWT signing configuration security | Complete — merged and verified | config/environment.ts + environment.test.ts and lib/jwt.ts: reject missing/weak/default secrets, no fallback. Serving configuration/revision not inspected. |
+| BE #75 / F7 C0 | Backend contract/product decisions | Decision/deferred — merged proposal | F7_Backend_Template_Contract_Proposal.md; technical proposals are not implementation evidence. |
+| BE #76 / F7 C1 | Universal/Local classification and immutable provenance foundation | Complete — merged and verified | Migration 022, templateClassification.integration.test.ts; source bindings/history protections. Classified Organizer gates closed. |
+| BE #77 / F7 C2 | Creator-owned Universal/Local scratch authoring | Complete — merged and verified | routes/creatorTemplates.ts; creatorTemplates.integration.test.ts: category validation, persisted owner/capability, legacy starters unchanged. FE category authoring absent. |
+| BE #78 / F7 C3, G4 foundation | Exact published Universal authority and Creator library | Complete — merged and verified | models/PublishedUniversal.ts and creatorTemplates.integration.test.ts: independent exact approval, safe library projection. Current authority strengthened by C5. |
+| BE #79 / F7 C4 | Independent Local draft from published Universal | Complete — merged and verified | PublishedUniversal.ts; creatorTemplates.integration.test.ts: exact copy/provenance, stale reference, owner isolation, transaction rollback; no source propagation. |
+| BE #80 / F7 C5 | Creator revisions and atomic Universal republication | Complete — merged and verified | Migration 023; HuntTemplate.ts / PublishedUniversal.ts; creatorTemplates.integration.test.ts + templatePublication.integration.test.ts. Reported 1,037 tests/54 files, zero skips. Approved Local revision not enabled. |
+| BE #81 / F7/G4 C6a | Hybrid Country/Locality contract | Decision/deferred — merged contract | F7_C6a_Hybrid_Locality_Contract.md. Provider rights unresolved; proposed Local withdrawal conflicts with approved continuity policy (§5). Actual C6b-3 API supersedes its proposal examples. |
+| BE #82 / F7/G4 C6b-1 | Implemented Country/Locality foundation, subject to verification | Complete — merged and verified at source/test level | Migration 024; Geography.ts / routes/geography.ts; geography.integration.test.ts. Reported 1,043 tests/55 files, zero skips. RO reference only; no seeded localities, provider, Template binding, FE or deployed E2E. |
+| BE #83 / F7/G4 C6b-3 | Implemented manual proposal/Admin-decision foundation, subject to verification | Complete — merged and verified at source/test level | Migration 025; LocalityProposal.ts / routes/localityProposals.ts; localityProposals.integration.test.ts. Reported 1,056 tests/56 files, zero skips. Independent evidence and storage-rights review remains human; no Template or Organizer activation. |
+| FE #118 / control baseline | Faithful Markdown baseline conversion | Complete — merged and verified as documentation only | Original file blob 35737425ed64805f55b79bb2dfc1d644ef58fa28; no implementation progress conveyed by conversion. |
+
+Each PR above is individually linked with its merge SHA in the ledger in §9 and is also available in the [FE merged history](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pulls?q=is%3Apr+is%3Amerged) or [BE merged history](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pulls?q=is%3Apr+is%3Amerged). Pinned repository heads and merge SHAs are recorded in §9; evidence file paths are repository-relative.
+
+| Remaining register scope (original order preserved) | Reconciled state / prerequisite |
+| --- | --- |
+| 04 — F7/G4/D10 track decision and completion | Partially implemented upstream BE; no approved pilot bypass inferred. Local approval/locality/evidence requirements and legacy compatibility/Organizer selection are not complete. |
+| C6b-2 — Mapbox permanent-storage integration | Blocked pending account entitlement verification: permanent-result storage, immutable snapshot/backup/sharing/post-termination retention, attribution and target settlement coverage. Temporary Search Box camera use confers no storage rights. No provider persistence found. |
+| C6b-4 — Local version locality binding / approved Local revisions | Not started; smallest next bounded implementation is binding-only (§8), with approved Local revision mechanics separately reviewed. |
+| C6b-5 — Local submission/exact-review locality checks | Not started; depends on binding, compatibility and approved Local continuity. |
+| 05 — H1–H3 invitation, eligibility and enrollment | H1 code resolution complete; H2 enrollment and H3 authoritative admission rules not started. |
+| 06 — H4–H8 membership/lobby/readiness/restore | Not started; team policies and enrollment prerequisites remain. |
+| 07 — I1–I9 authoritative checkpoint engine | Not started; local prototype gameplay is not backend runtime. |
+| 08 — I11, J, K FinishPoint/safety/operations/results | Not started for real workflows; authoring and D06 truthfulness are foundations only. |
+| 09 — I10, I12–I14; L–N | Staged: runtime work not started; existing L1 foundation partial; other L operations absent; decision/deferred scope retained for I14 and M–N. |
 
 # 7. Update the Master Architecture Plan — mandatory closing loop
 
@@ -283,6 +296,88 @@ At the end of each implementation PR (not only at the end of the whole project):
 
 # 8. Next action
 
-Begin with security/identity Task 01. Before any Codex coding prompt, inspect current BE/FE against the audit finding and specify the smallest safe patch plus regression tests. Do not start the gameplay engine or Universal/Local expansion by assumption.
+The baseline instruction “Begin with security/identity Task 01” is superseded: D01–D07 are merged bounded fixes with inspected regressions. Deployment/security verification remains a gate; do not repeat those implementations or declare G0 passed from source review alone.
 
-TedixHunt · Master Implementation Control Plan v3 · controlled working document
+Next smallest implementation candidate: **C6b-4 binding-only foundation** — add canonical Locality ID and a server-created immutable locality snapshot to Local Template versions through existing owner-scoped save/read paths. Keep classified Organizer selection closed. This is a proposed narrow implementation boundary, not authorization to code in this documentation PR.
+
+Prerequisites before its coding prompt:
+
+- Review the C6b-4 schema/API/snapshot contract: ID/snapshot pairing, Local-only binding, optional incomplete drafts, omission/inherit versus explicit refresh/null, inactive/unknown ID behavior, exact version reads and lock ordering. C6a is a proposal, not automatic technical approval.
+- Use C6b-1 stored IDs and C6b-3 independently reviewed manual Localities; Mapbox C6b-2 is not needed for this stored/manual slice and stays blocked. Pending/rejected proposal IDs cannot be bindings.
+- Preserve legacy/Signal content, historical versions/reviews/Hunt snapshots and Universal publication/provenance; settle treatment of existing unbound classified Local versions without silent backfill or activation.
+- Keep approved Local revision activation separate until a reviewed mechanism preserves the previous exact approved version during replacement review and allows explicit Admin suspension. C5's Universal-only publication pointer cannot be silently generalized. No temporary withdrawal policy may be introduced.
+- Require disposable-PostgreSQL regression evidence for atomic save/rollback, snapshot immutability and inheritance, category/owner/capability denial, concurrent saves and legacy history preservation. No FE workflow, Local evidence-validity system, classified Organizer selection or Participant runtime in the binding-only PR.
+
+After binding and its review: approved Local revision continuity, C6b-5 exact submission/review gates and remaining G4 evidence/eligibility decisions; then reviewed compatibility/selection rollout (C7) and D10. Architecture §20.2 ordering and the explicit Product Owner gate for any pilot parallel track remain unchanged.
+
+# 9. Reconciliation record — 28 October 2026
+
+## Baseline and verification boundaries
+
+Original baseline: 26 October 2026; faithful conversion merged as FE #118 on 28 October. This update preserves every original A–N task identifier/action/priority, G0–G6 milestone rule, dependencies and deferred scope, while adding reconciled statuses, replacing unsupported register claims and correcting the next action. Original baseline is recoverable at [FE commit 3221a390](https://github.com/tedixdev-arch/Tedix_Hunt_FE/blob/3221a3906e25c9fdea17aeb5a113e7238a0351c5/docs/TedixHunt_Master_Implementation_Control_Plan_v3.md).
+
+Reviewed source heads:
+
+- FE `3221a3906e25c9fdea17aeb5a113e7238a0351c5` (main, #118). Architecture plan remains v3.6 with merged FE #114–#116 participation/recovery/+100 policy. FE application/tests are unchanged from #117, `efe9c282a45bdfcd7b9bd36451270d068d6bdb62`.
+- BE `465775a47a1f699314377130f140aa341fd83d1b` (main, #83). Read current models/routes, additive migrations, integration-test assertions and relevant merged PR metadata. Merge dates were verified through GitHub, not inferred from PR titles or stale “Draft” wording in merged PR descriptions.
+- No deployment, live database, Mapbox account, real-device GPS, multi-account gameplay or end-to-end safety verification performed. Historical PR-reported PostgreSQL results are labeled as such; this review inspects the tests but does not rerun BE integration suites. Local shell proxy was unavailable, so current BE evidence was read through GitHub; no live environment changes.
+
+## Phase evidence and completion limits
+
+All paths below refer to the pinned heads above. [FE architecture plan](https://github.com/tedixdev-arch/Tedix_Hunt_FE/blob/3221a3906e25c9fdea17aeb5a113e7238a0351c5/docs/TedixHunt_Prototype_Architecture_Implementation_Plan.md) and companion [audit/critical path](https://github.com/tedixdev-arch/Tedix_Hunt_FE/blob/3221a3906e25c9fdea17aeb5a113e7238a0351c5/docs/TedixHunt_Architecture_Audit_and_Critical_Path_v1.md) retain historical checkmarks/findings; current bounded fixes in §6 supersede their stale security findings, without rewriting those documents here.
+
+| Tasks | Verified foundation / relevant merged PRs | Remaining completion boundary |
+| --- | --- | --- |
+| A1–A6 | BE #9–#13; FE deployment/session foundations. Current auth.ts, jwt.ts and environment.ts show native sessions and fail-closed fixes #70/#74. FE AuthProvider/API client and existing auth tests. | Fresh deployed revision/configuration, backup/restore and operational acceptance not established; no whole-platform completion claim. |
+| B1/B1.1/B2–B5 | BE #14–#16/#35; FE #28/#43/#45/#53/#61. Persisted global capabilities and Hunt context read model; current professional geography authorization regression inspected in BE huntTemplates.integration.test.ts. | Context/schema is not enrollment or Supervisor assignment/runtime. B6 effective Hunt authority absent; D9 remains not started. Full cross-domain acceptance not rerun. |
+| C1–C4; D1–D8 | BE #17–#25/#50/#51/#63; FE #17/#18/#64/#83/#84. Existing Hunt setup, publish-readiness, exact snapshot/access-code/catalog integration and geographic inspection. | Current classified catalog resolver in HuntTemplate.ts requires category IS NULL. Generic setup is not D10 Country → Locality → eligible Local selection; new safety/category readiness and deployed supply-chain checks pending. |
+| E1–E17 | BE #26/#28–#34/#36/#42/#46/#47; FE #19/#21/#27/#28/#30/#31/#35/#48/#54/#55/#60/#63. Existing real professional onboarding/UI/session foundations; D01/D02/D03/D07 regressions inspected. | E13/E16 are verification workflows: source tests do not close deployed onboarding E2E. Full account task acceptance not reverified here. |
+| F1–F6 | BE #48–#62/#64–#68; FE #65/#67/#68/#74–#81/#86–#104. Current Creator persistence, geographic/terminal authoring and map/preview tests; independent exact Admin review tested. | Starter catalog is not published community reuse. Walking estimates/preview are not safety certification or runtime. Provider/device/deployed save/reopen/review verification pending. |
+| F7/G4 | BE #76–#83; current PublishedUniversal.ts, HuntTemplate.ts, Geography.ts, LocalityProposal.ts and integration suites. Exact Universal publication/copy/republication and stored/manual Locality foundations implemented. | No canonical Template locality binding, approved Local revision continuity, full Local evidence/validity/eligibility or classified Organizer rollout; FE Universal/Local/community/catalog/proposal screens absent. |
+| G1–G3 | BE #56–#58/#63/#73/#80; FE #70/#73/#82. Current exact submitted-version review and self-approval/rollback tests; Admin geographic inspection. | Existing review foundation does not satisfy G4 Local governance or deployed independent route/safety review. |
+| H1 | BE #24, FE #17: routes/huntAccess.ts returns only identity/code/name/status; FE services/api/huntAccess.ts and tests/huntAccess.test.ts; BE domain/huntAccess.test.ts. | Complete only for public lookup; no membership mutation or admission authorization. |
+| H2–H8 | Membership/team tables and workspace reads exist; readiness screens are prototypes. BE app.ts exposes no enrollment/team/readiness/start/recovery runtime API. | Required persisted join/capacity/team/lobby/start/reconnect workflows not started; shared schema is not implementation. |
+| I1–I13 | FE useTemplateOneMission.ts, template-one/TemplateOneExperience.tsx and checkpointGameplay/finishPoint/participantPreview tests implement local play/preview. BE app.ts has no authoritative checkpoint/answer/progress/scoring/FinishPoint runtime routes. | Persisted authoritative runtime, five-minute recovery, once-only +100, restore/concurrency, actual GPS progression and suspension absent. I14 stays decision/deferred. |
+| J1–J8; K1–K3 | OrganizerMonitor and Participant gameplay/results are local prototypes; FE #117 adds truthful safety labels. No real incident/result runtime mounted in BE app.ts. | Real monitoring, HELP/PANIC delivery/receipt/resolve, network fallback, persisted final aggregation/results absent. J9/K4–K6 retain decision/deferred scope. |
+| L1–L6 | BE #37–#45/#71 and FE #52/#57/#58 support real Users & Roles lifecycle controls; UserDeletion.integration.test.ts verifies dependency retention. AdminConsole operational cards remain demo/local UI. | L1 remains partial for full auditability; L2–L6 operational systems not implemented by their screens. D06 does not create Safety Alerts backend. |
+| M1–M5; N1–N6 | Prototype history/request UI and generic Template review may be reusable foundations. | No verified persisted long-term Participant or complete request workflow; retain all decision/deferred boundaries. |
+
+
+## Merge evidence ledger
+
+| PR | Verified merge commit |
+| --- | --- |
+| [BE #69](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/69) | `0c128285a3b533e192d19047861e0bc401c3869d` |
+| [BE #70](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/70) | `d5634074665d2d17062004f796742bb4e64e0d7b` |
+| [BE #71](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/71) | `df7e38016be8df82d8441252f5c343b5be70dfd8` |
+| [BE #72](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/72) | `5fa660a730ff2fd91d7442b755b73c9c82566cd8` |
+| [BE #73](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/73) | `2869b3a56982e2e2a44d349062b8e4aac0d15e19` |
+| [BE #74](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/74) | `4fea7c31375a5ce9a7899c0fc6f009eb42949298` |
+| [BE #76](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/76) | `81f914dd95dd0a78fef651e61aab758c316a0f6b` |
+| [BE #77](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/77) | `d89bc06c48aa21d5660803294bc0cfe3ac786850` |
+| [BE #78](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/78) | `95da8c343a79ac1104df3ecc2b2cd8baf1e41e72` |
+| [BE #79](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/79) | `7663dc95170e12b25cd17f9ad0771819c43f8906` |
+| [BE #80](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/80) | `29ef1d9d808106735b101d65fd1344a546e01b87` |
+| [BE #81](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/81) | `9ca8d90d85c228a37e617388157893ff2c9a50e7` |
+| [BE #82](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/82) | `dd0f12b4abc67c917bb548bdb1a3b05faa402b2b` |
+| [BE #83](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/83) | `465775a47a1f699314377130f140aa341fd83d1b` |
+| [FE #117](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/117) | `efe9c282a45bdfcd7b9bd36451270d068d6bdb62` |
+| [FE #118](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/118) | `3221a3906e25c9fdea17aeb5a113e7238a0351c5` |
+
+
+## Specific discrepancies and unresolved blockers
+
+- The original register's “Done” for Local approval/locality/evidence requirements overstates progress. C6b-1/C6b-3 create locality foundations, not Template binding, route safety evidence, validity, approved Local continuity or Organizer eligibility. F7/G4/D10 remain partial/not started as distinguished above.
+- Architecture §20.1 still says F7/G4/D10 is not implemented; this is stale for the merged BE C1–C5/C6b-1/C6b-3 foundations, while correctly indicating the complete supply chain is absent. Companion-document synchronization is a separate review task; only this document changes here.
+- C6a proposed paths/status `accepted`/accept-against-existing are not C6b-3's actual API: Creator uses `/api/geography/locality-proposals` and `/mine`; Admin uses `/api/admin/locality-proposals` and `/:id/decision`, status `approved`. Approval creates a new catalog entry; duplicate conflict remains pending, with no silent reuse/merge. Independent evidence review and semantic duplicate ambiguity remain human responsibilities.
+- Approved Local revision is currently rejected by HuntTemplate.saveCreatorVersion; C5 enables approved Universal revisions and classified changes-requested corrections only. `published_version` is Universal-only. Neither C6a's withdrawal recommendation nor Universal continuity proves implementation of approved Local continuity. The approved policy in §5 governs future work.
+- C6b-2 remains blocked by unverified account-specific Mapbox permanent-storage/retention entitlement. Do not persist temporary Search Box results through the manual-proposal path. C6b-3 rejects explicit Mapbox evidence text but cannot establish undisclosed provenance or licensing automatically.
+- G0 source fixes are present, but no current deployment acceptance was established. G1 independent immutable route/safety verification, G2 Solo proof, G3 real Team proof, G4 variable-team scenarios and G5 operational/device proof remain open. G6 extensions remain staged. No pilot-track shortcut or release approval is inferred.
+- Potential cross-feature integrity gap for follow-up: current User.deleteControlled dependency detection does not include locality_proposals creator/reviewer references, while migration 025 adds restrictive user FKs. A proposal-only Creator or reviewer without another recognized history dependency may reach hard deletion and hit the FK instead of retirement. The existing D03 fix remains verified for its original Creator/Template scope; no regression covering this later proposal-only account case was found in the inspected suites. Verify and repair separately before claiming complete account-deletion coverage for C6b-3; no application change is made here.
+- Existing unresolved team/GPS/suspension/global-closure policies in §5 remain gates before their dependent work. No new policy is introduced by this reconciliation.
+
+## Verification performed for this documentation reconciliation
+
+FE focused regressions were run against local `efe9c28`, whose application/tests match current FE main (the only later merged change #118 is this baseline Markdown). Executed `npx vitest run tests/safetyPrototype.test.tsx`: 5/5 tests passed (one file). Executed `node --test --experimental-strip-types tests/huntAccess.test.ts tests/creatorTemplates.test.ts tests/adminTemplateReviews.test.ts tests/workspaceSelector.test.ts`: four Node test files passed, no skips. These include source-contract assertions, not real BE HTTP/PostgreSQL or deployed E2E. The initial Vitest invocation also named these `.test.ts` files, but Vitest includes only `.test.tsx`; they were run separately with Node. BE test assertions were inspected at the pinned current head; historical totals in §6 are PR-reported, not independently rerun. No application code or tests were modified.
+
+TedixHunt · Master Implementation Control Plan v3 · reconciled 28 October 2026 · Draft for ChatGPT review; do not merge or deploy.
