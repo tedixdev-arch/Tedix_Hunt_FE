@@ -1,6 +1,6 @@
 # Tedix Hunt - Prototype Architecture & Implementation Plan
 
-Version 3.6 | Updated 24 October 2026
+Version 3.6 | Updated 24 October 2026 | Foundation reconciliation 28 October 2026
 
 Revision note (3.6): Participation Architecture v1, documentation only. Adds approved Solo/Team selection, Template compatibility and adaptive fragment mechanics, and reconciles D/F/H/I/J/K with the controlled internal pilot. Historical implementation/evidence notes remain scoped to their original revisions; no new runtime capability, API, migration, deployment or E2E result is claimed. Security remediation priorities in the companion audit remain prerequisites.
 
@@ -33,6 +33,8 @@ Diagram-extension note (3.5): adds Phase J live operations, Phase K results/rewa
 Diagram-extension note (3.5): adds Phase A platform, Phase B identity/authorization and Phase C Hunt-domain context diagrams. Preserves implementation evidence, exact lifecycle states, planned B6/runtime boundaries and unresolved dependencies; no implementation or deployed verification is claimed.
 
 Diagram-extension note (3.5): adds Phase E professional lifecycle, Phase L Admin operations, Phase M long-term Participant systems and Phase N custom-request context diagrams. Preserves existing statuses, historical evidence, credential/authority boundaries and unresolved dependencies; no implementation or new deployed verification is claimed.
+
+Reconciliation — 28 October 2026 (version remains 3.6): reviewed FE main `53a3e376025adb161e28430a4d6c8ebe35644218` and BE main `c0b4dbd43707e993d9dede9c5ca75b0240cd647e` through merged BE #88. C6b-4 Locality binding and C6b-5 Local approval/revision continuity and suspension are complete **at backend foundation level**, subject to source/test/CI boundaries in §20.1a and the [Control Plan §9](TedixHunt_Master_Implementation_Control_Plan_v3.md#foundation-reconciliation-supplement--28-october-2026-through-be-88). C7 Organizer Local Template eligibility/selection contract is approved and merged; C7 backend implementation and D10 frontend integration have not started. Full G4 governance, safety and readiness remain incomplete. Mapbox permanent-storage entitlement remains unresolved. This dated record supersedes obsolete current-state absence claims, while prior revision notes and dated audit statements remain historical.
 
 The implementation strategy is:
 
@@ -105,7 +107,7 @@ Creator creates Universal or Local Template
 → Organizer/Admin monitor
 → Passport/history/achievements preserve long-term value
 
-This dependency chain drives implementation order. The governing architecture remains **Creator creates → Admin governs → Organizer configures → Participant plays → Backend records authoritative state**. Universal/Local is the planned v3.4 evolution; the existing unclassified catalog remains subject to the explicit compatibility strategy in F7 and section 14.
+This dependency chain drives implementation order. The governing architecture remains **Creator creates → Admin governs → Organizer configures → Participant plays → Backend records authoritative state**. Universal/Local is the v3.4 evolution with merged BE foundations through C6b-5; C7 implementation and dependent FE flows remain planned; the existing unclassified catalog remains subject to the explicit compatibility strategy in F7 and section 14.
 
 ### 3.1 Architecture diagram conventions
 
@@ -116,7 +118,7 @@ These three Mermaid views describe the existing baseline and agreed target toget
 | Purple fill + thick border; named focus subgraph | Current subject: the supply chain in the master view, Phase F in the other views. |
 | Neutral gray + thin border | Neighboring role, phase or technical service. |
 | `[I]` + solid border | Implemented only for the named scope; deployment/E2E remains as recorded in the phase. |
-| `[P]` + dashed border | Planned functionality, including Universal/Local classification and reuse. |
+| `[P]` + dashed border | Planned functionality for the named layer, including C7 Organizer selection, FE category/reuse integration and full safety governance. |
 | `[Mixed]` | Implemented foundation plus planned extension; both are stated in the label/caption. |
 | Solid labeled arrow | Business action or content handoff; a logical relationship, not a direct network call. |
 | Dotted labeled arrow | Technical responsibility, API exchange or persistence through backend authority. |
@@ -130,11 +132,11 @@ The emphasized supply chain is the target for ordinary location-based Hunts. Uni
 ```mermaid
 flowchart TB
   subgraph business["FOCUS — Business architecture: F / G / D / H / I"]
-    creator["[Mixed] Creator authors Templates<br/>Baseline I; categories P"]
-    universal["[P] Universal Template"]
-    adminU["[P] Admin Universal review<br/>Exact-version approval"]
-    local["[P] Local Template"]
-    adminL["[P] Admin Local review<br/>Independent exact-version approval"]
+    creator["[Mixed] Creator authors Templates<br/>BE categories I; FE integration P"]
+    universal["[Mixed] Universal Template<br/>BE I; FE integration P"]
+    adminU["[Mixed] Admin Universal review<br/>BE exact approval I; category UI P"]
+    local["[Mixed] Local Template<br/>BE binding / continuity I; FE P"]
+    adminL["[Mixed] Admin Local review<br/>BE exact authority I; full safety P"]
     organizer["[Mixed] Organizer selects and configures<br/>Generic setup I; Local-only catalog P"]
     hunt["[Mixed] Hunt<br/>Snapshot I; publish gates/runtime P"]
     participant["[P] Participant"]
@@ -161,10 +163,10 @@ flowchart TB
   classDef planned stroke-dasharray:6 4;
   class creator,universal,adminU,local,adminL,organizer,hunt,participant focus;
   class fe,be,db,geo neighbor;
-  class universal,adminU,local,adminL,participant planned;
+  class participant planned;
 ```
 
-**What this diagram tells us:** Creator authors, Admin approves exact versions, Organizer selects approved Local content and configures a Hunt, and Participant joins/plays that Hunt. The two layers describe the same platform at different levels; business arrows are logical handoffs, not direct service calls. All four FE experiences use BE contracts; BE governs authorization, lifecycle transitions, progress and scoring, and PostgreSQL stores authoritative records. Generic persistence/lifecycle are implemented; category gates and authoritative gameplay remain planned.
+**What this diagram tells us:** Creator authors, Admin approves exact versions, Organizer selects approved Local content and configures a Hunt, and Participant joins/plays that Hunt. The two layers describe the same platform at different levels; business arrows are logical handoffs, not direct service calls. All four FE experiences use BE contracts; BE governs authorization, lifecycle transitions, progress and scoring, and PostgreSQL stores authoritative records. Generic persistence/lifecycle and BE category validation, independent review, Universal reuse and Local binding/continuity/suspension are implemented. C7 selection, full G4 safety/validity, dependent FE and authoritative gameplay remain planned.
 
 Mapbox supplies presentation/search/advisory estimates, never approval, arrival, scores or persistence authority. Admin and Organizer also reuse read-only TedixMap previews (G3/D8); those edges are omitted for clarity. Geographic catalog provider choice is **unresolved** and is not inferred to be Mapbox. Participant payload visibility and authoritative gameplay remain planned Phase I work.
 
@@ -538,6 +540,8 @@ Admin Template Review is connected to the real list/detail/approve/request-chang
 The active application uses `src/main.tsx` and `src/routes/router.tsx`.
 
 ## 9. Current BE baseline
+
+28 October reconciliation: the historical baseline list below is extended by BE #76–#88: classified validation/independent review, Universal publication/copy/republication, stored/manual Localities, C6b-4 immutable locality binding and C6b-5 retained Local approval/revision continuity/suspension. C7 contract is merged; C7 backend implementation is absent. Full G4 safety/validity/readiness and D10 remain pending (§20.1a).
 
 Current main backend domains include authentication and Hunt contexts; Admin users and professional applications; organizations; Creator Templates; Admin Template review; approved Hunt Templates; Hunt options/access/rewards; and Hunts.
 
@@ -1035,7 +1039,7 @@ Status: ⬜ Not started; depends on B6 backend deployment
 - [ ] E2E: Organizer appears automatically, allocated Supervisor gains only that Hunt's operational access, removal revokes access, self-removal cannot remove automatic supervision.
 
 ### D10. Organizer map-first General Setup — planned workstream
-Status: ⬜ Not started; depends on F7/G4 location, review and approved-catalog contracts.
+Status: ⬜ Frontend integration not started. C7 eligibility/selection contract approved (#88); depends on reviewed C7 backend implementation, PostgreSQL acceptance and applicable F7/G4 readiness/compatibility gates.
 
 Target order within General Setup:
 
@@ -1404,30 +1408,30 @@ This credential lifecycle remains distinct from E14–E16 Admin provisioning.
 
 ## Phase F — Creator Template system
 
-Status: ✅ Creator baseline and F4–F6 implementation merged; geographic deployed E2E remains unverified; F7 is planned
+Status: ✅ Creator baseline and F4–F6 implementation merged; geographic deployed E2E remains unverified; F7 has merged BE foundations and pending FE/full supply-chain acceptance
 
 ### Phase F context — Creator within the platform
 
-Phase F's baseline persistence, submission and geographic authoring are implemented; the emphasized Universal/Local paths and Mechanics Library entry are planned F7 work. G1/G2's generic exact-version review/catalog/snapshot foundations are implemented, while their category-specific gates are planned G4/D10 extensions.
+Phase F's baseline persistence, submission and geographic authoring are implemented. Universal/Local validation, independent review, approved Universal discovery/copy/republication, stored/manual Localities and Local binding/approval continuity/suspension are merged BE foundations. The emphasized paths remain mixed: category/reuse/location FE integration, Mechanics Library entry, C7 selection and full G4/D10 acceptance remain pending.
 
 ```mermaid
 flowchart TB
   subgraph uPath["Phase F focus → Phase G neighbor — Universal path"]
-    universal["[P] Universal Template"]
-    submitU["[P] Exact-version submission<br/>Universal"]
-    reviewU["[P] Universal Admin Review"]
-    catalogU["[P] Approved Universal Catalog"]
-    reuse["[P] Creator reuse<br/>Copy exact version + provenance"]
+    universal["[Mixed] Universal Template<br/>BE I; FE P"]
+    submitU["[Mixed] Exact Universal submission<br/>BE I; category FE P"]
+    reviewU["[Mixed] Universal Admin Review<br/>BE I; category FE P"]
+    catalogU["[Mixed] Approved Universal Catalog<br/>BE I; FE P"]
+    reuse["[Mixed] Creator reuse<br/>BE exact copy I; FE P"]
     universal -->|"Creator pins version"| submitU
     submitU -->|"Requests Universal review"| reviewU
     reviewU -->|"Admin approves exact Universal version"| catalogU
     catalogU -->|"Active Creator selects approved source"| reuse
   end
   subgraph lPath["Phase F focus → Phase G / D neighbors — Local path"]
-    scratch["[P] Creator starts from scratch"]
-    local["[P] Independent Local Template<br/>Geography and adaptations"]
-    submitL["[P] Exact-version submission<br/>Local"]
-    reviewL["[P] Local Admin Review"]
+    scratch["[Mixed] Creator starts from scratch<br/>BE I; category FE P"]
+    local["[Mixed] Independent Local Template<br/>BE binding I; FE / full safety P"]
+    submitL["[Mixed] Exact Local submission<br/>BE locality gates I; FE P"]
+    reviewL["[Mixed] Local Admin Review<br/>BE authority I; full safety P"]
     catalogL["[P] Approved Local Catalog"]
     organizer["[P] Organizer selection<br/>Country / Locality"]
     scratch -->|"Creates owned draft"| local
@@ -1442,37 +1446,37 @@ flowchart TB
   classDef planned stroke-dasharray:6 4;
   class universal,submitU,reuse,scratch,local,submitL focus;
   class reviewU,catalogU,reviewL,catalogL,organizer neighbor;
-  class universal,submitU,reviewU,catalogU,reuse,scratch,local,submitL,reviewL,catalogL,organizer planned;
+  class catalogL,organizer planned;
 ```
 
 **What this diagram tells us:** Universal and Local have separate exact-version submission, Admin review and approved-catalog paths. Approved Universal reuse creates independent Local content; it never routes a Universal submission into Local approval. An active, approved Creator capability permits both authoring paths, including cross-Creator approved-source reuse (F1/F7).
 
-Both paths use the same authoritative BE/DB foundation: draft/version persistence and exact review are implemented (F2/G1/G2); category validation, community discovery, atomic copying and Local-only selection remain planned (F7/G4/D10, 20.2). Technical edges are omitted to keep the two business paths distinct. Organizer selection uses BE resolution and the existing generic snapshot mechanism, never FE-written snapshots. Copy retains source identity, exact version and provenance; drafts remain owner-scoped and no live inheritance is introduced.
+Both paths use the same authoritative BE/DB foundation: category validation, exact independent review, Universal discovery/atomic copy and Local binding/continuity/suspension are implemented. C7 Local-only Organizer selection and dependent FE/full G4 acceptance remain pending (F7/G4/D10, 20.2). Technical edges are omitted to keep the two business paths distinct. Organizer selection uses BE resolution and the existing generic snapshot mechanism, never FE-written snapshots. Copy retains source identity, exact version and provenance; drafts remain owner-scoped and no live inheritance is introduced.
 
-Approval arrows show successful decisions only; request-changes behavior and the current Creator resubmission UI limitation remain in F2/G1/section 14. No Creator approval/publication right or private-draft access is implied. Backend authorization governs every handoff, including cross-Creator copy and both review decisions. Category storage, copy transaction, catalog authorization, evidence/withdrawal gates, combined-capability self-review enforcement and legacy rollout remain **unresolved BE contract outputs** (20.2), not newly specified APIs.
+Approval arrows show successful decisions only; request-changes behavior and the current Creator resubmission UI limitation remain in F2/G1/section 14. No Creator approval/publication right or private-draft access is implied. Backend authorization governs every handoff, including cross-Creator copy and both review decisions. Category storage, exact copy transaction, Creator Universal catalog authorization and independent self-review guards are merged BE foundations. Full safety evidence/validity, reinstatement and legacy rollout remain unresolved or deferred; C7 eligibility/selection has an approved contract but no implementation (20.1a–20.2).
 
 ### Universal-to-Local lifecycle — focused target process
 
-This is the **planned F7/G4/D10 category workflow**, built on the implemented generic lifecycle and snapshot baseline. All category steps are planned; `[I]` at the end identifies only today's generic Hunt snapshot mechanism. Approval of Universal content does not certify geography or approve a derived Local.
+This is the **mixed F7/G4/D10 category workflow**: BE authoring/copy/review and Local binding/continuity/suspension are implemented; category FE, C7 selection and full safety/validity governance remain planned. `[I]` at the end identifies today's generic Hunt snapshot mechanism; it does not claim C7 exact Local selection is active. Approval of Universal content does not certify geography or approve a derived Local.
 
 ```mermaid
 flowchart TB
   subgraph source["Phase F focus / Phase G neighbor — Universal source"]
-    universal["[P] Author / revise Universal"]
-    submitU["[P] Submit exact Universal version"]
-    reviewU{"[P] Admin Universal review"}
-    approvedU["[P] Approved Universal version"]
+    universal["[Mixed] Author / revise Universal<br/>BE I; category FE P"]
+    submitU["[Mixed] Submit exact Universal version<br/>BE I; category FE P"]
+    reviewU{"[Mixed] Admin Universal review<br/>BE I; category FE P"}
+    approvedU["[Mixed] Approved Universal version<br/>BE publication I; FE P"]
     universal -->|"Pins version"| submitU
     submitU -->|"Requests review"| reviewU
     reviewU -->|"Request changes; revise new version"| universal
     reviewU -->|"Approve exact version"| approvedU
   end
   subgraph creation["FOCUS — Phase F: active Creator"]
-    choice{"[P] Start Local: copy or scratch?"}
-    eligible{"[P] Exact source still approved<br/>and reuse authorized?"}
-    copy["[P] Copy source snapshot<br/>Retain identity / version / provenance"]
-    local["[P] Author / revise independent Local<br/>Route, adaptations and evidence"]
-    submitL["[P] Submit exact Local version"]
+    choice{"[Mixed] Start Local: copy or scratch?<br/>BE I; FE P"}
+    eligible{"[Mixed] Exact source still approved<br/>and reuse authorized? BE I; FE P"}
+    copy["[Mixed] Copy exact source + provenance<br/>BE atomic copy I; FE P"]
+    local["[Mixed] Author / revise independent Local<br/>BE continuity I; FE / safety evidence P"]
+    submitL["[Mixed] Submit exact Local version<br/>BE binding checks I; FE P"]
     choice -->|"Copy approved source"| eligible
     eligible -->|"Yes: validate and copy atomically"| copy
     eligible -->|"No: choose again; no copy"| choice
@@ -1481,8 +1485,8 @@ flowchart TB
     local -->|"Pins complete version"| submitL
   end
   subgraph approval["NEIGHBOR — Phase G: independent Local decision"]
-    reviewL{"[P] Admin Local review<br/>Route and evidence gates"}
-    approvedL["[P] Approved Local version"]
+    reviewL{"[Mixed] Admin Local review<br/>BE exact authority I; full safety P"}
+    approvedL["[Mixed] Approved Local version<br/>BE authority / suspension I; C7 P"]
     reviewL -->|"Approve exact version"| approvedL
   end
   subgraph boundary["NEIGHBOR — Phase D / BE: immutable Hunt boundary"]
@@ -1499,10 +1503,10 @@ flowchart TB
   classDef planned stroke-dasharray:6 4;
   class universal,submitU,choice,eligible,copy,local,submitL focus;
   class reviewU,approvedU,reviewL,approvedL,select,snapshot neighbor;
-  class universal,submitU,reviewU,approvedU,choice,eligible,copy,local,submitL,reviewL,approvedL,select planned;
+  class select planned;
 ```
 
-**What this diagram tells us:** copy requires an eligible, approved exact Universal source; scratch requires none. Both produce independent Local content that must pass its own Admin review before Organizer selection. Request changes preserves the reviewed artifact; revision means a new immutable version and renewed submission. These loops describe the target, not an implemented Creator resubmission UI (F2/G1). The final cylinder marks the existing generic snapshot mechanism; the preceding Local-specific gates are planned (F7/G4/D10, section 14, 20.2).
+**What this diagram tells us:** copy requires an eligible, approved exact Universal source; scratch requires none. Both produce independent Local content that must pass its own Admin review before Organizer selection. Request changes preserves the reviewed artifact; revision means a new immutable version and renewed submission. These loops describe the target, not an implemented Creator resubmission UI (F2/G1). The final cylinder marks the existing generic snapshot mechanism; Local authority/locality foundations are implemented, while C7 selection and full safety/validity gates remain planned (F7/G4/D10, section 14, 20.2).
 
 **No live inheritance:** later Universal changes never automatically modify Local drafts, approved Local versions or Hunt snapshots. Local edits produce new immutable versions requiring their own submission and Admin review; later approvals never replace an existing Hunt snapshot. Explicit update-from-Universal is outside V1. The independent path joins the same Local validation/review gates and provides no approval bypass.
 
@@ -1519,7 +1523,7 @@ Participation extension — planned: declare Solo/Team-compatible mechanics per 
 
 Canonical Signal v1 is persisted platform Template content and is one concrete Competition Template implementation; it is not the Creator Framework. Legacy `eventData` is not canonical Template authority. This plan intentionally does not duplicate the complete Signal dataset.
 
-#### Universal and Local categories — agreed target, not implemented
+#### Universal and Local categories — BE foundations implemented; FE integration pending
 
 | Category | Content and validation boundary | Approval and consumption |
 | --- | --- | --- |
@@ -1674,10 +1678,10 @@ Status: ✅ Scoped BE/FE authoring and preview implementation merged; deployed E
 Validation limits: BE #62 reported 21 database tests skipped; later BE #63 reports a full PostgreSQL suite of 712 passing tests, zero skipped. Neither is deployed E2E evidence. FE provider tests are mocked; FE #81's mobile smoke used the missing-token fallback. Temporary custom challenge controls in FE #79 are not persisted authoring support.
 
 ### F7. Universal/Local creation, reuse and Country/Locality — planned workstreams
-Status: ⬜ Universal/Local classification, community reuse, hybrid location identity and approval-evidence contracts are not implemented. Existing Signal starters/research tools are merged baseline capabilities (section 20.1), not completion of F7.
+Status: 🟡 Partially implemented. BE C1–C5 and C6b-1/3/4/5 foundations are merged, including Local locality binding and approval/revision continuity/suspension. C7 contract complete; C7 backend implementation and D10 frontend integration not started. Creator/category/community/location FE and deployed supply-chain acceptance remain pending. Full G4 governance/safety/readiness and Mapbox permanent-storage entitlement remain unresolved (§20.1a). Existing starters do not complete F7.
 
-- [ ] BE contract/design first: define classification, exact Universal-source provenance/copy semantics, per-category versioned validation, separate approval gates, location identity and legacy adaptation (sections F1, G4 and 14). Specify schemas/API contracts in that step; no new endpoint is asserted here.
-- [ ] BE implementation follows as narrow tracked migrations, model/validation, authorized reuse, location lookup/persistence and review/catalog PRs; dependencies and acceptance are in section 20.2.
+- [x] BE foundation contracts/implementation through C6b-5: classification, exact Universal-source copy/provenance, independent review, stored/manual Locality identity, Local binding and retained approval/suspension. Complete only for these merged backend slices; full safety/validity and legacy activation remain gated.
+- [ ] Next BE implementation: C7 eligibility/discovery/exact-version Hunt selection against the merged contract; then PostgreSQL acceptance and review. Category FE/full G4/deployed acceptance remain separate; dependencies and stricter gates are in section 20.2.
 - [ ] Creator FE follows F1 information architecture: first expose the four labeled dashboard entries and Mechanics Library capability explanations; then integrate My Templates type/status/version context, the reusable editor and approved community Universal copying or independent Local creation in separate reviewable slices. Depend on agreed supported-mechanic configuration/availability and category/reuse contracts; do not add a second gameplay engine or arbitrary executable mechanics. Follow with a separate Country/Locality and Local-geography integration slice, preserving progressive drafts, explicit persistence and exact submission.
 - [ ] Retain AI-assisted proposals as optional Creator assistance. AI may propose candidates, order, narrative fit, content, sources and uncertainties; responsible Creators review/edit ordinary drafts. No AI approval/publication, invented verification, provider secrets in FE, or mutation of approved content/snapshots.
 - [ ] Preserve canonical Signal v1 and Signal Overload Cluj-Napoca, their story, puzzles, Personal/Team Challenges and seven-stop journey: six normal checkpoints plus terminal FinishPoint. Three routes per locality remains an optional curation target, never a database cardinality or approval quota. Existing starter provenance is not Universal-source provenance.
@@ -1690,7 +1694,7 @@ Intended identity principles: TedixHunt-owned stable internal UUID, ISO country 
 
 Resolve known internal/provider matches before creating a record; check country/administrative context and coordinates for potential duplicates. Ambiguous matches require explicit selection or manual review, not automatic merging by name or proximity. Provider changes/aliases must preserve stable internal references and provenance. Final uniqueness, reconciliation and merge rules belong to the BE contract.
 
-On provider failure, retain usable existing locations, show lookup failure/retry and do not invent results or silently substitute another location. Missing localities require a documented manual proposal/review path with country, context, coordinates and evidence before authoritative acceptance. Unresolved proposals cannot bypass Local submission/approval gates. Legacy country/region/city strings remain readable until explicitly mapped and reviewed; do not treat them as canonical UUID identities or mutate snapshots. Provider choice, coverage/licensing, request/caching/failure behavior and exact APIs are unresolved BE design outputs.
+On provider failure, retain usable existing locations, show lookup failure/retry and do not invent results or silently substitute another location. Missing localities require a documented manual proposal/review path with country, context, coordinates and evidence before authoritative acceptance. Unresolved proposals cannot bypass Local submission/approval gates. Legacy country/region/city strings remain readable until explicitly mapped and reviewed; do not treat them as canonical UUID identities or mutate snapshots. Stored Country/Locality reads and manual proposal/Admin-decision APIs are implemented in C6b-1/3; C6b-4 snapshots their stable IDs and facts. Provider choice/coverage/licensing and persistence remain unresolved; Mapbox permanent-storage entitlement is not established. C6a proposal examples do not override the implemented C6b-3 API (Control Plan §9).
 
 #### Geographic safety and review evidence
 
@@ -1714,22 +1718,22 @@ Status: ✅ Backend/DB, Admin FE review, Organizer integration and G3 preview im
 
 ### Phase G context — Admin within the platform
 
-Generic exact-version review is implemented; the two category decisions below are planned G4 extensions. Admin is responsible for human review, with separate downstream catalogs and no Creator self-approval.
+Generic and classified exact-version review are implemented at BE level, including independent evidence, retained Local authority and explicit suspension. Category FE, full route-safety/validity governance and C7 Organizer selection remain planned. Admin is responsible for human review, with separate downstream catalogs and no Creator self-approval.
 
 ```mermaid
 flowchart TB
   subgraph creator["NEIGHBOR — Phase F: Creator"]
-    submission["[Mixed] Creator submits exact version<br/>Generic I; Universal/Local categories P"]
-    revise["[P] Creator revises new version<br/>and resubmits"]
+    submission["[Mixed] Creator submits exact version<br/>BE categories / locality checks I; FE P"]
+    revise["[Mixed] Creator revises new version<br/>BE continuity I; revision UI P"]
     evidence["[P] Local route and safety evidence<br/>Sources, reviewer, dates and access conditions"]
-    reuse["[P] Creator reuse<br/>Independent copy with provenance"]
+    reuse["[Mixed] Creator reuse<br/>BE copy / provenance I; FE P"]
     revise -->|"Pins new submitted version"| submission
   end
   subgraph governance["FOCUS — Phase G: Admin Template governance"]
-    universal{"[P] Universal review<br/>Structure, content, supported mechanics"}
-    local{"[P] Separate Local review<br/>Every stop, segment and adaptation<br/>Human evidence/safety judgment"}
-    changes["[Mixed] Request changes I<br/>Category review loop P"]
-    uc["[P] Approved Universal catalog<br/>Creator reuse only"]
+    universal{"[Mixed] Universal review<br/>BE category review I; FE P"}
+    local{"[Mixed] Separate Local review<br/>BE exact approval / locality I<br/>Full human safety / validity gates P"}
+    changes["[Mixed] BE category request changes I<br/>Revision UI P; retained Local authority I"]
+    uc["[Mixed] Approved Universal catalog<br/>BE Creator reuse I; FE P"]
     lc["[P] Approved Local catalog<br/>Organizer selection"]
     inspect["[I] G3 read-only geographic inspection<br/>Exact submitted content"]
     submission -->|"Universal submission"| universal
@@ -1749,8 +1753,8 @@ flowchart TB
   end
   lc -->|"Makes eligible Local version selectable"| selection
   subgraph authority["NEIGHBOR — Backend / PostgreSQL authority"]
-    be["[Mixed] Admin-only authorization and pinned review I<br/>Category/evidence/self-review gates P"]
-    records[("[Mixed] PostgreSQL<br/>Immutable version + approval pin I<br/>Version-bound evidence/approval records P")]
+    be["[Mixed] BE authorization / exact review I<br/>Category / independent evidence I<br/>Full safety / validity P"]
+    records[("[Mixed] PostgreSQL<br/>Exact review / Local authority / suspension I<br/>Full safety evidence / validity P")]
     be -.->|"Persists decisions without rewriting content"| records
   end
   universal -.->|"Decision through authorized BE"| be
@@ -1760,14 +1764,14 @@ flowchart TB
   classDef planned stroke-dasharray:6 4;
   class universal,local,changes,uc,lc,inspect focus;
   class submission,revise,evidence,reuse,selection,be,records neighbor;
-  class universal,local,uc,lc,revise,evidence,reuse,selection planned;
+  class lc,evidence,selection planned;
 ```
 
-**What this diagram tells us:** Universal approval enables Creator reuse; Local approval independently enables Organizer selection. Universal approval never approves Local geography. Request changes preserves the exact reviewed artifact, while the target revision/resubmission path creates a new immutable version. Creator cannot approve their own submissions; combined Creator/Admin identity enforcement is an unresolved BE contract output, not an implemented guard asserted here.
+**What this diagram tells us:** Universal approval enables Creator reuse; Local approval independently enables Organizer selection. Universal approval never approves Local geography. Request changes preserves the exact reviewed artifact, while the target revision/resubmission path creates a new immutable version. Creator cannot approve their own submissions; combined Creator/Admin identity self-approval is blocked by merged independent-review guards; full operational auditability remains separate.
 
 G1/G2 implement generic review, approve/request-changes, pinned Creator catalog resolution and immutable Hunt snapshots. G3 supplies inspection, not safety certification. G4/F7 must add version-bound human evidence and category-specific gates: acknowledgment may address an advisory, required evidence needs review, and unresolved blocking hazards prevent approval. Mapbox, AI and automated checks cannot certify geographic safety; responsible Creators supply evidence and Admin reviews the actual route, including local/on-site checks where desk evidence is insufficient.
 
-**Technical and secondary authority:** every business arrow is subject to backend authorization. Existing immutable content and the submitted-version approval pin are not a completed immutable approval audit log. Evidence representation, reviewer/decision history, validity, expiry/re-review, withdrawal, combined-capability self-review enforcement and publish-readiness remain planned contract decisions (20.2); L6 audit remains unimplemented. No new API or schema is specified.
+**Technical and secondary authority:** every business arrow is subject to backend authorization. Existing immutable content and the submitted-version approval pin are not a completed immutable approval audit log. Exact immutable independent review evidence and Local authority/suspension are merged foundations. Full route-safety evidence, validity/expiry/re-review, reinstatement and publish/start readiness remain pending (20.2); L6 audit remains unimplemented. No new API or schema is specified.
 
 Account governance is a separate, secondary context: Admin → Creator/Organizer application approval, provisioning and account controls (Phases E/L1, implemented named scopes) → backend authorization and PostgreSQL. Account actions govern identity/capability access, not Template approval; blocking/removal preserves durable Template versions, Hunt snapshots and required provenance (section 6). This relationship is kept outside the Template graph for readability.
 
@@ -1835,12 +1839,12 @@ This read-only review mode does not restrict Admin platform authority; any expli
 - [ ] Record deployed exact-version review → approve → Organizer selection verification and real Mapbox/mobile checks.
 
 ### G4. Separate Universal/Local governance — planned extension
-Status: ⬜ Not started; depends on F7 BE contracts/implementation and Creator integration.
+Status: 🟡 Partially implemented — BE classified independent review, Local binding, exact approval/revision continuity and explicit suspension foundations are merged. Full G4 route-safety/evidence quality, validity and operational readiness remain incomplete; category FE pending. C7 contract approved, backend implementation not started (§20.1a).
 
 - [ ] Implement separate Universal and Local review using F1's criteria in the existing Admin workflow. Both decisions apply only to the exact submitted immutable version; approved Universal provenance never grants automatic Local approval.
 - [ ] Local review exposes Country/Locality identity, complete route, local adaptations, AI/provider provenance where applicable, safety category, evidence and validity/access conditions. Inspect every stop and connecting segment; a rendered map or AI score cannot replace human review.
 - [ ] Backend enforces category-specific validation and evidence requirements, including unresolved blocking hazards. Edited routes/adaptations require a new version and renewed review. Creator cannot directly approve/publish their own content.
-- [ ] Approved Universal discovery is for Creator reuse; Organizer's ordinary V1 location-based catalog exposes only approved Local versions for the selected Country/Locality. Preserve exact-version selection, withdrawal handling and BE #63's allowlisted geographic projection/key/version checks. Final API/filter shapes remain unresolved.
+- [ ] Approved Universal discovery is for Creator reuse; Organizer's ordinary V1 location-based catalog exposes only approved Local versions for the selected Country/Locality. Preserve exact-version selection, withdrawal handling and BE #63's allowlisted geographic projection/key/version checks. C7 API/filter/selection contract is approved in BE #88; backend implementation is pending. Eligibility is not physical route-safety certification.
 - [ ] Define and test explicit legacy/unclassified behavior before activating filtering. No inference from names/coordinates, automatic Signal conversion or mutation of old approval states/snapshots (section 14).
 - [ ] Acceptance: Universal approval without geography succeeds under its own contract; derived Local still requires independent review; invalid/expired required Local evidence or unresolved blockers prevent approval; approval/withdrawal and stale-version handling preserve immutable history.
 
@@ -2753,7 +2757,7 @@ flowchart TB
     review -->|"Request changes; new version / renewed review"| build
   end
   subgraph supply["NEIGHBOR — Phases F / G / D: reusable foundations"]
-    studio["[Mixed] F Creator Studio<br/>Versioning / submission I; categories P"]
+    studio["[Mixed] F Creator Studio<br/>BE category versioning I; category FE P"]
     governance["[Mixed] G Admin governance<br/>Pinned review I; Local evidence gates P"]
     setup["[Mixed] D Organizer setup<br/>Generic selection / snapshot I<br/>Approved Local-only target P"]
     studio -.->|"Supports Creator-owned authoring; no self-approval"| build
@@ -2776,7 +2780,7 @@ flowchart TB
   class organizer,triage,assign,build,review,available planned;
 ```
 
-**What this diagram tells us:** Organizer requests, Admin triages and assigns, Creator authors through F, Admin reviews the exact submitted version through G, and approved content returns to Organizer setup in D. The requested workflow remains planned even though generic authoring/review/catalog/snapshot foundations exist. A Creator cannot approve their own work; enforcement for identities holding both Creator and Admin capabilities remains an unresolved BE contract output (20.2), not an implemented self-review guard.
+**What this diagram tells us:** Organizer requests, Admin triages and assigns, Creator authors through F, Admin reviews the exact submitted version through G, and approved content returns to Organizer setup in D. The requested workflow remains planned even though generic authoring/review/catalog/snapshot foundations exist. A Creator cannot approve their own work; merged backend guards block self-approval for identities holding both Creator and Admin capabilities; the custom-request orchestration remains planned (20.2).
 
 For an ordinary location-based Hunt, the target requires an independently approved Local Template. Universal approval alone enables Creator reuse, never Organizer location-based selection or automatic Local approval. A Local may be created independently or copied from an exact approved Universal source with provenance; either path requires its own submission/review. These details reuse F7/G4 and do not invent request pricing, deadlines, automatic approval, assignment algorithms, statuses or APIs.
 
@@ -2884,13 +2888,13 @@ Request changes returns the submitted Template to `changes_requested` while pres
 
 Never let an edited Template retroactively change a published/active Hunt.
 
-Planned v3.4 extension: Universal Draft → exact submission → Admin Universal approval → another active Creator copies that exact approved version into an independent Local Draft (or creates Local from scratch) → exact Local submission → separate Admin Local approval → Organizer selects approved Local → backend snapshots exact key/version/content. Universal approval alone never authorizes Organizer location-based selection or Local approval.
+Mixed v3.4 extension (BE foundations through C6b-5 implemented; C7/FE/full governance pending): Universal Draft → exact submission → Admin Universal approval → another active Creator copies that exact approved version into an independent Local Draft (or creates Local from scratch) → exact Local submission → separate Admin Local approval → Organizer selects approved Local → backend snapshots exact key/version/content. Universal approval alone never authorizes Organizer location-based selection or Local approval.
 
 Compatibility gate: canonical Signal v1, Signal Overload Cluj-Napoca, all existing Template versions/approval states, Hunt snapshots and geographic contracts remain intact. Historical Templates without classification remain readable. Never infer Local status from a name, a city label or coordinates. Inventory legacy records and consumers, define explicit unclassified read/catalog behavior and a controlled reviewed classification/adaptation process before enforcing the new catalog rules. New Local-only filtering must not strand existing Hunts or silently remove the existing catalog before that transition is approved.
 
 Where new category/provenance or location metadata affects immutable content, create an explicitly reviewed new version/adapted artifact; do not backfill old immutable JSONB or retrospectively alter its approval. Decide storage, mapping and rollout in the BE contract. Existing `country`/`region`/`city` Hunt fields need explicit compatibility mapping; they do not already establish canonical Locality identity.
 
-Preserve `configuration.normalCheckpointCount`, `checkpointPositions[]` and separate `finishPoint` for Local geography. Universal validation must allow reusable structure without fixed geographic completeness. Current geographic submission rules and their pre-contract compatibility branch are existing behavior, not an implemented category distinction. Preserve existing snapshots independently of later classification, source edits, catalog changes or approval withdrawal; changes to future availability/readiness require explicit policy, never snapshot mutation.
+Preserve `configuration.normalCheckpointCount`, `checkpointPositions[]` and separate `finishPoint` for Local geography. Universal validation must allow reusable structure without fixed geographic completeness. Category-specific validation, Local stored-binding/material-geography checks and retained exact approval are implemented; full route-safety/validity remains pending. Preserve existing snapshots independently of later classification, source edits, catalog changes or approval withdrawal; changes to future availability/readiness require explicit policy, never snapshot mutation.
 
 ## 15. Participant runtime implementation rule
 
@@ -3014,6 +3018,8 @@ Completed foundation: A–E baseline, B1.1 contextual workspace integration, F C
 
 ## 20.1 Merged implementation audit — 24 October 2026
 
+Historical audit at the revisions pinned below. Its absence statements describe 24 October only; §20.1a supersedes current-state claims through BE #88. Original PR/evidence rows remain traceable.
+
 Historical 10 October baseline (retained):
 
 Audit source: GitHub PR merge metadata and PR scope/validation reports, checked against FE main `e3a6668bde6e55a8e7392d608a413a1586067a72` (includes #84). “Merged” below is repository evidence, not a deployed E2E result.
@@ -3047,9 +3053,27 @@ All named six PRs have `merged = true`; their descriptions may retain historical
 
 Step 7A is implemented (FE #70), not the next task. Preserve Step 7 supply-chain E2E as a release gate: Creator persists/submits → Admin reviews exact version/approves → catalog resolves it → Organizer selects → exact Hunt snapshot persists. Record environment, deployed FE/BE revisions, date, cases and results; do not relabel absent evidence as passed.
 
+## 20.1a Foundation reconciliation — 28 October 2026, through BE #88
+
+Reviewed FE main `53a3e376025adb161e28430a4d6c8ebe35644218` and BE main `c0b4dbd43707e993d9dede9c5ca75b0240cd647e`. See the [Control Plan §9 evidence supplement](TedixHunt_Master_Implementation_Control_Plan_v3.md#foundation-reconciliation-supplement--28-october-2026-through-be-88) for all final PR head/merge SHAs, exact merge status/times, test/CI boundaries and pinned reports.
+
+| Slice | Current evidence/status | Completion boundary |
+| --- | --- | --- |
+| C6b-4 Locality binding | [BE #84](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/84) contract merged `46e191fd84ccb0c919b0ff490b74dae169cd1deb`; [#85](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/85) implementation merged `9c20270f90cb31ed450eb7638eed9578d1d262a2` | Complete at BE foundation level: migration 026, Local-only stored ID/server snapshot, inheritance/refresh/null, exact reads and transaction locks/rollback. Not FE/Organizer activation. |
+| C6b-5 Local continuity/suspension | [BE #86](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/86) contract merged `5518197ae63b669d83226669f68b19f4ade17f85`; [#87](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/87) implementation merged `0b63014f0ea197598990e9b92755dc999375141a` | Complete at BE foundation level: migration 027, retained exact independently approved authority through replacement review, locality checks, private inspection, immutable explicit Admin suspension and hardened SQL guards. No reinstatement or historical backfill. |
+| C7 Organizer eligibility/selection | [BE #88](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/88) contract merged `c0b4dbd43707e993d9dede9c5ca75b0240cd647e` | Contract approved/complete; backend implementation not started. Proposed routes and Hunt source metadata are not active implementation. |
+| D10 / full F7/G4 | D10 frontend integration not started; F7/G4 partial | Full G4 safety/evidence quality, validity/expiry/re-review, operating conditions and readiness incomplete; deployed E2E/rollout absent. |
+| C6b-2 Mapbox persistence | Permanent-storage entitlement unresolved | Stored/manual catalog foundations do not establish provider storage, retention or sharing rights. |
+
+Merged implementation was verified from actual models/routes, migrations 026/027, fresh schema, binding/lifecycle/adversarial SQL test assertions and reports, not inferred from documentation-only PRs. #85 reports PostgreSQL 17.11 focused 72/0/0 and full 1,076/0/0 (including 213 PostgreSQL tests). #87 reports PostgreSQL 17.10 focused 90/0/0 and full 1,166/0/0. These pass/fail/skip totals were not rerun here. Independently inspected GitHub CI metadata confirms successful Backend validation at final implementation heads: [#85 run 40749287918](https://github.com/tedixdev-arch/Tedix_Hunt_BE/actions/runs/40749287918) and [#87 run 40757933255](https://github.com/tedixdev-arch/Tedix_Hunt_BE/actions/runs/40757933255), including build, database preparation/migrations and test steps; deployment jobs skipped. No deployed, provider/device or E2E acceptance established.
+
+Universal and Local are independent reusable Template types; a Hunt is an instance. Organizer chooses Country → Locality → available Local Template independently of residence. C7 must resolve the exact approved version and persist immutable Hunt source content/locality metadata; Organizers do not manage technical version numbers. Approved Local authority survives replacement review; explicit Admin suspension prevents new C7 selection and survives subsequent approvals. Historical unbound/evidence-less approvals are preserved without invented evidence but excluded by C7; missing pins remain integrity exceptions. Existing Hunts and Signal: Cluj-Napoca remain unchanged. C7 eligibility does not certify physical route safety.
+
+No merge, deployment, pilot or production release is authorized by this reconciliation. Historical revision/audit notes, Phase A–N identifiers and existing acceptance/approval gates remain intact.
+
 ## 20.2 Staged workstreams before Participant runtime
 
-These are planned workstreams, each split into small reviewable tasks, not single large implementation PRs. Keep one repository and one scoped slice per Draft PR. Review and merge BE contract decisions before dependent implementation; record deployment separately from verification.
+These are sequence containers, each split into small reviewable tasks, not single large implementation PRs. Foundation contracts and BE implementation through C6b-5 are merged; C7 contract is approved. Read the original containers below with §20.1a and the current remaining sequence here; do not restart completed slices. Keep one repository and one scoped slice per Draft PR. Review and merge BE contract decisions before dependent implementation; record deployment separately from verification.
 
 | Order / workstream | Dependencies and small tasks | Acceptance criteria |
 | --- | --- | --- |
@@ -3062,7 +3086,15 @@ These are planned workstreams, each split into small reviewable tasks, not singl
 | 7. Deployed supply-chain E2E | After BE/FE deployment with recorded revisions: test both Local-from-Universal and standalone Local, cross-Creator reuse, separate Admin approvals, catalog/preview and Hunt persistence. | Record environment/date/revisions/cases/results; source edits, new approvals, withdrawal and legacy transition never mutate existing Local versions or Hunt snapshots. Verify failure states, real provider/mobile behavior and review conditions. No claim of passed E2E from merge/CI alone. |
 | 8. Continue existing phases | After the content supply-chain gate, follow section 20.3: B6/D9, H, I, J, K and subsequent L–N work in scoped steps. | Prove authoritative enrollment and one checkpoint before expansion; no Participant runtime implementation pulled into F7/G4/D10. |
 
-Unresolved BE design outputs: classification storage/versioning, exact provenance/copy transaction, community catalog authorization, provider choice/coverage/licensing, identity deduplication/manual reconciliation, lookup/caching/error contracts, evidence representation/validity/re-review and publish-readiness, self-review enforcement for combined capabilities, approval withdrawal and staged legacy catalog compatibility. These are contract decisions, not invented existing endpoints.
+Current remaining dependency sequence:
+
+1. C7 backend eligibility, discovery and exact-version Hunt selection against [`docs/C7_Organizer_Local_Template_Eligibility_Contract.md`](https://github.com/tedixdev-arch/Tedix_Hunt_BE/blob/c0b4dbd43707e993d9dede9c5ca75b0240cd647e/docs/C7_Organizer_Local_Template_Eligibility_Contract.md).
+2. C7 backend PostgreSQL acceptance and PR review, including authorization/lock ordering, exact-version races, atomic source tuple, rollback and legacy regressions.
+3. D10 frontend Organizer integration, subject to the existing Creator/Admin, reviewed catalog, compatibility and readiness gates above.
+4. Remaining G4 route-safety, evidence quality, validity and operational governance. Any requirement that gates D10 must be satisfied before that integration/activation; this sequence does not defer a stricter existing prerequisite.
+5. Deployed E2E and rollout acceptance before claiming the complete supply chain; record environment/date/revisions/cases/results.
+
+Resolved foundation outputs include category storage, exact copy/provenance, Universal catalog authorization, independent review and Local locality/continuity/suspension. Still unresolved/deferred: provider choice/coverage/licensing and permanent storage, semantic duplicate/manual reconciliation, full safety evidence/validity/expiry/re-review and publish/start policy, suspension reinstatement, historical remediation and staged activation/legacy rollout. Review final C7 additive storage names and common account/role lock ordering in implementation design. Preserve §20.3's content-supply-chain prerequisite and the explicit Product Owner gate for any parallel pilot.
 
 ## 20.3 Remaining existing-phase sequence
 
@@ -3111,11 +3143,11 @@ Run Stage B with two independent real accounts and repeat Stage C across support
 
 Section 20.3 sequence containers are refined by these gates: deliver one normal checkpoint and terminal/results in A before B; add Team mechanics in B, then C coverage before I10 full Signal expansion. J safety/minimal operations must precede each live stage; continuous location monitoring and full reward fulfillment remain separate. Audit PR sequence 08–32 supplies scoped dependencies; its E2E-A–D evidence labels are distinct from pilot Stages A–C. Full F7/G4/D10 prerequisites remain unless P1 explicitly approves the bounded parallel path.
 
-# 21. Next-step planning gate — no implementation prompt yet
+# 21. Next-step planning gate — C7 backend implementation pending
 
 The obsolete “implement F4 / 5 m radius” prompt is retired: BE #60 already merged, followed by the dependent FE work. Do not reissue it.
 
-First review this v3.4 documentation-only FE Draft PR in the existing project workflow. After user merge, the next scoped planning target is the **F7/G4 Backend contract** in section 20.2, starting with a BE-only contract/design documentation slice for Universal/Local classification, exact-version copy provenance, category validation/approval and legacy compatibility. Follow with location/provider and evidence contracts as small reviewed tasks; no application code or migrations in that first contract slice. Only then write a separate implementation prompt for that one repository/slice.
+The earlier v3.4 contract-first next action is historical and superseded: BE foundation contracts/implementation through C6b-5 and C7's contract are merged. The next implementation task is **C7 backend eligibility, discovery and exact-version Hunt selection** against `docs/C7_Organizer_Local_Template_Eligibility_Contract.md` (BE #88), followed by PostgreSQL acceptance and PR review. C6b-4 and C6b-5 must not be reissued as unimplemented tasks. D10 frontend, full G4 governance and deployed supply-chain/rollout acceptance follow the stricter gates in §20.2. This synchronization delivers only a documentation Draft PR for ChatGPT review.
 
 No implementation prompts, AI-generated routes, application changes, automatic merge or deployment are included in this plan update. Preserve the existing architecture and verify deployed evidence independently.
 
