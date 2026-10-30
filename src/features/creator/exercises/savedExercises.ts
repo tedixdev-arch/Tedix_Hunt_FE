@@ -1,3 +1,4 @@
+import { signalFeatureDefaults } from '../../../data/organizerTemplates'
 import { checkpointExercises } from '../../../data/templateOne'
 import type { CheckpointGameplay } from '../checkpointGameplay'
 import { prototypes, type Exercise, type TeamType, teamNames } from './catalog'
@@ -12,7 +13,7 @@ export function savedExercise(value: CheckpointGameplay, field: 'kind' | 'teamKi
   const nested = object(value[field === 'kind' ? 'personalChallenge' : 'teamChallenge'] ?? value[field === 'kind' ? 'challenge' : 'teamPuzzle'])
   const source = { ...base, ...value, ...nested } as Record<string, unknown>
   const team = field === 'teamKind'
-  const instructions = text(nested.question, text(source[team ? 'teamPrompt' : 'prompt']))
+  const instructions = text(nested.question, text(source.question, text(source[team ? 'teamPrompt' : 'prompt'])))
   const answerMap = object(source.correctAnswers)
   const keys = Object.keys(answerMap)
   const answer = text(nested.answer, text(source.answer, team ? text(source.teamAnswer) : text(answerMap[keys[0]])))
@@ -20,7 +21,7 @@ export function savedExercise(value: CheckpointGameplay, field: 'kind' | 'teamKi
   const solution = text(nested.solution, text(source.solution, team ? `${text(source.teamInstruction)}\nAnswer: ${answer}` : [text(source.solutionIntro), ...strings(source.solutionSteps)].join('\n')))
   const exercise: Exercise = { id: text(source.id, String(value[field])), type: team ? value.teamKind as TeamType : 'legacy-fields', title: text(nested.title, text(source.title)), instructions, hint, solution, correctFeedback: text(source.successText, 'Correct!'), incorrectFeedback: 'Not quite. Review the content and try again.', data: {} }
   if (team) {
-    exercise.title = text(nested.title, `${teamNames[value.teamKind as TeamType]} · ${text(source.title)}`)
+    exercise.title = text(nested.title, text(source.teamTitle, signalFeatureDefaults.team[checkpointExercises.indexOf(base)]?.name ?? teamNames[value.teamKind as TeamType]))
     exercise.data = { evidence: strings(source.publicContributions), answer }
     if (['distributed-information', 'assemble-machine'].includes(exercise.type)) exercise.data.options = strings(source.teamOptions)
     if (exercise.type === 'hypothesis') exercise.data.rule = text(source.teamRule)
@@ -46,7 +47,7 @@ export function savedExercise(value: CheckpointGameplay, field: 'kind' | 'teamKi
       radial: 'Opposite endpoint pairs:\n6 ↔ 20\n17 ↔ 9\n___ ↔ 11',
       'shared-final-key': '2, 3, 5, 7, 11, ___',
     }
-    exercise.data = { context: text(nested.content, text(source.context, context[value.kind!] ?? instructions)), keys: customAnswer ? ['Answer'] : keys, answers: customAnswer ? [answer] : keys.map(key => text(answerMap[key])) }
+    exercise.data = { context: text(nested.content, text(source.context, customAnswer ? instructions : context[value.kind!] ?? instructions)), keys: customAnswer ? ['Answer'] : keys, answers: customAnswer ? [answer] : keys.map(key => text(answerMap[key])) }
   }
   return exercise
 }

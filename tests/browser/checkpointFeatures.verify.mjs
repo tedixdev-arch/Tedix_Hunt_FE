@@ -32,9 +32,9 @@ for (const width of [1440,768,390,320]) {
     assert.equal(await terminal.textContent(),'7 🚩')
     await terminal.focus(); await page.keyboard.press('Enter')
     await page.getByRole('combobox',{name,exact:true}).selectOption(name==='Personal Challenge'?'build-key':'hypothesis')
-    await page.getByRole('button',{name:'Create new',exact:true}).click()
-    await page.getByRole('region',{name:'Prototype component authoring'}).waitFor()
-    await page.getByRole('button',{name:'Approved component',exact:true}).click()
+    await page.getByRole('button',{name:'Create Your Own',exact:true}).click()
+    await page.getByRole('region',{name:`${name} authoring`,exact:true}).waitFor()
+    await page.getByRole('button',{name:'Predefined',exact:true}).click()
     if (name === 'Personal Challenge' && [1440,320].includes(width)) await nav.locator('xpath=..').screenshot({path:`work/checkpoint-features-browser/terminal-${width}.png`})
   }
   await nav.getByRole('button',{name:/Next Checkpoint/}).click()

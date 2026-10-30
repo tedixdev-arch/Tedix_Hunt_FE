@@ -1,0 +1,49 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "sevenSteps": true,
+      "positioningInsideFeatureOne": true,
+      "countResizesPositioning": true,
+      "continueWithoutVerification": true,
+      "terminalChallenges": true,
+      "terminalNavigationDisabled": true,
+      "checkpointSixNavigation": true,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "sevenSteps": true,
+      "positioningInsideFeatureOne": true,
+      "countResizesPositioning": true,
+      "continueWithoutVerification": true,
+      "terminalChallenges": true,
+      "terminalNavigationDisabled": true,
+      "checkpointSixNavigation": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "sevenSteps": true,
+      "positioningInsideFeatureOne": true,
+      "countResizesPositioning": true,
+      "continueWithoutVerification": true,
+      "terminalChallenges": true,
+      "terminalNavigationDisabled": true,
+      "checkpointSixNavigation": true,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "sevenSteps": true,
+      "positioningInsideFeatureOne": true,
+      "countResizesPositioning": true,
+      "continueWithoutVerification": true,
+      "terminalChallenges": true,
+      "terminalNavigationDisabled": true,
+      "checkpointSixNavigation": true,
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

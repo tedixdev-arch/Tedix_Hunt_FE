@@ -1,8 +1,8 @@
-import { getRecallCountdownState } from './recallCountdown'
+import { getRecallCountdownState, getNextCountdownTickDelay } from './recallCountdown'
 import { useEffect, useState } from 'react'
 import { checkAnswer, emptyAttempt, type Exercise } from './catalog'
 
-export const control = 'min-h-11 max-w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 disabled:opacity-50'
+export const control = 'min-h-11 max-w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 disabled:opacity-50'
 export function ExerciseRenderer({ exercise }: { exercise: Exercise }) {
   const [attempt, setAttempt] = useState(emptyAttempt)
   const [feedback, setFeedback] = useState('')
@@ -10,6 +10,7 @@ export function ExerciseRenderer({ exercise }: { exercise: Exercise }) {
   const [solution, showSolution] = useState(false)
   const [resetKey, setResetKey] = useState(0)
   const [recallReady, setRecallReady] = useState(false)
+  const [recallSeconds, setRecallSeconds] = useState(0)
   const [revealed, setRevealed] = useState(false)
   const [card, setCard] = useState<{ index: number; side: 'left' | 'right' }>()
   const [mismatch, setMismatch] = useState<{ index: number; side: 'left' | 'right' }>()
@@ -22,8 +23,15 @@ export function ExerciseRenderer({ exercise }: { exercise: Exercise }) {
   const options = (values: string[], value: string, choose: (value: string) => void) => <div className="grid gap-2">{values.map((option, i) => <button type="button" className={`${control} text-left ${value === option ? 'bg-indigo-100 ring-2 ring-indigo-600' : ''}`} aria-pressed={value === option} onClick={() => choose(option)} key={i}>{option}</button>)}</div>
   useEffect(() => {
     if (type !== 'memory-card') return
-    setRecallReady(false)
-    const timer = window.setTimeout(() => setRecallReady(getRecallCountdownState(0).stage === 'ready_to_reveal'), Number(d.revealDelayMs))
+    const deadline = Date.now() + Number(d.revealDelayMs)
+    let timer: number
+    const tick = () => {
+      const remaining = Math.max(0, deadline - Date.now())
+      const state = getRecallCountdownState(remaining)
+      setRecallReady(state.stage === 'ready_to_reveal'); setRecallSeconds(state.remainingSeconds)
+      if (remaining > 0) timer = window.setTimeout(tick, getNextCountdownTickDelay(remaining))
+    }
+    tick()
     return () => window.clearTimeout(timer)
   }, [type, d.revealDelayMs, resetKey])
   const reset = () => { setAttempt(emptyAttempt()); setFeedback(''); showHint(false); showSolution(false); setCard(undefined); setMismatch(undefined); setRevealed(false); setDragged(undefined); setResetKey(k => k + 1) }
@@ -60,7 +68,7 @@ export function ExerciseRenderer({ exercise }: { exercise: Exercise }) {
       const values = type === 'filter-noise' ? list('evidence').map(s => s.split(':')[0].trim()) : list('options')
       interaction = <fieldset className="space-y-2"><legend>Select all that apply</legend>{values.map((value, i) => <label className={`${control} flex items-center gap-2`} key={i}><input type="checkbox" checked={attempt.selected.includes(value)} onChange={() => toggle(value)} />{type === 'filter-noise' ? list('evidence')[i] : value}</label>)}</fieldset>; break
     }
-    case 'memory-card': interaction = <div className="space-y-3"><label className="block">Recalled answer<input className={`${control} mt-2 w-full`} value={attempt.text} onChange={e => setText(e.target.value)} /></label><button type="button" className={control} disabled={!recallReady} onClick={() => setRevealed(true)}>{recallReady ? 'Reveal recall card' : 'Recall before revealing…'}</button>{revealed && <p aria-label="Recall card answer" className="rounded-xl bg-indigo-50 p-4 text-xl">{String(d.answer)}</p>}</div>; break
+    case 'memory-card': interaction = <div className="space-y-3"><label className="block">Recalled answer<input className={`${control} mt-2 w-full`} value={attempt.text} onChange={e => setText(e.target.value)} /></label><button type="button" className={control} disabled={!recallReady} onClick={() => setRevealed(true)}>{recallReady ? 'Reveal recall card' : `Recall before revealing… ${recallSeconds}s`}</button>{revealed && <p aria-label="Recall card answer" className="rounded-xl bg-indigo-50 p-4 text-xl">{String(d.answer)}</p>}</div>; break
     case 'number-line': interaction = <div className="space-y-3"><div className="flex justify-between"><span>{String(d.min)}</span><span>{String(d.max)}</span></div><label className="block">Number line marker<input className="w-full" type="range" min={Number(d.min)} max={Number(d.max)} step={Number(d.step)} value={attempt.text || Number(d.min)} onChange={e => setText(e.target.value)} /></label><output aria-live="polite">{attempt.text || 'Move the marker to choose a value'}</output></div>; break
     case 'match-columns': interaction = <div className="space-y-3" aria-label="Match the columns">{list('left').map((item, i) => <label className="grid grid-cols-2 items-center gap-2" key={i}><span>{item} →</span><select className={control} value={attempt.values[i] ?? ''} onChange={e => setValue(i, e.target.value)}><option value="">Choose match</option>{[...list('right')].reverse().map((v, j) => <option key={j}>{v}</option>)}</select></label>)}</div>; break
     case 'drag-drop': interaction = <div className="space-y-3"><div className="flex flex-wrap gap-2">{list('items').map((item, i) => <span className={control} draggable onDragStart={e => { e.dataTransfer.setData('text/plain', String(i)); setDragged(i) }} key={i}>{item}</span>)}</div><div className="grid grid-cols-2 gap-2">{list('targets').map((target, i) => <div className="min-h-20 rounded-xl border-2 border-dashed border-indigo-300 p-3" key={i} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const raw = e.dataTransfer.getData('text/plain'); const index = raw === '' ? dragged : Number(raw); if (index !== undefined && Number.isInteger(index) && index >= 0 && index < list('items').length) setValue(index, target); setDragged(undefined) }}><strong>{target}</strong><p>{list('items').filter((_, i) => attempt.values[i] === target).join(', ')}</p></div>)}</div>{list('items').map((item, i) => <label className="flex flex-wrap items-center justify-between gap-2" key={i}>{item}<select className={control} aria-label={`Target for ${item}`} value={attempt.values[i] ?? ''} onChange={e => setValue(i, e.target.value)}><option value="">Choose target</option>{list('targets').map(v => <option key={v}>{v}</option>)}</select></label>)}</div>; break

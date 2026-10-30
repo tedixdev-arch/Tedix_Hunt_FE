@@ -3,8 +3,9 @@ import fs from 'node:fs/promises'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] })
 const page = await browser.newPage()
+page.setDefaultTimeout(10000)
 const errors = [], results = []
-page.on('pageerror', error => errors.push(String(error)))
+page.on('pageerror', error => { errors.push(String(error)); console.log('PAGE ERROR:', String(error)) })
 await fs.mkdir('work/exercise-library-browser', { recursive: true })
 const feature = name => page.locator('nav').nth(1).getByRole('button', { name })
 const panel = () => page.getByRole('region', { name: 'Personal Challenge authoring', exact: true })
@@ -26,10 +27,11 @@ async function solve(e) {
     case 'match-columns': for (let i = 0; i < d.right.length; i++) await p.locator('select').nth(i).selectOption(d.right[i]); break
     case 'drag-drop':
       await p.getByText('2', { exact: true }).first().dragTo(p.getByText('Even', { exact: true }).first())
+      assert.equal(await p.getByRole('combobox', { name: 'Target for 2', exact: true }).inputValue(), 'Even')
       for (let i = 0; i < d.assignments.length; i++) await p.getByRole('combobox', { name: `Target for ${d.items[i]}` }).selectOption(d.assignments[i]); break
     case 'fill-blank': for (let i = 0; i < d.answers.length; i++) await p.getByRole('textbox').nth(i).fill(d.answers[i]); break
     case 'sequence': case 'build-problem':
-      for (const piece of d.order ?? d.construction) await p.getByRole('button', { name: piece, exact: true }).filter({ hasNot: p.locator('[aria-label^="Remove"]') }).first().click(); break
+      for (const piece of d.order ?? d.construction) await p.getByRole('button', { name: piece, exact: true }).and(p.locator('button:not(:disabled)')).first().click(); break
     case 'find-mistake':
       await p.getByRole('radio').nth(d.mistake - 1).check(); await p.getByRole('button', { name: 'Check answer', exact: true }).click()
       assert.match(await p.textContent(), /Now explain/)
@@ -45,10 +47,11 @@ for (const width of [1440, 768, 390, 320]) {
   await page.goto('http://127.0.0.1:5173/tests/browser/exerciseLibrary.html')
   await feature(/Personal Challenge/).click()
   assert.equal(await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button').count(), 7)
-  assert.match(await page.getByLabel('Checkpoint selector', { exact: true }).textContent(), /7 · FinishPoint/)
+  assert.match(await page.getByLabel('Checkpoint selector', { exact: true }).textContent(), /7 🚩/)
   const original = await page.evaluate(() => window.fixtureRecord())
   const prototypes = await page.evaluate(() => window.prototypes)
   for (const e of prototypes) {
+    console.log(`Checking ${width}: ${e.type}`)
     await panel().getByRole('combobox', { name: 'Exercise catalog' }).selectOption(e.id)
     assert.equal(await page.getByRole('button', { name: 'Save draft', exact: true }).isDisabled(), true)
     const trigger = panel().getByRole('button', { name: 'Preview Exercise', exact: true })
@@ -76,12 +79,12 @@ for (const width of [1440, 768, 390, 320]) {
   assert.match(await dialog().textContent(), /Unsaved independent title/)
   await dialog().getByRole('button', { name: 'Close exercise preview' }).click()
   assert.equal(await panel().getByLabel('Title', { exact: true }).inputValue(), 'Unsaved independent title')
-  await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: '2', exact: true }).click()
+  await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: 'Checkpoint 2', exact: true }).click()
   await panel().getByRole('button', { name: 'Create Your Own', exact: true }).click()
   await panel().getByLabel('Title', { exact: true }).fill('Checkpoint two draft')
-  await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: '1', exact: true }).click()
+  await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: 'Checkpoint 1', exact: true }).click()
   assert.equal(await panel().getByLabel('Title', { exact: true }).inputValue(), 'Unsaved independent title')
-  await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: '7 · FinishPoint', exact: true }).click()
+  await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: 'Checkpoint 7, FinishPoint', exact: true }).click()
   await panel().getByRole('button', { name: 'Create Your Own', exact: true }).click()
   await panel().getByLabel('Title', { exact: true }).fill('FinishPoint draft')
   await feature(/Team Challenge/).click()

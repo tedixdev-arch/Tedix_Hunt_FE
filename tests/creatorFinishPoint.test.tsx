@@ -287,6 +287,8 @@ for (const [featureNumber, gameplayLabel, fieldName, supportedType] of [
   expect(saved.checkpoints).toEqual([{ ...original.content.checkpoints[0] as object, [fieldName]: supportedType }, original.content.checkpoints[1]])
   expect(saved.configuration).toEqual(original.content.configuration); expect(saved.scoring).toEqual(original.content.scoring)
   expect(JSON.stringify(saved)).not.toContain('Not persisted'); expect(record).toEqual(original)
+  await click(featureNumber); await click('Create Your Own')
+  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Not persisted')
 })
 
 test('walking inspection entry is in Review and opens separately from checkpoint placement', async () => {
@@ -349,7 +351,7 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   await click('6.')
   await currentStep(0)
   expect((container.querySelector('input[maxlength="100"]') as HTMLInputElement).value).toBe('Unsaved Finish')
-  await click('6.')
+  await click('6.'); await click('Predefined')
   expect((container.querySelectorAll('section[aria-label="Checkpoint gameplay"] select')[0] as HTMLSelectElement).value).toBe('radial')
   await click('Journey previewed')
   expect(container.querySelector('[role="dialog"]')!.textContent).toContain('Start preview')
