@@ -76,9 +76,15 @@ export interface SessionSnapshot {
   refreshToken: string | null;
 }
 
+export interface AuthenticationAttempt {
+  origin: SessionSnapshot;
+  committed?: SessionSnapshot;
+}
+
 interface SessionState {
   identity: object;
   storedValue?: string | null;
+  authentication?: AuthenticationAttempt;
   flight?: { snapshot: SessionSnapshot; promise: Promise<Required<SessionTokens>> };
 }
 
@@ -109,6 +115,25 @@ export function sameCredentials(store: SessionStore, snapshot: SessionSnapshot):
   return sameSession(store, snapshot)
     && store.getAccessToken() === snapshot.accessToken
     && store.getRefreshToken() === snapshot.refreshToken;
+}
+
+/** Starting another login supersedes older attempts without discarding the active session. */
+export function beginAuthentication(store: SessionStore): AuthenticationAttempt {
+  const attempt = { origin: sessionSnapshot(store) };
+  sessionState(store).authentication = attempt;
+  return attempt;
+}
+
+export function currentAuthentication(store: SessionStore, attempt: AuthenticationAttempt): boolean {
+  return sessionState(store).authentication === attempt
+    && sameSession(store, attempt.committed ?? attempt.origin);
+}
+
+export function commitAuthentication(store: SessionStore, attempt: AuthenticationAttempt, tokens: SessionTokens): boolean {
+  if (!currentAuthentication(store, attempt)) return false;
+  replaceSession(store, tokens);
+  attempt.committed = sessionSnapshot(store);
+  return true;
 }
 
 /** Replacement and logout invalidate pending work even for identical credentials. */

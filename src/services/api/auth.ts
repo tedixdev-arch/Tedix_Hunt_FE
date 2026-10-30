@@ -1,5 +1,5 @@
-import { apiClient, type ApiClient } from './client.ts';
-import { clearSession, replaceSession, sameSession, sessionSnapshot, sessionStore, type SessionStore } from './session.ts';
+import { ApiError, apiClient, type ApiClient } from './client.ts';
+import { beginAuthentication, clearSession, commitAuthentication, sameSession, sessionSnapshot, sessionState, sessionStore, type SessionStore } from './session.ts';
 
 export type GlobalRole = 'participant' | 'organizer' | 'creator' | 'admin';
 
@@ -81,9 +81,20 @@ export class AuthApi {
     this.session = session;
   }
 
-  private async authenticate(path: string, input: unknown): Promise<AuthResponse> {
-    const response = await this.client.post<AuthResponse>(path, input, { authenticated: false });
-    replaceSession(this.session, response.tokens);
+  private async authenticate<T extends AuthResponse | GuestAuthResponse = AuthResponse>(path: string, input: unknown, accessOnly = false): Promise<T> {
+    const attempt = beginAuthentication(this.session);
+    const response = await this.client.post<T>(path, input, { authenticated: false });
+    const tokens = accessOnly ? { accessToken: response.tokens.accessToken } : response.tokens;
+    if (!commitAuthentication(this.session, attempt, tokens)) {
+      // A superseded login may still have issued a server credential. Discard it locally
+      // and revoke it best effort, without authenticating as the replacement account.
+      if ('refreshToken' in response.tokens) {
+        void this.client.post('/api/auth/logout', { refreshToken: response.tokens.refreshToken }, {
+          authenticated: false, retryOnUnauthorized: false,
+        }).catch(() => undefined);
+      }
+      throw new ApiError('The session has changed. Please try again.', 401, 'unauthorized');
+    }
     return response;
   }
 
@@ -115,8 +126,14 @@ export class AuthApi {
     return this.authenticate('/api/auth/creator/activate', input);
   }
 
-  changePassword(input: ChangePasswordInput): Promise<ChangePasswordResponse> {
-    return this.client.post<ChangePasswordResponse>('/api/auth/change-password', input);
+  async changePassword(input: ChangePasswordInput): Promise<ChangePasswordResponse> {
+    const origin = sessionSnapshot(this.session);
+    const authentication = sessionState(this.session).authentication;
+    const response = await this.client.post<ChangePasswordResponse>('/api/auth/change-password', input);
+    if (!sameSession(this.session, origin) || sessionState(this.session).authentication !== authentication) {
+      throw new ApiError('The session has changed. Please try again.', 401, 'unauthorized');
+    }
+    return response;
   }
 
   registerParticipant(input: RegisterInput): Promise<AuthResponse> {
@@ -128,10 +145,9 @@ export class AuthApi {
   }
 
   async createGuestSession(input: GuestSessionInput = {}): Promise<GuestAuthResponse> {
-    const response = await this.client.post<GuestAuthResponse>('/api/auth/guest', input, { authenticated: false });
-    // Guests are intentionally non-refreshable.
-    replaceSession(this.session, { accessToken: response.tokens.accessToken });
-    return response;
+    // Guest creation participates in the same intent order as login/register/activation.
+    // Its backend response remains access-only and non-refreshable.
+    return this.authenticate<GuestAuthResponse>('/api/auth/guest', input, true);
   }
 
   async refresh(): Promise<RefreshResponse> {

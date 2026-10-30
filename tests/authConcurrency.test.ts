@@ -273,3 +273,111 @@ test('stale 401 after rotation successfully retries once with current credential
   assert.deepEqual(await request, { ok: true });
   assert.equal(h.calls.filter(c => c.url.endsWith('/refresh')).length, 1);
 });
+
+for (const first of ['A', 'B']) {
+  test(`latest intended login B wins across AuthApi/storage wrappers when ${first} completes first`, async () => {
+    const h = setup();
+    const otherStore = new LocalSessionStore(h.storage);
+    const otherAuth = new AuthApi(new ApiClient('https://api.test', otherStore, h.fetcher), otherStore);
+    const a = h.auth.loginParticipant({ email: 'a@test', password: 'password' });
+    const rejectedA = assert.rejects(a, unauthorized);
+    const b = otherAuth.loginOrganizer({ email: 'b@test', password: 'password' });
+    if (first === 'A') {
+      h.calls[0].response.resolve(json({ user: { id: 'A' }, tokens: rotated }));
+      await rejectedA;
+      assert.equal(h.session.getAccessToken(), old.accessToken);
+      h.calls[1].response.resolve(json({ user: { id: 'B' }, tokens: replacement }));
+      await b;
+    } else {
+      h.calls[1].response.resolve(json({ user: { id: 'B' }, tokens: replacement }));
+      await b;
+      h.calls[0].response.resolve(json({ user: { id: 'A' }, tokens: rotated }));
+      await rejectedA;
+    }
+    assert.equal(h.session.getAccessToken(), replacement.accessToken);
+    assert.equal(h.saves(), 2, 'only initial credentials and winning B are saved');
+    assert.ok(h.calls[2].url.endsWith('/logout'));
+    assert.deepEqual(JSON.parse(String(h.calls[2].init?.body)), { refreshToken: rotated.refreshToken });
+    assert.equal(new Headers(h.calls[2].init?.headers).has('authorization'), false);
+    h.calls[2].response.resolve(json({ success: true }));
+  });
+}
+
+test('logout cancels pending login even when there is no stored session', async () => {
+  const h = setup();
+  h.session.clearSession();
+  const login = h.auth.loginAdmin({ email: 'a@test', password: 'password' });
+  const rejected = assert.rejects(login, unauthorized);
+  await h.auth.logout();
+  assert.equal(h.calls.length, 1, 'credentialless logout needs no server request');
+  h.calls[0].response.resolve(json({ user: { id: 'A' }, tokens: rotated }));
+  await rejected;
+  assert.equal(h.session.getAccessToken(), null);
+  assert.equal(h.saves(), 1, 'pending login credentials never persisted');
+  h.calls[1].response.resolve(json({ success: true }));
+});
+
+for (const newer of [replacement, old]) {
+  test(`direct session replacement cancels pending login (${newer.accessToken})`, async () => {
+    const h = setup();
+    const login = h.auth.loginCreator({ email: 'a@test', password: 'password' });
+    const rejected = assert.rejects(login, unauthorized);
+    h.session.clearSession();
+    h.session.saveSession(newer);
+    h.calls[0].response.resolve(json({ user: { id: 'A' }, tokens: rotated }));
+    await rejected;
+    assert.equal(h.session.getAccessToken(), newer.accessToken);
+    assert.equal(h.session.getRefreshToken(), newer.refreshToken);
+    h.calls[1].response.resolve(json({ success: true }));
+  });
+}
+
+test('a failed latest login does not make an earlier successful login eligible again', async () => {
+  const h = setup();
+  const a = h.auth.loginParticipant({ email: 'a@test', password: 'password' });
+  const rejectedA = assert.rejects(a, unauthorized);
+  const b = h.auth.loginParticipant({ email: 'b@test', password: 'password' });
+  const rejectedB = assert.rejects(b);
+  h.calls[1].response.resolve(json({}, 500));
+  await rejectedB;
+  h.calls[0].response.resolve(json({ user: { id: 'A' }, tokens: rotated }));
+  await rejectedA;
+  assert.equal(h.session.getRefreshToken(), old.refreshToken);
+  assert.equal(h.saves(), 1);
+  h.calls[2].response.resolve(json({ success: true }));
+});
+
+const authenticationStarts = [
+  { name: 'participant registration', start: (auth: AuthApi) => auth.registerParticipant({ email: 'a@test', password: 'password', name: 'A' }) },
+  { name: 'admin activation', start: (auth: AuthApi) => auth.activateAdmin({ token: 'activation', password: 'password' }) },
+  { name: 'creator activation', start: (auth: AuthApi) => auth.activateCreator({ token: 'activation', password: 'password' }) },
+  { name: 'organizer activation', start: (auth: AuthApi) => auth.activateDirectOrganizer({ token: 'activation', password: 'password' }) },
+  { name: 'guest creation', start: (auth: AuthApi) => auth.createGuestSession({ name: 'A' }) },
+];
+for (const operation of authenticationStarts) {
+  test(`${operation.name} shares latest-intended authentication ordering`, async () => {
+    const h = setup();
+    const earlier = operation.start(h.auth);
+    const rejected = assert.rejects(earlier, unauthorized);
+    const latest = h.auth.loginParticipant({ email: 'b@test', password: 'password' });
+    const tokens = operation.name === 'guest creation' ? { accessToken: 'guest' } : rotated;
+    h.calls[0].response.resolve(json({ user: { id: 'A' }, tokens }));
+    await rejected;
+    assert.equal(h.session.getAccessToken(), old.accessToken);
+    h.calls[1].response.resolve(json({ user: { id: 'B' }, tokens: replacement }));
+    await latest;
+    assert.equal(h.session.getAccessToken(), replacement.accessToken);
+    if (operation.name !== 'guest creation') h.calls[2].response.resolve(json({ success: true }));
+  });
+}
+
+test('a current login can commit after the originating session refresh rotates credentials', async () => {
+  const h = setup();
+  const login = h.auth.loginParticipant({ email: 'b@test', password: 'password' });
+  const refresh = h.auth.refresh();
+  h.calls[1].response.resolve(json(rotated));
+  await refresh;
+  h.calls[0].response.resolve(json({ user: { id: 'B' }, tokens: replacement }));
+  await login;
+  assert.equal(h.session.getAccessToken(), replacement.accessToken);
+});
