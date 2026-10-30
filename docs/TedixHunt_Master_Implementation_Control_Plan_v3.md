@@ -2,9 +2,34 @@
 
 # Master Implementation Control Plan — v3
 
-26 October 2026 baseline; reconciled 28 October 2026  \|  Product Owner control checklist  \|  Baseline: merged architecture v3.6 and PRs \#114–\#116
+26 October 2026 baseline; current reconciliation 30 October 2026 (Europe/Bucharest)  \|  Product Owner control checklist  \|  Baseline: merged architecture v3.6 and PRs \#114–\#116
 
 Purpose: trace every Phase A–N item in the Master Prototype Architecture Plan, distinguish existing foundation from missing implementation, and track small approved PRs. This is a planning/control document, not proof of deployed functionality.
+
+## Current execution dashboard — 30 October 2026
+
+**NEXT CODEX TASK: F7-FE-01 — Creator dashboard/navigation and read-only Mechanics Library using the existing supported authoring contract.** One FE Draft PR; do not implement it in this documentation PR. Required functionality, verified prerequisites, tests and closure evidence are in the [execution dependency matrix](TedixHunt_Execution_Dependency_Matrix.md#capability-boundary-and-first-task-prerequisites) and §8 below. This master remains the single entry point; the supporting matrix supplies subordinate PR-sized slices, not another progress authority.
+
+| Order | Task ID | Deliverable | Status | Dependency | Next action |
+| --- | --- | --- | --- | --- | --- |
+| Foundation | F7 C6b-4 / C6b-5 | Local binding, retained approval/revision and explicit suspension | Complete — merged/source verified | BE #85/#87 | Reuse; no reimplementation or deployed claim. |
+| Foundation | C7 contract / backend | Local eligibility, safe preview and exact atomic Hunt selection | Complete — merged/source verified | BE #88 contract; #89 code | Consume merged APIs after integration gates; report/test evidence is not deployed E2E. |
+| 1 | F7-FE-01 | Four dashboard entries and truthful supported-mechanics guidance | Ready for implementation | Existing Creator guard/editor, C2 typed contract; matrix capability boundary | Open one bounded implementation Draft PR. |
+| 2 | F7-FE-02–05 | Owned type/status/version context, Universal create/save/submit | Not started | 01 and C2/C5 | Deliver individual read/create/save/submit slices. |
+| 3 | F7-FE-06–12 | Approved Universal reuse, scratch Local, binding, proposals, revisions and Local editor | Not started | C3–C6b-5 and preceding FE slices | Follow matrix branch dependencies; preserve shared editor. |
+| 4 | F7-FE-13; G4-FE-01–05 | Creator regression and category-specific independent Admin review/continuity/suspension | Not started | Representative Creator submissions and merged Admin APIs | Review exact version; complete stored/manual catalog branch. |
+| Alongside 1–4 | G4-DEC-01 / G4-BE-03 | Safety/validity/conditions and narrative-feedback decisions | Decision/deferred | Architecture §14/§20.2; actual API gaps | Record PO decisions; existing state-only corrections can proceed. |
+| 5 | G4-BE-01/02; G4-FE-06/07 | Missing governance and approved narrative feedback integration | Blocked | Approved decisions/contracts and missing BE work | Contract-first small slices; no invented safety certification. |
+| 6 | D10-GATE | Creator/Admin, reviewed catalog, compatibility and applicable readiness evidence | Blocked | Architecture §20.2; FE #121 report; above dependencies | Record satisfaction or explicit PO scope clarification; no hidden exception. |
+| 7 | D10-FE-01–08 | Country → Locality → Eligible Local → Preview → Select → Configure | Blocked | D10-GATE; merged C7 | Then deliver bounded dependent slices, preserving settings/legacy. |
+| 8 | D10-E2E-01/02 | Integrated chain, then deployed acceptance | Blocked | FE implementation, actual environment and applicable rollout gates | Record each evidence level separately. |
+| Provider branch | C6b-2 | Mapbox permanent-result persistence | Blocked | Account licensing/entitlement evidence | Verify rights; stored/manual work need not wait. |
+| Later | H1–H8; I1–I13; J1–J8; K1–K3 | Enrollment, shared engine, live safety and results | Not started | Content-chain gate; B6/D9 and relevant policy decisions | H1 lookup alone source-complete; use H–N execution audit, then §20.3 Solo/Team stages with minimum safety/results. |
+| Later | L1 | Users & Roles operational audit coverage | Partially implemented | Existing controls; proposal-only deletion verification | Verify scoped history/retirement cases. |
+| Later | L2–L6 | Remaining Admin operational systems | Not started | Real J/K events and approved scoped contracts | Follow original phase dependencies; demo screens are not delivery. |
+| Staged | I14/J9/K4–K6; M1–M5/N1–N6 | Deferred extensions | Decision/deferred | Original phase decisions in §4 | Approve only separately scoped dependent work. |
+
+**Evidence boundary:** current pinned FE `fc43d2040700e44df0db9e5481f95964f597e6be` (#121), BE `bcf1fda4153cc8ea787c4d7e5922f4cb4b34ee32` (#89). GitHub merge metadata verified; source/API and test assertions inspected. No deployment, live DB, provider entitlement, real-device GPS or integrated/deployed E2E was verified here. BE #89's reported tests are attributed in §10. FE #121 is a readiness report only. Architecture v3.6 remains unchanged; stale C7-pending statements in its §20.2/§21 are recorded as discrepancies, not permission to waive its integration gate.
 
 # 1. Mandatory implementation rule
 
@@ -17,13 +42,15 @@ Minimum necessary implementation. Keep interfaces clear, ergonomic and simple; k
 | Verify / repair | Existing foundation reported in architecture/audit; inspect current FE/BE and test before marking complete. |
 | Build | Missing runtime or planned extension; implement only when its dependency/milestone is approved. |
 | Decision / defer | Not yet approved in detail or not needed for the first controlled pilot. Track, do not silently implement. |
-| Complete — merged and verified | Exact bounded implementation is merged; source and relevant tests inspected. This does not assert deployment or E2E. |
+| Complete — merged/source verified | Exact bounded slice is merged; source and relevant tests inspected. A contract-only slice completes only its contract. No deployment/E2E claim. |
+| Complete — deployed/E2E verified | Exact slice has recorded actual deployed acceptance, environment/date/revisions/cases/results. |
+| Ready for implementation | All prerequisites for the bounded slice are verified; no implementation completion implied. |
 | Partially implemented | Some foundation exists, but the named task/workflow still has missing behavior or verification. |
 | Not started | No implementation of the required behavior found; a prototype or schema alone does not count. |
 | Blocked | Explicit prerequisite prevents the specified slice from proceeding. |
 | Decision/deferred | Product/technical decision or separately approved later scope; no implied implementation. |
 
-The original Current action and Priority / gate columns retain the 26 October planning baseline. The added Reconciled status column and sections 6, 8 and 9 record the 28 October source review and supersede stale progress claims. Historical architecture checkmarks are baseline evidence, not proof of deployed or end-to-end behavior. “Partially implemented — verification pending” does not assert a known code defect; it withholds full completion where this review lacks sufficient acceptance evidence.
+The original Current action and Priority / gate columns retain the 26 October planning baseline. The Reconciled status column, §§6/8/10 and dashboard record current source review; §9 preserves dated historical evidence. Current records supersede stale progress claims without rewriting historical observations. Historical architecture checkmarks are baseline evidence, not proof of deployed or end-to-end behavior. “Partially implemented — verification pending” does not assert a known code defect; it withholds full completion where this review lacks sufficient acceptance evidence.
 
 # 3. Milestones and dependency gates
 
@@ -86,7 +113,7 @@ Important sequencing choice: architecture §20.2 currently orders F7/G4/D10 befo
 | D7 | Access code/link | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
 | D8 | Organizer geographic preview | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
 | D9 | Allocate Supervisors | Verify / repair | Foundation audit | Not started — required runtime/extension absent (§9). |
-| D10 | Map-first General Setup | Build (separate track) | Architecture dependency | Not started — required runtime/extension absent (§9). |
+| D10 | Map-first General Setup | Build (separate track) | Architecture dependency | Not started — FE absent; implementation blocked by §20.2 integration gates (FE #121), despite merged C7 BE #89. See D10-GATE. |
 
 ## E — Professional accounts
 
@@ -120,7 +147,7 @@ Important sequencing choice: architecture §20.2 currently orders F7/G4/D10 befo
 | F4 | Radius contract compatibility | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
 | F5 | Shared map and Creator Map Editor | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
 | F6 | FinishPoint authoring and route validation | Verify / repair | Foundation audit | Partially implemented — authoring/route estimates/preview exist; deployed/provider/device verification pending; no runtime completion (§9). |
-| F7 | Universal/Local creation, community reuse and Country/Locality | Build (separate track) | Architecture dependency | Partially implemented — BE C1–C5, C6b-1/3/4/5 foundations complete; C7 contract merged, implementation pending; FE/community supply chain pending (§6/§9). |
+| F7 | Universal/Local creation, community reuse and Country/Locality | Build (separate track) | Architecture dependency | Partially implemented — BE C1–C5, C6b-1/3/4/5 foundations complete; C7 contract/backend complete at merged-source level (#88/#89); category/reuse/location FE and integrated chain pending (§6/§9). |
 
 ## G — Admin Template governance
 
@@ -129,13 +156,13 @@ Important sequencing choice: architecture §20.2 currently orders F7/G4/D10 befo
 | G1 | Admin Template review | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
 | G2 | Approved Template authority | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
 | G3 | Admin geographic preview | Verify / repair | Foundation audit | Partially implemented — existing foundation; full task verification pending (§9). |
-| G4 | Separate Universal/Local governance | Build (separate track) | Architecture dependency | Partially implemented — classified exact review, locality binding, Local continuity/suspension foundations complete; full safety/evidence/validity and C7 implementation pending (§6/§9). |
+| G4 | Separate Universal/Local governance | Build (separate track) | Architecture dependency | Partially implemented — classified exact review, locality binding, Local continuity/suspension foundations complete; C7 backend complete (#89); category-specific Admin FE and full safety/evidence/validity incomplete (§6/§9). |
 
 ## H — Participant enrollment
 
 | ID | Master architecture task | Current action | Priority / gate | Reconciled status / evidence |
 | --- | --- | --- | --- | --- |
-| H1 | Resolve access code | Build | Post-pilot / verify | Complete — merged and verified for public code resolution only; FE #17 / BE #24 (§9). |
+| H1 | Resolve access code | Build | Post-pilot / verify | Complete — merged/source verified for public code resolution only; FE #17 / BE #24 (§9). |
 | H2 | Persist Participant enrollment | Build | Pilot critical | Not started — required runtime/extension absent (§9). |
 | H3 | Enrollment availability rules | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
 | H4 | Team creation/assignment | Build | Post-pilot / verify | Not started — required runtime/extension absent (§9). |
@@ -226,7 +253,7 @@ Important sequencing choice: architecture §20.2 currently orders F7/G4/D10 befo
 
 - Universal vs Local (§F1/F7/G4): categories of Template, not two gameplay engines. Universal approved source may be copied into Creator-owned version with provenance; Local has geography, independent review and exact-version approval. Organizer sees approved Local for selected Country/Locality.
 
-- Approved Local continuity (Product Owner policy, reaffirmed 28 October 2026): an existing approved Local Template version remains eligible while its replacement is under review, unless Admin explicitly suspends it. Revision must preserve the prior exact approval independently of candidate state; no implicit withdrawal on draft/submission/request-changes. This is required future behavior, not implemented Local selection. C6a §7/U2 temporary-removal recommendation conflicts with this approved policy and is not adopted. Universal C5 continuity is an implemented precedent, not proof of Local support.
+- Approved Local continuity (Product Owner policy, reaffirmed 28 October 2026): an existing approved Local Template version remains eligible while its replacement is under review, unless Admin explicitly suspends it. Revision must preserve the prior exact approval independently of candidate state; no implicit withdrawal on draft/submission/request-changes. This is implemented at merged BE foundation/selection level by #87/#89; dependent FE and integrated/deployed acceptance remain missing. C6a §7/U2 temporary-removal recommendation conflicts with this approved policy and is not adopted. Local support is independently verified in C6b-5/C7 source; Universal C5 alone was never proof of it.
 
 - Organizer map-first (§D10): Country → Locality → approved Template → read-only preview; do not treat a map as safety certification.
 
@@ -246,39 +273,41 @@ Use one row per actual PR. Status below refers only to each bounded slice, not c
 
 | PR / task IDs | Implemented scope | Reconciled state | Source/test evidence and limits |
 | --- | --- | --- | --- |
-| BE #69 / D01; E4/E12/E17 | Public applications refuse existing passwordless identities | Complete — merged and verified | CreatorApplication.ts, OrganizerApplication.ts; ApplicationCredentials.integration.test.ts (ownership, activation races, rollback). Deployed verification pending. |
-| BE #70 / D02; A4/A6 | Fail closed on unverified Tedix ID | Complete — merged and verified | routes/auth.ts; TedixAuthentication.integration.test.ts. No upstream identity-verification integration; native auth retained. |
-| BE #71 / D03; L1 | Account Deletion Integrity | Complete — merged and verified | models/User.ts; UserDeletion.integration.test.ts. Creator dependencies retained through retirement; no general history deletion. |
-| BE #72 / D04; B2/D8/G3 | Hidden geography access control | Complete — merged and verified | routes/huntTemplates.ts; huntTemplates.integration.test.ts (professional capability, guest/Participant denial, role revocation). |
-| BE #73 / D05; G1/G2 | Independent Template review | Complete — merged and verified | HuntTemplate.approveCreatorTemplate and adminTemplateReviews.integration.test.ts: self-approval denial, exact submitted pin, rollback. |
-| FE #117 / D06; J5–J7/L3 | Truthful HELP/PANIC safety UI | Complete — merged and verified | SafetyDialog/readiness/Monitor/Admin demo labels; safetyPrototype.test.tsx. Real incident transport and lifecycle are absent; manual browser/device check pending. |
-| BE #74 / D07; A4/E9 | JWT signing configuration security | Complete — merged and verified | config/environment.ts + environment.test.ts and lib/jwt.ts: reject missing/weak/default secrets, no fallback. Serving configuration/revision not inspected. |
+| BE #69 / D01; E4/E12/E17 | Public applications refuse existing passwordless identities | Complete — merged/source verified | CreatorApplication.ts, OrganizerApplication.ts; ApplicationCredentials.integration.test.ts (ownership, activation races, rollback). Deployed verification pending. |
+| BE #70 / D02; A4/A6 | Fail closed on unverified Tedix ID | Complete — merged/source verified | routes/auth.ts; TedixAuthentication.integration.test.ts. No upstream identity-verification integration; native auth retained. |
+| BE #71 / D03; L1 | Account Deletion Integrity | Complete — merged/source verified | models/User.ts; UserDeletion.integration.test.ts. Creator dependencies retained through retirement; no general history deletion. |
+| BE #72 / D04; B2/D8/G3 | Hidden geography access control | Complete — merged/source verified | routes/huntTemplates.ts; huntTemplates.integration.test.ts (professional capability, guest/Participant denial, role revocation). |
+| BE #73 / D05; G1/G2 | Independent Template review | Complete — merged/source verified | HuntTemplate.approveCreatorTemplate and adminTemplateReviews.integration.test.ts: self-approval denial, exact submitted pin, rollback. |
+| FE #117 / D06; J5–J7/L3 | Truthful HELP/PANIC safety UI | Complete — merged/source verified | SafetyDialog/readiness/Monitor/Admin demo labels; safetyPrototype.test.tsx. Real incident transport and lifecycle are absent; manual browser/device check pending. |
+| BE #74 / D07; A4/E9 | JWT signing configuration security | Complete — merged/source verified | config/environment.ts + environment.test.ts and lib/jwt.ts: reject missing/weak/default secrets, no fallback. Serving configuration/revision not inspected. |
 | BE #75 / F7 C0 | Backend contract/product decisions | Decision/deferred — merged proposal | F7_Backend_Template_Contract_Proposal.md; technical proposals are not implementation evidence. |
-| BE #76 / F7 C1 | Universal/Local classification and immutable provenance foundation | Complete — merged and verified | Migration 022, templateClassification.integration.test.ts; source bindings/history protections. Classified Organizer gates closed. |
-| BE #77 / F7 C2 | Creator-owned Universal/Local scratch authoring | Complete — merged and verified | routes/creatorTemplates.ts; creatorTemplates.integration.test.ts: category validation, persisted owner/capability, legacy starters unchanged. FE category authoring absent. |
-| BE #78 / F7 C3, G4 foundation | Exact published Universal authority and Creator library | Complete — merged and verified | models/PublishedUniversal.ts and creatorTemplates.integration.test.ts: independent exact approval, safe library projection. Current authority strengthened by C5. |
-| BE #79 / F7 C4 | Independent Local draft from published Universal | Complete — merged and verified | PublishedUniversal.ts; creatorTemplates.integration.test.ts: exact copy/provenance, stale reference, owner isolation, transaction rollback; no source propagation. |
-| BE #80 / F7 C5 | Creator revisions and atomic Universal republication | Complete — merged and verified | Migration 023; HuntTemplate.ts / PublishedUniversal.ts; creatorTemplates.integration.test.ts + templatePublication.integration.test.ts. Reported 1,037 tests/54 files, zero skips. Approved Local revision was not enabled by C5; subsequently implemented by C6b-5 (#87). |
+| BE #76 / F7 C1 | Universal/Local classification and immutable provenance foundation | Complete — merged/source verified | Migration 022, templateClassification.integration.test.ts; source bindings/history protections. Classified Organizer gates closed. |
+| BE #77 / F7 C2 | Creator-owned Universal/Local scratch authoring | Complete — merged/source verified | routes/creatorTemplates.ts; creatorTemplates.integration.test.ts: category validation, persisted owner/capability, legacy starters unchanged. FE category authoring absent. |
+| BE #78 / F7 C3, G4 foundation | Exact published Universal authority and Creator library | Complete — merged/source verified | models/PublishedUniversal.ts and creatorTemplates.integration.test.ts: independent exact approval, safe library projection. Current authority strengthened by C5. |
+| BE #79 / F7 C4 | Independent Local draft from published Universal | Complete — merged/source verified | PublishedUniversal.ts; creatorTemplates.integration.test.ts: exact copy/provenance, stale reference, owner isolation, transaction rollback; no source propagation. |
+| BE #80 / F7 C5 | Creator revisions and atomic Universal republication | Complete — merged/source verified | Migration 023; HuntTemplate.ts / PublishedUniversal.ts; creatorTemplates.integration.test.ts + templatePublication.integration.test.ts. Reported 1,037 tests/54 files, zero skips. Approved Local revision was not enabled by C5; subsequently implemented by C6b-5 (#87). |
 | BE #81 / F7/G4 C6a | Hybrid Country/Locality contract | Decision/deferred — merged contract | F7_C6a_Hybrid_Locality_Contract.md. Provider rights unresolved; historical proposed withdrawal is superseded by continuity contracts #84/#86 and implementation #87 (§5). Actual C6b-3 API supersedes its proposal examples. |
-| BE #82 / F7/G4 C6b-1 | Implemented Country/Locality foundation, subject to verification | Complete — merged and verified at source/test level | Migration 024; Geography.ts / routes/geography.ts; geography.integration.test.ts. Reported 1,043 tests/55 files, zero skips. RO reference only; no seeded localities/provider/FE/deployed E2E in #82. Template binding subsequently merged in #85. |
-| BE #83 / F7/G4 C6b-3 | Implemented manual proposal/Admin-decision foundation, subject to verification | Complete — merged and verified at source/test level | Migration 025; LocalityProposal.ts / routes/localityProposals.ts; localityProposals.integration.test.ts. Reported 1,056 tests/56 files, zero skips. Independent evidence and storage-rights review remains human; no Template or Organizer activation. |
-| BE #84 / F7 C6b-4 contract | Locality binding contract | Complete — merged contract only | Binding/inheritance/refresh/null, exact snapshots and lock ordering; no implementation in #84. |
-| BE #85 / F7 C6b-4 implementation | Local version locality binding | Complete — merged backend foundation; source/test scope | Migration 026, HuntTemplate.ts, creatorTemplates.ts and templateLocalityBinding.integration.test.ts. Optional Local-only binding, server snapshot, exact inheritance/read, locks/rollback; no Organizer activation. Reported PostgreSQL and independently checked CI distinguished in §9. |
-| BE #86 / F7/G4 C6b-5 contract | Exact Local authority, revision and suspension | Complete — merged contract only | Independent exact-version approval survives candidate review; explicit one-way Admin suspension; no implementation in #86. |
-| BE #87 / F7/G4 C6b-5 implementation | Local approval/revision continuity and suspension | Complete — merged backend foundation; source/test scope | Migration 027/fresh schema, retained Local authority, immutable suspension tuple, locality submission/approval checks, private inspection and adversarial SQL guards. Historical compatibility/integrity limits retained; no C7, FE or deployed E2E. |
-| BE #88 / C7 contract | Organizer Local eligibility/discovery/exact selection | Complete — merged contract; backend implementation not started | C7_Organizer_Local_Template_Eligibility_Contract.md defines proposed routes/source tuple/acceptance; registers no routes or migrations. D10 not started. |
-| FE #118 / control baseline | Faithful Markdown baseline conversion | Complete — merged and verified as documentation only | Original file blob 35737425ed64805f55b79bb2dfc1d644ef58fa28; no implementation progress conveyed by conversion. |
+| BE #82 / F7/G4 C6b-1 | Implemented Country/Locality foundation, subject to verification | Complete — merged/source verified | Migration 024; Geography.ts / routes/geography.ts; geography.integration.test.ts. Reported 1,043 tests/55 files, zero skips. RO reference only; no seeded localities/provider/FE/deployed E2E in #82. Template binding subsequently merged in #85. |
+| BE #83 / F7/G4 C6b-3 | Implemented manual proposal/Admin-decision foundation, subject to verification | Complete — merged/source verified | Migration 025; LocalityProposal.ts / routes/localityProposals.ts; localityProposals.integration.test.ts. Reported 1,056 tests/56 files, zero skips. Independent evidence and storage-rights review remains human; no Template or Organizer activation. |
+| BE #84 / F7 C6b-4 contract | Locality binding contract | Complete — merged/source verified — contract only | Binding/inheritance/refresh/null, exact snapshots and lock ordering; no implementation in #84. |
+| BE #85 / F7 C6b-4 implementation | Local version locality binding | Complete — merged/source verified — backend foundation | Migration 026, HuntTemplate.ts, creatorTemplates.ts and templateLocalityBinding.integration.test.ts. Optional Local-only binding, server snapshot, exact inheritance/read, locks/rollback; no Organizer activation. Reported PostgreSQL and independently checked CI distinguished in §9. |
+| BE #86 / F7/G4 C6b-5 contract | Exact Local authority, revision and suspension | Complete — merged/source verified — contract only | Independent exact-version approval survives candidate review; explicit one-way Admin suspension; no implementation in #86. |
+| BE #87 / F7/G4 C6b-5 implementation | Local approval/revision continuity and suspension | Complete — merged/source verified — backend foundation | Migration 027/fresh schema, retained Local authority, immutable suspension tuple, locality submission/approval checks, private inspection and adversarial SQL guards. Historical compatibility/integrity limits retained; no C7, FE or deployed E2E. |
+| BE #88 / C7 contract | Organizer Local eligibility/discovery/exact selection | Complete — merged/source verified — contract only; backend separately implemented in #89 | C7_Organizer_Local_Template_Eligibility_Contract.md defines routes/source tuple/acceptance. #88 itself registers no code; #89 implements it. D10 FE not implemented. |
+| BE #89 / C7 implementation | Organizer eligible Local discovery/detail and exact atomic draft Hunt selection | Complete — merged/source verified — backend only | OrganizerLocalTemplate.ts, organizerLocalTemplates.ts, migration 028, app.ts, Hunt mapping/protected PATCH/publish and organizerLocalTemplate.integration.test.ts inspected. Reported 1,255 tests/60 files, zero failures/skips, not rerun here. No FE, deployment or E2E claim. |
+| FE #121 / D10 readiness | Explicit integration blocker and verified C7 handoff | Complete — merged/source verified — documentation only | D10_Organizer_Integration_Readiness_Report.md; no application changes or Organizer implementation. D10 remains blocked. |
+| FE #118 / control baseline | Faithful Markdown baseline conversion | Complete — merged/source verified — documentation only | Original file blob 35737425ed64805f55b79bb2dfc1d644ef58fa28; no implementation progress conveyed by conversion. |
 
 Each PR above is individually linked with its merge SHA in the ledger in §9 and is also available in the [FE merged history](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pulls?q=is%3Apr+is%3Amerged) or [BE merged history](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pulls?q=is%3Apr+is%3Amerged). Pinned repository heads and merge SHAs are recorded in §9; evidence file paths are repository-relative.
 
 | Remaining register scope (original order preserved) | Reconciled state / prerequisite |
 | --- | --- |
-| 04 — F7/G4/D10 track decision and completion | Partially implemented upstream BE; no approved pilot bypass inferred. Binding and approval-continuity/suspension foundations complete; full safety/evidence/validity, C7 implementation and FE/rollout remain incomplete. |
+| 04 — F7/G4/D10 track decision and completion | Partially implemented upstream BE; no approved pilot bypass inferred. Binding and approval-continuity/suspension foundations complete; C7 backend complete (#89); full safety/evidence/validity and category-specific FE/rollout remain incomplete. |
 | C6b-2 — Mapbox permanent-storage integration | Blocked pending account entitlement verification: permanent-result storage, immutable snapshot/backup/sharing/post-termination retention, attribution and target settlement coverage. Temporary Search Box camera use confers no storage rights. No provider persistence found. |
-| C6b-4 — Local version locality binding | Complete — merged backend foundation #85 against contract #84; verification boundaries in §9. |
-| C6b-5 — Local approval/revision continuity, suspension and locality checks | Complete — merged backend foundation #87 against contract #86; verification boundaries in §9. |
-| C7 — Organizer Local eligibility/discovery/exact-version Hunt selection | Contract complete (#88); backend implementation not started; next bounded implementation (§8). |
-| D10 — Organizer frontend integration | Not started; depends on reviewed C7 implementation and applicable readiness/compatibility gates. |
+| C6b-4 — Local version locality binding | Complete — merged/source verified — backend #85 against contract #84; verification boundaries in §9. |
+| C6b-5 — Local approval/revision continuity, suspension and locality checks | Complete — merged/source verified — backend #87 against contract #86; verification boundaries in §9. |
+| C7 — Organizer Local eligibility/discovery/exact-version Hunt selection | Complete — merged/source verified — contract #88 and backend #89; FE/integrated/deployed acceptance separate (§10). |
+| D10 — Organizer frontend integration | Blocked — FE not started; C7 backend merged #89, but §20.2 Creator/Admin/reviewed-catalog/compatibility/readiness prerequisites remain (FE #121). |
 | 05 — H1–H3 invitation, eligibility and enrollment | H1 code resolution complete; H2 enrollment and H3 authoritative admission rules not started. |
 | 06 — H4–H8 membership/lobby/readiness/restore | Not started; team policies and enrollment prerequisites remain. |
 | 07 — I1–I9 authoritative checkpoint engine | Not started; local prototype gameplay is not backend runtime. |
@@ -303,23 +332,19 @@ At the end of each implementation PR (not only at the end of the whole project):
 
 # 8. Next action
 
-The baseline instruction “Begin with security/identity Task 01” is superseded: D01–D07 are merged bounded fixes with inspected regressions. Deployment/security verification remains a gate; do not repeat those implementations or declare G0 passed from source review alone.
+**NEXT CODEX TASK: F7-FE-01 — Creator dashboard/navigation and read-only Mechanics Library.** Base implementation on freshly verified latest FE main in a separate bounded Draft PR. This documentation PR implements none of it.
 
-Next action: **C7 backend eligibility, discovery and exact-version Hunt selection** against the merged [C7 Organizer Local Template eligibility contract](https://github.com/tedixdev-arch/Tedix_Hunt_BE/blob/c0b4dbd43707e993d9dede9c5ca75b0240cd647e/docs/C7_Organizer_Local_Template_Eligibility_Contract.md) (`docs/C7_Organizer_Local_Template_Eligibility_Contract.md`). Contract complete; backend implementation not started. C6b-4 and C6b-5 are completed backend foundation slices, not the next implementation tasks.
+Verified prerequisites: persisted active Creator guard/session and existing Studio; shared supported gameplay vocabulary/configuration contract (BE checkpointGameplay/C2, FE checkpointGameplay/editor); architecture F1/F7 four-entry information architecture. Implement Mechanics Library, My Templates, Create Universal Template and Create Local Template navigation with truthful staged destinations and short supported-authoring explanations. Existing My Templates remains usable; planned creation is not falsely routed to unclassified creation. Do not add a new mechanic, runtime or persistence contract. The [matrix capability boundary](TedixHunt_Execution_Dependency_Matrix.md#capability-boundary-and-first-task-prerequisites) constrains availability claims; unresolved future configuration fields remain decisions, not prerequisites invented for this read-only slice.
 
-Use stored/manual Localities; C6b-2 provider persistence remains blocked by entitlement. Implement only the reviewed C7 boundary: authorized eligible discovery/detail and atomic exact-version selection into an existing draft Hunt, reusing the two-step creation flow. Preserve legacy classified gates, immutable snapshots/settings and error/nondisclosure rules; never substitute a newer approval. Review additive storage details and common account/role lock ordering in the implementation design, as required by the contract. No frontend or rollout is authorized by this documentation PR.
+Closure: keyboard/focus/back navigation and responsive interaction tests, Creator-route authorization and session-error handling, no mutation from browsing, legacy Studio/starter reachability regression, relevant FE tests/typecheck/build and documented results/screenshots or equivalent review evidence. Record PR/merge SHA and exact implemented scope under F7-FE-01; do not mark F7 complete or D10 unblocked from this slice.
 
-Remaining dependency sequence:
+Execution order and critical path are in the [dependency matrix](TedixHunt_Execution_Dependency_Matrix.md#3-dependency-order-and-decisions): Creator type context and Universal create/save/submit; approved Universal reuse plus standalone Local; stored/manual locality binding and Local editor/revisions; independent category-specific Admin review with retained authority/suspension; applicable missing governance, reviewed catalog and legacy/compatibility decisions; D10 readiness gate; then dependent Organizer FE and integrated/deployed acceptance. Product/governance contract work can proceed alongside isolated Creator development. New narrative feedback requires its own reviewed contract; existing decision-state correction can proceed.
 
-1. C7 backend eligibility, discovery and exact-version Hunt selection.
-2. C7 backend disposable-PostgreSQL acceptance (including concurrency, authorization, rollback and legacy regressions) and PR review.
-3. D10 frontend Organizer integration, subject to applicable readiness gates and §20.2's stricter Creator/Admin/compatibility prerequisites.
-4. Remaining G4 route-safety, evidence quality, validity and operational governance requirements; any requirement that gates D10 must be satisfied before that integration/activation, not postponed by this list.
-5. Deployed E2E and rollout acceptance, with environment, FE/BE revisions, cases/results recorded before claiming the complete supply chain.
-
-Architecture §20.2's ordering before Participant runtime and explicit Product Owner approval for any parallel pilot remain unchanged. No pilot or production release, merge or deployment approval is granted.
+C6b-4/#85, C6b-5/#87, C7 contract/#88 and C7 backend/#89 are complete only at their bounded merged-source levels; do not reissue them. C6b-2 permanent provider persistence remains blocked by licensing; stored/manual work can proceed. D10 remains explicitly blocked under architecture §20.2 and FE #121 until its prerequisites are satisfied or PO records a specific scope clarification; no hidden integration exception is inferred. Runtime H–N sequencing, G0–G6 and explicit PO approval for a parallel pilot remain unchanged. No application, deployment, release or merge is authorized by this documentation PR.
 
 # 9. Reconciliation record — 28 October 2026
+
+**Historical record through BE #88.** Keep the observations, test reports and pending-work statements below at their stated source heads. Current §10, §6, §8 and dashboard supersede C7-pending claims after merged #89; they do not turn these historical observations into fresh verification.
 
 ## Baseline and verification boundaries
 
@@ -435,3 +460,60 @@ Architecture v3.6: current diagrams/captions in §3 and Phase F/G; BE baseline �
 Validated existing Phase A–N task identifiers and G0–G6 gate rows against the pre-change documents; historical evidence/audit headings and original merge ledger retained. Checked referenced #84–#88 merge metadata and new pinned file/CI links via GitHub. Both plans agree: C6b-4/5 backend foundations complete, C7 contract complete/backend pending, D10 not started, full G4 incomplete, next action C7 backend. Only the two requested Markdown files change. No application/database/test edits or application tests run for this documentation-only reconciliation; prior test executions above remain historical evidence. Shell Git proxy unavailable; GitHub connector used for current source/evidence and delivery.
 
 TedixHunt · Master Implementation Control Plan v3 · reconciled 28 October 2026 · Draft for ChatGPT review; do not merge or deploy.
+
+
+# 10. Current reconciliation and execution control — 30 October 2026
+
+## Verified current baseline and status corrections
+
+Pinned latest FE main `fc43d2040700e44df0db9e5481f95964f597e6be` includes documentation-only FE #121; BE main `bcf1fda4153cc8ea787c4d7e5922f4cb4b34ee32` includes C7 #89. GitHub trees and direct PR metadata, including merged=true, merge commit and timestamps, were checked. PR descriptions retaining “Draft / do not merge” are historical and do not override GitHub merge state. Dates below retain UTC for exact GitHub audit matching; this review date uses Europe/Bucharest.
+
+| PR | Verified GitHub merge UTC | Exact merge commit | Current completion boundary |
+| --- | --- | --- | --- |
+| [BE #76](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/76) | merged=true; 2026-10-27T17:33:47Z | `81f914dd95dd0a78fef651e61aab758c316a0f6b` | Backend foundation only |
+| [BE #77](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/77) | merged=true; 2026-10-28T12:34:11Z | `d89bc06c48aa21d5660803294bc0cfe3ac786850` | Backend foundation only |
+| [BE #78](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/78) | merged=true; 2026-10-28T12:52:51Z | `95da8c343a79ac1104df3ecc2b2cd8baf1e41e72` | Backend foundation only |
+| [BE #79](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/79) | merged=true; 2026-10-28T16:23:27Z | `7663dc95170e12b25cd17f9ad0771819c43f8906` | Backend foundation only |
+| [BE #80](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/80) | merged=true; 2026-10-28T16:49:09Z | `29ef1d9d808106735b101d65fd1344a546e01b87` | Backend foundation only |
+| [BE #82](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/82) | merged=true; 2026-10-28T17:41:03Z | `dd0f12b4abc67c917bb548bdb1a3b05faa402b2b` | Backend foundation only |
+| [BE #83](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/83) | merged=true; 2026-10-28T18:11:37Z | `465775a47a1f699314377130f140aa341fd83d1b` | Backend foundation only |
+| [BE #85](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/85) | merged=true; 2026-10-28T18:55:00Z | `9c20270f90cb31ed450eb7638eed9578d1d262a2` | Backend foundation only |
+| [BE #87](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/87) | merged=true; 2026-10-28T19:55:59Z | `0b63014f0ea197598990e9b92755dc999375141a` | Backend foundation only |
+| [BE #88](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/88) | merged=true; 2026-10-28T20:15:56Z | `c0b4dbd43707e993d9dede9c5ca75b0240cd647e` | Contract only; #89 supplies implementation |
+| [BE #89](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/89) | merged=true; 2026-10-29T23:34:41Z | `bcf1fda4153cc8ea787c4d7e5922f4cb4b34ee32` | Backend implementation complete at merged-source level; no FE/deployed/E2E completion |
+| [FE #121](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/121) | merged=true; 2026-10-29T23:43:07Z | `fc43d2040700e44df0db9e5481f95964f597e6be` | D10 readiness documentation only, not Organizer implementation. |
+
+| Item | Current status | What remains |
+| --- | --- | --- |
+| C6b-4 | Complete — merged/source verified | FE binding/editor and integrated/deployed acceptance. |
+| C6b-5 | Complete — merged/source verified | FE continuity/suspension/independent review; no reinstatement API or automatic historic remediation. |
+| C7 contract | Complete — merged/source verified | Contract closure is distinct from code and activation. |
+| C7 backend | Complete — merged/source verified | No Organizer FE, physical safety certification, new publish/start governance, deployed or E2E completion. |
+| F7 | Partially implemented | Category/reuse/location FE; existing editor and BE do not close the user workflow. |
+| G4 task | Partially implemented | Category-specific Admin FE; route evidence quality, validity/expiry/re-review, conditions and applicable readiness enforcement. |
+| D10 | Blocked | FE not implemented; explicit §20.2 integration prerequisites remain, documented by FE #121. |
+| C6b-2 | Blocked | Account-specific permanent-storage/retention entitlement; temporary results cannot be laundered through manual proposals. |
+
+## Execution slices and evidence levels
+
+The [supporting matrix](TedixHunt_Execution_Dependency_Matrix.md) defines 13 F7 FE slices, 11 G4 FE/BE/decision items and 11 D10 gate/FE/acceptance items: **35 unique dependency-matrix IDs**. It adds **23 H–N subordinate execution/verification/decision IDs**, for **58 new IDs total**. Broad future governance/runtime rows are explicitly contract-first containers and must acquire PR-sized implementation children after approved design; they do not authorize a giant implementation. Original tasks are not renumbered, reordered or redefined.
+
+For every slice track contract/decision, BE, FE, integrated workflow and deployed E2E separately. Existing C1–C7 contracts/BE foundations are merged-source complete where stated. All new FE deliverables remain incomplete; integrated/deployed acceptance is unverified. Governance APIs are missing/decision-dependent where marked. Required functionality, tests, security, legacy regressions, documentation and closure evidence are specified per slice plus CLOSE-1 in the matrix. All original A–N rows and G0–G6 gates remain; H–N scope and namespace collisions are explicitly audited there.
+
+## Verification performed and limitations
+
+Read current architecture v3.6, control plan, FE #121 readiness report, Creator Studio/chooser/gameplay and API client, Admin Console/TemplateReviews/review client, Organizer setup/editor/generalSetup and backend reports/contracts/routes/models plus binding/Local-approval/C7 test assertions. Verified BE #76–#80/#82/#83/#85/#87/#88/#89 and FE #121 merge metadata directly in GitHub; compared pinned tree and file contents rather than relying on the older local checkout. C7 discovery/detail/PUT registration, preview allowlist, exact approval/binding resolver, server source capture, preserved settings, authorization/locking and stale error rules were inspected. Source tests demonstrate intended coverage, not that they were rerun in this review.
+
+BE #89 and its [implementation report](https://github.com/tedixdev-arch/Tedix_Hunt_BE/blob/bcf1fda4153cc8ea787c4d7e5922f4cb4b34ee32/docs/C7_Implementation_Report.md) report PostgreSQL 17, 89 C7 tests included in 248 focused/8-file tests and 1,255 complete-suite/60-file tests, zero failures/skips, typecheck/build and 28-migration rerun/fresh-schema parity passed. These are **reported executions**, not fresh local results or independently verified current CI. No application/runtime tests were run for this docs-only change. No live DB, current deployed revision/API availability, provider entitlement, human route review, real-device GPS, multi-account integrated chain or deployed E2E was verified. Shell git fetch/clone failed at the configured proxy; GitHub connector reads/delivery were used without changing network controls.
+
+Documentation checks: original §4 task ID/name/action/priority sequence and G0–G6 rows compared with the pinned pre-change master; all retained. Supporting matrix IDs/dependencies, duplicate IDs, counts, table column structure, relative links and Markdown whitespace checked. Only the master and one linked dependency table change. Architecture plan, application code, migrations, runtime tests and deployments are unchanged. GitHub diff and committed-file verification are required before delivery closure.
+
+## Outstanding decisions, discrepancies and mapping
+
+PO decisions are explicitly indexed in the matrix: applicable D10 integration prerequisites/scope clarification, safety/evidence/validity/operating/publish-start policy, legacy/Signal staged activation, version-bound narrative feedback, Mapbox rights, and existing dependent pilot/team/GPS/suspension/ranking policies. No decision or exception is invented. Stored/manual Creator/Admin development is not automatically blocked by provider persistence or deployment restrictions; the explicit D10 integration gate is preserved.
+
+Architecture §20.1a/§20.2/§21's C7-pending status is stale after #89 and needs separate documentation synchronization. Architecture v3.6 and its design/gates are not rewritten in this PR. Historical Local compatibility without binding/independent evidence remains readable but excluded from new C7 selection; no latest-version fallback, automatic classification or history rewrite. The earlier proposal-only account-deletion concern remains an unverified L1 follow-up; #87 suspension-attribution protection does not prove that separate path fixed.
+
+No existing task was found unmappable to the architecture. Phase C1–C4 versus F7 backend C1–C7, G4 variable-team gate versus G4 Admin task, and Mapbox M-stage versus Phase M IDs are explicitly distinguished in the matrix. All H–N original scope, approved five-minute recovery/+100-once rules, Signal: Cluj-Napoca compatibility and deferred features remain intact.
+
+Draft for ChatGPT review. **Do not merge automatically. Do not deploy. Stop after the documentation Draft PR.**
