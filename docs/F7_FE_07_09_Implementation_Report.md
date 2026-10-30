@@ -60,7 +60,7 @@ Create Local → choose approved Universal or scratch → configure in the exist
 | F7-FE-07 focused | 23 Vitest tests; exact-envelope/provenance Node test-file passed |
 | F7-FE-08 focused | 50 creation/persistence/Signal Vitest tests; 14 navigation tests passed |
 | F7-FE-09 focused | 31 locality/persistence/creation Vitest tests passed |
-| Final `npm test` | 38 Node test-file entries; 400 Vitest tests / 23 files; zero failures/skips |
+| Final `npm test` | 38 Node test-file entries; 411 Vitest tests / 24 files; zero failures/skips |
 | `npm run typecheck` | Passed |
 | `npm run build` | Passed; existing Vite large-bundle warning |
 | `git diff --check` | Passed |
@@ -69,6 +69,14 @@ Create Local → choose approved Universal or scratch → configure in the exist
 | Frozen history | Reconciliation unchanged; no new task IDs; G4/D10/C6b-2 states untouched |
 
 Reproduce with a local Vite server and `PLAYWRIGHT_MODULE` pointing to Playwright: `node tests/browser/localAuthoring.verify.mjs`, `creatorStudio.verify.mjs`, `universalAuthoring.verify.mjs`, and `universalLibrary.verify.mjs` under tests/browser. Chromium defaults to `/usr/bin/chromium`. Local server and Chromium required execution permission for socket binding; checks succeeded. Browser fixtures make no real backend writes. [Machine-readable Local browser result](evidence/F7_FE_07_09_Browser_Results.json).
+
+## PR #128 review correction
+
+The Local submission preflight was incorrectly guarded by Universal-only classification, leaving its Local locality comparison unreachable. It now runs for both classified types before exact-version submission; failed/stale or uncertain classified requests require the existing reopen recovery. Local route readiness, persisted-role/owner authorization, draft-only submission and existing read-only lifecycle restrictions remain intact. This correction adds no F7-FE-11/12 workflow.
+
+The new Local submission regression fixture completes the existing route review, preview and validation before attempting submission. Before the fix, 10 regression cases failed because owner preflight was skipped; afterward all 11 pass, covering a successful exact-version request, stale version, locality ID, saved snapshot, status and content, denied/conflicting owner reads, and readiness/submitted restrictions. Focused command: `npx vitest run tests/localSubmissionPreflight.test.tsx tests/universalSubmission.test.tsx tests/localPersistence.test.tsx tests/creatorFinishPoint.test.tsx` — 55 tests passed. Correction validation: full `npm test` passed 38 Node test-file entries and 411 Vitest tests / 24 files, zero failures/skips; typecheck, build and diff checks passed. Existing bundle-size warning remains. Earlier browser evidence applies to the original UI; no new browser acceptance is claimed for this two-condition correction.
+
+The Master register now records F7-FE-03–06 as merged-source verified through PR #127, merge `62b3479`, and retains F7-FE-07–09 In review in Draft #128. The dashboard and obsolete #127 review-stop wording are corrected. All 169 task IDs/order and frozen reconciliation are preserved. Integration and deployment remain unverified; no merge or deployment.
 
 ## Remaining limits
 

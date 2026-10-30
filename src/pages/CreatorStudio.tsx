@@ -365,7 +365,7 @@ export function CreatorTemplateEditorPage() {
     mutationLock.current = true
     setSubmitting(true); setSubmitError('')
     try {
-      if (universal) {
+      if (classified) {
         const latest = await creatorTemplatesApi.get(persisted.key)
         if (sequence !== readSequence.current) return
         if (latest.version !== persisted.version || latest.status !== 'draft' || !templateContentEqual(latest.content, persisted.content) || (local && (latest.localityId !== persisted.localityId || JSON.stringify(latest.localitySnapshot) !== JSON.stringify(persisted.localitySnapshot)))) { setConflict(true); setSubmitError('The saved version changed or has already been submitted. Reopen its current state before submitting.'); return }
@@ -375,7 +375,7 @@ export function CreatorTemplateEditorPage() {
       if (sequence === readSequence.current) setPersisted(result)
     } catch (reason) {
       if (sequence !== readSequence.current) return
-      if (universal && (!(reason instanceof ApiError) || reason.status === null || reason.status === 409 || reason.status >= 500)) setConflict(true)
+      if (classified && (!(reason instanceof ApiError) || reason.status === null || reason.status === 409 || reason.status >= 500)) setConflict(true)
       setSubmitError(universal && reason instanceof ApiError && reason.status === 400 ? 'The saved Universal content was rejected. Check supported activities, checkpoint numbering and FinishPoint gameplay; save corrections before retrying.' : creatorTemplateError(reason, 'submit'))
     } finally { mutationLock.current = false; setSubmitting(false) }
   }
