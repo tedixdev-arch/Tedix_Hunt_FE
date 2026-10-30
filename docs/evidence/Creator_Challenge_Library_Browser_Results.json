@@ -1,0 +1,307 @@
+{
+  "scenarios": 60,
+  "results": [
+    {
+      "width": 1440,
+      "type": "tap-pair",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "single-choice",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "true-false",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "memory-card",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "number-line",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "multiple-choice",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "match-columns",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "drag-drop",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "fill-blank",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "sequence",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "find-mistake",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "build-problem",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "number-pattern",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "shape-pattern",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "type": "rule-discovery",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "tap-pair",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "single-choice",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "true-false",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "memory-card",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "number-line",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "multiple-choice",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "match-columns",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "drag-drop",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "fill-blank",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "sequence",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "find-mistake",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "build-problem",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "number-pattern",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "shape-pattern",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "type": "rule-discovery",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "tap-pair",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "single-choice",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "true-false",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "memory-card",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "number-line",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "multiple-choice",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "match-columns",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "drag-drop",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "fill-blank",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "sequence",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "find-mistake",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "build-problem",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "number-pattern",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "shape-pattern",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "type": "rule-discovery",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "tap-pair",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "single-choice",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "true-false",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "memory-card",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "number-line",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "multiple-choice",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "match-columns",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "drag-drop",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "fill-blank",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "sequence",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "find-mistake",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "build-problem",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "number-pattern",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "shape-pattern",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "type": "rule-discovery",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "backend": "mocked fixture; no live FE–BE integration"
+}

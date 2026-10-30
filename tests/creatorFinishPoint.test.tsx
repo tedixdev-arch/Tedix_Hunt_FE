@@ -23,6 +23,8 @@ let root: Root
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   Element.prototype.scrollIntoView = vi.fn()
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
   Object.values(mocks).forEach(mock => mock.mockReset())
   record = { key: 'trail', version: 3, status: 'draft', content: {
     key: 'trail', version: 3, displayName: 'Trail', theme: 'City', mission: 'Go',
@@ -30,7 +32,7 @@ beforeEach(() => {
     scoring: { model: 'platform', selections: { final: 1 }, extra: 'preserved' }, checkpoints: [{ checkpointNumber: 1, name: 'Museum', personal: 0, team: 0, navigation: 0, extra: 'preserved' }],
   } }
   mocks.get.mockImplementation(async () => structuredClone(record))
-  mocks.createVersion.mockImplementation(async (key, content) => ({ key, content, version: content.version, status: 'draft' }))
+  mocks.createVersion.mockImplementation(async (key, content) => ({ ...structuredClone(record), key, content, version: content.version, status: 'draft' }))
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
 afterEach(() => { act(() => root.unmount()); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
@@ -45,7 +47,7 @@ async function click(text: string) {
     const toggle = [...container.querySelectorAll('button')].find(b => b.textContent === 'FinishPoint location details')!
     if (toggle.getAttribute('aria-expanded') === 'false') await act(async () => toggle.click())
     await act(async () => button.click())
-    await click('Approved component'); await act(async () => (container.querySelector('[aria-label="Checkpoint selector"] button:last-child') as HTMLButtonElement).click()) }
+    await click('Predefined'); await act(async () => (container.querySelector('[aria-label="Checkpoint selector"] button:last-child') as HTMLButtonElement).click()) }
   else await act(async () => button.click())
 }
 function change(selector: string, value: string) {
@@ -211,8 +213,6 @@ test('editing a normal checkpoint writes the same flat fields as FinishPoint', a
 })
 
 for (const [featureNumber, gameplayLabel, fieldName, approvedType, challenge] of [
-  ['3.', 'Personal Challenge', 'kind', 'radial', true],
-  ['4.', 'Team Challenge', 'teamKind', 'clue-synthesis', true],
   ['5.', 'Navigation', 'navigationMode', 'signal-strength', false],
 ] as const) {
   test(`${gameplayLabel} retains prototype controls without changing saved gameplay`, async () => {
@@ -264,18 +264,38 @@ for (const [featureNumber, gameplayLabel, fieldName, approvedType, challenge] of
   })
 }
 
-test('prototype authoring alone does not create an immutable version or overwrite custom data', async () => {
-  record.content.checkpoints = [{ checkpoint: 1, kind: 'square', custom: { prompt: 'Saved custom prompt' } }, { role: 'terminal', custom: 'saved' }]
+for (const [featureNumber, gameplayLabel, fieldName, supportedType] of [
+  ['3.', 'Personal Challenge', 'kind', 'radial'], ['4.', 'Team Challenge', 'teamKind', 'clue-synthesis'],
+] as const) test(`${gameplayLabel} saves supported settings only after confirmation and retains the experiment`, async () => {
+  record.content.checkpoints = [{ checkpoint: 1, kind: 'square', teamKind: 'hypothesis', custom: { preserved: true } }, { role: 'terminal', kind: 'build-key', teamKind: 'assemble-machine', custom: ['finish'] }]
   const original = structuredClone(record)
-  await render(); await verify(); await click('3.'); await click('Create new')
-  const input = container.querySelector('[aria-label="Prototype component authoring"] input')!
+  await render(); await verify(); await click(featureNumber)
+  await selectGameplay(gameplayLabel, supportedType); await click('Create Your Own')
+  const title = container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement
   await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Not persisted')
-    input.dispatchEvent(new Event('input', { bubbles: true }))
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(title, 'Not persisted')
+    title.dispatchEvent(new Event('input', { bubbles: true }))
   })
   await save()
-  expect(mocks.createVersion).not.toHaveBeenCalled()
-  expect(record).toEqual(original)
+  const dialog = container.querySelector('dialog')!
+  expect(dialog.textContent).toContain('will be excluded'); expect(dialog.textContent).toContain(`${gameplayLabel} · Checkpoint 1`)
+  expect(mocks.createVersion).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled()
+  expect(document.activeElement?.textContent).toBe('Cancel')
+  await click('Cancel'); expect(record).toEqual(original)
+  await save(); await click('Save supported settings only')
+  expect(mocks.createVersion).toHaveBeenCalledTimes(1)
+  const saved = mocks.createVersion.mock.calls[0][1]
+  expect(saved.checkpoints).toEqual([{ ...original.content.checkpoints[0] as object, [fieldName]: supportedType }, original.content.checkpoints[1]])
+  expect(saved.configuration).toEqual(original.content.configuration); expect(saved.scoring).toEqual(original.content.scoring)
+  expect(JSON.stringify(saved)).not.toContain('Not persisted'); expect(JSON.stringify(saved)).not.toContain('custom:')
+  expect(record).toEqual(original); expect(container.textContent).toContain('Experimental exercises were excluded')
+  await click(featureNumber)
+  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Not persisted')
+  await click('Predefined'); await save()
+  expect(container.querySelector('dialog')).not.toBeNull() // Inactive retained experiments also require disclosure.
+  await click('Save supported settings only'); expect(mocks.createVersion).toHaveBeenCalledTimes(1) // Equality still prevents a duplicate version.
+  await click(featureNumber); await click('Create Your Own')
+  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Not persisted')
 })
 
 test('walking inspection entry is in Review and opens separately from checkpoint placement', async () => {
@@ -307,11 +327,11 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   change('input[maxlength="100"]', 'Unsaved Finish')
   await click('6.')
   await selectGameplay('Personal Challenge', 'radial')
-  await click('3.'); await click('Create new')
-  const authoring = container.querySelector('[aria-label="Prototype component authoring"]')!
-  const input = authoring.querySelector('input')!
+  await click('3.'); await click('Create Your Own')
+  const authoring = container.querySelector('[aria-label$="content editor"]')!
+  const input = authoring.querySelector('textarea')!
   await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Temporary idea')
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input, 'Temporary idea')
     input.dispatchEvent(new Event('input', { bubbles: true }))
   })
   const validate = [...container.querySelectorAll('button')].find(button => button.textContent === 'Run template validation')!
@@ -320,7 +340,7 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   const dialog = container.querySelector('[role="dialog"]')!
   expect(dialog.textContent).toContain('Unsaved Trail')
   expect(container.querySelector('div[hidden]')).not.toBeNull()
-  expect(container.querySelector('[aria-label="Prototype component authoring"]')).toBe(authoring)
+  expect(container.querySelector('[aria-label$="content editor"]')).toBe(authoring)
   await click('Start preview'); await click('Simulate arrival')
   await click('Inspect Personal Challenge'); await click('Simulate Personal Challenge completion')
   await click('Inspect Team Challenge'); await click('Simulate Team Challenge completion')
@@ -338,7 +358,7 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   await click('6.')
   await currentStep(0)
   expect((container.querySelector('input[maxlength="100"]') as HTMLInputElement).value).toBe('Unsaved Finish')
-  await click('6.')
+  await click('6.'); await click('Predefined')
   expect((container.querySelectorAll('section[aria-label="Checkpoint gameplay"] select')[0] as HTMLSelectElement).value).toBe('radial')
   await click('Journey previewed')
   expect(container.querySelector('[role="dialog"]')!.textContent).toContain('Start preview')
@@ -479,4 +499,106 @@ test('Universal Feature 1 has count and preview without geography or a FinishPoi
   expect(container.querySelector('[data-position-count]')).toBeNull()
   expect(container.textContent).not.toContain('FinishPoint location details')
   await click('Continue'); expect(container.textContent).toContain('Feature 2 of 7')
+})
+
+for (const [featureNumber, label, field] of [['3.', 'Personal Challenge', 'kind'], ['4.', 'Team Challenge', 'teamKind']] as const) {
+  test(`${label}: all seven stops remain independent, including FinishPoint and feature switching`, async () => {
+    record.content.configuration.normalCheckpointCount = 6
+    record.content.configuration.checkpointPositions = Array.from({ length: 6 }, (_, i) => ({ ...checkpoint, checkpointNumber: i + 1 }))
+    record.content.checkpoints = [...Array.from({ length: 6 }, (_, i) => ({ checkpoint: i + 1, role: 'normal', kind: 'hidden-rule', teamKind: 'scrambled-word', marker: i })), { role: 'terminal', kind: 'shared-final-key', teamKind: 'shared-final-key', marker: 'terminal' }]
+    const before = structuredClone(record)
+    await render(); await click(featureNumber)
+    const choose = async (number: number) => {
+      const selector = container.querySelector('[aria-label="Checkpoint selector"]')!
+      await act(async () => (selector.querySelectorAll('button')[number] as HTMLButtonElement).click())
+    }
+    expect(container.querySelector('[aria-label="Checkpoint selector"]')?.querySelectorAll('button').length).toBe(7)
+    for (let i = 0; i < 7; i++) {
+      await choose(i); await click('Create Your Own')
+      const title = container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(title, `Draft ${i + 1}`)
+        title.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    }
+    for (let i = 0; i < 7; i++) {
+      await choose(i)
+      expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe(`Draft ${i + 1}`)
+    }
+    await click(featureNumber === '3.' ? '4.' : '3.'); await click(featureNumber)
+    for (let i = 0; i < 7; i++) { await choose(i); await click('Predefined') }
+    await choose(6); await selectGameplay(label, field === 'kind' ? 'radial' : 'clue-synthesis')
+    expect((container.querySelector('section[aria-label="Checkpoint gameplay"] select') as HTMLSelectElement).value).toBe(field === 'kind' ? 'radial' : 'clue-synthesis')
+    expect(record).toEqual(before); expect(mocks.createVersion).not.toHaveBeenCalled()
+  })
+}
+
+
+async function experimentTitle(value: string) {
+  const title = container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(title, value)
+    title.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+test('confirmation cancellation and stale confirmation never write, and confirmed attempts require fresh confirmation', async () => {
+  sixCheckpointRecord(); record.category = 'universal'
+  await render(); await currentStep(1); await click('Create Your Own'); await experimentTitle('First experiment')
+  ;[...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Save draft')!.focus()
+  await click('Save draft')
+  await act(async () => container.querySelector('dialog')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+  expect(container.querySelector('dialog')).toBeNull(); expect(document.activeElement?.textContent).toBe('Save draft')
+  expect(mocks.createVersion).not.toHaveBeenCalled()
+  await click('Save draft')
+  // Simulate an external/editor update while the confirmation is open. Its consent cannot cover a new snapshot.
+  change('input', 'Changed while confirming')
+  await click('Save supported settings only')
+  expect(mocks.createVersion).not.toHaveBeenCalled(); expect(container.textContent).toContain('Review them and save again')
+  await click('Save draft'); await click('Save supported settings only')
+  expect(mocks.createVersion).toHaveBeenCalledTimes(1)
+  const payload = mocks.createVersion.mock.calls[0][1]
+  expect(payload.displayName).toBe('Changed while confirming'); expect(JSON.stringify(payload)).not.toContain('First experiment')
+  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('First experiment')
+  await click('Save draft'); expect(container.querySelector('dialog')).not.toBeNull()
+  await click('Cancel'); expect(mocks.createVersion).toHaveBeenCalledTimes(1)
+})
+test('Discard Experiment removes only the selected Personal checkpoint and preserves Team and FinishPoint drafts', async () => {
+  sixCheckpointRecord(); await render(); await currentStep(1); await click('Create Your Own'); await experimentTitle('Personal one')
+  await checkpointButton(7); await click('Create Your Own'); await experimentTitle('Personal FinishPoint')
+  await currentStep(2); await checkpointButton(1); await click('Create Your Own'); await experimentTitle('Team one')
+  await currentStep(1); await checkpointButton(1); await click('Discard Experiment')
+  expect(container.querySelector('[aria-label$="content editor"]')).toBeNull()
+  await checkpointButton(7)
+  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Personal FinishPoint')
+  await currentStep(2); await checkpointButton(1)
+  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Team one')
+  expect(mocks.createVersion).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled()
+})
+test('confirmed save cannot unblock submission or change intent; preview-only intent is an explicit separate choice', async () => {
+  sixCheckpointRecord(); record.category = 'universal'
+  await render(); await currentStep(1)
+  await selectGameplay('Personal Challenge', 'radial') // An independent supported edit to persist.
+  await click('Create Your Own'); await experimentTitle('Intended custom content')
+  await click('Save draft'); await click('Save supported settings only')
+  const submit = () => [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Submit version to Admin')!
+  expect(submit().disabled).toBe(true)
+  await click('Predefined'); expect(submit().disabled).toBe(true)
+  const intent = container.querySelector('[aria-label="Experiment status"] input') as HTMLInputElement
+  expect(intent.checked).toBe(true)
+  await act(async () => intent.click())
+  expect(submit().disabled).toBe(false)
+  await click('Create Your Own')
+  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Intended custom content')
+  expect(container.textContent).toContain('Preview only: submission uses the supported assignment')
+  expect(mocks.submit).not.toHaveBeenCalled()
+})
+test('failed confirmed saving retains supported edits, experiments and submission intent', async () => {
+  sixCheckpointRecord(); record.category = 'universal'
+  await render(); change('input', 'Supported unsaved name'); await currentStep(1); await click('Create Your Own'); await experimentTitle('Retain after failure')
+  mocks.createVersion.mockRejectedValueOnce(new Error('network failed'))
+  await click('Save draft'); await click('Save supported settings only')
+  expect((container.querySelector('input') as HTMLInputElement).value).toBe('Supported unsaved name')
+  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retain after failure')
+  expect((container.querySelector('[aria-label="Experiment status"] input') as HTMLInputElement).checked).toBe(true)
+  expect(container.textContent).toContain('could not be confirmed'); expect(container.textContent).not.toContain('Experimental exercises were excluded')
 })

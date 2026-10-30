@@ -1,0 +1,58 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "supportedSaveAndReopen": true,
+      "confirmationRequired": true,
+      "cancelAndEscapeSafe": true,
+      "excludedPayload": true,
+      "draftsRetainedAfterSave": true,
+      "targetedDiscard": true,
+      "submissionIntentPreserved": true,
+      "explicitPreviewOnly": true,
+      "noDuplicateVersion": true,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "supportedSaveAndReopen": true,
+      "confirmationRequired": true,
+      "cancelAndEscapeSafe": true,
+      "excludedPayload": true,
+      "draftsRetainedAfterSave": true,
+      "targetedDiscard": true,
+      "submissionIntentPreserved": true,
+      "explicitPreviewOnly": true,
+      "noDuplicateVersion": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "supportedSaveAndReopen": true,
+      "confirmationRequired": true,
+      "cancelAndEscapeSafe": true,
+      "excludedPayload": true,
+      "draftsRetainedAfterSave": true,
+      "targetedDiscard": true,
+      "submissionIntentPreserved": true,
+      "explicitPreviewOnly": true,
+      "noDuplicateVersion": true,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "supportedSaveAndReopen": true,
+      "confirmationRequired": true,
+      "cancelAndEscapeSafe": true,
+      "excludedPayload": true,
+      "draftsRetainedAfterSave": true,
+      "targetedDiscard": true,
+      "submissionIntentPreserved": true,
+      "explicitPreviewOnly": true,
+      "noDuplicateVersion": true,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "backend": "mocked fixture; no live FE–BE integration"
+}
