@@ -27,6 +27,7 @@ test('PWA activates updates, removes old precaches, and excludes the version mar
   assert.match(config, /registerType: 'autoUpdate'/)
   assert.match(config, /cleanupOutdatedCaches: true/)
   assert.match(config, /globIgnores: \['\*\*\/version\.json'\]/)
+  assert.ok(config.includes('navigateFallbackDenylist: [/^\\/version\\.json$/]'), 'missing version marker must not receive the homepage navigation fallback')
   assert.doesNotMatch(config, /globPatterns: \[[^\]]*json/)
 })
 

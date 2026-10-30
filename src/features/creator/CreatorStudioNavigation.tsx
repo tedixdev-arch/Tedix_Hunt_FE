@@ -5,13 +5,6 @@ import { gameplayPresentation } from './CheckpointGameplayEditor'
 import { supportedGameplay } from './checkpointGameplay'
 
 const focus = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700'
-const entries = [
-  ['mechanics', 'Mechanics Library', 'Explore supported authoring and preview capabilities.'],
-  ['templates', 'My Templates', 'Open your owned Templates and current operations.'],
-  ['universal', 'Create Universal Template', 'Reusable stories and challenges, without fixed locations.'],
-  ['local', 'Create Local Template', 'Stories and challenges tied to real locations. Start from an approved Universal Template or from scratch.'],
-] as const
-
 function MechanicsLibrary() {
   return <div className="mt-5 space-y-5 text-sm text-slate-700">
     <section><h3 className="text-lg font-bold text-slate-950">What can I create?</h3>
@@ -59,17 +52,45 @@ function MechanicsLibraryDialog({ onClose }: { onClose: () => void }) {
 export function CreatorStudioNavigation() {
   const [params, setParams] = useSearchParams()
   const view = params.get('studio')
+  const open = (view: string) => setParams(current => { const next = new URLSearchParams(current); next.set('studio', view); return next })
   const close = () => setParams(current => { const next = new URLSearchParams(current); next.delete('studio'); return next })
   return <>
-    <nav aria-label="Creator Studio entries" className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {entries.map(([key, label, description]) => key === 'universal' ? <Link key={key} to="/create?category=universal" className={`min-h-28 min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-emerald-500 ${focus}`}><span className="block font-bold">{label}</span><span className="mt-2 block text-sm text-slate-600">{description}</span></Link> : key === 'local' ? <button key={key} type="button" onClick={() => setParams(current => { const next = new URLSearchParams(current); next.set('studio', 'local'); return next })} className={`min-h-28 min-w-0 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-emerald-500 ${focus}`}><span className="block font-bold">{label}</span><span className="mt-2 block text-sm text-slate-600">{description}</span></button> : <button key={key} type="button" aria-haspopup={key === 'templates' ? undefined : 'dialog'} onClick={() => {
-        if (key === 'templates') { const heading = document.getElementById('my-templates'); heading?.focus(); heading?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }); return }
-        setParams(current => { const next = new URLSearchParams(current); next.set('studio', key); return next })
-      }} className={`min-h-28 min-w-0 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-emerald-500 ${focus}`}><span className="block font-bold">{label}</span><span className="mt-2 block text-sm text-slate-600">{description}</span></button>)}
-    </nav>
-    <button type="button" aria-expanded={view === 'library'} onClick={() => setParams(current => { const next = new URLSearchParams(current); if (view === 'library') next.delete('studio'); else next.set('studio', 'library'); return next })} className={`mt-4 min-h-12 rounded-xl border border-slate-300 bg-white px-4 font-bold ${focus}`}>{view === 'library' ? 'Close Universal Library' : 'Browse Universal Library'}</button>
-    {view === 'local' && <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5" aria-label="Create Local Template"><h2 className="text-2xl font-bold">Choose your starting point</h2><p className="mt-2 text-sm text-slate-600">Configure your own Local draft, then save. Both choices need independent Local approval.</p><div className="mt-4 flex flex-wrap gap-3"><button type="button" onClick={() => setParams({ studio: 'library' })} className={`min-h-12 rounded-xl border px-4 font-bold ${focus}`}>Start from an approved Universal</button><Link to="/create?category=local" className={`min-h-12 rounded-xl bg-emerald-500 px-4 py-3 font-bold ${focus}`}>Start from scratch</Link></div></section>}
+    <div className="mt-5 flex flex-wrap items-center gap-3">
+      <button type="button" aria-haspopup="dialog" onClick={() => open('create')} className={`min-h-12 rounded-xl bg-emerald-500 px-5 font-bold ${focus}`}>+ Create Template</button>
+      <button type="button" aria-expanded={view === 'library'} onClick={() => view === 'library' ? close() : open('library')} className={`min-h-12 rounded-xl px-4 font-bold text-slate-700 underline ${focus}`}>{view === 'library' ? 'Close Universal Library' : 'Browse Universal Library'}</button>
+    </div>
+    {(view === 'create' || view === 'local') && <TemplateTypeDialog local={view === 'local'} onLocal={() => open('local')} onBack={() => open('create')} onLibrary={() => open('library')} onClose={close} />}
     {view === 'library' && <UniversalLibrary />}
-    {view === 'mechanics'  && <MechanicsLibraryDialog onClose={close} />}
+    {view === 'mechanics' && <MechanicsLibraryDialog onClose={close} />}
   </>
+}
+
+function TemplateTypeDialog({ local, onLocal, onBack, onLibrary, onClose }: { local: boolean; onLocal: () => void; onBack: () => void; onLibrary: () => void; onClose: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null
+    const panel = dialog.current!
+    panel.showModal()
+    return () => { panel.close(); queueMicrotask(() => { if (previous?.isConnected) previous.focus() }) }
+  }, [])
+  useEffect(() => { dialog.current?.querySelector<HTMLElement>('[data-choice]')?.focus() }, [local])
+  const choice = `block min-h-12 w-full rounded-xl border border-slate-300 p-4 text-left hover:border-emerald-600 ${focus}`
+  return <dialog ref={dialog} aria-labelledby="template-type-title" onCancel={event => { event.preventDefault(); onClose() }} onKeyDown={event => {
+    if (event.key !== 'Tab') return
+    const controls = [...(dialog.current?.querySelectorAll<HTMLElement>('a[href],button:not(:disabled)') ?? [])]
+    const first = controls[0], last = controls.at(-1)
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+  }} className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 text-slate-950 shadow-xl backdrop:bg-slate-950/50 sm:p-7">
+    <h2 id="template-type-title" className="text-2xl font-bold">{local ? 'Create a Local Template' : 'Choose a template type'}</h2>
+    <div className="mt-5 space-y-3">{local ? <>
+      <button data-choice type="button" onClick={onLibrary} className={choice}>Start from an approved Universal</button>
+      <Link to="/create?category=local" className={choice}>Start from scratch</Link>
+      <button type="button" onClick={onBack} className={`min-h-12 px-3 font-bold ${focus}`}>← Back to template types</button>
+    </> : <>
+      <Link data-choice to="/create?category=universal" className={choice}><span className="block font-bold">Universal Template</span><span className="mt-1 block text-sm text-slate-600">Create reusable challenges and gameplay without a fixed location.</span></Link>
+      <button type="button" onClick={onLocal} className={choice}><span className="block font-bold">Local Template</span><span className="mt-1 block text-sm text-slate-600">Create a location-based Hunt template.</span></button>
+    </>}</div>
+    <button type="button" onClick={onClose} className={`mt-4 min-h-12 rounded-xl border border-slate-300 px-4 font-bold ${focus}`}>Cancel</button>
+  </dialog>
 }

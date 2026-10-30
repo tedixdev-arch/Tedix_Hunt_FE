@@ -122,15 +122,15 @@ test('loading, empty and failed list are distinct; retry recovers', async () => 
   let resolve!: (value: []) => void
   api.list.mockReturnValueOnce(new Promise(done => { resolve = done }))
   await render(); expect(container.textContent).toContain('Loading Creator Templates…')
-  expect(container.textContent).not.toContain('No persisted')
-  await act(async () => resolve([])); expect(container.textContent).toContain('No persisted')
+  expect(container.textContent).not.toContain('No templates yet.')
+  await act(async () => resolve([])); expect(container.textContent).toContain('No templates yet.')
 })
 
 test.each([[401, 'sign in again'], [403, 'not authorized'], [404, 'could not be found'], [400, 'could not be loaded'], [409, 'could not be loaded'], [500, 'Failure']] as const)('list error %s is private, retryable and has no false empty result', async (status, message) => {
   api.list.mockRejectedValueOnce(new ApiError('Failure', status, 'http'))
   await render()
   expect(container.querySelector('[role="alert"]')?.textContent).toContain(message)
-  expect(cards()).toHaveLength(0); expect(container.textContent).not.toContain('No persisted')
+  expect(cards()).toHaveLength(0); expect(container.textContent).not.toContain('No templates yet.')
   api.list.mockResolvedValue([projection('local')]); await retry(); expect(cards()).toHaveLength(1)
 })
 

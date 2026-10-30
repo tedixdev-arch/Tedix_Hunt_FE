@@ -42,6 +42,7 @@ export default defineConfig({
         globIgnores: ['**/version.json'],
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/version\.json$/],
       },
     }),
   ],
