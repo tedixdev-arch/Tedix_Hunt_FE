@@ -1,3 +1,4 @@
+import { UseUniversalAsLocal } from './UseUniversalAsLocal'
 import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../services/api/client'
 import { universalLibraryApi, type PublishedUniversal, type PublishedUniversalDetail } from '../../services/api/universalLibrary'
@@ -112,6 +113,7 @@ export function UniversalLibrary() {
       <p className="mt-2 text-sm">By {detail.creator.name ?? 'Creator'} · Published version {detail.publishedReference.version}</p>
       <p className="mt-2 text-sm text-slate-600">{detail.theme}</p>
       {typeof detail.content.configuration.summary === 'string' && <p className="mt-4 whitespace-pre-wrap">{detail.content.configuration.summary}</p>}
+      <UseUniversalAsLocal key={`${detail.id}:${detail.publishedReference.version}`} source={detail} />
       <section className="mt-5 space-y-3" aria-label="Approved story"><h4 className="text-lg font-bold">Mission &amp; story</h4>
         {missionStoryFields(detail.content.mission).map(([key, value]) => <p key={key} className="whitespace-pre-wrap">{value}</p>)}
       </section>

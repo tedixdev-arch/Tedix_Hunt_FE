@@ -92,6 +92,10 @@ export class CreatorTemplatesApi {
     return this.client.delete(`/api/creator/templates/${encodeURIComponent(key)}`)
   }
 
+  fromUniversal(sourceKey: string, key: string, publishedReference: { templateId: string; version: number }): Promise<CreatorTemplate> {
+    return this.client.post(`/api/creator/templates/from-universal/${encodeURIComponent(sourceKey)}`, { key, publishedReference: { templateId: publishedReference.templateId, version: publishedReference.version } })
+  }
+
   create(content: CreatorTemplateContent, category?: 'universal'): Promise<CreatorTemplate> {
     return this.client.post('/api/creator/templates', { key: content.key, content, ...(category ? { category } : {}) })
   }
