@@ -1,6 +1,6 @@
 # F7-FE-01 — Creator Studio navigation and Mechanics Library
 
-Status: implemented in a Draft PR, pending ChatGPT review. Do not merge or deploy. F7 remains partial; Universal/Local creation, full F1/F7 acceptance and D10 remain pending.
+Status: implemented in [Draft PR #123](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/123), pending ChatGPT review. Do not merge or deploy. F7 remains partial; Universal/Local creation, full F1/F7 acceptance and D10 remain pending.
 
 ## Baseline and scope
 
