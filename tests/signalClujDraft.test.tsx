@@ -74,10 +74,10 @@ test.each([401, 403, 409, 500])('dashboard displays starter error %s and allows 
   expect([...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('Signal: Cluj Napoca'))?.disabled).toBe(false)
 })
 
-test('one creation CTA opens both options with accessible labels and closing creates nothing', async () => {
+test('legacy creation CTA opens both options with accessible labels and closing creates nothing', async () => {
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
   const trigger = [...container.querySelectorAll('button')].find(button => button.textContent === 'Create Template')!
-  expect(container.querySelectorAll('[aria-haspopup="dialog"]')).toHaveLength(1)
+  expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
   expect(container.textContent).not.toContain('Create Signal Cluj route draft')
   trigger.focus()
   await click('Create Template')
