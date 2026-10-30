@@ -165,5 +165,138 @@
   },
   "delivery": {
     "status": "explicitly authorized for upload and one Draft PR; no merge or deployment"
+  },
+  "narrowCorrection": {
+    "scope": "Existing Draft PR #135: positioning inside Feature 1",
+    "tests": {
+      "nodeFiles": 42,
+      "vitestFiles": 31,
+      "vitestTests": 518,
+      "failures": 0,
+      "skipped": 0,
+      "focusedTests": 55
+    },
+    "typecheck": "PASS",
+    "build": "PASS; existing bundle-size warning",
+    "browsers": {
+      "checkpointFeatures": {
+        "results": [
+          {
+            "width": 1440,
+            "sevenSteps": true,
+            "positioningInsideFeatureOne": true,
+            "countResizesPositioning": true,
+            "continueWithoutVerification": true,
+            "terminalChallenges": true,
+            "terminalNavigationDisabled": true,
+            "checkpointSixNavigation": true,
+            "overflow": false
+          },
+          {
+            "width": 768,
+            "sevenSteps": true,
+            "positioningInsideFeatureOne": true,
+            "countResizesPositioning": true,
+            "continueWithoutVerification": true,
+            "terminalChallenges": true,
+            "terminalNavigationDisabled": true,
+            "checkpointSixNavigation": true,
+            "overflow": false
+          },
+          {
+            "width": 390,
+            "sevenSteps": true,
+            "positioningInsideFeatureOne": true,
+            "countResizesPositioning": true,
+            "continueWithoutVerification": true,
+            "terminalChallenges": true,
+            "terminalNavigationDisabled": true,
+            "checkpointSixNavigation": true,
+            "overflow": false
+          },
+          {
+            "width": 320,
+            "sevenSteps": true,
+            "positioningInsideFeatureOne": true,
+            "countResizesPositioning": true,
+            "continueWithoutVerification": true,
+            "terminalChallenges": true,
+            "terminalNavigationDisabled": true,
+            "checkpointSixNavigation": true,
+            "overflow": false
+          }
+        ],
+        "errors": []
+      },
+      "universal": {
+        "measurements": [
+          {
+            "width": 1440,
+            "overflow": false
+          },
+          {
+            "width": 768,
+            "overflow": false
+          },
+          {
+            "width": 390,
+            "overflow": false
+          },
+          {
+            "width": 320,
+            "overflow": false
+          }
+        ],
+        "errors": []
+      },
+      "completion": {
+        "results": [
+          {
+            "width": 1440,
+            "keyboard": "Enter/Tab/Shift+Tab passed",
+            "overflow": false,
+            "proposals": "pending and approved registry read passed",
+            "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+          },
+          {
+            "width": 768,
+            "keyboard": "Enter/Tab/Shift+Tab passed",
+            "overflow": false,
+            "proposals": "pending and approved registry read passed",
+            "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+          },
+          {
+            "width": 390,
+            "keyboard": "Enter/Tab/Shift+Tab passed",
+            "overflow": false,
+            "proposals": "pending and approved registry read passed",
+            "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+          },
+          {
+            "width": 320,
+            "keyboard": "Enter/Tab/Shift+Tab passed",
+            "overflow": false,
+            "proposals": "pending and approved registry read passed",
+            "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+          }
+        ],
+        "errors": []
+      },
+      "positions": {
+        "widths": [
+          1440,
+          1280,
+          768,
+          390,
+          360,
+          320
+        ],
+        "result": "PASS: responsive layout, view/edit, keyboard/touch search, explicit placement, deselection, confirmation/history",
+        "errors": []
+      }
+    },
+    "contractsAndDataModel": "unchanged",
+    "blockers": "No new blocker; existing real integration/deployed acceptance limitations remain",
+    "delivery": "Existing Draft PR #135 only; no merge or deployment"
   }
 }

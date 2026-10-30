@@ -10,10 +10,10 @@ vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 const mocks = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: mocks }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: ({ onMapClick }: any) => onMapClick ? <button type="button" onClick={() => onMapClick(47, 24)}>Place map point</button> : <div aria-label="Read-only route map" /> }))
-vi.mock('../src/features/creator/RouteEditor', () => ({ RouteEditor: (props: any) => <button type="button" onClick={() => {
+vi.mock('../src/features/creator/RouteEditor', () => ({ RouteEditor: (props: any) => <div data-position-count={props.drafts.length}><button type="button" onClick={() => {
   props.onVerifiedChange(new Set([1])); props.onSafetyChange(new Set(['a', 'b', 'c', 'd', 'e', 'f']))
   props.onConfigurationChange({ normalCheckpointCount: 1, checkpointPositions: props.drafts })
-}}>Verify saved route</button> }))
+}}>Verify saved route</button></div> }))
 
 const finishPoint = { name: ' City Wall ', latitude: 46.778123, longitude: 23.641234, radiusMeters: 17 }
 const checkpoint = { checkpointNumber: 1, name: 'Museum', latitude: 46.77, longitude: 23.59, radiusMeters: 30 }
@@ -36,15 +36,17 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 async function render() { await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=trail']}><CreatorTemplateEditorPage /></MemoryRouter>)) }
 async function click(text: string) {
-  if (text === '2.') return // Position controls remain mounted outside the seven steps.
+  if (text === '2.') { await currentStep(0); return }
   const oldSteps: Record<string, number> = { '3.': 1, '4.': 2, '5.': 3, '6.': 1, '9.': 6 }
+  if (text === '6.') await currentStep(0)
   const button = /^\d\.$/.test(text) ? container.querySelectorAll('nav')[1].querySelectorAll('button')[oldSteps[text] ?? 0] : Array.from(container.querySelectorAll('button')).findLast(item => item.textContent?.includes(text))!
   expect(button, text).toBeDefined()
-  await act(async () => button.click())
   if (text === '6.') {
     const toggle = [...container.querySelectorAll('button')].find(b => b.textContent === 'FinishPoint location details')!
     if (toggle.getAttribute('aria-expanded') === 'false') await act(async () => toggle.click())
+    await act(async () => button.click())
     await click('Approved component'); await act(async () => (container.querySelector('[aria-label="Checkpoint selector"] button:last-child') as HTMLButtonElement).click()) }
+  else await act(async () => button.click())
 }
 function change(selector: string, value: string) {
   act(() => {
@@ -65,6 +67,7 @@ async function save() {
 test('Feature 6 hydration and saving preserve settings, checkpoints and immutable versions', async () => {
   const before = structuredClone(record)
   await render(); await verify(); await click('6.')
+  await currentStep(0)
   expect(container.querySelector('section[aria-label="FinishPoint placement"]')).not.toBeNull()
   expect((container.querySelector('input[maxlength="100"]') as HTMLInputElement).value).toBe(finishPoint.name)
   expect((container.querySelector('input[type="number"][min="5"]') as HTMLInputElement).value).toBe('17')
@@ -84,6 +87,7 @@ test('Feature 6 hydration and saving preserve settings, checkpoints and immutabl
 })
 test('invalid FinishPoint blocks persistence and geographic validation', async () => {
   await render(); await verify(); await click('6.')
+  await currentStep(0)
   change('input[type="number"][min="5"]', '4')
   await save()
   expect(mocks.createVersion).not.toHaveBeenCalled()
@@ -98,6 +102,7 @@ test('missing geographic FinishPoint remains an incomplete draft without default
   expect(mocks.createVersion.mock.calls[0][1].configuration).not.toHaveProperty('finishPoint')
   expect(container.textContent).toContain('Place one FinishPoint in Checkpoint Positions')
   await click('6.')
+  await currentStep(0)
   expect((container.querySelector('input[type="number"][min="5"]') as HTMLInputElement).value).toBe('15')
   expect(mocks.submit).not.toHaveBeenCalled()
 })
@@ -287,6 +292,7 @@ test('walking inspection entry is in Review and opens separately from checkpoint
   await click('Close inspection')
   expect(review.querySelector('[aria-label="Read-only route map"]')).toBeNull()
   await click('6.')
+  await currentStep(0)
   expect(container.textContent).toContain('Place map point')
   expect(record).toEqual(before)
   expect(mocks.createVersion).not.toHaveBeenCalled()
@@ -297,7 +303,9 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   await render()
   change('input', 'Unsaved Trail')
   await click('6.')
+  await currentStep(0)
   change('input[maxlength="100"]', 'Unsaved Finish')
+  await click('6.')
   await selectGameplay('Personal Challenge', 'radial')
   await click('3.'); await click('Create new')
   const authoring = container.querySelector('[aria-label="Prototype component authoring"]')!
@@ -328,7 +336,9 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   expect(document.activeElement?.textContent).toContain('Journey previewed')
   expect(validate.disabled).toBe(true)
   await click('6.')
+  await currentStep(0)
   expect((container.querySelector('input[maxlength="100"]') as HTMLInputElement).value).toBe('Unsaved Finish')
+  await click('6.')
   expect((container.querySelectorAll('section[aria-label="Checkpoint gameplay"] select')[0] as HTMLSelectElement).value).toBe('radial')
   await click('Journey previewed')
   expect(container.querySelector('[role="dialog"]')!.textContent).toContain('Start preview')
@@ -429,6 +439,7 @@ test.each(['universal', 'local'] as const)('%s creation uses seven confirmation 
 
 test('geographic controls remain locked with the rest of the editor during an immutable save', async () => {
   sixCheckpointRecord(); await render(); await click('6.')
+  await currentStep(0)
   change('input[maxlength="100"]', 'Pending Finish')
   let resolve!: (value: CreatorTemplate) => void
   mocks.createVersion.mockImplementationOnce(() => new Promise(done => { resolve = done }))
@@ -438,4 +449,34 @@ test('geographic controls remain locked with the rest of the editor during an im
   const saved = mocks.createVersion.mock.calls[0][1]
   await act(async () => resolve({ ...record, version: saved.version, content: saved }))
   expect(container.querySelector('input[maxlength="100"]')!.matches(':disabled')).toBe(false)
+})
+
+test.each(['local', undefined] as const)('Feature 1 contains one positioning editor for geographic category %s; Continue requires no route verification', async category => {
+  sixCheckpointRecord(); record.category = category
+  await render()
+  const article = container.querySelector('[aria-label="Hunt Features"]')!.nextElementSibling!
+  expect(article.querySelector('[aria-label="Total checkpoint count"]')).not.toBeNull()
+  expect(article.querySelectorAll('#checkpoint-positions')).toHaveLength(1)
+  expect(container.querySelectorAll('#checkpoint-positions')).toHaveLength(1)
+  change('[aria-label="Total checkpoint count"]', '8')
+  expect(article.querySelector('[data-position-count="7"]')).not.toBeNull()
+  await click('FinishPoint location details')
+  expect(article.querySelector('[aria-label="FinishPoint placement"]')).not.toBeNull()
+  await click(category ? 'Continue' : 'Save & continue')
+  expect(container.textContent).toContain('Feature 2 of 7')
+  expect(container.querySelector('#checkpoint-positions')).toBeNull()
+  expect(mocks.createVersion).not.toHaveBeenCalled()
+  expect(mocks.submit).not.toHaveBeenCalled()
+  expect([...container.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Submit version to Admin')!.disabled).toBe(true)
+  await currentStep(0)
+  expect(container.querySelector('[data-position-count="7"]')).not.toBeNull()
+})
+test('Universal Feature 1 has count and preview without geography or a FinishPoint location editor', async () => {
+  sixCheckpointRecord(); record.category = 'universal'; await render()
+  expect(container.querySelector('[aria-label="Total checkpoint count"]')).not.toBeNull()
+  expect(container.textContent).toContain('Checkpoint 7 is the FinishPoint.')
+  expect(container.querySelector('#checkpoint-positions')).toBeNull()
+  expect(container.querySelector('[data-position-count]')).toBeNull()
+  expect(container.textContent).not.toContain('FinishPoint location details')
+  await click('Continue'); expect(container.textContent).toContain('Feature 2 of 7')
 })
