@@ -45,7 +45,7 @@ async function click(text: string) {
     const toggle = [...container.querySelectorAll('button')].find(b => b.textContent === 'FinishPoint location details')!
     if (toggle.getAttribute('aria-expanded') === 'false') await act(async () => toggle.click())
     await act(async () => button.click())
-    await click('Approved component'); await act(async () => (container.querySelector('[aria-label="Checkpoint selector"] button:last-child') as HTMLButtonElement).click()) }
+    await click('Predefined'); await act(async () => (container.querySelector('[aria-label="Checkpoint selector"] button:last-child') as HTMLButtonElement).click()) }
   else await act(async () => button.click())
 }
 function change(selector: string, value: string) {
@@ -211,8 +211,6 @@ test('editing a normal checkpoint writes the same flat fields as FinishPoint', a
 })
 
 for (const [featureNumber, gameplayLabel, fieldName, approvedType, challenge] of [
-  ['3.', 'Personal Challenge', 'kind', 'radial', true],
-  ['4.', 'Team Challenge', 'teamKind', 'clue-synthesis', true],
   ['5.', 'Navigation', 'navigationMode', 'signal-strength', false],
 ] as const) {
   test(`${gameplayLabel} retains prototype controls without changing saved gameplay`, async () => {
@@ -264,18 +262,31 @@ for (const [featureNumber, gameplayLabel, fieldName, approvedType, challenge] of
   })
 }
 
-test('prototype authoring alone does not create an immutable version or overwrite custom data', async () => {
-  record.content.checkpoints = [{ checkpoint: 1, kind: 'square', custom: { prompt: 'Saved custom prompt' } }, { role: 'terminal', custom: 'saved' }]
+for (const [featureNumber, gameplayLabel, fieldName, supportedType] of [
+  ['3.', 'Personal Challenge', 'kind', 'radial'], ['4.', 'Team Challenge', 'teamKind', 'clue-synthesis'],
+] as const) test(`${gameplayLabel} custom authoring blocks saving until supported assignments are selected`, async () => {
+  record.content.checkpoints = [{ checkpoint: 1, kind: 'square', teamKind: 'hypothesis', custom: { preserved: true } }, { role: 'terminal', kind: 'build-key', teamKind: 'assemble-machine', custom: ['finish'] }]
   const original = structuredClone(record)
-  await render(); await verify(); await click('3.'); await click('Create new')
-  const input = container.querySelector('[aria-label="Prototype component authoring"] input')!
+  await render(); await verify(); await click(featureNumber)
+  expect(container.textContent).toContain('Predefined'); expect(container.textContent).toContain('Create Your Own')
+  expect(container.querySelector('[aria-label="Approved Participant preview"]')).toBeNull()
+  await selectGameplay(gameplayLabel, supportedType)
+  await click('Create Your Own')
+  expect(container.textContent).toContain('session draft only')
+  const title = container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement
   await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Not persisted')
-    input.dispatchEvent(new Event('input', { bubbles: true }))
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(title, 'Not persisted')
+    title.dispatchEvent(new Event('input', { bubbles: true }))
   })
   await save()
-  expect(mocks.createVersion).not.toHaveBeenCalled()
+  expect(mocks.createVersion).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled()
   expect(record).toEqual(original)
+  await click(featureNumber); await click('Predefined'); await save()
+  expect(mocks.createVersion).toHaveBeenCalledTimes(1)
+  const saved = mocks.createVersion.mock.calls[0][1]
+  expect(saved.checkpoints).toEqual([{ ...original.content.checkpoints[0] as object, [fieldName]: supportedType }, original.content.checkpoints[1]])
+  expect(saved.configuration).toEqual(original.content.configuration); expect(saved.scoring).toEqual(original.content.scoring)
+  expect(JSON.stringify(saved)).not.toContain('Not persisted'); expect(record).toEqual(original)
 })
 
 test('walking inspection entry is in Review and opens separately from checkpoint placement', async () => {
@@ -307,11 +318,11 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   change('input[maxlength="100"]', 'Unsaved Finish')
   await click('6.')
   await selectGameplay('Personal Challenge', 'radial')
-  await click('3.'); await click('Create new')
-  const authoring = container.querySelector('[aria-label="Prototype component authoring"]')!
-  const input = authoring.querySelector('input')!
+  await click('3.'); await click('Create Your Own')
+  const authoring = container.querySelector('[aria-label$="content editor"]')!
+  const input = authoring.querySelector('textarea')!
   await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Temporary idea')
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input, 'Temporary idea')
     input.dispatchEvent(new Event('input', { bubbles: true }))
   })
   const validate = [...container.querySelectorAll('button')].find(button => button.textContent === 'Run template validation')!
@@ -320,7 +331,7 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   const dialog = container.querySelector('[role="dialog"]')!
   expect(dialog.textContent).toContain('Unsaved Trail')
   expect(container.querySelector('div[hidden]')).not.toBeNull()
-  expect(container.querySelector('[aria-label="Prototype component authoring"]')).toBe(authoring)
+  expect(container.querySelector('[aria-label$="content editor"]')).toBe(authoring)
   await click('Start preview'); await click('Simulate arrival')
   await click('Inspect Personal Challenge'); await click('Simulate Personal Challenge completion')
   await click('Inspect Team Challenge'); await click('Simulate Team Challenge completion')
@@ -480,3 +491,35 @@ test('Universal Feature 1 has count and preview without geography or a FinishPoi
   expect(container.textContent).not.toContain('FinishPoint location details')
   await click('Continue'); expect(container.textContent).toContain('Feature 2 of 7')
 })
+
+for (const [featureNumber, label, field] of [['3.', 'Personal Challenge', 'kind'], ['4.', 'Team Challenge', 'teamKind']] as const) {
+  test(`${label}: all seven stops remain independent, including FinishPoint and feature switching`, async () => {
+    record.content.configuration.normalCheckpointCount = 6
+    record.content.configuration.checkpointPositions = Array.from({ length: 6 }, (_, i) => ({ ...checkpoint, checkpointNumber: i + 1 }))
+    record.content.checkpoints = [...Array.from({ length: 6 }, (_, i) => ({ checkpoint: i + 1, role: 'normal', kind: 'hidden-rule', teamKind: 'scrambled-word', marker: i })), { role: 'terminal', kind: 'shared-final-key', teamKind: 'shared-final-key', marker: 'terminal' }]
+    const before = structuredClone(record)
+    await render(); await click(featureNumber)
+    const choose = async (number: number) => {
+      const selector = container.querySelector('[aria-label="Checkpoint selector"]')!
+      await act(async () => (selector.querySelectorAll('button')[number] as HTMLButtonElement).click())
+    }
+    expect(container.querySelector('[aria-label="Checkpoint selector"]')?.querySelectorAll('button').length).toBe(7)
+    for (let i = 0; i < 7; i++) {
+      await choose(i); await click('Create Your Own')
+      const title = container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(title, `Draft ${i + 1}`)
+        title.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    }
+    for (let i = 0; i < 7; i++) {
+      await choose(i)
+      expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe(`Draft ${i + 1}`)
+    }
+    await click(featureNumber === '3.' ? '4.' : '3.'); await click(featureNumber)
+    for (let i = 0; i < 7; i++) { await choose(i); await click('Predefined') }
+    await choose(6); await selectGameplay(label, field === 'kind' ? 'radial' : 'clue-synthesis')
+    expect((container.querySelector('section[aria-label="Checkpoint gameplay"] select') as HTMLSelectElement).value).toBe(field === 'kind' ? 'radial' : 'clue-synthesis')
+    expect(record).toEqual(before); expect(mocks.createVersion).not.toHaveBeenCalled()
+  })
+}

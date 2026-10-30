@@ -1,3 +1,4 @@
+import { teamNames } from './exercises/catalog'
 import { CheckpointStoryPreview } from './CheckpointStoryPreview'
 import { signalFeatureDefaults } from '../../data/organizerTemplates'
 import { checkpointExercises } from '../../data/templateOne'
@@ -32,7 +33,7 @@ export function CheckpointGameplayEditor({ value, onChange, fields = gameplayFie
       }}>
         <option value="">Not configured (optional)</option>
         {value[field] !== undefined && !supportedGameplay[field].includes(value[field]!) && <option value={value[field]}>Unsupported saved value: {value[field]}</option>}
-        {supportedGameplay[field].map(type => <option key={type} value={type}>{optionLabel(field, type)}</option>)}
+        {supportedGameplay[field].map(type => <option key={type} value={type}>{field === 'teamKind' ? `${teamNames[type as keyof typeof teamNames]} · ${optionLabel(field, type)}` : optionLabel(field, type)}</option>)}
       </select>
     </label>)}
   </section>
