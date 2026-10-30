@@ -62,5 +62,5 @@ test('legacy verification redirects, fake 2FA is absent, and Admin logout uses s
   assert.match(router, /path: '\/admin\/verify',[\s\S]{0,100}element: <Navigate replace to="\/admin\/sign-in" \/>/)
   assert.doesNotMatch(consolePage, /2FA verified/i)
   assert.match(consolePage, /<OrganizerHeader logoutTo="\/admin\/sign-in" showProfile\/>/)
-  assert.match(provider, /const logout = useCallback\(async \(\) => \{ try \{ await authApi\.logout\(\) } finally \{ setUser\(null\) } }/)
+  assert.match(provider, /const logout = useCallback\(async \(\) => \{[\s\S]*?setUser\(null\)[\s\S]*?await authApi\.logout\(\)/)
 })
