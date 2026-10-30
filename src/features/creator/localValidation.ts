@@ -11,9 +11,9 @@ export function localContentValidation(content: CreatorTemplateContent) {
     && new Set(positions.map(point => point.checkpointNumber)).size === count
     && positions.every(point => isValidCheckpoint(point) && point.name.length <= 100 && point.checkpointNumber >= 1 && point.checkpointNumber <= count && Number.isInteger(point.checkpointNumber))
   return {
-    count: validCount ? '' : 'Choose 1–20 route checkpoints in Number of Checkpoints.',
+    count: validCount ? '' : 'Choose 2–21 total checkpoints in Number of Checkpoints.',
     positions: validPositions ? '' : 'Place and name each numbered checkpoint exactly once in Checkpoint Positions. Set valid coordinates and a radius from 5 to 500 metres.',
-    finish: isValidFinishPoint(finishPoint) ? '' : 'Place one FinishPoint with a name, valid coordinates and a radius from 5 to 500 metres in Feature 6.',
+    finish: isValidFinishPoint(finishPoint) ? '' : 'Place one FinishPoint with a name, valid coordinates and a radius from 5 to 500 metres in Checkpoint Positions.',
     gameplay: gameplayValidation(content, true),
   }
 }

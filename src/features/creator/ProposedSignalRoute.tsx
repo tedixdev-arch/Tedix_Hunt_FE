@@ -40,7 +40,7 @@ export function ProposedSignalRoute({ proposal, onInspect, selectedCheckpoint, o
     </ol>
     {selected && <section id={detailId} aria-label={`${candidateLabel(selected)} research details`} className="mt-3 space-y-2 break-words rounded-lg bg-white p-3">
       <h5 className="font-bold">{candidateLabel(selected)} · {selected.landmark}</h5>
-      <p>{selected.role === 'terminal' ? 'Terminal gameplay · FinishPoint is configured in Feature 6.' : 'Normal checkpoint'}</p>
+      <p>{selected.role === 'terminal' ? 'Terminal gameplay · FinishPoint is configured in Hunt Features.' : 'Normal checkpoint'}</p>
       <p><strong>Address: </strong>{selected.address}</p>
       <p><strong>Proposed exterior arrival area: </strong>{selected.arrivalArea}</p>
       <p><strong>Research confidence: </strong>{selected.confidence}</p>

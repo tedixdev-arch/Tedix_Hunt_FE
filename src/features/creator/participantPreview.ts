@@ -36,9 +36,9 @@ export function projectPreview(content: CreatorTemplateContent): PreviewJourney 
   }
   const positions: unknown[] = Array.isArray(configuration.checkpointPositions) ? configuration.checkpointPositions : []
   if (validCount && (positions.length !== count || positions.some((point, index) => !object(point) || point.checkpointNumber !== index + 1))) {
-    warnings.push('Correct checkpoint geography numbering and positions in Feature 2: exactly 1..N in order. Preview does not reorder saved geography.')
+    warnings.push('Correct checkpoint geography numbering and positions in Checkpoint Positions: exactly 1..N in order. Preview does not reorder saved geography.')
   }
-  if (saved.filter(entry => object(entry) && entry.role === 'terminal').length > 1) warnings.push('Keep one FinishPoint gameplay entry in Feature 6; duplicate terminal gameplay cannot be previewed unambiguously.')
+  if (saved.filter(entry => object(entry) && entry.role === 'terminal').length > 1) warnings.push('Keep one FinishPoint gameplay entry in Hunt Features; duplicate terminal gameplay cannot be previewed unambiguously.')
   const checkpoints: PreviewCheckpoint[] = Array.from({ length: validCount ? count : Math.min(gameplay.normal.length, 20) }, (_, index) => {
     const number = index + 1
     const matches = gameplay.normal.filter(entry => entry.checkpoint === number)
@@ -55,10 +55,9 @@ export function projectPreview(content: CreatorTemplateContent): PreviewJourney 
 
 function checkpoint(label: string, role: PreviewCheckpoint['role'], gameplay: CheckpointGameplay | undefined, position?: PreviewCheckpoint['position']): PreviewCheckpoint {
   const warnings: string[] = []
-  const feature = role === 'terminal' ? 'Feature 6' : 'Feature 2'
-  if (!position) warnings.push(`${label}: missing or invalid geography. Set a name, valid coordinates and a 5–500 m discovery radius in ${feature}. Arrival can still be simulated manually.`)
+  if (!position) warnings.push(`${label}: missing or invalid geography. Set a name, valid coordinates and a 5–500 m discovery radius in Checkpoint Positions. Arrival can still be simulated manually.`)
   if (gameplay?.role !== undefined && gameplay.role !== 'normal' && gameplay.role !== 'terminal') warnings.push(`${label}: unsupported checkpoint role. Review the saved gameplay entry in Hunt Features.`)
-  if (!gameplay) warnings.push(`${label}: configure an unambiguous checkpoint gameplay entry in Hunt Features${role === 'terminal' ? ' / Feature 6' : ''}. No activities were invented.`)
+  if (!gameplay) warnings.push(`${label}: configure an unambiguous checkpoint gameplay entry in Hunt Features. No activities were invented.`)
   for (const field of ['navigationMode', 'kind', 'teamKind'] as const) {
     if (gameplay?.[field] !== undefined && !supportedGameplay[field].includes(gameplay[field]!)) warnings.push(`${label}: unsupported or incomplete ${field}. Review its saved choice in Hunt Features; interaction is simulated.`)
   }

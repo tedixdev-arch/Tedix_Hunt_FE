@@ -84,7 +84,7 @@ export function gameplayValidation(content: CreatorTemplateContent, submission =
     }
   }
   if (!submission || !geographic) return ''
-  if (terminal.length !== 1) return 'Configure FinishPoint gameplay in Feature 6, then save before submitting. Challenges may be left unconfigured.'
+  if (terminal.length !== 1) return 'Configure FinishPoint gameplay in Hunt Features, then save before submitting. Challenges may be left unconfigured.'
   const count = content.configuration.normalCheckpointCount
   const normal = entries.filter(entry => entry.role !== 'terminal')
   const numbers = new Set(normal.map(entry => entry.checkpoint))

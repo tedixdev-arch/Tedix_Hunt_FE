@@ -35,5 +35,5 @@ export function finishPointValidation(configuration: Record<string, unknown>, su
     return isValidFinishPoint(configuration.finishPoint) ? '' : 'FinishPoint needs a non-empty name of at most 100 characters, valid coordinates, and an integer radius from 5 to 500 metres.'
   }
   return submission && (configuration.normalCheckpointCount !== undefined || configuration.checkpointPositions !== undefined)
-    ? 'Place one FinishPoint in Feature 6 before submitting this geographic Template.' : ''
+    ? 'Place one FinishPoint in Checkpoint Positions before submitting this geographic Template.' : ''
 }

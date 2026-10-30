@@ -41,7 +41,7 @@ try {
     })
     await page.route('https://events.mapbox.com/**', route => route.fulfill({ json: {} }))
     await page.goto(process.env.PREVIEW_URL || 'http://127.0.0.1:5173/tests/browser/mapboxSearch.html')
-    await page.getByRole('button', { name: /2\.Checkpoint Positions/ }).click()
+    await page.locator('#checkpoint-positions').scrollIntoViewIfNeeded()
     await page.waitForFunction(() => window.testMap?.isStyleLoaded())
     const original = await camera(page)
     const originalPins = await pins(page)

@@ -1,0 +1,169 @@
+{
+  "date": "2026-10-30",
+  "timezone": "Europe/Bucharest",
+  "level": "FE source and mocked browser checks; real integration blocked, deployed acceptance unverified",
+  "baseCommit": "40b6373413155dbf9e72e4c3e256a771c1f2be0d",
+  "tests": {
+    "nodeFiles": 42,
+    "vitestFiles": 31,
+    "vitestTests": 515,
+    "failures": 0,
+    "skipped": 0
+  },
+  "typecheck": "PASS",
+  "build": "PASS including TypeScript/Vite/PWA; existing bundle-size warning",
+  "browsers": {
+    "checkpointFeatures": {
+      "results": [
+        {
+          "width": 1440,
+          "sevenSteps": true,
+          "terminalChallenges": true,
+          "terminalNavigationDisabled": true,
+          "checkpointSixNavigation": true,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "sevenSteps": true,
+          "terminalChallenges": true,
+          "terminalNavigationDisabled": true,
+          "checkpointSixNavigation": true,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "sevenSteps": true,
+          "terminalChallenges": true,
+          "terminalNavigationDisabled": true,
+          "checkpointSixNavigation": true,
+          "overflow": false
+        },
+        {
+          "width": 320,
+          "sevenSteps": true,
+          "terminalChallenges": true,
+          "terminalNavigationDisabled": true,
+          "checkpointSixNavigation": true,
+          "overflow": false
+        }
+      ],
+      "errors": []
+    },
+    "local": {
+      "measurements": [
+        {
+          "width": 1440,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "overflow": false
+        },
+        {
+          "width": 320,
+          "overflow": false
+        }
+      ],
+      "errors": []
+    },
+    "universal": {
+      "measurements": [
+        {
+          "width": 1440,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "overflow": false
+        },
+        {
+          "width": 320,
+          "overflow": false
+        }
+      ],
+      "errors": []
+    },
+    "completion": {
+      "results": [
+        {
+          "width": 1440,
+          "keyboard": "Enter/Tab/Shift+Tab passed",
+          "overflow": false,
+          "proposals": "pending and approved registry read passed",
+          "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+        },
+        {
+          "width": 768,
+          "keyboard": "Enter/Tab/Shift+Tab passed",
+          "overflow": false,
+          "proposals": "pending and approved registry read passed",
+          "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+        },
+        {
+          "width": 390,
+          "keyboard": "Enter/Tab/Shift+Tab passed",
+          "overflow": false,
+          "proposals": "pending and approved registry read passed",
+          "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+        },
+        {
+          "width": 320,
+          "keyboard": "Enter/Tab/Shift+Tab passed",
+          "overflow": false,
+          "proposals": "pending and approved registry read passed",
+          "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+        }
+      ],
+      "errors": []
+    },
+    "positions": {
+      "widths": [
+        1440,
+        1280,
+        768,
+        390,
+        360,
+        320
+      ],
+      "errors": [],
+      "passed": "Responsive layout, view/edit, keyboard/touch search, explicit placement, deselection, confirmation and history"
+    },
+    "referenceCamera": {
+      "widths": [
+        244,
+        284,
+        314,
+        660,
+        1044
+      ],
+      "modes": [
+        "Map",
+        "Satellite"
+      ],
+      "passed": "Repeated CP3/CP1/FinishPoint focus, Show all, unchanged saved references/history, visible markers, no overflow/page errors",
+      "measurements": 40,
+      "mockedMapboxHTTP": true,
+      "realMapboxGL": true
+    }
+  },
+  "preservation": {
+    "frozenReconciliation": "byte-identical",
+    "taskIdsAndOrder": "unchanged",
+    "starterAndSeedData": "unchanged",
+    "apiServices": "unchanged",
+    "backendChanges": false,
+    "mergeOrDeployment": false
+  },
+  "delivery": {
+    "status": "explicitly authorized for upload and one Draft PR; no merge or deployment"
+  }
+}
