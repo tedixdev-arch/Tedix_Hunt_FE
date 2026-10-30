@@ -54,6 +54,7 @@ export function creatorTemplateError(error: unknown, operation: 'save' | 'submit
     if (error.status === 409 && code === 'template_in_use') return 'This Template is in use by a Hunt or has protected dependencies and cannot be deleted. Cancel and keep this Template, or contact support.'
     return 'Deletion could not be confirmed. Cancel and refresh My Templates to check its current state, or retry.'
   }
+  if (operation === 'load' && (error.status === 400 || error.status === 409)) return 'The Template list could not be loaded. Retry to refresh its current state.'
   if (operation === 'starter' && error.status === 404) return 'This starter is unavailable in the deployed backend. No alternative starter was created. Please try again when it is available.'
   if (error.status === 404) return 'This Creator Template could not be found. Return to Creator Studio and reopen it.'
   if (operation === 'starter' && error.status === 409) return 'The selected starter could not be created because of a conflict. Return to the dashboard and check your drafts before retrying.'

@@ -22,6 +22,16 @@ export interface CreatorTemplate {
   status: CreatorTemplateStatus
   content: CreatorTemplateContent
   origin?: unknown
+  // C2 classification and C6b-5 private owner projections. Omitted on legacy/older responses.
+  category?: 'universal' | 'local' | null
+  localApprovedVersion?: number | null
+  localApproval?: {
+    version: number | null
+    authority: 'approved' | 'historical' | 'integrity_exception' | 'none'
+    independentEvidence: boolean
+    localityBound: boolean
+  }
+  localSuspension?: { at: string; byUserId: string; reason: string; version: number } | null
   submittedVersion?: number | null
 }
 
