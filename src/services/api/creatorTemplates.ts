@@ -23,7 +23,7 @@ export interface CreatorTemplate {
   content: CreatorTemplateContent
   origin?: unknown
   // C2 classification and C6b-5 private owner projections. Omitted on legacy/older responses.
-  category?: 'universal' | 'local' | null
+  category?: 'universal' | 'local' | 'local' | null
   // F7-BE-01: Universal owner GETs only. Null means never published; omission means unavailable.
   publishedVersion?: number | null
   localApprovedVersion?: number | null
@@ -96,7 +96,7 @@ export class CreatorTemplatesApi {
     return this.client.post(`/api/creator/templates/from-universal/${encodeURIComponent(sourceKey)}`, { key, publishedReference: { templateId: publishedReference.templateId, version: publishedReference.version } })
   }
 
-  create(content: CreatorTemplateContent, category?: 'universal'): Promise<CreatorTemplate> {
+  create(content: CreatorTemplateContent, category?: 'universal' | 'local'): Promise<CreatorTemplate> {
     return this.client.post('/api/creator/templates', { key: content.key, content, ...(category ? { category } : {}) })
   }
 

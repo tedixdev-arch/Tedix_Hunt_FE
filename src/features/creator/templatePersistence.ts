@@ -15,7 +15,7 @@ export function templateContentEqual(current: CreatorTemplateContent, persisted:
   return JSON.stringify({ ...current, version: persisted.version }) === JSON.stringify(persisted)
 }
 
-export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'create' | 'createVersion'>, current: CreatorTemplateContent, persisted: CreatorTemplate | null, category?: 'universal'): Promise<CreatorTemplate> {
+export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'create' | 'createVersion'>, current: CreatorTemplateContent, persisted: CreatorTemplate | null, category?: 'universal' | 'local'): Promise<CreatorTemplate> {
   if (persisted && templateContentEqual(current, persisted.content)) return persisted
   current = { ...current, mission: serializeMission(current.mission) }
   const validation = finishPointValidation(current.configuration) || gameplayValidation(current)

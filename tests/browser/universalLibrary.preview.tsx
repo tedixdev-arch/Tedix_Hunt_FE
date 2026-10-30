@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom'
 import { createRoot } from 'react-dom/client'
 import { UniversalLibrary } from '../../src/features/creator/UniversalLibrary'
 import { universalLibraryApi } from '../../src/services/api/universalLibrary'
@@ -19,4 +20,4 @@ universalLibraryApi.get = async () => ({ ...product, publishedReference: { ...pr
   configuration: { normalCheckpointCount: 1, summary: 'Reusable content without a fixed locality or mandatory physical route.' },
   scoring: {}, checkpoints: [{ role: 'normal', checkpoint: 1, kind: 'logic-matrix' }, { role: 'terminal' }],
 } })
-createRoot(document.getElementById('root')!).render(<main className="h-dvh overflow-y-auto bg-slate-100 px-4 py-6 text-slate-950 sm:px-8"><div className="mx-auto max-w-6xl"><UniversalLibrary /></div></main>)
+createRoot(document.getElementById('root')!).render(<main className="h-dvh overflow-y-auto bg-slate-100 px-4 py-6 text-slate-950 sm:px-8"><div className="mx-auto max-w-6xl"><MemoryRouter><UniversalLibrary /></MemoryRouter></div></main>)
