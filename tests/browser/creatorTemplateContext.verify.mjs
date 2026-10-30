@@ -13,7 +13,7 @@ for (const width of [1440, 768, 390, 320]) {
   const list = page.getByRole('region', { name: 'Creator Templates' })
   await list.locator('article').first().waitFor()
   assert.equal(await list.locator('article').count(), 3)
-  for (const text of ['Type: Universal', 'Type: Local', 'Type: Legacy', 'Current candidate: Submitted · Version 3', 'Retained Local approval: Approved · Version 1', 'Suspended · Version 1']) {
+  for (const text of ['Type: Universal', 'Type: Local', 'Type: Legacy', 'Current candidate: Submitted · Version 3', 'Current candidate: Draft · Version 2', 'Publication: Published version 1.', 'Retained Local approval: Approved · Version 1', 'Suspended · Version 1']) {
     assert.equal((await list.textContent()).includes(text), true)
   }
   const edit = list.getByRole('link', { name: 'Edit template' })

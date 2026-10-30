@@ -14,7 +14,8 @@ creatorTemplatesApi.list = async () => {
   const local = projection('local', 'submitted', 3)
   local.content.displayName = 'A very long owned Local Template name with route and approval context for responsive verification'
   local.localSuspension = { at: '2026-10-29T00:00:00Z', byUserId: 'admin', version: 1, reason: 'Route access is temporarily restricted pending an independent safety review.' }
-  return [projection('universal'), local, projection(null, 'approved')]
+  const universal = projection('universal', 'draft', 2); universal.publishedVersion = 1
+  return [universal, local, projection(null, 'approved')]
 }
 for (const method of ['create', 'createVersion', 'submit', 'delete', 'createStarterDraft'] as const) {
   creatorTemplatesApi[method] = async () => { throw new Error(`Unexpected mutation: ${method}`) }

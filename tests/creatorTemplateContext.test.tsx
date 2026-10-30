@@ -38,12 +38,46 @@ test.each([['draft', 'Draft'], ['submitted', 'Submitted'], ['changes_requested',
   expect(cards()[0].querySelector('a')?.textContent).toBe(['draft', 'changes_requested'].includes(status) ? 'Edit template' : 'View template')
 })
 
-test('Universal publication gap never uses latest or submitted version as publication', async () => {
-  const record = projection('universal', 'approved', 4); record.submittedVersion = 3
+test.each(['draft', 'submitted', 'changes_requested', 'approved'] as const)('Universal %s keeps older publication separate from candidate and review', async status => {
+  const record = projection('universal', status, 4); record.submittedVersion = status === 'draft' ? null : 3; record.publishedVersion = 1
   api.list.mockResolvedValue([record]); await render()
-  expect(cards()[0].textContent).toContain('Review artifact: Version 3')
-  expect(cards()[0].textContent).toContain('Publication: Context unavailable. An earlier approved version may remain published.')
-  expect(cards()[0].textContent).not.toContain('published · Version 4')
+  expect(cards()[0].textContent).toContain('Version 4')
+  expect(cards()[0].textContent).toContain('Publication: Published version 1.')
+  expect(cards()[0].textContent).not.toContain('Published version 4')
+  expect(cards()[0].textContent).not.toContain('Published version 3')
+  if (status !== 'draft') expect(cards()[0].textContent).toContain('Submitted for review: Version 3')
+})
+
+test('Universal draft v2 retains exact published v1', async () => {
+  const record = projection('universal', 'draft', 2); record.publishedVersion = 1
+  api.list.mockResolvedValue([record]); await render()
+  expect(cards()[0].textContent).toContain('Current candidate: Draft · Version 2')
+  expect(cards()[0].textContent).toContain('Publication: Published version 1.')
+  expect(cards()[0].textContent).not.toContain('Submitted for review:')
+})
+
+test.each(['draft', 'submitted', 'changes_requested', 'approved'] as const)('Universal %s null publication means never published despite candidate status', async status => {
+  const record = projection('universal', status, 3); record.publishedVersion = null
+  api.list.mockResolvedValue([record]); await render()
+  expect(cards()[0].textContent).toContain('Publication: Not yet published.')
+  expect(cards()[0].textContent).not.toContain('Published version')
+  expect(cards()[0].textContent).not.toContain('Submitted for review:')
+})
+
+test('missing Universal projection is unavailable, never inferred from approved candidate/submission', async () => {
+  const record = projection('universal', 'approved', 4); record.submittedVersion = 3; delete record.publishedVersion
+  api.list.mockResolvedValue([record]); await render()
+  expect(cards()[0].textContent).toContain('Submitted for review: Version 3')
+  expect(cards()[0].textContent).toContain('Publication: Publication information unavailable.')
+  expect(cards()[0].textContent).not.toContain('Not yet published')
+  expect(cards()[0].textContent).not.toContain('Published version')
+})
+
+test.each(['local', null] as const)('publication display does not change %s category behavior', async category => {
+  const record = projection(category, 'approved'); record.publishedVersion = 99
+  api.list.mockResolvedValue([record]); await render()
+  expect(cards()[0].textContent).not.toContain('Publication:')
+  expect(cards()[0].textContent).not.toContain('Published version 99')
 })
 
 test('suspension of prior authority remains visible after a replacement approval', async () => {

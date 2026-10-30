@@ -132,3 +132,23 @@ for (const [status, code, message] of [
     assert.equal(setup.calls.length, 1)
   })
 }
+
+test('both owner GETs preserve exact, null and missing Universal publication without enrichment', async () => {
+  for (const publishedVersion of [3, null, undefined]) {
+    const universal: CreatorTemplate = {
+      ...record, category: 'universal', status: 'approved', version: 4, submittedVersion: 3,
+      ...(publishedVersion === undefined ? {} : { publishedVersion }),
+    }
+    const setup = api([[universal], universal])
+    const list = await setup.api.list()
+    const detail = await setup.api.get(record.key)
+    for (const result of [list[0], detail]) {
+      assert.equal(result.publishedVersion, publishedVersion)
+      assert.equal(Object.hasOwn(result, 'publishedVersion'), publishedVersion !== undefined)
+      assert.equal(result.version, 4)
+      assert.equal(result.submittedVersion, 3)
+    }
+    assert.equal(setup.calls.length, 2)
+    assert.ok(setup.calls.every(call => call.init?.method === 'GET' && call.url.includes('/api/creator/templates')))
+  }
+})

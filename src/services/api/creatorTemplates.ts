@@ -24,6 +24,8 @@ export interface CreatorTemplate {
   origin?: unknown
   // C2 classification and C6b-5 private owner projections. Omitted on legacy/older responses.
   category?: 'universal' | 'local' | null
+  // F7-BE-01: Universal owner GETs only. Null means never published; omission means unavailable.
+  publishedVersion?: number | null
   localApprovedVersion?: number | null
   localApproval?: {
     version: number | null

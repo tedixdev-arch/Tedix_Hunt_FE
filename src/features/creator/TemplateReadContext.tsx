@@ -8,8 +8,8 @@ export function TemplateReadContext({ template }: { template: CreatorTemplate })
   return <dl className="mt-2 space-y-1 text-sm text-slate-600">
     <div><dt className="inline font-bold">Type: </dt><dd className="inline">{category === 'universal' ? 'Universal' : category === 'local' ? 'Local' : 'Legacy'}</dd></div>
     <div><dt className="inline font-bold">Current candidate: </dt><dd className="inline">{statuses[template.status]} · Version {template.version}</dd></div>
-    {template.submittedVersion != null && <div><dt className="inline font-bold">Review artifact: </dt><dd className="inline">Version {template.submittedVersion}</dd></div>}
-    {category === 'universal' && <div><dt className="inline font-bold">Publication: </dt><dd className="inline">Context unavailable. An earlier approved version may remain published.</dd></div>}
+    {template.submittedVersion != null && template.submittedVersion !== template.version && <div><dt className="inline font-bold">Submitted for review: </dt><dd className="inline">Version {template.submittedVersion}</dd></div>}
+    {category === 'universal' && <div><dt className="inline font-bold">Publication: </dt><dd className="inline">{template.publishedVersion === undefined ? 'Publication information unavailable.' : template.publishedVersion === null ? 'Not yet published.' : `Published version ${template.publishedVersion}.`}</dd></div>}
     {category === 'local' && <>
       <div><dt className="inline font-bold">Retained Local approval: </dt><dd className="inline">{!approval ? 'Context unavailable.'
         : approval.authority === 'integrity_exception' ? 'Integrity restriction — approval version cannot be resolved.'
