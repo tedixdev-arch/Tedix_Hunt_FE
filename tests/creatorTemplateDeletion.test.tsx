@@ -30,7 +30,7 @@ async function render() { await act(async () => root.render(<MemoryRouter><Creat
 const button = (text: string, scope: ParentNode = container) => [...scope.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === text || (text === 'Signal: Cluj Napoca' && item.textContent?.startsWith(text)) || (text === 'Close' && item.getAttribute('aria-label') === 'Close template creation chooser'))!
 async function click(text: string, scope: ParentNode = container) { await act(async () => button(text, scope).click()) }
 const cards = () => [...container.querySelectorAll<HTMLElement>('[aria-label="Creator Templates"] article')]
-const counts = () => [...container.querySelectorAll('[aria-label="Template queues"] article')].map(card => card.lastElementChild?.textContent)
+const statusCounts = () => ['Draft', 'Changes requested', 'Submitted', 'Approved'].map(status => String(cards().filter(card => card.textContent?.includes(`Current candidate: ${status} ·`)).length))
 async function open() { const trigger = button('Delete', cards()[0]); trigger.focus(); await act(async () => trigger.click()); return trigger }
 async function key(key: string, shiftKey = false) {
   const event = new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true })
@@ -79,7 +79,7 @@ test('Tab wraps both ways, Escape cancels and restores focus without deletion', 
   expect(api.delete).not.toHaveBeenCalled()
 })
 
-test('confirmation sends the selected key once, keeps cards while pending and refreshes cards and counters', async () => {
+test('confirmation sends the selected key once, keeps cards while pending and refreshes cards and record statuses', async () => {
   const selected = template('draft', 'key /?#&é')
   api.list.mockResolvedValueOnce([selected, ...records.slice(1)]).mockResolvedValueOnce(records.slice(1))
   let resolve!: () => void
@@ -90,14 +90,14 @@ test('confirmation sends the selected key once, keeps cards while pending and re
   expect(api.delete).toHaveBeenCalledExactlyOnceWith(selected.key)
   expect(button('Deleting…').disabled).toBe(true)
   expect(container.querySelector('dialog [role="status"]')?.textContent).toBe('Deleting Template…')
-  expect(cards()).toHaveLength(4); expect(counts()).toEqual(['1', '1', '1', '1'])
+  expect(cards()).toHaveLength(4); expect(statusCounts()).toEqual(['1', '1', '1', '1'])
   expect(api.list).toHaveBeenCalledTimes(1)
   expect((await key('Tab')).defaultPrevented).toBe(true)
   expect(document.activeElement).toBe(button('Cancel'))
   await act(async () => resolve())
   expect(container.querySelector('dialog')).toBeNull()
   expect(api.list).toHaveBeenCalledTimes(2)
-  expect(cards()).toHaveLength(3); expect(counts()).toEqual(['0', '1', '1', '1'])
+  expect(cards()).toHaveLength(3); expect(statusCounts()).toEqual(['0', '1', '1', '1'])
   expect(cards().map(card => card.querySelector('h2')?.textContent)).toEqual(records.slice(1).map(item => item.content.displayName))
   expect(document.activeElement?.textContent).toBe('My Templates')
 })
@@ -107,12 +107,12 @@ test.each([
   [404, 'not_found', 'not found or is no longer owned'],
   [409, 'template_not_deletable', 'current status'], [409, 'template_in_use', 'protected dependencies'],
   [409, 'unknown_conflict', 'Deletion could not be confirmed'], [500, 'server_error', 'Deletion could not be confirmed'],
-] as const)('failure %s %s retains the card and counters, displays an action and allows cancel', async (status, code, message) => {
+] as const)('failure %s %s retains the card and record statuses, displays an action and allows cancel', async (status, code, message) => {
   api.delete.mockRejectedValue(new ApiError('Failure', status, 'http', { error: code }))
   await render(); const trigger = await open(); await click('Delete Template')
   expect(container.querySelector('dialog [role="alert"]')?.textContent).toContain(message)
   expect(button('Delete Template').disabled).toBe(false)
-  expect(cards()).toHaveLength(4); expect(counts()).toEqual(['1', '1', '1', '1'])
+  expect(cards()).toHaveLength(4); expect(statusCounts()).toEqual(['1', '1', '1', '1'])
   expect(api.list).toHaveBeenCalledTimes(1)
   await click('Cancel'); expect(document.activeElement).toBe(trigger)
 })
@@ -150,11 +150,11 @@ test('refresh failure after confirmed deletion keeps existing cards and Retry on
   expect(container.querySelector('[role="alert"]')).not.toBeNull()
   await click('Retry')
   expect(api.delete).toHaveBeenCalledTimes(1)
-  expect(cards()).toHaveLength(3); expect(counts()[0]).toBe('0')
+  expect(cards()).toHaveLength(3); expect(statusCounts()[0]).toBe('0')
 })
 
 test('creation chooser still opens both paths after cancellation', async () => {
-  await render(); await open(); await click('Cancel'); await click('Create Template')
+  await render(); await open(); await click('Cancel'); await click('Create Legacy Template')
   expect(button('Start from scratch')).toBeDefined()
   await click('Start from Template')
   expect(button('Signal: Cluj Napoca')).toBeDefined()
@@ -169,12 +169,12 @@ test('confirmed deletion preserves other cards while the authoritative refresh i
   await render(); await open(); await click('Delete Template')
   expect(container.querySelector('dialog')).toBeNull()
   expect(cards()).toHaveLength(4)
-  expect(counts()).toEqual(['1', '1', '1', '1'])
+  expect(statusCounts()).toEqual(['1', '1', '1', '1'])
   expect(button('Delete', cards()[0]).disabled).toBe(true)
   expect(container.querySelector('[aria-label="Creator Templates"]')?.getAttribute('aria-busy')).toBe('true')
   await act(async () => refresh(records.slice(1)))
   expect(cards()).toHaveLength(3)
-  expect(counts()).toEqual(['0', '1', '1', '1'])
+  expect(statusCounts()).toEqual(['0', '1', '1', '1'])
   expect(button('Delete', cards()[0]).disabled).toBe(false)
 })
 
@@ -182,7 +182,7 @@ test.each([401, 403, 404])('refresh %s after deletion clears cached private card
   api.list.mockResolvedValueOnce(records).mockRejectedValueOnce(new ApiError('Denied', status, 'http'))
   await render(); await open(); await click('Delete Template')
   expect(cards()).toHaveLength(0)
-  expect(counts()).toEqual(['0', '0', '0', '0'])
+  expect(statusCounts()).toEqual(['0', '0', '0', '0'])
   expect(container.querySelector('[role="alert"]')).not.toBeNull()
   expect(container.textContent).not.toContain('No persisted Creator Templates yet.')
 })

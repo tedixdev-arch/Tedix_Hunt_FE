@@ -40,49 +40,57 @@ function noMutations() {
   for (const key of ['create', 'createVersion', 'submit', 'delete', 'createStarterDraft', 'listStarters'] as const) expect(mocks.api[key]).not.toHaveBeenCalled()
 }
 
-test('four entries are discoverable; My Templates focuses the existing empty owned list', async () => {
+test('one primary action and direct empty list replace dashboard cards', async () => {
   await render()
-  expect([...container.querySelectorAll('nav[aria-label="Creator Studio entries"] > *')].map(node => node.firstElementChild?.textContent)).toEqual(['Mechanics Library', 'My Templates', 'Create Universal Template', 'Create Local Template'])
-  await click('My Templates')
-  expect(document.activeElement?.id).toBe('my-templates')
-  expect(container.textContent).toContain('No persisted Creator Templates yet.')
-  expect(container.textContent).toContain('legacy, unclassified creation')
+  expect(container.querySelector('h1')?.textContent).toBe('Creator Studio')
+  expect(container.textContent).toContain('Create and manage Hunt templates.')
+  expect(container.querySelector('nav[aria-label="Creator Studio entries"]')).toBeNull()
+  expect(container.textContent).toContain('No templates yet. Choose Create Template to get started.')
+  expect(container.querySelector('details')?.textContent).toContain('Create Legacy Template')
   noMutations()
 })
 
-test('Mechanics Library is read-only and separates configuration, simulation and future runtime', async () => {
-  await render(); const trigger = await click('Mechanics Library')
+test('guided choices trap focus, cancel and restore the trigger without creating drafts', async () => {
+  await render(); const trigger = await click('+ Create Template')
   const panel = container.querySelector('dialog')!
-  expect(panel.open).toBe(true)
-  expect(panel.querySelector('input,select,textarea,a')).toBeNull()
-  expect(panel.querySelectorAll('button')).toHaveLength(1)
-  for (const text of ['What can I create?', 'What can I configure?', 'What is not available yet?', '1–20', 'FinishPoint', 'Personal Challenges', 'Team Challenges', 'Compass + Distance', 'manually simulate', 'Hints and scoring']) expect(panel.textContent).toContain(text)
-  expect(document.activeElement).toBe(button('← Back'))
-  for (const shiftKey of [true, false]) {
-    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true })
-    await act(async () => document.activeElement!.dispatchEvent(event))
-    expect(event.defaultPrevented).toBe(true); expect(document.activeElement).toBe(button('← Back'))
-  }
-  // Escape dispatches cancel on a native modal dialog.
+  expect(panel.textContent).toContain('Choose a template type')
+  expect(document.activeElement).toBe(panel.querySelector('a'))
+  expect(panel.querySelector('a')?.getAttribute('href')).toBe('/create?category=universal')
+  const cancel = button('Cancel'); cancel.focus()
+  const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+  await act(async () => cancel.dispatchEvent(tab))
+  expect(tab.defaultPrevented).toBe(true); expect(document.activeElement).toBe(panel.querySelector('a'))
+  const shift = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })
+  await act(async () => document.activeElement!.dispatchEvent(shift))
+  expect(document.activeElement).toBe(cancel)
+  await click('Local Template')
+  expect(panel.textContent).toContain('Create a Local Template')
+  expect(document.activeElement).toBe(button('Start from an approved Universal'))
+  expect(panel.querySelector('a')?.getAttribute('href')).toBe('/create?category=local')
+  await click('← Back to template types')
+  expect(panel.textContent).toContain('Choose a template type')
   await act(async () => panel.dispatchEvent(new Event('cancel', { cancelable: true })))
   expect(container.querySelector('dialog')).toBeNull(); expect(document.activeElement).toBe(trigger)
   noMutations()
 })
 
-test('Local entry opens inline source choices and scratch shared editor link', async () => {
-  await render('/creator'); await click('Create Local Template')
-  expect(container.textContent).toContain('Choose your starting point')
-  expect(container.querySelector('a[href="/create?category=local"]')).not.toBeNull()
+test('Local approved origin opens the existing Library only on selection', async () => {
+  await render(); await click('+ Create Template'); await click('Local Template')
+  expect(library.list).not.toHaveBeenCalled()
   await click('Start from an approved Universal')
-  expect(container.textContent).toContain('Universal Library')
+  expect(container.querySelector('dialog')).toBeNull()
+  expect(library.list).toHaveBeenCalledTimes(1)
+  noMutations()
 })
 
-test('browser history back and forward open and close guidance without mutation', async () => {
-  await render(); const trigger = await click('Mechanics Library')
+test('browser history back and forward restores choices and cancellation returns to Studio', async () => {
+  await render(); const trigger = await click('+ Create Template'); await click('Local Template')
   await act(async () => router.navigate(-1))
-  expect(container.querySelector('dialog')).toBeNull(); expect(document.activeElement).toBe(trigger)
+  expect(container.querySelector('dialog')?.textContent).toContain('Choose a template type')
   await act(async () => router.navigate(1))
-  expect(container.querySelector('dialog')?.textContent).toContain('Mechanics Library')
+  expect(container.querySelector('dialog')?.textContent).toContain('Create a Local Template')
+  await click('Cancel')
+  expect(container.querySelector('dialog')).toBeNull(); expect(document.activeElement).toBe(trigger)
   noMutations()
 })
 
@@ -90,7 +98,7 @@ test('owned list loading, retry and records remain reachable', async () => {
   let resolve!: (value: unknown[]) => void
   mocks.api.list.mockReturnValueOnce(new Promise(done => { resolve = done }))
   await render(); expect(container.textContent).toContain('Loading Creator Templates…')
-  await click('My Templates'); await click('Mechanics Library'); await click('← Back')
+  await click('+ Create Template'); await click('Cancel')
   await act(async () => resolve([{ key: 'owned', status: 'draft', version: 3, content: { displayName: 'Owned legacy', theme: 'City', configuration: { normalCheckpointCount: 2 } } }]))
   expect(container.querySelector('a[href="/create?template=owned"]')?.textContent).toBe('Edit template')
   expect(button('Delete')).toBeDefined(); expect(container.textContent).toContain('Version 3')
@@ -100,7 +108,7 @@ test('owned list loading, retry and records remain reachable', async () => {
 test.each([[401, 'session has expired'], [403, 'not authorized'], [500, 'Failed to load']] as const)('list error %s retains guidance and supports retry', async (status, text) => {
   mocks.api.list.mockRejectedValueOnce(new ApiError('Failed to load', status, 'http')).mockResolvedValue([])
   await render(); expect(container.querySelector('[role="alert"]')?.textContent).toContain(text)
-  await click('Mechanics Library'); await click('← Back'); await click('Retry')
+  await click('+ Create Template'); await click('Cancel'); await click('Retry')
   expect(mocks.api.list).toHaveBeenCalledTimes(2); expect(container.querySelector('[role="alert"]')).toBeNull()
   noMutations()
 })
@@ -120,7 +128,8 @@ test('session bootstrap does not expose Creator content or fetch Templates', asy
 
 test('Universal creation is a direct shared-editor link without mutation', async () => {
   await render()
-  expect(container.querySelector('a[href="/create?category=universal"]')?.textContent).toContain('Create Universal Template')
+  await click('+ Create Template')
+  expect(container.querySelector('a[href="/create?category=universal"]')?.textContent).toContain('Universal Template')
   noMutations()
 })
 

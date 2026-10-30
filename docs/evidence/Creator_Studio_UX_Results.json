@@ -1,0 +1,134 @@
+{
+  "date": "2026-10-30",
+  "level": "FE fixtures/mocked only; no real FE-BE integration",
+  "typecheck": "PASS",
+  "build": "PASS; existing bundle-size warning",
+  "tests": {
+    "nodeFiles": 42,
+    "vitestFiles": 31,
+    "vitestTests": 506,
+    "failures": 0,
+    "skipped": 0
+  },
+  "browsers": {
+    "creatorStudio": {
+      "measurements": [
+        {
+          "width": 1440,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "overflow": false
+        },
+        {
+          "width": 320,
+          "overflow": false
+        }
+      ],
+      "errors": [],
+      "mutationRequests": []
+    },
+    "localAuthoring": {
+      "measurements": [
+        {
+          "width": 1440,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "overflow": false
+        },
+        {
+          "width": 320,
+          "overflow": false
+        }
+      ],
+      "errors": []
+    },
+    "universalAuthoring": {
+      "measurements": [
+        {
+          "width": 1440,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "overflow": false
+        },
+        {
+          "width": 320,
+          "overflow": false
+        }
+      ],
+      "errors": []
+    },
+    "universalLibrary": {
+      "measurements": [
+        {
+          "width": 1440,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "overflow": false
+        },
+        {
+          "width": 320,
+          "overflow": false
+        }
+      ],
+      "errors": [],
+      "mutations": []
+    },
+    "creatorCompletion": {
+      "results": [
+        {
+          "width": 1440,
+          "keyboard": "Enter/Tab/Shift+Tab passed",
+          "overflow": false,
+          "proposals": "pending and approved registry read passed",
+          "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+        },
+        {
+          "width": 768,
+          "keyboard": "Enter/Tab/Shift+Tab passed",
+          "overflow": false,
+          "proposals": "pending and approved registry read passed",
+          "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+        },
+        {
+          "width": 390,
+          "keyboard": "Enter/Tab/Shift+Tab passed",
+          "overflow": false,
+          "proposals": "pending and approved registry read passed",
+          "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+        },
+        {
+          "width": 320,
+          "keyboard": "Enter/Tab/Shift+Tab passed",
+          "overflow": false,
+          "proposals": "pending and approved registry read passed",
+          "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+        }
+      ],
+      "errors": []
+    }
+  }
+}

@@ -46,7 +46,7 @@ test('dashboard prevents repeat clicks and navigates to returned draft key witho
   let resolve!: (value: CreatorTemplate) => void
   api.createStarterDraft.mockReturnValue(new Promise(done => { resolve = done }))
   await render(<MemoryRouter initialEntries={['/creator']}><Routes><Route path="/creator" element={<CreatorStudioPage />} /><Route path="/create" element={<Location />} /></Routes></MemoryRouter>)
-  await click('Create Template')
+  await click('Create Legacy Template')
   await click('Start from Template')
   expect(api.createStarterDraft).not.toHaveBeenCalled()
   const starter = [...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('Signal: Cluj Napoca'))!
@@ -68,7 +68,7 @@ test('dashboard prevents repeat clicks and navigates to returned draft key witho
 test.each([401, 403, 409, 500])('dashboard displays starter error %s and allows manual retry', async status => {
   api.createStarterDraft.mockRejectedValue(new ApiError('Failure', status, 'http'))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Template')
+  await click('Create Legacy Template')
   await click('Start from Template'); await click('Signal: Cluj Napoca')
   expect(container.querySelector('[role="alert"]')).not.toBeNull()
   expect([...container.querySelectorAll('button')].find(button => button.textContent?.startsWith('Signal: Cluj Napoca'))?.disabled).toBe(false)
@@ -76,11 +76,11 @@ test.each([401, 403, 409, 500])('dashboard displays starter error %s and allows 
 
 test('legacy creation CTA opens both options with accessible labels and closing creates nothing', async () => {
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  const trigger = [...container.querySelectorAll('button')].find(button => button.textContent === 'Create Template')!
+  const trigger = [...container.querySelectorAll('button')].find(button => button.textContent === 'Create Legacy Template')!
   expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
   expect(container.textContent).not.toContain('Create Signal Cluj route draft')
   trigger.focus()
-  await click('Create Template')
+  await click('Create Legacy Template')
   const dialog = container.querySelector('dialog')!
   expect(dialog.open).toBe(true)
   expect(dialog.querySelector(`#${dialog.getAttribute('aria-labelledby')}`)?.textContent).toBe('Create Template')
@@ -93,7 +93,7 @@ test('legacy creation CTA opens both options with accessible labels and closing 
   await click('Close')
   expect(container.querySelector('dialog')).toBeNull()
   expect(document.activeElement).toBe(trigger)
-  await click('Create Template')
+  await click('Create Legacy Template')
   await act(async () => container.querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true })))
   expect(container.querySelector('dialog')).toBeNull()
   expect(api.createStarterDraft).not.toHaveBeenCalled()
@@ -102,9 +102,9 @@ test('legacy creation CTA opens both options with accessible labels and closing 
 
 test.each(['Close', 'Escape'])('starter view supports Back and %s without creating a draft', async control => {
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  const trigger = [...container.querySelectorAll('button')].find(button => button.textContent === 'Create Template')!
+  const trigger = [...container.querySelectorAll('button')].find(button => button.textContent === 'Create Legacy Template')!
   trigger.focus()
-  await click('Create Template')
+  await click('Create Legacy Template')
   const dialog = container.querySelector('dialog')!
   const template = [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Start from Template')!
   expect(dialog.querySelector('#template-starter-description')?.textContent).toBe('Choose an existing starter Template to customize.')
@@ -124,7 +124,7 @@ test.each(['Close', 'Escape'])('starter view supports Back and %s without creati
   else await act(async () => dialog.dispatchEvent(new Event('cancel', { cancelable: true })))
   expect(container.querySelector('dialog')).toBeNull()
   expect(document.activeElement).toBe(trigger)
-  await click('Create Template')
+  await click('Create Legacy Template')
   expect(container.querySelector('#template-creation-title')?.textContent).toBe('Create Template')
   expect(api.createStarterDraft).not.toHaveBeenCalled()
   expect(api.create).not.toHaveBeenCalled()
@@ -133,7 +133,7 @@ test.each(['Close', 'Escape'])('starter view supports Back and %s without creati
 test('Tab and Shift+Tab wrap inside both views, including while starter creation is pending', async () => {
   api.createStarterDraft.mockRejectedValue(new ApiError('Failure', 409, 'http'))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Template')
+  await click('Create Legacy Template')
   const close = container.querySelector<HTMLButtonElement>('[aria-label="Close template creation chooser"]')!
   const signal = [...container.querySelectorAll('button')].find(button => button.textContent === 'Start from Template')!
   const tab = async (shiftKey = false) => {
@@ -158,7 +158,7 @@ test('Tab and Shift+Tab wrap inside both views, including while starter creation
 
 test('scratch opens the unchanged generic editor without persisting a Template', async () => {
   await render(<MemoryRouter initialEntries={['/creator']}><Routes><Route path="/creator" element={<CreatorStudioPage />} /><Route path="/create" element={<CreatorTemplateEditorPage />} /></Routes></MemoryRouter>)
-  await click('Create Template')
+  await click('Create Legacy Template')
   await click('Start from scratch')
   expect(container.textContent).toContain('Template details')
   expect(container.querySelector('dialog')).toBeNull()
@@ -171,8 +171,8 @@ test('closing and reopening during Signal creation keeps both paths protected', 
   let resolve!: (value: CreatorTemplate) => void
   api.createStarterDraft.mockReturnValue(new Promise(done => { resolve = done }))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Template'); await click('Start from Template'); await click('Signal: Cluj Napoca')
-  await click('Close'); await click('Create Template')
+  await click('Create Legacy Template'); await click('Start from Template'); await click('Signal: Cluj Napoca')
+  await click('Close'); await click('Create Legacy Template')
   for (const name of ['Start from scratch', 'Start from Template']) {
     expect([...container.querySelectorAll('button')].find(button => button.textContent === name)?.disabled).toBe(true)
     await click(name)
@@ -184,26 +184,24 @@ test('closing and reopening during Signal creation keeps both paths protected', 
 test('starter errors survive closing, offer checking drafts, and permit an explicit retry', async () => {
   api.createStarterDraft.mockRejectedValueOnce(new ApiError('Failure', 500, 'http')).mockResolvedValue(record)
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Template'); await click('Start from Template'); await click('Signal: Cluj Napoca')
+  await click('Create Legacy Template'); await click('Start from Template'); await click('Signal: Cluj Napoca')
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('Check your drafts before retrying')
   await click('Check My Templates')
   expect(api.list).toHaveBeenCalledTimes(2)
   expect(container.querySelector('dialog')).toBeNull()
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('Check your drafts before retrying')
-  await click('Create Template')
+  await click('Create Legacy Template')
   expect(container.querySelector('dialog [role="alert"]')).not.toBeNull()
   await click('Start from Template'); await click('Signal: Cluj Napoca')
   expect(api.createStarterDraft).toHaveBeenCalledTimes(2)
 })
 
-test('My Templates preserves every status counter, card and existing editor link', async () => {
+test('My Templates shows every status, card and existing editor link without counters', async () => {
   const statuses = ['draft', 'changes_requested', 'submitted', 'approved'] as const
   api.list.mockResolvedValue(statuses.map(status => ({ ...record, key: `${status}&key`, status, content: { ...record.content, displayName: `${status} Template` } })))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
   expect(container.querySelector('h2')?.textContent).toBe('My Templates')
-  const queues = [...container.querySelectorAll('[aria-label="Template queues"] article')]
-  expect(queues.map(queue => queue.firstElementChild?.textContent)).toEqual(['Drafts', 'Changes requested', 'Submitted', 'Approved'])
-  expect(queues.every(queue => queue.lastElementChild?.textContent === '1')).toBe(true)
+  expect(container.querySelector('[aria-label="Template queues"]')).toBeNull()
   const cards = [...container.querySelectorAll('[aria-label="Creator Templates"] article')]
   expect(cards).toHaveLength(4)
   cards.forEach((card, index) => {
@@ -211,7 +209,7 @@ test('My Templates preserves every status counter, card and existing editor link
     expect(card.querySelector('a')?.getAttribute('href')).toBe(`/create?template=${statuses[index]}%26key`)
     expect(card.querySelector('a')?.textContent).toBe(index < 2 ? 'Edit template' : 'View template')
   })
-  await click('Create Template'); await click('Close')
+  await click('Create Legacy Template'); await click('Close')
   expect(container.querySelectorAll('[aria-label="Creator Templates"] article')).toHaveLength(4)
 })
 
@@ -369,7 +367,7 @@ test('hydration prefills seven research names and draft save cannot promote refe
 test('Overload is a distinct starter choice and opens its own returned draft', async () => {
   api.createStarterDraft.mockResolvedValue({ ...record, key: 'overload-owned' })
   await render(<MemoryRouter initialEntries={['/creator']}><Routes><Route path="/creator" element={<CreatorStudioPage />} /><Route path="/create" element={<Location />} /></Routes></MemoryRouter>)
-  await click('Create Template'); await click('Start from Template')
+  await click('Create Legacy Template'); await click('Start from Template')
   expect(container.textContent).toContain('Signal: Cluj Napoca')
   await click('Signal Overload - Cluj Napoca')
   expect(api.createStarterDraft).toHaveBeenCalledTimes(1)
@@ -381,7 +379,7 @@ test('Overload is a distinct starter choice and opens its own returned draft', a
 test('unavailable Overload reports an error without invoking original Signal', async () => {
   api.createStarterDraft.mockRejectedValue(new ApiError('Missing', 404, 'http'))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Template'); await click('Start from Template'); await click('Signal Overload - Cluj Napoca')
+  await click('Create Legacy Template'); await click('Start from Template'); await click('Signal Overload - Cluj Napoca')
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('starter is unavailable')
   expect(api.createStarterDraft.mock.calls[0][0].key).toBe('signal-overload-cluj-napoca')
 })
@@ -410,7 +408,7 @@ test('catalog loading, error retry and empty states preserve navigation without 
   let reject!: (reason: Error) => void
   api.listStarters.mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({ items: [] })
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Template'); await click('Start from Template')
+  await click('Create Legacy Template'); await click('Start from Template')
   expect(container.querySelector('[role="status"]')?.textContent).toBe('Loading starter Templates…')
   expect(container.textContent).not.toContain('Signal: Cluj Napoca')
   await act(async () => reject(new Error('404')))
@@ -431,7 +429,7 @@ test('backend names, descriptions, dates and order render inside selectable rows
   api.listStarters.mockResolvedValue({ items })
   api.createStarterDraft.mockReturnValue(new Promise(() => {}))
   await render(<MemoryRouter><CreatorStudioPage /></MemoryRouter>)
-  await click('Create Template'); await click('Start from Template')
+  await click('Create Legacy Template'); await click('Start from Template')
   const rows = [...container.querySelectorAll<HTMLButtonElement>('dialog li button')]
   expect(rows.map(row => row.querySelector('.font-bold')?.textContent)).toEqual(items.map(item => item.displayName))
   expect(rows.map(row => row.children[1].textContent)).toEqual(['-', '12 Oct 2026', '-'])
