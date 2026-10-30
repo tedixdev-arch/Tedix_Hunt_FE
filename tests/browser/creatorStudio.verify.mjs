@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict'
+import fs from 'node:fs/promises'
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] })
+const page = await browser.newPage()
+const errors = [], requests = [], measurements = []
+page.on('pageerror', error => errors.push(String(error)))
+page.on('request', request => { if (!['GET', 'HEAD'].includes(request.method())) requests.push(request.url()) })
+const output = 'work/creator-studio-browser'
+await fs.mkdir(output, { recursive: true })
+for (const width of [1440, 768, 390, 320]) {
+  await page.setViewportSize({ width, height: 900 })
+  await page.goto('http://127.0.0.1:5173/tests/browser/creatorStudio.html')
+  const nav = page.getByRole('navigation', { name: 'Creator Studio entries' })
+  await nav.waitFor()
+  assert.equal(await nav.getByRole('button').count(), 4)
+  const measure = await nav.evaluate(nav => ({ width: innerWidth, columns: getComputedStyle(nav).gridTemplateColumns.split(' ').length, overflow: document.documentElement.scrollWidth > innerWidth || document.querySelector('main').scrollWidth > innerWidth }))
+  measurements.push(measure)
+  assert.equal(measure.overflow, false)
+  assert.equal(measure.columns, width >= 1024 ? 4 : width >= 640 ? 2 : 1)
+  for (const label of ['Mechanics Library', 'Create Universal Template', 'Create Local Template']) {
+    const trigger = nav.getByRole('button', { name: new RegExp(`^${label}`) })
+    await trigger.focus(); await page.keyboard.press('Enter')
+    const panel = page.getByRole('dialog')
+    await panel.waitFor()
+    assert.equal(await panel.evaluate(panel => panel.scrollWidth > panel.clientWidth), false)
+    const back = panel.getByRole('button', { name: '← Back to Creator Studio' })
+    assert.equal(await back.evaluate(button => document.activeElement === button), true)
+    await page.keyboard.press('Tab'); assert.equal(await back.evaluate(button => document.activeElement === button), true)
+    await page.keyboard.press('Shift+Tab'); assert.equal(await back.evaluate(button => document.activeElement === button), true)
+    if ([1440, 390].includes(width)) await page.screenshot({ path: `${output}/${label.split(' ')[0].toLowerCase()}-${width}.png` })
+    await page.keyboard.press('Escape')
+    await panel.waitFor({ state: 'detached' })
+    await page.waitForFunction(button => document.activeElement === button, await trigger.elementHandle())
+  }
+  await nav.getByRole('button', { name: /^My Templates/ }).click()
+  assert.equal(await page.locator('#my-templates').evaluate(node => document.activeElement === node), true)
+  await page.locator('main').evaluate(node => node.scrollTo(0, 0))
+  if ([1440, 390].includes(width)) await page.screenshot({ path: `${output}/dashboard-${width}.png` })
+}
+assert.deepEqual(errors, []); assert.deepEqual(requests, [])
+await fs.writeFile(`${output}/results.json`, JSON.stringify({ measurements, errors, mutationRequests: requests }, null, 2))
+console.log(JSON.stringify({ measurements, errors, mutationRequests: requests }, null, 2))
+await browser.close()

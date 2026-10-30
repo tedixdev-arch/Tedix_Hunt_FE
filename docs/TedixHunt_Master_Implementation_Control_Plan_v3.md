@@ -273,6 +273,7 @@ Use one row per actual PR. Status below refers only to each bounded slice, not c
 
 | PR / task IDs | Implemented scope | Reconciled state | Source/test evidence and limits |
 | --- | --- | --- | --- |
+| FE Draft PR / F7-FE-01 | Four Creator Studio entries and read-only Mechanics Library; staged Universal/Local destinations; existing My Templates and legacy chooser preserved | Implemented — Draft, pending ChatGPT review; not merged | [Implementation report](F7_FE_01_Implementation_Report.md): 281 Vitest tests / 14 files, Node runner 35 passing file entries; typecheck/build and Chromium 320–1440px checks passed, zero skips. Contract/BE unchanged; FE pending review; integrated/deployed acceptance unverified. Universal/Local creation and full F7/D10 remain pending. |
 | BE #69 / D01; E4/E12/E17 | Public applications refuse existing passwordless identities | Complete — merged/source verified | CreatorApplication.ts, OrganizerApplication.ts; ApplicationCredentials.integration.test.ts (ownership, activation races, rollback). Deployed verification pending. |
 | BE #70 / D02; A4/A6 | Fail closed on unverified Tedix ID | Complete — merged/source verified | routes/auth.ts; TedixAuthentication.integration.test.ts. No upstream identity-verification integration; native auth retained. |
 | BE #71 / D03; L1 | Account Deletion Integrity | Complete — merged/source verified | models/User.ts; UserDeletion.integration.test.ts. Creator dependencies retained through retirement; no general history deletion. |

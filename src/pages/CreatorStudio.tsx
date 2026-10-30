@@ -1,5 +1,6 @@
 import { editMissionStory, missionStoryFields, type TemplateMission } from '../features/creator/mission'
 import { DeleteTemplateDialog } from '../features/creator/DeleteTemplateDialog'
+import { CreatorStudioNavigation } from '../features/creator/CreatorStudioNavigation'
 import { TemplateCreationChooser } from '../features/creator/TemplateCreationChooser'
 import { prefillSignalLandmarks } from '../features/creator/signalLandmarks'
 import { readRouteProposal } from '../features/creator/routeResearch'
@@ -156,12 +157,15 @@ export function CreatorStudioPage() {
   }
   useEffect(() => { void load() }, [])
   const statuses = [['Drafts', 'draft'], ['Changes requested', 'changes_requested'], ['Submitted', 'submitted'], ['Approved', 'approved']] as const
-  return <Shell><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Creator Studio</p><div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-4xl font-bold">Competition Templates</h1><p className="mt-3 max-w-2xl text-slate-600">Create complete, safe Hunts that Organizers can adapt in Set the Hunt.</p></div><button type="button" aria-haspopup="dialog" onClick={() => setChoosing(true)} className="flex min-h-12 items-center rounded-xl bg-emerald-500 px-5 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Create Template</button></div>
+  return <Shell><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Creator Studio</p><div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-4xl font-bold">Competition Templates</h1><p className="mt-3 max-w-2xl text-slate-600">Create complete, safe Hunts that Organizers can adapt in Set the Hunt.</p></div></div>
+    <CreatorStudioNavigation />
     {choosing && <TemplateCreationChooser creating={creatingStarter} error={starterError} onScratch={() => { if (!creating.current) navigate('/create') }} onStarter={createStarter} onClose={() => setChoosing(false)} onCheckTemplates={() => { setChoosing(false); load() }} />}
     {!choosing && creatingStarter && <p role="status" className="mt-3 text-sm font-bold text-emerald-800">Creating Signal Cluj draft…</p>}
     {!choosing && starterError && <p role="alert" className="mt-3 text-sm text-red-800">{starterError}</p>}
     {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">{error}<button type="button" className="ml-3 underline" onClick={load}>Retry</button></div>}
-    <h2 ref={templatesHeading} tabIndex={-1} className="mt-8 text-2xl font-bold">My Templates</h2>
+    <h2 id="my-templates" ref={templatesHeading} tabIndex={-1} className="mt-8 text-2xl font-bold">My Templates</h2>
+    <div className="mt-4 flex flex-wrap items-center gap-3"><span className="text-sm font-bold text-slate-600">Legacy creation</span><button type="button" aria-haspopup="dialog" onClick={() => setChoosing(true)} className="flex min-h-12 items-center rounded-xl bg-emerald-500 px-5 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Create Template</button></div>
+    <p className="mt-4 text-sm text-slate-600">The existing Create Template action opens legacy, unclassified creation and the starter catalog. It does not create a Universal or Local Template.</p>
     {deleteTarget && <DeleteTemplateDialog name={deleteTarget.content.displayName} deleting={deleting} error={deleteError} onCancel={() => setDeleteTarget(null)} onConfirm={() => void confirmDelete()} restoreFocus={restoreDeleteFocus} />}
     {!deleteTarget && deleteError && <p role="alert" className="mt-4 text-sm text-red-900">{deleteError} <button type="button" onClick={() => { setDeleteError(''); void load() }} className="min-h-12 px-3 font-bold underline">Refresh My Templates</button></p>}
     <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Template queues">{statuses.map(([name, status]) => <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={name}><p className="text-sm font-bold text-slate-500">{name}</p><p className="mt-2 text-3xl font-bold">{templates.filter(item => item.status === status).length}</p></article>)}</section>
