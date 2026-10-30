@@ -99,3 +99,14 @@ test('04 candidate approval refreshes retained authority without removing suspen
   api.get.mockResolvedValue(fixture('local')); api.approved.mockResolvedValue({ ...retained(), localSuspension: audit }); api.approve.mockResolvedValue({ ...fixture('local'), status: 'approved' }); await render('/admin/reviews/local?category=Local')
   api.approved.mockResolvedValue({ ...retained(), version: 3, localApprovedVersion: 3, localSuspension: audit }); await click('Approve template'); expect(api.approved).toHaveBeenCalledTimes(2); expect(container.textContent).toContain('Retained version: 3'); expect(container.textContent).toContain(audit.reason); expect(container.querySelector('textarea')).toBeNull()
 })
+test('readable inspection uses the exact GET artifact, not queue content or another candidate', async () => {
+  const exact = fixture('universal')
+  exact.version = 4; exact.content = { ...exact.content, version: 4, mission: 'Exact submitted story v4', configuration: { normalCheckpointCount: 1, durationMinutes: 35 }, checkpoints: [{ checkpoint: 1, kind: 'hidden-rule', prompt: 'Exact question v4', answer: 'Exact answer v4' }, { role: 'terminal', teamKind: 'shared-final-key', teamPrompt: 'Exact terminal v4' }] }
+  api.get.mockResolvedValue(exact); vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected candidate read') }))
+  await render('/admin/reviews/universal')
+  expect(api.get).toHaveBeenCalledExactlyOnceWith('universal'); expect(container.textContent).toContain('Submitted version 4')
+  const summary = container.querySelector('[aria-label="Submitted gameplay and settings"]')!
+  expect(summary.textContent).toContain('Exact submitted story v4'); expect(summary.textContent).not.toContain('Exact story v3')
+  expect(container.querySelector('[aria-label="Submitted checkpoints"]')!.textContent).toContain('Exact answer v4')
+  expect(container.querySelector('[aria-label="Submitted FinishPoint"]')!.textContent).toContain('Exact terminal v4'); expect(fetch).not.toHaveBeenCalled()
+})

@@ -79,7 +79,7 @@ test('Admin uses the exact review GET artifact, never fetches a draft, and inspe
   expect(mocks.markers.map(marker => marker.coordinates)).toEqual([[23, 46], [24, 47], [25, 48]])
   expect(container.textContent).toContain('Submitted version 4'); expect(fetch).not.toHaveBeenCalled()
   await action('Close geography inspection'); expect(mocks.approve).not.toHaveBeenCalled(); expect(mocks.requestChanges).not.toHaveBeenCalled()
-  expect(container.textContent).toContain('Checkpoints, answers and hints')
+  expect(container.textContent).toContain('Checkpoints')
   expect(container.querySelector('[aria-label="Hunt geography preview"]')).toBeNull()
 })
 
@@ -99,7 +99,7 @@ test('review loading errors and retry remain authoritative; failed decisions pre
   mocks.requestChanges.mockRejectedValueOnce(new Error('Decision unavailable'))
   await action('Request changes')
   expect(container.textContent).toContain('The review could not be loaded or saved')
-  expect(container.textContent).toContain('Other saved settings')
+  expect(container.textContent).toContain('Technical details')
   expect(mocks.maps[0].remove).not.toHaveBeenCalled()
   expect(mocks.approve).not.toHaveBeenCalled()
 })

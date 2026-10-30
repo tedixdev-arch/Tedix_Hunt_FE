@@ -2,7 +2,7 @@ import { ApiError } from '../../services/api/client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminTemplateReviewsApi, type AdminTemplateReview, type RetainedLocalReview } from '../../services/api/adminTemplateReviews'
 import { inspectHuntGeography } from '../../components/huntMapGeography'
-import { HuntMapInspection } from '../../components/HuntMapPreview'
+import { TemplateContentInspection } from './TemplateContentInspection'
 import { PersistedValue } from './PersistedValue'
 import { reviewError } from './reviewState'
 const panel = 'min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5'
@@ -20,8 +20,14 @@ export function LocalBindingDetails({ review }: { review: AdminTemplateReview | 
     {changed && <p role="alert">Locality coordinates, country or identity changed. Approval cannot bypass this geographic conflict.</p>}
     {relabeled && <p>Registry labels changed; the saved snapshot remains unchanged.</p>}
     {warning && <p role="alert">{warning}</p>}
-    <div className="mt-3 grid min-w-0 gap-4 sm:grid-cols-2"><details><summary className="cursor-pointer font-bold">Saved locality snapshot</summary><PersistedValue value={saved} /></details><details><summary className="cursor-pointer font-bold">Current registry entry</summary><PersistedValue value={current} /></details></div>
+    <div className="mt-3 grid min-w-0 gap-4 sm:grid-cols-2"><details><summary className="cursor-pointer font-bold">Saved locality snapshot</summary><LocalityFacts value={saved} /></details><details><summary className="cursor-pointer font-bold">Current registry entry</summary><LocalityFacts value={current} /></details></div>
+    <details className="mt-3"><summary className="cursor-pointer font-bold">Technical details</summary><PersistedValue value={{ localityId: review.localityId, localitySnapshot: saved, currentLocality: current }} /></details>
   </section>
+}
+
+function LocalityFacts({ value }: { value: AdminTemplateReview['localitySnapshot'] | AdminTemplateReview['currentLocality'] }) {
+  if (!value) return <p className="mt-2 text-sm">Unavailable</p>
+  return <dl className="mt-3 space-y-2 text-sm"><div><dt className="font-bold">Name</dt><dd className="break-words">{value.name}</dd></div><div><dt className="font-bold">Country</dt><dd>{value.countryDisplayName} ({value.countryCode})</dd></div><div><dt className="font-bold">Administrative area</dt><dd className="break-words">{value.administrativeContext}</dd></div><div><dt className="font-bold">Coordinates</dt><dd>{value.latitude}, {value.longitude}</dd></div></dl>
 }
 
 export function RetainedLocalInspection({ templateKey, onDenied }: { templateKey: string; onDenied: () => void }) {
@@ -44,9 +50,9 @@ export function RetainedLocalInspection({ templateKey, onDenied }: { templateKey
       <p>Approval record: {({ approved: 'Retained approval recorded', historical: 'Historical approval', integrity_exception: 'Approved content is unresolved', none: 'No retained approval' })[approval.localApproval?.authority ?? 'none']}.</p>
       {(!approval.localApproval?.independentEvidence || !approval.localApproval?.localityBound || approval.localApproval.authority !== 'approved') && <p role="alert">Historical, unbound or missing independent approval evidence. This record does not establish eligibility for new Organizer selection.</p>}
       <LocalBindingDetails review={approval} />
-      <details className={panel}><summary className="cursor-pointer font-bold">Inspect exact retained content</summary>{approval.content && approval.version != null ? <><HuntMapInspection configuration={approval.content.configuration} sourceLabel={`Retained version ${approval.version}`} /><PersistedValue value={approval.content} /></> : <p role="alert">Retained content is unresolved. No candidate content was substituted.</p>}</details>
+      <details className={panel}><summary className="cursor-pointer font-bold">Inspect exact retained content</summary>{approval.content && approval.version != null ? <TemplateContentInspection content={approval.content} version={approval.version} category={approval.category} sourceLabel={`Retained version ${approval.version}`} /> : <p role="alert">Retained content is unresolved. No candidate content was substituted.</p>}</details>
       {approval.category === 'local' && !approval.localSuspension && approval.version != null && approval.content && ['approved', 'historical'].includes(approval.localApproval?.authority ?? '') && <SuspensionDecision key={approval.version} approval={approval} onChanged={async () => { await load(); setError('Retained approval changed or was already suspended. Inspect the refreshed approval and make a new explicit decision.') }} onRecorded={audit => setApproval(current => current ? { ...current, localSuspension: audit } : current)} onDenied={onDenied} />}
-      {approval.localSuspension && <section aria-label="Suspension record"><h4 className="font-bold">Suspended for new selection</h4><PersistedValue value={approval.localSuspension} /><p>Excluded from NEW Organizer selection. Existing Hunts are not terminated.</p></section>}
+      {approval.localSuspension && <section aria-label="Suspension record"><h4 className="font-bold">Suspended for new selection</h4><p className="mt-2 whitespace-pre-wrap break-words">{approval.localSuspension.reason}</p><p className="mt-2 text-sm">Version {approval.localSuspension.version} · Suspended at {approval.localSuspension.at}</p><details className="mt-2"><summary className="cursor-pointer font-bold">Technical details</summary><PersistedValue value={approval.localSuspension} /></details><p>Excluded from NEW Organizer selection. Existing Hunts are not terminated.</p></section>}
     </div>}
   </section>
 }

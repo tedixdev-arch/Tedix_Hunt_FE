@@ -24,7 +24,8 @@ test('Admin review renders object mission/story/metadata and terminal gameplay w
     expect(container.textContent).toContain('Saved provenance')
     expect(container.textContent).toContain('Saved terminal solution')
     expect(container.textContent).not.toContain('[object Object]')
-    expect([...container.querySelectorAll('h4')].at(-1)?.textContent).toBe('FinishPoint')
+    expect(container.querySelector('[aria-label="Submitted FinishPoint"] h3')?.textContent).toBe('FinishPoint')
+    expect(container.querySelector('[aria-label="Submitted FinishPoint"]')?.textContent).toContain('Saved terminal solution')
     const approve = [...container.querySelectorAll('button')].find(button => button.textContent === 'Approve template')!
     expect(approve.disabled).toBe(false)
     await act(async () => approve.click())

@@ -18,7 +18,7 @@ for (const width of [1440, 768, 390, 320]) {
   await page.getByRole('heading', { name: 'local exact submitted story', exact: true }).waitFor()
   await page.getByText('Candidate version: 7 · draft. Retained version: 2.').waitFor()
   await page.getByText('Registry labels changed; the saved snapshot remains unchanged.').first().waitFor()
-  await page.getByText('Saved geography', { exact: true }).click()
+  await page.getByText('Saved geography', { exact: true }).first().click()
   await button('Inspect Hunt geography').first().click()
   await page.getByRole('heading', { name: 'Read-only Hunt geography' }).waitFor()
   assert.match(await page.getByRole('list', { name: 'Geographic stop details' }).textContent(), /FinishPoint: Finish/)

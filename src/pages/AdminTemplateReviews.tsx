@@ -2,12 +2,11 @@ import { ApiError } from '../services/api/client'
 import { useAuth } from '../app/providers/AuthProvider'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { HuntMapInspection } from '../components/HuntMapPreview'
 import { AdminShell } from './AdminConsole.tsx'
 import { adminTemplateReviewsApi, type AdminTemplateReview } from '../services/api/adminTemplateReviews.ts'
 import { LocalityProposalReview } from '../features/admin/LocalityProposalReview'
 import { RetainedLocalInspection, LocalBindingDetails } from '../features/admin/LocalInspection'
-import { PersistedValue } from '../features/admin/PersistedValue'
+import { TemplateContentInspection } from '../features/admin/TemplateContentInspection'
 import { reviewCategories, reviewCategory, reviewError, type ReviewCategory } from '../features/admin/reviewState'
 
 const panel = 'min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5'
@@ -105,12 +104,5 @@ function TemplateInspection({ templateKey, onDecision, onDenied }: { templateKey
   </div>
 }
 export function SubmittedContent({ review }: { review: AdminTemplateReview }) {
-  const configuration = review.content.configuration
-  const duration = configuration.durationMinutes
-  const additionalContent = Object.fromEntries(Object.entries(review.content).filter(([field]) => !['key', 'version', 'displayName', 'theme', 'mission', 'configuration', 'checkpoints', 'scoring'].includes(field)))
-  return <><section className={panel}><h3 className="text-xl font-bold">Template summary</h3><p>Version under review: {review.version} · {duration == null ? 'Duration not submitted' : `${duration} minutes`} · {configuration.normalCheckpointCount} checkpoints</p><PersistedValue value={review.content.mission} /></section>
-    {review.category !== 'universal' && <details className={panel}><summary className="cursor-pointer font-bold">Saved geography</summary><HuntMapInspection configuration={configuration} /><PersistedValue value={{ checkpointPositions: configuration.checkpointPositions, finishPoint: configuration.finishPoint }} /></details>}
-    <details className={panel}><summary className="cursor-pointer font-bold">Checkpoints, answers and hints</summary><div className="mt-3 space-y-3">{review.content.checkpoints.map((checkpoint, index) => <section key={index}><h4 className="font-bold">{checkpoint && typeof checkpoint === 'object' && (checkpoint as Record<string, unknown>).role === 'terminal' ? 'FinishPoint' : `Checkpoint ${index + 1}`}</h4><PersistedValue value={checkpoint} /></section>)}</div></details>
-    <details className={panel}><summary className="cursor-pointer font-bold">Scoring</summary><PersistedValue value={review.content.scoring} /></details>
-    <details className={panel}><summary className="cursor-pointer font-bold">Other saved settings</summary><PersistedValue value={review.category === 'universal' ? Object.fromEntries(Object.entries(configuration).filter(([field]) => !['checkpointPositions', 'finishPoint'].includes(field))) : configuration} /><PersistedValue value={additionalContent} /></details></>
+  return <TemplateContentInspection content={review.content} version={review.version} category={review.category} />
 }

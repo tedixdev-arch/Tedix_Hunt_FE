@@ -47,3 +47,9 @@ Locality approval/rejection requires independent human review and a reason of 10
 | Deployed acceptance | **Unverified** |
 
 Fixtures do not establish real multi-account authorization/transactions, C7 list/PUT exclusion after suspension, persistence of existing Hunt snapshots, approved-proposal availability to a real Creator, or live provider behavior. No suitable real review accounts were configured; no live account/registry mutations were performed. Map fixtures exercise saved details and missing-token handling, not real provider rendering. No D10/F7-FE-13 acceptance, G4-BE-01/02/03, G4-DEC policy work, full route safety/validity/feedback contract, merge, migration or deployment was performed or promoted.
+
+## Draft #130 review correction — Readable inspection
+
+30 October 2026: the existing Draft now uses concise human-readable submitted gameplay/settings, logically ordered checkpoints and distinct FinishPoint/terminal gameplay, with raw persisted values only in collapsed Technical details. Submitted and exact retained artifacts share the same read-only inspection. Reuses existing activity labels, Legacy compatibility mapping, story preview and maps; no backend, decision, permission, locality-governance or immutable-version change. [Correction scope and validation](evidence/G4_FE_Readable_Inspection.md).
+
+Correction validation supersedes the initial test totals above: **41 Node test-file entries; 492 Vitest tests / 30 files passed**, typecheck/build/diff checks passed; readable inspection and existing governance Chromium checks passed at 1440/768/390/320px. Real integrated/deployed acceptance remains unverified. Existing Draft #130 only; stop for review, no merge or deployment.
