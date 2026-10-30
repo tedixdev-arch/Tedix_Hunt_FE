@@ -1,3 +1,7 @@
+> **Superseded for current execution control.** Use the [TedixHunt Master Execution Plan](TedixHunt_Master_Execution_Plan.md).
+> This original document is preserved unchanged below as historical evidence, including its dated status wording.
+> [Reconciliation and complete traceability](TedixHunt_Execution_Plan_Reconciliation.md) was verified before adding this notice.
+
 **TedixHunt**
 
 # Master Implementation Control Plan — v3
