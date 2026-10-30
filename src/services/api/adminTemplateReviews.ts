@@ -54,6 +54,10 @@ export class AdminTemplateReviewsApi {
     return this.client.get(`/api/admin/templates/review/${encodeURIComponent(key)}?view=approved`)
   }
 
+  suspend(key: string, version: number, reason: string): Promise<{ key: string; localApprovedVersion: number | null; localSuspension: NonNullable<CreatorTemplate['localSuspension']> }> {
+    return this.client.post(`/api/admin/templates/${encodeURIComponent(key)}/suspend`, { version, reason })
+  }
+
   approve(key: string, version?: number): Promise<AdminTemplateReview> {
     return this.client.post(`/api/admin/templates/review/${encodeURIComponent(key)}/approve`, version === undefined ? undefined : { version })
   }

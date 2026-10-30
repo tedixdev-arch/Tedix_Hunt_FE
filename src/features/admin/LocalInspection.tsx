@@ -1,3 +1,4 @@
+import { ApiError } from '../../services/api/client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminTemplateReviewsApi, type AdminTemplateReview, type RetainedLocalReview } from '../../services/api/adminTemplateReviews'
 import { inspectHuntGeography } from '../../components/huntMapGeography'
@@ -44,7 +45,39 @@ export function RetainedLocalInspection({ templateKey }: { templateKey: string }
       {(!approval.localApproval?.independentEvidence || !approval.localApproval?.localityBound || approval.localApproval.authority !== 'approved') && <p role="alert">Historical, unbound or missing independent approval evidence. This record does not establish eligibility for new Organizer selection.</p>}
       <LocalBindingDetails review={approval} />
       <details className={panel}><summary className="cursor-pointer font-bold">Inspect exact retained content</summary>{approval.content && approval.version != null ? <><HuntMapInspection configuration={approval.content.configuration} sourceLabel={`Retained version ${approval.version}`} /><PersistedValue value={approval.content} /></> : <p role="alert">Retained content is unresolved. No candidate content was substituted.</p>}</details>
+      {!approval.localSuspension && approval.version != null && approval.content && ['approved', 'historical'].includes(approval.localApproval?.authority ?? '') && <SuspensionDecision key={approval.version} approval={approval} onChanged={async () => { await load(); setError('Retained approval changed or was already suspended. Inspect the refreshed approval and make a new explicit decision.') }} onRecorded={audit => setApproval(current => current ? { ...current, localSuspension: audit } : current)} onDenied={() => setApproval(null)} />}
       {approval.localSuspension && <section aria-label="Suspension record"><h4 className="font-bold">Suspended for new selection</h4><PersistedValue value={approval.localSuspension} /><p>Excluded from NEW Organizer selection. Existing Hunts are not terminated.</p></section>}
     </div>}
   </section>
+}
+
+function SuspensionDecision({ approval, onChanged, onRecorded, onDenied }: { approval: RetainedLocalReview; onChanged: () => Promise<void>; onRecorded: (audit: NonNullable<AdminTemplateReview['localSuspension']>) => void; onDenied: () => void }) {
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const lock = useRef(false)
+  async function suspend(event: React.FormEvent) {
+    event.preventDefault()
+    if (lock.current || approval.version == null || !reason.trim() || reason.length > 1000) return
+    lock.current = true; setSaving(true); setError('')
+    try {
+      const result = await adminTemplateReviewsApi.suspend(approval.key, approval.version, reason.trim())
+      onRecorded(result.localSuspension)
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 409) {
+        setReason(''); await onChanged()
+        setError('Retained approval changed or was already suspended. Inspect the refreshed approval before deciding again.')
+      } else {
+        if (cause instanceof ApiError && (cause.status === 401 || cause.status === 403)) onDenied()
+        setError(reviewError(cause))
+      }
+    } finally { lock.current = false; setSaving(false) }
+  }
+  return <details className={panel}><summary className="cursor-pointer font-bold">Suspend retained Local approval</summary>
+    <p className="mt-3">Suspending version {approval.version} excludes it from NEW Organizer selection. Existing Hunts are not terminated. Candidate approval does not remove suspension.</p>
+    <form onSubmit={event => void suspend(event)}><label className="mt-3 block font-bold" htmlFor="suspension-reason">Reason for suspension</label><textarea id="suspension-reason" className="mt-2 min-h-24 w-full rounded-lg border p-3" required maxLength={1000} value={reason} onChange={event => setReason(event.target.value)} disabled={saving} /><p className="text-sm">{reason.length}/1,000 characters</p>
+      <button className={button + ' mt-3 border-red-400 text-red-900'} disabled={saving || !reason.trim() || reason.length > 1000}>{saving ? 'Suspending…' : `Suspend version ${approval.version}`}</button>
+      {error && <p role="alert">{error}</p>}
+    </form>
+  </details>
 }

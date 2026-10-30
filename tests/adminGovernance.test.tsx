@@ -68,3 +68,15 @@ test('03 historical unresolved authority exposes missing evidence and never subs
   api.approved.mockResolvedValue({ ...retained(), version: null, content: null, localitySnapshot: null, currentLocality: null, localApproval: { version: 2, authority: 'integrity_exception', independentEvidence: false, localityBound: false } })
   await render('/admin/reviews/local?view=approved'); expect(container.textContent).toContain('Retained content is unresolved'); expect(container.textContent).toContain('does not establish eligibility'); expect(container.textContent).not.toContain('Exact story v3')
 })
+async function fill(selector: string, value: string) { const node = container.querySelector<HTMLTextAreaElement>(selector)!; await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(node, value); node.dispatchEvent(new Event('input', { bubbles: true })) }) }
+test('04 suspension requires a reason and pins retained authority instead of candidate', async () => {
+  api.approved.mockResolvedValue(retained()); const audit = { version: 2, reason: 'Unsafe access', at: '2026-10-30T12:00:00Z', byUserId: 'admin' }; api.suspend.mockResolvedValue({ key: 'local', localApprovedVersion: 2, localSuspension: audit })
+  await render('/admin/reviews/local?view=approved'); expect(button('Suspend version 2').disabled).toBe(true); await fill('#suspension-reason', '   '); expect(button('Suspend version 2').disabled).toBe(true)
+  await fill('#suspension-reason', 'Unsafe access'); expect(container.querySelector('textarea')!.maxLength).toBe(1000); await click('Suspend version 2'); expect(api.suspend).toHaveBeenCalledExactlyOnceWith('local', 2, 'Unsafe access'); expect(container.textContent).toContain('Existing Hunts are not terminated'); expect(container.textContent).toContain('Unsafe access'); expect(button('Suspend version 2')).toBeUndefined()
+})
+test('04 suspension conflict reloads retained version and never silently retries', async () => {
+  const { ApiError } = await import('../src/services/api/client'); api.approved.mockResolvedValue(retained()); api.suspend.mockRejectedValue(new ApiError('conflict', 409, 'conflict')); await render('/admin/reviews/local?view=approved'); await fill('#suspension-reason', 'Changed access'); api.approved.mockResolvedValue({ ...retained(), version: 4 }); await click('Suspend version 2'); expect(api.suspend).toHaveBeenCalledTimes(1); expect(container.textContent).toContain('Retained version: 4'); expect(button('Suspend version 4').disabled).toBe(true)
+})
+test('04 already suspended authority retains audit and offers no reset', async () => {
+  api.approved.mockResolvedValue({ ...retained(), localSuspension: { version: 2, reason: 'Retained suspension', at: '2026-10-30T12:00:00Z', byUserId: 'admin' } }); await render('/admin/reviews/local?view=approved'); expect(container.textContent).toContain('Retained suspension'); expect(container.querySelector('textarea')).toBeNull(); expect(container.textContent).not.toMatch(/Reinstate|Reset suspension/)
+})
