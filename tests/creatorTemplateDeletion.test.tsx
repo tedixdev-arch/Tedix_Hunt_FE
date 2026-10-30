@@ -177,3 +177,12 @@ test('confirmed deletion preserves other cards while the authoritative refresh i
   expect(counts()).toEqual(['0', '1', '1', '1'])
   expect(button('Delete', cards()[0]).disabled).toBe(false)
 })
+
+test.each([401, 403, 404])('refresh %s after deletion clears cached private cards and approval context', async status => {
+  api.list.mockResolvedValueOnce(records).mockRejectedValueOnce(new ApiError('Denied', status, 'http'))
+  await render(); await open(); await click('Delete Template')
+  expect(cards()).toHaveLength(0)
+  expect(counts()).toEqual(['0', '0', '0', '0'])
+  expect(container.querySelector('[role="alert"]')).not.toBeNull()
+  expect(container.textContent).not.toContain('No persisted Creator Templates yet.')
+})

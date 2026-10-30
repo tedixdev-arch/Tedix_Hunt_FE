@@ -1,4 +1,6 @@
 import { editMissionStory, missionStoryFields, type TemplateMission } from '../features/creator/mission'
+import { ApiError } from '../services/api/client'
+import { TemplateReadContext } from '../features/creator/TemplateReadContext'
 import { DeleteTemplateDialog } from '../features/creator/DeleteTemplateDialog'
 import { CreatorStudioNavigation } from '../features/creator/CreatorStudioNavigation'
 import { TemplateCreationChooser } from '../features/creator/TemplateCreationChooser'
@@ -125,7 +127,10 @@ export function CreatorStudioPage() {
       const records = await creatorTemplatesApi.list()
       if (sequence === loadSequence.current) setTemplates(records)
     } catch (reason) {
-      if (sequence === loadSequence.current) setError(creatorTemplateError(reason, 'load'))
+      if (sequence === loadSequence.current) {
+        if (reason instanceof ApiError && [401, 403, 404].includes(reason.status ?? 0)) setTemplates([])
+        setError(creatorTemplateError(reason, 'load'))
+      }
     } finally { if (sequence === loadSequence.current) setLoading(false) }
   }
   const [deleteTarget, setDeleteTarget] = useState<CreatorTemplate | null>(null)
@@ -155,7 +160,7 @@ export function CreatorStudioPage() {
     // The deleted trigger may have disappeared after the authoritative list refresh.
     if (!deleteTrigger.current?.isConnected && (document.activeElement === document.body || document.activeElement === templatesHeading.current)) templatesHeading.current?.focus()
   }
-  useEffect(() => { void load() }, [])
+  useEffect(() => { void load(); return () => { ++loadSequence.current } }, [])
   const statuses = [['Drafts', 'draft'], ['Changes requested', 'changes_requested'], ['Submitted', 'submitted'], ['Approved', 'approved']] as const
   return <Shell><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Creator Studio</p><div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-4xl font-bold">Competition Templates</h1><p className="mt-3 max-w-2xl text-slate-600">Create complete, safe Hunts that Organizers can adapt in Set the Hunt.</p></div></div>
     <CreatorStudioNavigation />
@@ -171,15 +176,14 @@ export function CreatorStudioPage() {
     <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Template queues">{statuses.map(([name, status]) => <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={name}><p className="text-sm font-bold text-slate-500">{name}</p><p className="mt-2 text-3xl font-bold">{templates.filter(item => item.status === status).length}</p></article>)}</section>
     <section className="mt-8 space-y-4" aria-label="Creator Templates" aria-busy={loading}>
       {loading && templates.length === 0 ? <p className="rounded-2xl bg-white p-5">Loading Creator Templates…</p>
-        : templates.length === 0 ? <p className="rounded-2xl bg-white p-5 text-slate-600">No persisted Creator Templates yet.</p>
+        : templates.length === 0 && error ? null : templates.length === 0 ? <p className="rounded-2xl bg-white p-5 text-slate-600">No persisted Creator Templates yet.</p>
         : templates.map(item => {
           const editable = item.status === 'draft' || item.status === 'changes_requested'
           return <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={item.key}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="min-w-0 break-words">
-                <p className="text-xs font-bold uppercase text-amber-700">{item.status.replace('_', ' ')} · Version {item.version}</p>
                 <h2 className="mt-2 text-xl font-bold">{item.content.displayName}</h2>
-                <p className="mt-2 text-sm text-slate-500">{item.content.theme} · {item.content.configuration.normalCheckpointCount} checkpoints + FinishPoint</p>
+                <TemplateReadContext template={item} />
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Link className="min-h-12 rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold focus-visible:outline focus-visible:outline-2" to={`/create?template=${encodeURIComponent(item.key)}`}>{editable ? 'Edit template' : 'View template'}</Link>
