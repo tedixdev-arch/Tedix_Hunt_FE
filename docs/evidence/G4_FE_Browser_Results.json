@@ -1,0 +1,42 @@
+{
+  "boundary": "FE fixtures only; no real integrated or deployed acceptance",
+  "results": [
+    {
+      "width": 1440,
+      "keyboard": "Tab/Shift+Tab/Enter passed",
+      "local": "exact positions/FinishPoint and retained authority passed",
+      "decisions": "409 explicit recovery and self-approval denial passed",
+      "suspension": "retained v2 body and consequences passed",
+      "proposals": "duplicate pending and independent approval passed",
+      "horizontalOverflow": false
+    },
+    {
+      "width": 768,
+      "keyboard": "Tab/Shift+Tab/Enter passed",
+      "local": "exact positions/FinishPoint and retained authority passed",
+      "decisions": "409 explicit recovery and self-approval denial passed",
+      "suspension": "retained v2 body and consequences passed",
+      "proposals": "duplicate pending and independent approval passed",
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "keyboard": "Tab/Shift+Tab/Enter passed",
+      "local": "exact positions/FinishPoint and retained authority passed",
+      "decisions": "409 explicit recovery and self-approval denial passed",
+      "suspension": "retained v2 body and consequences passed",
+      "proposals": "duplicate pending and independent approval passed",
+      "horizontalOverflow": false
+    },
+    {
+      "width": 320,
+      "keyboard": "Tab/Shift+Tab/Enter passed",
+      "local": "exact positions/FinishPoint and retained authority passed",
+      "decisions": "409 explicit recovery and self-approval denial passed",
+      "suspension": "retained v2 body and consequences passed",
+      "proposals": "duplicate pending and independent approval passed",
+      "horizontalOverflow": false
+    }
+  ],
+  "pageErrors": []
+}

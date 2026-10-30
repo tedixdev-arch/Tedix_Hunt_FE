@@ -1,0 +1,50 @@
+{
+  "boundary": "FE fixtures only; real integrated and deployed acceptance unverified",
+  "results": [
+    {
+      "width": 1440,
+      "readableSettings": "passed",
+      "orderedCheckpoint": "passed",
+      "exactSavedActivityContent": "passed",
+      "distinctTerminalGameplay": "passed",
+      "rawValuesCollapsed": true,
+      "keyboardDisclosure": "Enter passed",
+      "universalGeographyAbsent": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 768,
+      "readableSettings": "passed",
+      "orderedCheckpoint": "passed",
+      "exactSavedActivityContent": "passed",
+      "distinctTerminalGameplay": "passed",
+      "rawValuesCollapsed": true,
+      "keyboardDisclosure": "Enter passed",
+      "universalGeographyAbsent": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "readableSettings": "passed",
+      "orderedCheckpoint": "passed",
+      "exactSavedActivityContent": "passed",
+      "distinctTerminalGameplay": "passed",
+      "rawValuesCollapsed": true,
+      "keyboardDisclosure": "Enter passed",
+      "universalGeographyAbsent": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 320,
+      "readableSettings": "passed",
+      "orderedCheckpoint": "passed",
+      "exactSavedActivityContent": "passed",
+      "distinctTerminalGameplay": "passed",
+      "rawValuesCollapsed": true,
+      "keyboardDisclosure": "Enter passed",
+      "universalGeographyAbsent": true,
+      "horizontalOverflow": false
+    }
+  ],
+  "pageErrors": []
+}

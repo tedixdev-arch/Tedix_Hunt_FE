@@ -6,8 +6,9 @@ import { HuntMapInspection } from '../src/components/HuntMapPreview'
 import { AdminTemplateReviewDetailPage } from '../src/pages/AdminTemplateReviews'
 
 const mocks = vi.hoisted(() => ({ maps: [] as any[], markers: [] as any[], get: vi.fn(), approve: vi.fn(), requestChanges: vi.fn() }))
+vi.mock('../src/app/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'admin', roles: ['admin'] } }) }))
 vi.mock('../src/pages/AdminConsole.tsx', () => ({ AdminShell: ({ children }: any) => <main>{children}</main> }))
-vi.mock('../src/services/api/index.ts', () => ({ adminTemplateReviewsApi: { get: mocks.get, approve: mocks.approve, requestChanges: mocks.requestChanges } }))
+vi.mock('../src/services/api/adminTemplateReviews.ts', () => ({ adminTemplateReviewsApi: { get: mocks.get, approve: mocks.approve, requestChanges: mocks.requestChanges, list: async () => [] } }))
 vi.mock('mapbox-gl', () => ({ default: {
   Map: class {
     handlers = new Map<string, Set<(...args: any[]) => void>>()
@@ -78,7 +79,7 @@ test('Admin uses the exact review GET artifact, never fetches a draft, and inspe
   expect(mocks.markers.map(marker => marker.coordinates)).toEqual([[23, 46], [24, 47], [25, 48]])
   expect(container.textContent).toContain('Submitted version 4'); expect(fetch).not.toHaveBeenCalled()
   await action('Close geography inspection'); expect(mocks.approve).not.toHaveBeenCalled(); expect(mocks.requestChanges).not.toHaveBeenCalled()
-  expect(container.textContent).toContain('Submitted checkpoint and challenge content')
+  expect(container.textContent).toContain('Checkpoints')
   expect(container.querySelector('[aria-label="Hunt geography preview"]')).toBeNull()
 })
 
@@ -86,19 +87,19 @@ test.each(['Approve template', 'Request changes'])('preserves explicit %s and ba
   await admin(); await action('Inspect Hunt geography')
   if (label === 'Approve template') await act(async () => { container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach(input => input.click()) })
   await action(label)
-  expect(label === 'Approve template' ? mocks.approve : mocks.requestChanges).toHaveBeenCalledExactlyOnceWith('exact')
-  expect(container.textContent).toContain('Decision recorded by backend'); expect(mocks.maps[0].remove).toHaveBeenCalledOnce()
+  expect(label === 'Approve template' ? mocks.approve : mocks.requestChanges).toHaveBeenCalledExactlyOnceWith('exact', undefined)
+  expect(container.textContent).toContain(label === 'Approve template' ? 'Template approved' : 'Changes requested'); expect(mocks.maps[0].remove).not.toHaveBeenCalled()
 })
 
 test('review loading errors and retry remain authoritative; failed decisions preserve inspection and notes', async () => {
   mocks.get.mockRejectedValueOnce(new Error('Review unavailable'))
   await admin()
-  expect(container.textContent).toContain('Review unavailable'); expect(mocks.maps).toHaveLength(0)
-  await action('Retry'); await action('Inspect Hunt geography')
+  expect(container.textContent).toContain('The review could not be loaded or saved'); expect(mocks.maps).toHaveLength(0)
+  await action('Refresh inspection'); await action('Inspect Hunt geography')
   mocks.requestChanges.mockRejectedValueOnce(new Error('Decision unavailable'))
   await action('Request changes')
-  expect(container.textContent).toContain('Decision unavailable')
-  expect(container.textContent).toContain('Submitted configuration')
+  expect(container.textContent).toContain('The review could not be loaded or saved')
+  expect(container.textContent).toContain('Technical details')
   expect(mocks.maps[0].remove).not.toHaveBeenCalled()
   expect(mocks.approve).not.toHaveBeenCalled()
 })

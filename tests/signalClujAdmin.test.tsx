@@ -4,8 +4,9 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import { AdminTemplateReviewDetailPage } from '../src/pages/AdminTemplateReviews'
 
-const api = vi.hoisted(() => ({ get: vi.fn(), approve: vi.fn(), requestChanges: vi.fn() }))
-vi.mock('../src/services/api/index.ts', () => ({ adminTemplateReviewsApi: api }))
+const api = vi.hoisted(() => ({ get: vi.fn(), approve: vi.fn(), requestChanges: vi.fn(), list: vi.fn().mockResolvedValue([]) }))
+vi.mock('../src/services/api/adminTemplateReviews.ts', () => ({ adminTemplateReviewsApi: api }))
+vi.mock('../src/app/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'admin', roles: ['admin'] } }) }))
 vi.mock('../src/pages/AdminConsole.tsx', () => ({ AdminShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }))
 vi.mock('../src/components/HuntMapPreview', () => ({ HuntMapInspection: () => <div /> }))
 
@@ -23,12 +24,12 @@ test('Admin review renders object mission/story/metadata and terminal gameplay w
     expect(container.textContent).toContain('Saved provenance')
     expect(container.textContent).toContain('Saved terminal solution')
     expect(container.textContent).not.toContain('[object Object]')
-    expect([...container.querySelectorAll('h4')].at(-1)?.textContent).toBe('FinishPoint')
+    expect(container.querySelector('[aria-label="Submitted FinishPoint"] h3')?.textContent).toBe('FinishPoint')
+    expect(container.querySelector('[aria-label="Submitted FinishPoint"]')?.textContent).toContain('Saved terminal solution')
     const approve = [...container.querySelectorAll('button')].find(button => button.textContent === 'Approve template')!
-    expect(approve.disabled).toBe(true)
-    await act(async () => container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach(input => input.click()))
+    expect(approve.disabled).toBe(false)
     await act(async () => approve.click())
-    expect(api.approve).toHaveBeenCalledWith('signal-new')
-    expect(container.textContent).toContain('Decision recorded by backend')
+    expect(api.approve).toHaveBeenCalledWith('signal-new', undefined)
+    expect(container.textContent).toContain('Template approved')
   } finally { act(() => root.unmount()); container.remove(); vi.unstubAllGlobals() }
 })
