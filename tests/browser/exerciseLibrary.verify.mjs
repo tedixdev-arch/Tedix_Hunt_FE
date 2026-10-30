@@ -53,7 +53,7 @@ for (const width of [1440, 768, 390, 320]) {
   for (const e of prototypes) {
     console.log(`Checking ${width}: ${e.type}`)
     await panel().getByRole('combobox', { name: 'Exercise catalog' }).selectOption(e.id)
-    assert.equal(await page.getByRole('button', { name: 'Save draft', exact: true }).isDisabled(), true)
+    assert.equal(await page.getByRole('button', { name: 'Save draft', exact: true }).isDisabled(), false)
     const trigger = panel().getByRole('button', { name: 'Preview Exercise', exact: true })
     await trigger.click()
     const p = dialog(); await p.waitFor()

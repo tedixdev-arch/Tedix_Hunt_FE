@@ -23,4 +23,7 @@ scope.fixtureCalls = []; scope.fixtureRecord = () => structuredClone(record); sc
 creatorTemplatesApi.get = async () => structuredClone(record)
 creatorTemplatesApi.createVersion = async (_, content) => { scope.fixtureCalls.push({ method: 'version', content }); record = { ...record, version: content.version, content }; return structuredClone(record) }
 creatorTemplatesApi.submit = async () => { throw new Error('Browser fixture must not submit') }
-createRoot(document.getElementById('root')!).render(<MemoryRouter initialEntries={['/create?template=exercise-fixture']}><AuthProvider><CreatorTemplateEditorPage /></AuthProvider></MemoryRouter>)
+let root = createRoot(document.getElementById('root')!)
+const mountEditor = () => root.render(<MemoryRouter initialEntries={['/create?template=exercise-fixture']}><AuthProvider><CreatorTemplateEditorPage /></AuthProvider></MemoryRouter>)
+scope.fixtureReopen = () => { root.unmount(); root = createRoot(document.getElementById('root')!); mountEditor() }
+mountEditor()
