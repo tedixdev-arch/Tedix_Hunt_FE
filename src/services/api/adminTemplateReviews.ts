@@ -42,12 +42,12 @@ export class AdminTemplateReviewsApi {
     return this.client.get(`/api/admin/templates/review/${encodeURIComponent(key)}`)
   }
 
-  approve(key: string): Promise<AdminTemplateReview> {
-    return this.client.post(`/api/admin/templates/review/${encodeURIComponent(key)}/approve`)
+  approve(key: string, version?: number): Promise<AdminTemplateReview> {
+    return this.client.post(`/api/admin/templates/review/${encodeURIComponent(key)}/approve`, version === undefined ? undefined : { version })
   }
 
-  requestChanges(key: string): Promise<AdminTemplateReview> {
-    return this.client.post(`/api/admin/templates/review/${encodeURIComponent(key)}/request-changes`)
+  requestChanges(key: string, version?: number): Promise<AdminTemplateReview> {
+    return this.client.post(`/api/admin/templates/review/${encodeURIComponent(key)}/request-changes`, version === undefined ? undefined : { version })
   }
 }
 

@@ -41,3 +41,11 @@ test('malformed review list envelopes fail instead of becoming a mock or empty l
   await assert.rejects(api.list(), /Invalid Template review response/)
 })
 
+
+test('classified decisions send exact inspected version for both actions', async () => {
+  const bodies: unknown[] = []
+  const fetcher: typeof fetch = async (_url, init) => { bodies.push(JSON.parse(String(init?.body))); return new Response(JSON.stringify(review), { headers: { 'content-type': 'application/json' } }) }
+  const api = new AdminTemplateReviewsApi(new ApiClient('https://api.example.test', session, fetcher))
+  await api.approve('local', 3); await api.requestChanges('universal', 8)
+  assert.deepEqual(bodies, [{ version: 3 }, { version: 8 }])
+})

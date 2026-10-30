@@ -1,3 +1,5 @@
+import { ApiError } from '../services/api/client'
+import { useAuth } from '../app/providers/AuthProvider'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { HuntMapInspection } from '../components/HuntMapPreview'
@@ -41,6 +43,8 @@ function ReviewWorkspace() {
 }
 
 function TemplateInspection({ templateKey, onDecision }: { templateKey: string; onDecision: () => Promise<void> }) {
+  const { user } = useAuth()
+  const decisionLock = useRef(false)
   const [review, setReview] = useState<AdminTemplateReview | null>(null)
   const [result, setResult] = useState<AdminTemplateReview | null>(null)
   const [loading, setLoading] = useState(true)
@@ -56,21 +60,36 @@ function TemplateInspection({ templateKey, onDecision }: { templateKey: string; 
   }, [templateKey])
   useEffect(() => { void load(); return () => { generation.current++ } }, [load])
   const decide = async (action: 'approve' | 'changes') => {
-    if (saving || !review) return
+    if (decisionLock.current || saving || !review || result || review.status !== 'submitted') return
+    if (action === 'approve' && (!user || review.creator.id === user.id)) return
+    decisionLock.current = true
     setSaving(true); setError('')
+    const request = generation.current
     try {
-      const response = action === 'approve' ? await adminTemplateReviewsApi.approve(review.key) : await adminTemplateReviewsApi.requestChanges(review.key)
+      const version = review.category ? review.version : undefined
+      const response = action === 'approve' ? await adminTemplateReviewsApi.approve(review.key, version) : await adminTemplateReviewsApi.requestChanges(review.key, version)
+      if (request !== generation.current) return
       setResult(response); await onDecision()
-    } catch (cause) { setError(reviewError(cause)) }
-    finally { setSaving(false) }
+    } catch (cause) {
+      if (request !== generation.current) return
+      if (cause instanceof ApiError && cause.status === 409) {
+        await load(); await onDecision()
+        setError('This submission changed or was already reviewed. Inspection has been refreshed. Inspect it again and make a new explicit decision.')
+      } else {
+        if (cause instanceof ApiError && [401, 403, 404].includes(cause.status ?? 0)) setReview(null)
+        setError(reviewError(cause))
+      }
+    } finally { decisionLock.current = false; setSaving(false) }
   }
+
   if (loading) return <p role="status">Loading submitted Template…</p>
   return <div className="min-w-0 space-y-4">
     {error && <p className={panel + ' text-red-900'} role="alert">{error}</p>}
     <button className={button} type="button" disabled={saving} onClick={() => void load()}>Refresh inspection</button>
     {review && <><header className={panel}><p>{reviewCategory(review)} · {review.status}</p><h3 className="mt-2 break-words text-2xl font-bold">{review.content.displayName}</h3><p className="mt-2 break-words">{review.creator.name} ({review.creator.email}) · Submitted version {review.version}</p></header>
       <section className={panel} aria-label="Template decision"><h3 className="text-xl font-bold">Decision</h3>
-        {result ? <p role="status">{result.status === 'approved' ? 'Template approved' : 'Changes requested'} · version {result.version}</p> : <div className="mt-3 flex flex-wrap gap-3"><button className={button + ' bg-emerald-100'} disabled={saving} onClick={() => void decide('approve')}>Approve template</button><button className={button} disabled={saving} onClick={() => void decide('changes')}>Request changes</button></div>}
+        {result ? <p role="status">{result.status === 'approved' ? 'Template approved' : result.status === 'changes_requested' ? 'Changes requested' : 'Decision response received; refresh inspection'} · version {result.version}</p> : <div className="mt-3 flex flex-wrap gap-3"><button className={button + ' bg-emerald-100'} disabled={saving || !user || review.creator.id === user.id || review.status !== 'submitted'} onClick={() => void decide('approve')}>Approve template</button><button className={button} disabled={saving || review.status !== 'submitted'} onClick={() => void decide('changes')}>Request changes</button></div>}
+      {review.creator.id === user?.id && <p className="mt-3">You cannot approve your own Template, including when you also have a Creator role.</p>}
       </section><SubmittedContent review={review} /></>}
   </div>
 }

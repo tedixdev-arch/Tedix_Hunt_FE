@@ -32,3 +32,25 @@ test('01 empty and ambiguous missing inspection have readable recovery', async (
   const { ApiError } = await import('../src/services/api/client'); api.list.mockResolvedValue([]); api.get.mockRejectedValue(new ApiError('not_found', 404, 'http'))
   await render('/admin/reviews/gone'); expect(container.textContent).toContain('No items awaiting review'); expect(container.textContent).toContain('may have changed'); expect(button('Refresh inspection')).toBeTruthy()
 })
+test('02 classified decisions pin exact version and repeated clicks submit once', async () => {
+  api.approve.mockResolvedValue({ ...fixture('universal'), status: 'approved' }); await render('/admin/reviews/universal')
+  await act(async () => { button('Approve template').click(); button('Approve template').click() })
+  expect(api.approve).toHaveBeenCalledExactlyOnceWith('universal', 3); expect(container.textContent).toContain('Template approved')
+})
+test('02 combined-role owner cannot self-approve but may request changes per BE contract', async () => {
+  api.get.mockResolvedValue({ ...fixture('local'), creator: { id: 'admin', name: 'Me', email: null } }); await render('/admin/reviews/local')
+  expect(button('Approve template').disabled).toBe(true); expect(button('Request changes').disabled).toBe(false); expect(api.approve).not.toHaveBeenCalled()
+})
+test('02 stale 409 refreshes exact inspection and requires a new explicit action', async () => {
+  const { ApiError } = await import('../src/services/api/client'); api.approve.mockRejectedValueOnce(new ApiError('conflict', 409, 'conflict'))
+  await render('/admin/reviews/universal'); api.get.mockResolvedValue({ ...fixture('universal'), version: 5, content: { ...fixture('universal').content, version: 5 } })
+  await click('Approve template'); expect(api.approve).toHaveBeenCalledTimes(1); expect(container.textContent).toContain('Submitted version 5'); expect(container.textContent).toContain('new explicit decision')
+  api.requestChanges.mockResolvedValue({ ...fixture('universal'), version: 5, status: 'changes_requested' }); await click('Request changes'); expect(api.requestChanges).toHaveBeenCalledExactlyOnceWith('universal', 5)
+})
+test.each([401, 403])('02 %s decision denial clears private inspection and shows no success', async status => {
+  const { ApiError } = await import('../src/services/api/client'); api.approve.mockRejectedValue(new ApiError('forbidden', status, 'http')); await render('/admin/reviews/universal'); await click('Approve template')
+  expect(container.textContent).not.toContain('Exact story'); expect(container.textContent).not.toContain('Template approved'); expect(container.querySelector('[role="alert"]')).toBeTruthy()
+})
+test('02 legacy decisions preserve optional body behavior', async () => {
+  api.get.mockResolvedValue(fixture()); api.requestChanges.mockResolvedValue({ ...fixture(), status: 'changes_requested' }); await render('/admin/reviews/legacy'); await click('Request changes'); expect(api.requestChanges).toHaveBeenCalledExactlyOnceWith('legacy', undefined)
+})
