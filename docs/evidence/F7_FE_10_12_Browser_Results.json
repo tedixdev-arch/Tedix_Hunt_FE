@@ -1,0 +1,33 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "keyboard": "Enter/Tab/Shift+Tab passed",
+      "overflow": false,
+      "proposals": "pending and approved registry read passed",
+      "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+    },
+    {
+      "width": 768,
+      "keyboard": "Enter/Tab/Shift+Tab passed",
+      "overflow": false,
+      "proposals": "pending and approved registry read passed",
+      "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+    },
+    {
+      "width": 390,
+      "keyboard": "Enter/Tab/Shift+Tab passed",
+      "overflow": false,
+      "proposals": "pending and approved registry read passed",
+      "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+    },
+    {
+      "width": 320,
+      "keyboard": "Enter/Tab/Shift+Tab passed",
+      "overflow": false,
+      "proposals": "pending and approved registry read passed",
+      "revisions": "Universal/Local exact v4 submission, retained v2, suspension passed"
+    }
+  ],
+  "errors": []
+}

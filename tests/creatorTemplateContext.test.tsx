@@ -35,7 +35,7 @@ test.each([['draft', 'Draft'], ['submitted', 'Submitted'], ['changes_requested',
   expect(cards()[0].textContent).toContain(`Current candidate: ${label} · Version 3`)
   expect(cards()[0].textContent).toContain('Retained Local approval: Approved · Version 1')
   expect(cards()[0].textContent).toContain('Local suspension: None recorded.')
-  expect(cards()[0].querySelector('a')?.textContent).toBe(['draft', 'changes_requested'].includes(status) ? 'Edit template' : 'View template')
+  expect(cards()[0].querySelector('a')?.textContent).toBe(['approved', 'changes_requested'].includes(status) ? 'Revise' : status === 'draft' ? 'Edit template' : 'View template')
 })
 
 test.each(['draft', 'submitted', 'changes_requested', 'approved'] as const)('Universal %s keeps older publication separate from candidate and review', async status => {
