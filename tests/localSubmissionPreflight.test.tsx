@@ -8,7 +8,7 @@ import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 
 const api = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }), get: async () => ({ id: 'place', active: true }) } }))
+vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }), get: async () => ({ id: 'place', active: true, countryCode: 'RO', latitude: 46, longitude: 23 }) } }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: () => <div /> }))
 vi.mock('../src/features/creator/RouteEditor', () => ({ RouteEditor: (props: any) => <button type="button" onClick={() => {
@@ -33,8 +33,7 @@ async function click(text: string) { await act(async () => button(text).click())
 async function render() { await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=owned-local']}><CreatorTemplateEditorPage /></MemoryRouter>)) }
 async function ready() {
   await render(); expect(button('Submit version').disabled).toBe(true)
-  await click('2.'); await click('Verify saved route'); await click('Save & continue')
-  await click('Preview full journey'); await click('Close preview'); await click('Run template validation')
+  await click('Run template validation')
   expect(button('Submit version').disabled).toBe(false)
   expect(api.get).toHaveBeenCalledTimes(1); expect(api.submit).not.toHaveBeenCalled()
 }
