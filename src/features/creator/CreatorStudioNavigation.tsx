@@ -1,3 +1,4 @@
+import { UniversalLibrary } from './UniversalLibrary'
 import { useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { gameplayPresentation } from './CheckpointGameplayEditor'
@@ -68,6 +69,8 @@ export function CreatorStudioNavigation() {
         setParams(current => { const next = new URLSearchParams(current); next.set('studio', key); return next })
       }} className={`min-h-28 min-w-0 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-emerald-500 ${focus}`}><span className="block font-bold">{label}</span><span className="mt-2 block text-sm text-slate-600">{description}</span></button>)}
     </nav>
-    {view === 'mechanics' && <MechanicsLibraryDialog onClose={close} />}
+    <button type="button" aria-expanded={view === 'library'} onClick={() => setParams(current => { const next = new URLSearchParams(current); if (view === 'library') next.delete('studio'); else next.set('studio', 'library'); return next })} className={`mt-4 min-h-12 rounded-xl border border-slate-300 bg-white px-4 font-bold ${focus}`}>{view === 'library' ? 'Close Universal Library' : 'Browse Universal Library'}</button>
+    {view === 'library' && <UniversalLibrary />}
+    {view === 'mechanics'  && <MechanicsLibraryDialog onClose={close} />}
   </>
 }

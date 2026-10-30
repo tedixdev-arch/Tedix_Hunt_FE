@@ -15,8 +15,8 @@ for (const width of [1440, 768, 390, 320]) {
   await nav.waitFor()
   assert.equal(await nav.locator(':scope > *').count(), 4)
   assert.equal(await nav.getByRole('button').count(), 2)
-  assert.equal(await nav.getByText('Coming soon', { exact: true }).count(), 2)
-  for (const type of ['Universal', 'Local']) {
+  assert.equal(await nav.getByText('Coming soon', { exact: true }).count(), 1)
+  for (const type of ['Local']) {
     const card = nav.locator(':scope > div').filter({ hasText: `Create ${type} Template` })
     assert.equal(await card.locator('button,a,[tabindex]').count(), 0)
     await card.click(); assert.equal(await page.getByRole('dialog').count(), 0)
@@ -25,7 +25,9 @@ for (const width of [1440, 768, 390, 320]) {
   await page.keyboard.press('Tab')
   assert.equal(await nav.getByRole('button', { name: /^My Templates/ }).evaluate(node => document.activeElement === node), true)
   await page.keyboard.press('Tab')
-  assert.equal(await page.getByRole('button', { name: 'Create Template', exact: true }).evaluate(node => document.activeElement === node), true)
+  assert.equal(await nav.getByRole('link', { name: /^Create Universal Template/ }).evaluate(node => document.activeElement === node), true)
+  await page.keyboard.press('Tab')
+  assert.equal(await page.getByRole('button', { name: 'Browse Universal Library', exact: true }).evaluate(node => document.activeElement === node), true)
   const measure = await nav.evaluate(nav => ({ width: innerWidth, columns: getComputedStyle(nav).gridTemplateColumns.split(' ').length, overflow: document.documentElement.scrollWidth > innerWidth || document.querySelector('main').scrollWidth > innerWidth }))
   measurements.push(measure)
   assert.equal(measure.overflow, false)

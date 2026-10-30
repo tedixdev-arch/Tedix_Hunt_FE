@@ -6,6 +6,8 @@ import { router as applicationRouter } from '../src/routes/router'
 import { ApiError } from '../src/services/api/client'
 import type { PublicUser } from '../src/services/api/auth'
 
+const library = vi.hoisted(() => ({ list: vi.fn(), get: vi.fn() }))
+vi.mock('../src/services/api/universalLibrary', () => ({ universalLibraryApi: library }))
 const mocks = vi.hoisted(() => ({
   auth: { user: null as PublicUser | null, isBootstrapping: false },
   api: { list: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn(), delete: vi.fn(), createStarterDraft: vi.fn(), listStarters: vi.fn() },
@@ -19,7 +21,7 @@ const creator = { id: 'creator', roles: ['creator'], isGuest: false } as PublicU
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks()
   mocks.auth.user = creator; mocks.auth.isBootstrapping = false
-  mocks.api.list.mockResolvedValue([])
+  mocks.api.list.mockResolvedValue([]); library.list.mockResolvedValue({ items: [] })
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function () { this.setAttribute('open', '') } })
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function () { this.removeAttribute('open') } })
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
@@ -127,5 +129,13 @@ test('session bootstrap does not expose Creator content or fetch Templates', asy
 test('Universal creation is a direct shared-editor link without mutation', async () => {
   await render()
   expect(container.querySelector('a[href="/create?category=universal"]')?.textContent).toContain('Create Universal Template')
+  noMutations()
+})
+
+test('Library opens inline on demand and history removes it without authoring mutations', async () => {
+  await render(); expect(library.list).not.toHaveBeenCalled()
+  await click('Browse Universal Library'); expect(library.list).toHaveBeenCalledTimes(1)
+  expect(container.textContent).toContain('No approved Universal Templates are available.')
+  await act(async () => router.navigate(-1)); expect(container.querySelector('section[aria-label="Universal Library"]')).toBeNull()
   noMutations()
 })
