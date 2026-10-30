@@ -24,7 +24,7 @@ export function LocalBindingDetails({ review }: { review: AdminTemplateReview | 
   </section>
 }
 
-export function RetainedLocalInspection({ templateKey }: { templateKey: string }) {
+export function RetainedLocalInspection({ templateKey, onDenied }: { templateKey: string; onDenied: () => void }) {
   const [approval, setApproval] = useState<RetainedLocalReview | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -33,19 +33,19 @@ export function RetainedLocalInspection({ templateKey }: { templateKey: string }
     const request = ++generation.current
     setApproval(null); setError(''); setLoading(true)
     try { const result = await adminTemplateReviewsApi.approved(templateKey); if (request === generation.current) setApproval(result) }
-    catch (cause) { if (request === generation.current) setError(reviewError(cause)) }
+    catch (cause) { if (request === generation.current) { setError(reviewError(cause)); if (cause instanceof ApiError && (cause.status === 401 || cause.status === 403)) onDenied() } }
     finally { if (request === generation.current) setLoading(false) }
-  }, [templateKey])
+  }, [templateKey, onDenied])
   useEffect(() => { void load(); return () => { generation.current++ } }, [load])
   return <section className={panel} aria-label="Retained Local approval"><h3 className="text-xl font-bold">Retained Local approval</h3><p className="mt-2">This approval is separate from the candidate under review.</p>
     <button className={button + ' mt-3'} onClick={() => void load()} disabled={loading}>Refresh retained approval</button>
     {loading && <p role="status">Loading retained approval…</p>}{error && <p role="alert">{error}</p>}
-    {approval && <div className="mt-4 space-y-4"><p>Candidate version: {approval.candidateVersion ?? 'unavailable'} · {approval.candidateStatus}. Retained version: {approval.version ?? 'unresolved'}.</p>
-      <p>Approval record: {approval.localApproval?.authority ?? 'unavailable'}.</p>
+    {approval && <div className="mt-4 space-y-4"><p>Candidate version: {approval.candidateVersion ?? 'unavailable'} · {approval.candidateStatus === 'changes_requested' ? 'changes requested' : approval.candidateStatus}. Retained version: {approval.version ?? 'unresolved'}.</p>
+      <p>Approval record: {({ approved: 'Retained approval recorded', historical: 'Historical approval', integrity_exception: 'Approved content is unresolved', none: 'No retained approval' })[approval.localApproval?.authority ?? 'none']}.</p>
       {(!approval.localApproval?.independentEvidence || !approval.localApproval?.localityBound || approval.localApproval.authority !== 'approved') && <p role="alert">Historical, unbound or missing independent approval evidence. This record does not establish eligibility for new Organizer selection.</p>}
       <LocalBindingDetails review={approval} />
       <details className={panel}><summary className="cursor-pointer font-bold">Inspect exact retained content</summary>{approval.content && approval.version != null ? <><HuntMapInspection configuration={approval.content.configuration} sourceLabel={`Retained version ${approval.version}`} /><PersistedValue value={approval.content} /></> : <p role="alert">Retained content is unresolved. No candidate content was substituted.</p>}</details>
-      {!approval.localSuspension && approval.version != null && approval.content && ['approved', 'historical'].includes(approval.localApproval?.authority ?? '') && <SuspensionDecision key={approval.version} approval={approval} onChanged={async () => { await load(); setError('Retained approval changed or was already suspended. Inspect the refreshed approval and make a new explicit decision.') }} onRecorded={audit => setApproval(current => current ? { ...current, localSuspension: audit } : current)} onDenied={() => setApproval(null)} />}
+      {approval.category === 'local' && !approval.localSuspension && approval.version != null && approval.content && ['approved', 'historical'].includes(approval.localApproval?.authority ?? '') && <SuspensionDecision key={approval.version} approval={approval} onChanged={async () => { await load(); setError('Retained approval changed or was already suspended. Inspect the refreshed approval and make a new explicit decision.') }} onRecorded={audit => setApproval(current => current ? { ...current, localSuspension: audit } : current)} onDenied={onDenied} />}
       {approval.localSuspension && <section aria-label="Suspension record"><h4 className="font-bold">Suspended for new selection</h4><PersistedValue value={approval.localSuspension} /><p>Excluded from NEW Organizer selection. Existing Hunts are not terminated.</p></section>}
     </div>}
   </section>

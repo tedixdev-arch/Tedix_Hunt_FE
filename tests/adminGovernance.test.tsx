@@ -80,3 +80,22 @@ test('04 suspension conflict reloads retained version and never silently retries
 test('04 already suspended authority retains audit and offers no reset', async () => {
   api.approved.mockResolvedValue({ ...retained(), localSuspension: { version: 2, reason: 'Retained suspension', at: '2026-10-30T12:00:00Z', byUserId: 'admin' } }); await render('/admin/reviews/local?view=approved'); expect(container.textContent).toContain('Retained suspension'); expect(container.querySelector('textarea')).toBeNull(); expect(container.textContent).not.toMatch(/Reinstate|Reset suspension/)
 })
+test('01 late inspection cannot overwrite another selected item', async () => {
+  let resolve!: (value: AdminTemplateReview) => void
+  api.get.mockImplementationOnce(() => new Promise(done => { resolve = done })); await render('/admin/reviews/universal?category=Local')
+  expect(container.textContent).toContain('Loading submitted Template'); api.get.mockResolvedValue(fixture('local'))
+  await act(async () => container.querySelector<HTMLAnchorElement>('a[href*="/admin/reviews/local"]')!.click())
+  await act(async () => resolve({ ...fixture('universal'), content: { ...fixture('universal').content, mission: 'Late private response' } }))
+  expect(container.textContent).not.toContain('Late private response'); expect(container.textContent).toContain('Saved geography')
+})
+test('01 revoked Admin queue access clears all inspection content', async () => {
+  const { ApiError } = await import('../src/services/api/client'); await render('/admin/reviews/universal'); api.list.mockRejectedValue(new ApiError('forbidden', 403, 'http')); await click('Refresh queue'); expect(container.textContent).not.toContain('Exact story v3'); expect(container.querySelector('[aria-label="Review queue"]')).toBeNull(); expect(button('Retry access')).toBeTruthy()
+})
+test('04 more than 1000 suspension characters cannot be submitted', async () => {
+  api.approved.mockResolvedValue(retained()); await render('/admin/reviews/local?view=approved'); await fill('#suspension-reason', 'x'.repeat(1001)); expect(button('Suspend version 2').disabled).toBe(true); expect(api.suspend).not.toHaveBeenCalled()
+})
+test('04 candidate approval refreshes retained authority without removing suspension', async () => {
+  const audit = { version: 2, reason: 'Still suspended after new approval', at: '2026-10-30', byUserId: 'admin' }
+  api.get.mockResolvedValue(fixture('local')); api.approved.mockResolvedValue({ ...retained(), localSuspension: audit }); api.approve.mockResolvedValue({ ...fixture('local'), status: 'approved' }); await render('/admin/reviews/local?category=Local')
+  api.approved.mockResolvedValue({ ...retained(), version: 3, localApprovedVersion: 3, localSuspension: audit }); await click('Approve template'); expect(api.approved).toHaveBeenCalledTimes(2); expect(container.textContent).toContain('Retained version: 3'); expect(container.textContent).toContain(audit.reason); expect(container.querySelector('textarea')).toBeNull()
+})

@@ -48,9 +48,15 @@ export function AdminShell({active,children}:{active:string;children:ReactNode})
   const [hasPendingCreatorApplications, setHasPendingCreatorApplications] = useState(false)
   const [collapsed,setCollapsed] = useState(() => {
     const saved = window.localStorage.getItem(sidebarPreferenceKey)
-    return saved === null ? window.matchMedia('(max-width: 767px)').matches : saved === 'true'
+    return window.matchMedia('(max-width: 767px)').matches || saved === 'true'
   })
   useEffect(() => window.localStorage.setItem(sidebarPreferenceKey,String(collapsed)),[collapsed])
+  useEffect(() => {
+    const narrow = window.matchMedia('(max-width: 767px)')
+    const collapseOnNarrow = () => { if (narrow.matches) setCollapsed(true) }
+    narrow.addEventListener('change', collapseOnNarrow)
+    return () => narrow.removeEventListener('change', collapseOnNarrow)
+  }, [])
   useEffect(() => {
     let active = true
     const loadPendingCount = async () => {
@@ -102,7 +108,7 @@ export function AdminShell({active,children}:{active:string;children:ReactNode})
         </nav>
         <div className="border-t border-slate-200 p-2"><button aria-expanded={!collapsed} aria-label={collapsed?'Expand admin sidebar':'Collapse admin sidebar'} title={collapsed?'Expand':'Collapse'} className={`flex min-h-11 w-full items-center rounded-lg text-sm font-semibold text-slate-600 outline-none hover:bg-slate-100 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-emerald-500 ${collapsed?'justify-center':'gap-2 px-3'}`} onClick={()=>setCollapsed(value=>!value)} type="button"><span aria-hidden="true">{collapsed?'›':'‹'}</span>{!collapsed&&<span>Collapse</span>}<span className="sr-only">{collapsed?'Expand':'Collapse'} admin navigation</span></button></div>
       </aside>
-      <div className="min-w-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1600px] px-5 py-7 sm:px-8 sm:py-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Admin Console</p><h1 className="mt-2 text-4xl font-bold tracking-tight">Platform administration</h1></div></div>{children}</div></div>
+      <div className="min-w-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1600px] px-3 py-5 sm:px-8 sm:py-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Admin Console</p><h1 className="mt-2 text-2xl sm:text-4xl font-bold tracking-tight">Platform administration</h1></div></div>{children}</div></div>
     </div>
   </main>
 }

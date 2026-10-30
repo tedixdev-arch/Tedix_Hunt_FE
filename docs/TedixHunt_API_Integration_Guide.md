@@ -874,6 +874,8 @@ Do not expose public Creator signup.
 
 ## 7.7 Template review
 
+**Current implemented-contract note (30 October 2026, G4-FE-01–05 / Draft #130):** The proposed endpoints below are historical. Actual BE source at `a7df0f963feb8b431dfa83913eeca0facc43c116` exposes GET `/api/admin/templates/review` and `/{key}` (exact submitted artifact), with `?view=approved` for retained exact Local authority, nullable integrity-exception content and separate candidate/current-locality projections. Queue categories are grouped client-side. POST `/{key}/approve` and `/request-changes` require `{version}` for classified Templates and preserve optional bodies for Legacy. No Template reject/narrative-feedback endpoint is used. POST `/api/admin/templates/{key}/suspend` accepts exact `{version,reason}` (nonblank, ≤1,000 characters). GET `/api/admin/locality-proposals` returns pending proposals; POST `/{id}/decision` accepts `{decision,reason}` with `approved`/`rejected`, a trimmed reason of 10–1,000 characters, independent reviewer, and 409 duplicate-pending semantics. [FE evidence and limits](G4_FE_01_05_Implementation_Report.md). No backend contract changed.
+
 The original guide correctly identifies review listing and decision APIs, but review should be version-based.
 
 ### Planned APIs

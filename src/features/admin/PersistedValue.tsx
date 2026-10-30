@@ -15,4 +15,3 @@ export function PersistedValue({ value }: { value: unknown }) {
   if (entries.length === 0) return <span className="text-slate-500">No persisted values</span>
   return <dl className="space-y-3">{entries.map(([key, item]) => <div key={key}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{fieldLabel(key)}</dt><dd className="mt-1"><PersistedValue value={item} /></dd></div>)}</dl>
 }
-
