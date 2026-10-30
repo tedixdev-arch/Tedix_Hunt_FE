@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../services/api/client'
+import { LocalityProposals } from './LocalityProposals'
 import { geographyApi, type Country, type Locality, type LocalitySnapshot } from '../../services/api/geography'
 
 const control = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:opacity-50'
@@ -58,6 +59,7 @@ export function LocalGeographySelector({ savedId, snapshot, value, onChange, dis
       <ul className="mt-3 space-y-2">{results.map(place => <li key={place.id}><button type="button" aria-pressed={value === place.id} className="min-h-12 w-full break-words rounded-xl border border-slate-300 p-3 text-left text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700" onClick={() => { setSelected(place); onChange(place.id) }}>{facts(place)} <span className="block text-xs text-slate-500">Reference {place.id}</span></button></li>)}</ul>
       <p role="status" className="mt-3 text-sm">{value === undefined ? 'Keep the saved locality and its snapshot on the next save.' : value === null ? 'No locality selected. The next save will clear any saved locality.' : `Selected for next save: ${selected ? facts(selected) : value}. Registry facts will be captured by the server.`}</p>
       <div className="mt-3 flex flex-wrap gap-3"><button type="button" className="min-h-12 rounded-xl border px-3 text-sm font-bold" onClick={() => { setSelected(null); onChange(null) }}>Clear locality</button>{savedId && <button type="button" className="min-h-12 rounded-xl border px-3 text-sm font-bold" onClick={() => { setCountry(snapshot?.countryCode ?? ''); setSelected(null); onChange(undefined) }}>Keep saved locality</button>}{current?.active && <button type="button" className="min-h-12 rounded-xl border px-3 text-sm font-bold" onClick={() => { setCountry(current.countryCode); setSelected(current); onChange(current.id) }}>Use current registry details on next save</button>}</div>
+      <LocalityProposals country={country} countries={countries} onRegistryPlace={place => { ++sequence.current; setCountry(place.countryCode); setQuery(''); setResults([]); setSelected(place); onChange(place.id) }} />
     </>}
     {(error || lookupError) && <div className="mt-3 text-sm"><p role="alert">{error || lookupError}</p><button type="button" className="min-h-12 px-3 font-bold underline" onClick={() => setRetry(value => value + 1)}>Retry registry</button></div>}
   </section>
