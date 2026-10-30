@@ -40,7 +40,7 @@ function noMutations() {
 
 test('four entries are discoverable; My Templates focuses the existing empty owned list', async () => {
   await render()
-  expect([...container.querySelectorAll('nav[aria-label="Creator Studio entries"] button')].map(node => node.firstElementChild?.textContent)).toEqual(['Mechanics Library', 'My Templates', 'Create Universal Template', 'Create Local Template'])
+  expect([...container.querySelectorAll('nav[aria-label="Creator Studio entries"] > *')].map(node => node.firstElementChild?.textContent)).toEqual(['Mechanics Library', 'My Templates', 'Create Universal Template', 'Create Local Template'])
   await click('My Templates')
   expect(document.activeElement?.id).toBe('my-templates')
   expect(container.textContent).toContain('No persisted Creator Templates yet.')
@@ -54,7 +54,7 @@ test('Mechanics Library is read-only and separates configuration, simulation and
   expect(panel.open).toBe(true)
   expect(panel.querySelector('input,select,textarea,a')).toBeNull()
   expect(panel.querySelectorAll('button')).toHaveLength(1)
-  for (const text of ['Authorable / configurable now', 'Previewable now', 'Planned runtime behavior', '1–20', 'FinishPoint', 'Personal Challenges', 'Team Challenges', 'Compass + Distance', 'manually simulated', 'Hints and scoring']) expect(panel.textContent).toContain(text)
+  for (const text of ['What can I create?', 'What can I configure?', 'What is not available yet?', '1–20', 'FinishPoint', 'Personal Challenges', 'Team Challenges', 'Compass + Distance', 'manually simulate', 'Hints and scoring']) expect(panel.textContent).toContain(text)
   expect(document.activeElement).toBe(button('← Back'))
   for (const shiftKey of [true, false]) {
     const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true })
@@ -67,15 +67,19 @@ test('Mechanics Library is read-only and separates configuration, simulation and
   noMutations()
 })
 
-test.each(['Universal', 'Local'])('%s creation opens a truthful staged destination and Back restores focus', async type => {
-  await render(); const trigger = await click(`Create ${type} Template`)
-  const panel = container.querySelector('dialog')!
-  expect(panel.textContent).toContain('This workflow is not available yet.')
-  if (type === 'Universal') expect(panel.textContent).toContain('F7-FE-03')
-  else for (const text of ['Start from an approved Universal Template.', 'Start from scratch.', 'no Universal source is required', 'separate review']) expect(panel.textContent).toContain(text)
-  expect(panel.querySelectorAll('button')).toHaveLength(1)
-  expect(router.state.location.pathname).toBe('/creator')
-  await click('← Back'); expect(container.querySelector('dialog')).toBeNull(); expect(document.activeElement).toBe(trigger)
+test.each(['Universal', 'Local'])('%s creation is a noninteractive Coming soon card, including old deep links', async type => {
+  await render(`/creator?studio=${type.toLowerCase()}`)
+  const card = [...container.querySelectorAll('nav > div')].find(node => node.textContent?.startsWith(`Create ${type} Template`))!
+  expect(card.textContent).toContain('Coming soon')
+  expect(card.querySelector('button,a,input,[tabindex]')).toBeNull()
+  expect(card.hasAttribute('tabindex')).toBe(false)
+  expect(card.hasAttribute('role')).toBe(false)
+  expect(button(`Create ${type} Template`)).toBeUndefined()
+  await act(async () => card.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+  expect(container.querySelector('dialog')).toBeNull()
+  expect(container.textContent).not.toContain('F7-FE-03')
+  if (type === 'Universal') expect(card.textContent).toContain('without fixed locations')
+  else expect(card.textContent).toContain('approved Universal Template or from scratch')
   noMutations()
 })
 
@@ -102,7 +106,7 @@ test('owned list loading, retry and records remain reachable', async () => {
 test.each([[401, 'session has expired'], [403, 'not authorized'], [500, 'Failed to load']] as const)('list error %s retains guidance and supports retry', async (status, text) => {
   mocks.api.list.mockRejectedValueOnce(new ApiError('Failed to load', status, 'http')).mockResolvedValue([])
   await render(); expect(container.querySelector('[role="alert"]')?.textContent).toContain(text)
-  await click('Create Local Template'); await click('← Back'); await click('Retry')
+  await click('Mechanics Library'); await click('← Back'); await click('Retry')
   expect(mocks.api.list).toHaveBeenCalledTimes(2); expect(container.querySelector('[role="alert"]')).toBeNull()
   noMutations()
 })

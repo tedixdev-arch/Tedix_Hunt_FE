@@ -13,12 +13,24 @@ for (const width of [1440, 768, 390, 320]) {
   await page.goto('http://127.0.0.1:5173/tests/browser/creatorStudio.html')
   const nav = page.getByRole('navigation', { name: 'Creator Studio entries' })
   await nav.waitFor()
-  assert.equal(await nav.getByRole('button').count(), 4)
+  assert.equal(await nav.locator(':scope > *').count(), 4)
+  assert.equal(await nav.getByRole('button').count(), 2)
+  assert.equal(await nav.getByText('Coming soon', { exact: true }).count(), 2)
+  for (const type of ['Universal', 'Local']) {
+    const card = nav.locator(':scope > div').filter({ hasText: `Create ${type} Template` })
+    assert.equal(await card.locator('button,a,[tabindex]').count(), 0)
+    await card.click(); assert.equal(await page.getByRole('dialog').count(), 0)
+  }
+  await nav.getByRole('button', { name: /^Mechanics Library/ }).focus()
+  await page.keyboard.press('Tab')
+  assert.equal(await nav.getByRole('button', { name: /^My Templates/ }).evaluate(node => document.activeElement === node), true)
+  await page.keyboard.press('Tab')
+  assert.equal(await page.getByRole('button', { name: 'Create Template', exact: true }).evaluate(node => document.activeElement === node), true)
   const measure = await nav.evaluate(nav => ({ width: innerWidth, columns: getComputedStyle(nav).gridTemplateColumns.split(' ').length, overflow: document.documentElement.scrollWidth > innerWidth || document.querySelector('main').scrollWidth > innerWidth }))
   measurements.push(measure)
   assert.equal(measure.overflow, false)
   assert.equal(measure.columns, width >= 1024 ? 4 : width >= 640 ? 2 : 1)
-  for (const label of ['Mechanics Library', 'Create Universal Template', 'Create Local Template']) {
+  for (const label of ['Mechanics Library']) {
     const trigger = nav.getByRole('button', { name: new RegExp(`^${label}`) })
     await trigger.focus(); await page.keyboard.press('Enter')
     const panel = page.getByRole('dialog')
