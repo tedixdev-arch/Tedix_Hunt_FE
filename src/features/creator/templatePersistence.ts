@@ -16,12 +16,13 @@ export function templateContentEqual(current: CreatorTemplateContent, persisted:
 }
 
 export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'create' | 'createVersion'>, current: CreatorTemplateContent, persisted: CreatorTemplate | null, category?: 'universal' | 'local', localityId?: string | null): Promise<CreatorTemplate> {
-  if (localityId === undefined && persisted && templateContentEqual(current, persisted.content)) return persisted
+  const revision = persisted?.category && ['approved', 'changes_requested'].includes(persisted.status)
+  if (!revision && localityId === undefined && persisted && templateContentEqual(current, persisted.content)) return persisted
   current = { ...current, mission: serializeMission(current.mission) }
   const validation = finishPointValidation(current.configuration) || gameplayValidation(current)
   if (validation) throw new Error(validation)
   if (!persisted) return category ? api.create({ ...current, version: 1 }, category, ...(localityId !== undefined ? [localityId] as const : [])) : api.create({ ...current, version: 1 })
-  if (localityId === undefined && templateContentEqual(current, persisted.content)) return persisted
+  if (!revision && localityId === undefined && templateContentEqual(current, persisted.content)) return persisted
   return api.createVersion(persisted.key, { ...current, key: persisted.key, version: persisted.version + 1 }, ...(localityId !== undefined ? [localityId] as const : []))
 }
 
