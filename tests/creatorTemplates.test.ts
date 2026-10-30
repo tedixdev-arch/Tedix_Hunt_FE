@@ -152,3 +152,10 @@ test('both owner GETs preserve exact, null and missing Universal publication wit
     assert.ok(setup.calls.every(call => call.init?.method === 'GET' && call.url.includes('/api/creator/templates')))
   }
 })
+
+test('F7-FE-03 Universal create sends only classified envelope and accepts persisted response', async () => {
+  const authoritative = { ...record, category: 'universal' as const, key: 'server-key' }
+  const setup = api([authoritative])
+  assert.deepEqual(await setup.api.create(content, 'universal'), authoritative)
+  assert.deepEqual(JSON.parse(String(setup.calls[0].init?.body)), { key: content.key, content, category: 'universal' })
+})

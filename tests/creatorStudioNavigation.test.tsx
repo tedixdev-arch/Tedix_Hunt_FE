@@ -67,7 +67,7 @@ test('Mechanics Library is read-only and separates configuration, simulation and
   noMutations()
 })
 
-test.each(['Universal', 'Local'])('%s creation is a noninteractive Coming soon card, including old deep links', async type => {
+test.each(['Local'])('%s creation is a noninteractive Coming soon card, including old deep links', async type => {
   await render(`/creator?studio=${type.toLowerCase()}`)
   const card = [...container.querySelectorAll('nav > div')].find(node => node.textContent?.startsWith(`Create ${type} Template`))!
   expect(card.textContent).toContain('Coming soon')
@@ -122,4 +122,10 @@ test('session bootstrap does not expose Creator content or fetch Templates', asy
   mocks.auth.isBootstrapping = true
   await render('/creator?studio=mechanics')
   expect(container.textContent).toBe('Loading…'); expect(mocks.api.list).not.toHaveBeenCalled(); noMutations()
+})
+
+test('Universal creation is a direct shared-editor link without mutation', async () => {
+  await render()
+  expect(container.querySelector('a[href="/create?category=universal"]')?.textContent).toContain('Create Universal Template')
+  noMutations()
 })
