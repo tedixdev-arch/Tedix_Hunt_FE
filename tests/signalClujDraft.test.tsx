@@ -253,6 +253,19 @@ test('participant preview renders object story and keeps fictional directions ou
 })
 
 async function feature(name: string) {
+  if (name === 'Checkpoint Positions' || name === 'Final Checkpoint') {
+    await feature('Number of Checkpoints')
+  }
+  if (name === 'Checkpoint Positions') {
+    const toggle = [...container.querySelectorAll('button')].find(b => b.textContent === 'FinishPoint location details')!
+    if (toggle.getAttribute('aria-expanded') === 'true') await act(async () => toggle.click())
+    return
+  }
+  if (name === 'Final Checkpoint') {
+    const toggle = [...container.querySelectorAll('button')].find(b => b.textContent === 'FinishPoint location details')!
+    if (toggle.getAttribute('aria-expanded') === 'false') await act(async () => toggle.click())
+    return
+  }
   const button = [...container.querySelectorAll('button')].find(button => button.textContent?.includes(name))!
   expect(button).toBeDefined(); await act(async () => button.click())
 }
@@ -466,20 +479,17 @@ test('resetting saved checkpoint and FinishPoint geography saves an incomplete d
 })
 
 
-test('Feature 2 keeps the standard nine-feature navigation and shell', async () => {
+test('positioning lives only inside Feature 1 of seven feature steps', async () => {
   await render(<MemoryRouter initialEntries={['/create?template=signal-cluj-new']}><CreatorTemplateEditorPage /></MemoryRouter>)
-  await feature('Checkpoint Positions')
   const editor = container.querySelector('[aria-label="Checkpoint position editor"]')!
-  const article = editor.closest('article')!
-  const navigation = article.previousElementSibling!
-  expect(navigation.tagName).toBe('NAV')
-  expect(navigation.querySelectorAll('button')).toHaveLength(9)
-  expect(navigation.querySelector('button.border-emerald-500')!.textContent).toContain('Checkpoint Positions')
-  expect(container.querySelector('.position-feature-navigation')).toBeNull()
-  expect(container.querySelector('.max-w-6xl')).not.toBeNull()
+  expect(editor.closest('#checkpoint-positions')).not.toBeNull()
+  expect(editor.closest('article')?.textContent).toContain('Number of Checkpoints')
+  expect(container.querySelectorAll('#checkpoint-positions')).toHaveLength(1)
+  const navigation = container.querySelectorAll('nav')[1]
+  expect(navigation.querySelectorAll('button')).toHaveLength(7)
+  expect(navigation.textContent).not.toContain('Final Checkpoint')
   await feature('Personal Challenge')
   expect(container.querySelector('[aria-label="Checkpoint position editor"]')).toBeNull()
-  expect(container.querySelector('.max-w-6xl')).not.toBeNull()
 })
 
 test('arrival notes edit existing research metadata and survive save/reopen', async () => {

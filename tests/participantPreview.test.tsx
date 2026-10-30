@@ -106,7 +106,7 @@ test('unsupported configuration and missing locations stay inspectable without m
   content.checkpoints[0] = { checkpoint: 1, kind: { future: true }, teamKind: '', actual: ['saved'] }
   render(); await click('Start preview')
   expect(container.textContent).toContain('missing or invalid geography')
-  expect(container.textContent).toContain('Feature 2')
+  expect(container.textContent).toContain('Checkpoint Positions')
   expect(map.props.cameraTarget).toBeUndefined()
   expect(map.props.checkpoints).toEqual([])
   await click('Simulate arrival'); await click('Inspect Personal Challenge')

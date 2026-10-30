@@ -15,13 +15,13 @@ export function walkingDestinations(configuration: Record<string, unknown>): Rou
   const count = configuration.normalCheckpointCount
   if (!Number.isInteger(count) || (count as number) < 1 || (count as number) > 20) throw new Error('Set the normal checkpoint count to an integer from 1 to 20 in Feature 1.')
   const points = configuration.checkpointPositions
-  if (!Array.isArray(points) || points.length !== count) throw new Error(`Position exactly ${count} normal checkpoints in Feature 2.`)
+  if (!Array.isArray(points) || points.length !== count) throw new Error(`Position exactly ${count} normal checkpoints in Checkpoint Positions.`)
   const destinations = points.map((point, index) => {
     if (!point || point.checkpointNumber !== index + 1) throw new Error('Checkpoint numbering must be complete, unique, and ordered 1..N. Correct the saved geography before validating; numbering was not changed.')
-    if (!coordinates(point)) throw new Error(`Checkpoint ${index + 1} needs valid latitude (−90..90) and longitude (−180..180) in Feature 2.`)
+    if (!coordinates(point)) throw new Error(`Checkpoint ${index + 1} needs valid latitude (−90..90) and longitude (−180..180) in Checkpoint Positions.`)
     return { label: `CP${index + 1}`, latitude: point.latitude, longitude: point.longitude }
   })
-  if (!coordinates(configuration.finishPoint)) throw new Error('Place a FinishPoint with valid latitude (−90..90) and longitude (−180..180) in Feature 6.')
+  if (!coordinates(configuration.finishPoint)) throw new Error('Place a FinishPoint with valid latitude (−90..90) and longitude (−180..180) in Checkpoint Positions.')
   return [...destinations, { label: 'FinishPoint', latitude: configuration.finishPoint.latitude, longitude: configuration.finishPoint.longitude }]
 }
 

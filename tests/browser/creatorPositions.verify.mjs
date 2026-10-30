@@ -12,16 +12,16 @@ await page.route('https://api.mapbox.com/**',async route=> {
   return route.fulfill({json:{}})
 })
 await page.goto('http://127.0.0.1:5173/tests/browser/creatorPositions.html')
-await page.getByRole('button',{name:/2\.Checkpoint Positions/}).click()
+await page.locator('#checkpoint-positions').scrollIntoViewIfNeeded()
 await page.locator('.mapboxgl-canvas').waitFor()
 await page.waitForTimeout(600)
 const measurements=[]
-const output='docs/checkpoint-positions/simplified'
+const output='work/checkpoint-positions-browser'
 await fs.mkdir(output,{recursive:true})
 for(const width of [1440,1280,768,390,360,320]) {
   await page.setViewportSize({width,height:width<640?2800:1800})
   await page.reload()
-  await page.getByRole('button',{name:/2\.Checkpoint Positions/}).click()
+  await page.locator('#checkpoint-positions').scrollIntoViewIfNeeded()
   await page.locator('.mapboxgl-canvas').waitFor()
   await page.waitForTimeout(600)
   await page.locator('.position-editor').evaluate(el=>el.parentElement.closest('section').scrollIntoView({block:'start'}))
@@ -38,7 +38,7 @@ for(const width of [1440,1280,768,390,360,320]) {
   assert.ok(measure.inspector.y >= measure.map.y+measure.map.h-2)
   if(width>=640) { assert.ok(measure.inspector.x>measure.list.x); assert.ok(measure.rows.every(h=>h>=32&&h<=36)) }
   else { assert.ok(measure.inspector.y>measure.list.y); assert.ok(measure.rows.every(h=>h>=44)) }
-  assert.equal(measure.toolbar.length,3)
+  assert.equal(measure.toolbar.length,6)
   assert.ok(measure.toolbar.every(b=>b.width>=44&&b.height>=44))
   assert.equal(await page.getByRole('button',{name:'Fit route',exact:true}).count(),0)
   assert.equal(await page.locator('.position-inspector dt').count(),4)
@@ -64,10 +64,13 @@ for(const width of [1440,1280,768,390,360,320]) {
   if(width<640) await page.getByRole('listbox').getByRole('option').getByRole('button').tap()
   else { await search.press('ArrowDown'); await search.press('Enter') }
   await page.waitForTimeout(600)
+  // Search only moves the camera under the current positioning contract. Placement is explicit.
+  assert.equal(await page.getByRole('button',{name:'Confirm position',exact:true}).isDisabled(),true)
+  await page.locator('.mapboxgl-canvas').click({position:{x:120,y:300}})
   assert.equal(await page.getByRole('button',{name:'Confirm position',exact:true}).isDisabled(),false)
-  assert.match(await page.locator('.position-values').innerText(),/46.77100, 23.60400/)
   await page.getByRole('button',{name:'Confirm position',exact:true}).click()
-  assert.match(await page.locator('.position-inspector').innerText(),/Confirmed/)
+  assert.equal(await page.locator('[data-checkpoint="4"] .position-state-confirmed').count(),1)
+  await page.locator('[data-checkpoint="4"]').click()
   await page.getByRole('button',{name:'Undo last position change',exact:true}).click()
   assert.equal(await page.getByRole('button',{name:'Confirm position',exact:true}).isDisabled(),true)
   assert.equal(await page.getByRole('button',{name:'Undo last position change',exact:true}).isDisabled(),true)
@@ -107,8 +110,8 @@ await page.getByRole('button',{name:'Edit',exact:true}).click()
 await page.getByLabel('Name:',{exact:true}).fill('Edited finish')
 await page.getByRole('button',{name:'Save changes',exact:true}).click()
 assert.match(await page.locator('.position-values').innerText(),/Edited finish/)
-const featureNavigation=page.locator('.position-editor').locator('xpath=ancestor::article/preceding-sibling::nav')
-assert.equal(await featureNavigation.locator('button').count(),9)
+const featureNavigation=page.getByRole('navigation', {name:'Hunt Features'})
+assert.equal(await featureNavigation.locator('button').count(),7)
 await fs.writeFile(`${output}/browser-measurements.json`,JSON.stringify({mockedMapbox:true,measurements,errors},null,2))
 assert.deepEqual(errors,[])
 console.log('Responsive layout, view/edit, keyboard/touch search, Deselect and confirmation/history checks passed at six widths (Mapbox mocked).')

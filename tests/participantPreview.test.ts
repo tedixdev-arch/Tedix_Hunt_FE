@@ -53,7 +53,7 @@ test('incomplete and invalid geography emits actionable warnings without inventi
     input.configuration.checkpointPositions[0].latitude = value as number
     const before = structuredClone(input), journey = projectPreview(input)
     assert.equal(journey.checkpoints[0].position, undefined)
-    assert.match(journey.checkpoints[0].warnings.join(' '), /Feature 2/)
+    assert.match(journey.checkpoints[0].warnings.join(' '), /Checkpoint Positions/)
     assert.deepEqual(input, before)
   }
   for (const radiusMeters of [4, 501, NaN]) {
@@ -61,7 +61,7 @@ test('incomplete and invalid geography emits actionable warnings without inventi
     assert.equal(projectPreview(input).checkpoints.at(-1)?.position, undefined)
   }
   const input = template(); delete input.configuration.finishPoint
-  assert.match(projectPreview(input).checkpoints.at(-1)!.warnings.join(' '), /Feature 6/)
+  assert.match(projectPreview(input).checkpoints.at(-1)!.warnings.join(' '), /Checkpoint Positions/)
 })
 
 test('duplicate, unordered and conflicting numbering is warned and never silently repaired', () => {

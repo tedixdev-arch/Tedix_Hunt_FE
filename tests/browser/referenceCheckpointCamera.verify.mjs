@@ -15,7 +15,7 @@ try {
     await page.route('https://api.mapbox.com/**', route => route.fulfill({ json: { version: 8, sources: {}, layers: [{ id: 'fixture-background', type: 'background', paint: { 'background-color': route.request().url().includes('satellite') ? '#586358' : '#e8eeeb' } }] } }))
     await page.route('https://events.mapbox.com/**', route => route.fulfill({ json: {} }))
     await page.goto(process.env.PREVIEW_URL || 'http://127.0.0.1:5173/tests/browser/mapboxSearch.html')
-    await page.getByRole('button', { name: /2\.Checkpoint Positions/ }).click()
+    await page.locator('#checkpoint-positions').scrollIntoViewIfNeeded()
     await page.waitForFunction(() => window.testMap?.isStyleLoaded())
     const select = number => page.locator(`[data-checkpoint="${number}"]`).click()
     const showAll = () => page.getByRole('button', { name: 'Show all checkpoints', exact: true }).click()
