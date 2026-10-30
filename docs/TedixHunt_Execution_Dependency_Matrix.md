@@ -1,3 +1,7 @@
+> **Superseded for current execution control.** Use the [TedixHunt Master Execution Plan](TedixHunt_Master_Execution_Plan.md).
+> This original document is preserved unchanged below as historical evidence, including its dated status wording.
+> [Reconciliation and complete traceability](TedixHunt_Execution_Plan_Reconciliation.md) was verified before adding this notice.
+
 # F7 / G4 / D10 execution dependencies
 
 This supporting table is entered through the [Master Control Plan](TedixHunt_Master_Implementation_Control_Plan_v3.md). Reviewed 30 October 2026 (Europe/Bucharest). Architecture remains **v3.6**. These are subordinate execution IDs, not renamed architecture tasks. Parent completion requires all applicable implementation and acceptance work; a child merged PR does not close its parent.
