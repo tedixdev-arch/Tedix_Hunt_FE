@@ -1,105 +1,86 @@
-import { missionStoryFields } from '../features/creator/mission'
-import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { HuntMapInspection } from '../components/HuntMapPreview'
 import { AdminShell } from './AdminConsole.tsx'
-import { adminTemplateReviewsApi, type AdminTemplateReview } from '../services/api/index.ts'
+import { adminTemplateReviewsApi, type AdminTemplateReview } from '../services/api/adminTemplateReviews.ts'
+import { PersistedValue } from '../features/admin/PersistedValue'
+import { reviewCategories, reviewCategory, reviewError, type ReviewCategory } from '../features/admin/reviewState'
 
-const checklist = ['Template information', 'Submitted checkpoint and challenge content', 'Participant-facing text', 'Answers, hints and solutions', 'Scoring configuration', 'Persisted checkpoint geography']
+const panel = 'min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5'
+const button = 'min-h-12 rounded-xl border border-slate-300 px-4 py-2 font-bold disabled:opacity-40'
 
-function fieldLabel(value: string): string {
-  const label = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ')
-  return label.charAt(0).toUpperCase() + label.slice(1)
-}
+export function AdminTemplateReviewsPage() { return <ReviewWorkspace /> }
+export function AdminTemplateReviewDetailPage() { return <ReviewWorkspace /> }
 
-function PersistedValue({ value }: { value: unknown }) {
-  if (value == null) return <span className="text-slate-500">Not submitted</span>
-  if (typeof value === 'boolean') return <span>{value ? 'Yes' : 'No'}</span>
-  if (typeof value !== 'object') return <span className="whitespace-pre-wrap break-words">{String(value)}</span>
-  if (Array.isArray(value)) {
-    if (value.length === 0) return <span className="text-slate-500">None submitted</span>
-    return <ol className="space-y-2">{value.map((item, index) => <li className="rounded-lg border border-slate-200 bg-white p-3" key={index}><span className="mb-2 block text-xs font-bold uppercase text-slate-400">Item {index + 1}</span><PersistedValue value={item} /></li>)}</ol>
-  }
-  const entries = Object.entries(value)
-  if (entries.length === 0) return <span className="text-slate-500">No persisted values</span>
-  return <dl className="space-y-3">{entries.map(([key, item]) => <div key={key}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{fieldLabel(key)}</dt><dd className="mt-1"><PersistedValue value={item} /></dd></div>)}</dl>
-}
-
-function message(error: unknown): string {
-  return error instanceof Error ? error.message : 'The request could not be completed.'
-}
-
-export function AdminTemplateReviewsPage() {
+function ReviewWorkspace() {
+  const { key = '' } = useParams()
+  const [params] = useSearchParams()
+  const [category, setCategory] = useState<ReviewCategory>(() => reviewCategories.find(value => value === params.get('category')) ?? 'Universal')
   const [reviews, setReviews] = useState<AdminTemplateReview[] | null>(null)
   const [error, setError] = useState('')
+  const generation = useRef(0)
   const load = useCallback(async () => {
+    const request = ++generation.current
     setReviews(null); setError('')
-    try { setReviews(await adminTemplateReviewsApi.list()) }
-    catch (cause) { setError(message(cause)) }
+    try { const items = await adminTemplateReviewsApi.list(); if (request === generation.current) setReviews(items) }
+    catch (cause) { if (request === generation.current) setError(reviewError(cause)) }
   }, [])
-  useEffect(() => { void load() }, [load])
-
-  return <AdminShell active="templates"><section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <h2 className="text-2xl font-bold">Template Reviews</h2>
-    <p className="mt-2 text-slate-600">Approve Creator templates before they appear in Quick Setup.</p>
-    {reviews === null && !error && <p className="mt-5" role="status">Loading submitted Templates…</p>}
-    {error && <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4" role="alert"><p>{error}</p><button className="mt-3 rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white" onClick={() => void load()} type="button">Retry</button></div>}
-    {reviews?.length === 0 && <p className="mt-5 rounded-xl bg-slate-50 p-5">No Creator Templates are awaiting review.</p>}
-    {!!reviews?.length && <div className="mt-5 divide-y divide-slate-100">{reviews.map(review => <div className="flex min-h-16 items-center justify-between gap-4 py-3" key={review.key}><span><strong>{review.content.displayName}</strong><span className="ml-2 text-sm text-slate-500">{review.creator.name} · Submitted version {review.version}</span></span><Link className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white" to={`/admin/reviews/${encodeURIComponent(review.key)}`}>Review</Link></div>)}</div>}
-  </section></AdminShell>
+  useEffect(() => { void load(); return () => { generation.current++ } }, [load])
+  return <AdminShell active="templates"><h2 className="mt-6 text-2xl font-bold">Template Reviews</h2>
+    <p className="mt-2 text-slate-600">Choose a category, select an item, inspect it and decide.</p>
+    <nav aria-label="Review categories" className="my-5 flex flex-wrap gap-2">{reviewCategories.map(value => <Link className={button + (category === value ? ' bg-slate-950 text-white' : ' bg-white')} aria-current={category === value ? 'page' : undefined} key={value} to={`/admin/templates?category=${encodeURIComponent(value)}`} onClick={() => setCategory(value)}>{value}</Link>)}</nav>
+    <div className="grid min-w-0 gap-5 lg:grid-cols-[280px_minmax(0,1fr)]"><section aria-label="Review queue" className={panel}>
+      <h3 className="text-lg font-bold">{category}</h3>
+      <button type="button" className={button + ' mt-3'} onClick={() => void load()}>Refresh queue</button>
+      {reviews === null && !error && <p className="mt-4" role="status">Loading submitted Templates…</p>}
+      {error && <p className="mt-4" role="alert">{error}</p>}
+      {reviews && !reviews.some(item => reviewCategory(item) === category) && <p className="mt-4">No items awaiting review in this category.</p>}
+      <ul className="mt-3 space-y-2">{reviews?.filter(item => reviewCategory(item) === category).map(item => <li key={item.key}><Link className="block min-h-12 break-words rounded-xl border p-3 focus-visible:outline" aria-current={key === item.key ? 'true' : undefined} to={`/admin/reviews/${encodeURIComponent(item.key)}?category=${encodeURIComponent(category)}`}><strong>{item.content.displayName}</strong><span className="block text-sm">{item.creator.name ?? 'Creator'} · Submitted version {item.version}</span></Link></li>)}</ul>
+    </section><div className="min-w-0">{key ? <TemplateInspection key={key} templateKey={key} onDecision={load} /> : <section className={panel}>Select an item to inspect its exact submitted version.</section>}</div></div>
+  </AdminShell>
 }
 
-export function AdminTemplateReviewDetailPage() {
-  const { key = '' } = useParams()
+function TemplateInspection({ templateKey, onDecision }: { templateKey: string; onDecision: () => Promise<void> }) {
   const [review, setReview] = useState<AdminTemplateReview | null>(null)
   const [result, setResult] = useState<AdminTemplateReview | null>(null)
-  const [checked, setChecked] = useState(new Set<string>())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const generation = useRef(0)
   const load = useCallback(async () => {
-    setLoading(true); setError(''); setReview(null); setResult(null); setChecked(new Set())
-    try { setReview(await adminTemplateReviewsApi.get(key)) }
-    catch (cause) { setError(message(cause)) }
-    finally { setLoading(false) }
-  }, [key])
-  useEffect(() => { void load() }, [load])
-
+    const request = ++generation.current
+    setLoading(true); setError(''); setReview(null); setResult(null)
+    try { const item = await adminTemplateReviewsApi.get(templateKey); if (request === generation.current) setReview(item) }
+    catch (cause) { if (request === generation.current) setError(reviewError(cause)) }
+    finally { if (request === generation.current) setLoading(false) }
+  }, [templateKey])
+  useEffect(() => { void load(); return () => { generation.current++ } }, [load])
   const decide = async (action: 'approve' | 'changes') => {
     if (saving || !review) return
     setSaving(true); setError('')
     try {
-      const response = action === 'approve'
-        ? await adminTemplateReviewsApi.approve(review.key)
-        : await adminTemplateReviewsApi.requestChanges(review.key)
-      // The server response, never a local projection, is the recorded decision.
-      setResult(response)
-    } catch (cause) { setError(message(cause)) }
+      const response = action === 'approve' ? await adminTemplateReviewsApi.approve(review.key) : await adminTemplateReviewsApi.requestChanges(review.key)
+      setResult(response); await onDecision()
+    } catch (cause) { setError(reviewError(cause)) }
     finally { setSaving(false) }
   }
-
-  if (loading) return <AdminShell active="templates"><p className="mt-8" role="status">Loading submitted Template…</p></AdminShell>
-  if (!review) return <AdminShell active="templates"><section className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5" role="alert"><h2 className="text-xl font-bold">Template could not be loaded</h2><p className="mt-2">{error}</p><button className="mt-4 rounded-xl bg-slate-950 px-4 py-3 font-bold text-white" onClick={() => void load()} type="button">Retry</button></section></AdminShell>
-  if (result) {
-    const approved = result.status === 'approved'
-    return <AdminShell active="templates"><section className={`mt-6 rounded-2xl border p-7 ${approved ? 'border-emerald-300 bg-emerald-50' : 'border-amber-300 bg-amber-50'}`} role="status"><div className={`grid h-12 w-12 place-items-center rounded-full text-2xl font-bold text-white ${approved ? 'bg-emerald-500' : 'bg-amber-500'}`}>✓</div><p className="mt-5 text-xs font-semibold uppercase tracking-wide">Decision recorded by backend</p><h2 className="mt-2 text-3xl font-bold">{approved ? 'Template approved' : 'Changes requested'}</h2><p className="mt-3">{result.content.displayName} · submitted version {result.version}</p><Link className="mt-6 inline-flex min-h-12 items-center rounded-xl bg-slate-950 px-5 font-bold text-white" to="/admin/templates">Return to Template Reviews</Link></section></AdminShell>
-  }
-
-  // The review API exposes the exact version pinned by submitted_version as version.
+  if (loading) return <p role="status">Loading submitted Template…</p>
+  return <div className="min-w-0 space-y-4">
+    {error && <p className={panel + ' text-red-900'} role="alert">{error}</p>}
+    <button className={button} type="button" disabled={saving} onClick={() => void load()}>Refresh inspection</button>
+    {review && <><header className={panel}><p>{reviewCategory(review)} · {review.status}</p><h3 className="mt-2 break-words text-2xl font-bold">{review.content.displayName}</h3><p className="mt-2 break-words">{review.creator.name} ({review.creator.email}) · Submitted version {review.version}</p></header>
+      <section className={panel} aria-label="Template decision"><h3 className="text-xl font-bold">Decision</h3>
+        {result ? <p role="status">{result.status === 'approved' ? 'Template approved' : 'Changes requested'} · version {result.version}</p> : <div className="mt-3 flex flex-wrap gap-3"><button className={button + ' bg-emerald-100'} disabled={saving} onClick={() => void decide('approve')}>Approve template</button><button className={button} disabled={saving} onClick={() => void decide('changes')}>Request changes</button></div>}
+      </section><SubmittedContent review={review} /></>}
+  </div>
+}
+function SubmittedContent({ review }: { review: AdminTemplateReview }) {
   const configuration = review.content.configuration
-  const positions = Array.isArray(configuration.checkpointPositions) ? configuration.checkpointPositions : []
   const duration = configuration.durationMinutes
   const additionalContent = Object.fromEntries(Object.entries(review.content).filter(([field]) => !['key', 'version', 'displayName', 'theme', 'mission', 'configuration', 'checkpoints', 'scoring'].includes(field)))
-  return <AdminShell active="templates"><div className="mt-6"><Link className="text-sm font-bold text-slate-500" to="/admin/templates">← Template Reviews</Link><p className="mt-5 text-xs font-semibold uppercase tracking-wide text-amber-700">Awaiting review</p><h2 className="mt-2 text-3xl font-bold">{review.content.displayName}</h2><p className="mt-2 text-slate-600">{review.creator.name} ({review.creator.email}) · {review.content.theme} · Submitted version {review.version}</p></div>
-    {error && <p className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-900" role="alert">{error}</p>}
-    <section className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]"><div className="min-w-0 space-y-4">
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Template summary</h3><dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3"><div><dt className="text-slate-500">Version under review</dt><dd className="mt-1 font-bold">{review.version}</dd></div><div><dt className="text-slate-500">Duration</dt><dd className="mt-1 font-bold">{duration == null ? '—' : `${String(duration)} minutes`}</dd></div><div><dt className="text-slate-500">Checkpoints</dt><dd className="mt-1 font-bold">{configuration.normalCheckpointCount}</dd></div></dl>{missionStoryFields(review.content.mission).map(([key, text]) => <p key={key} className="mt-3 text-sm text-slate-600"><strong>{key}: </strong>{text}</p>)}</article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Submitted mission content</h3><div className="mt-4 text-sm"><PersistedValue value={review.content.mission} /></div></article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Fixed route and safety</h3><p className="mt-2 text-sm text-slate-500">Read-only persisted checkpoint geography</p><HuntMapInspection key={`${review.key}:${review.version}`} configuration={configuration} /><div className="mt-4 space-y-2">{positions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm">No checkpoint positions were submitted.</p> : positions.map((position, index) => !position || typeof position !== 'object' || typeof position.name !== 'string' || typeof position.latitude !== 'number' || typeof position.longitude !== 'number' || typeof position.radiusMeters !== 'number' ? <div key={index}><PersistedValue value={position} /></div> : <div className="grid gap-1 rounded-xl border border-slate-200 p-4 text-sm sm:grid-cols-[1fr_auto]" key={position.checkpointNumber}><strong>{position.checkpointNumber}. {position.name}</strong><span>{position.latitude}, {position.longitude} · {position.radiusMeters} m radius</span></div>)}</div></article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Submitted checkpoint and challenge content</h3><p className="mt-2 text-sm text-slate-500">Exact read-only content persisted with submitted version {review.version}</p><div className="mt-4 space-y-4">{review.content.checkpoints.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm">No checkpoint or challenge content was submitted.</p> : review.content.checkpoints.map((checkpoint, index) => <section className="rounded-xl bg-slate-50 p-4 text-sm" key={index}><h4 className="mb-3 text-base font-bold">{checkpoint && typeof checkpoint === 'object' && (checkpoint as Record<string, unknown>).role === 'terminal' ? 'FinishPoint' : `Checkpoint ${index + 1}`}</h4><PersistedValue value={checkpoint} /></section>)}</div></article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Scoring configuration and events</h3><p className="mt-2 text-sm text-slate-500">Persisted scoring rules for this submitted artifact</p><div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm"><PersistedValue value={review.content.scoring} /></div></article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Submitted configuration</h3><p className="mt-2 text-sm text-slate-500">Participant instructions and other persisted configuration fields are shown when present.</p><div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm"><PersistedValue value={configuration} /></div></article>
-      {Object.keys(additionalContent).length > 0 && <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Additional submitted content</h3><div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm"><PersistedValue value={additionalContent} /></div></article>}
-    </div><aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Review checklist</h3><p className="mt-2 text-sm text-slate-500">Check every area before making a decision.</p><div className="mt-4 space-y-2">{checklist.map(item => <label className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm font-bold" key={item}><input checked={checked.has(item)} className="h-5 w-5 accent-emerald-500" onChange={() => setChecked(current => { const next = new Set(current); next.has(item) ? next.delete(item) : next.add(item); return next })} type="checkbox" />{item}</label>)}</div><button className="mt-4 min-h-12 w-full rounded-xl bg-emerald-500 font-bold disabled:cursor-not-allowed disabled:bg-slate-300" disabled={saving || checked.size !== checklist.length} onClick={() => void decide('approve')} type="button">{saving ? 'Recording decision…' : 'Approve template'}</button><button className="mt-2 min-h-12 w-full rounded-xl border border-amber-400 bg-amber-50 font-bold text-amber-900 disabled:cursor-not-allowed disabled:opacity-40" disabled={saving} onClick={() => void decide('changes')} type="button">{saving ? 'Recording decision…' : 'Request changes'}</button></aside></section>
-  </AdminShell>
+  return <><section className={panel}><h3 className="text-xl font-bold">Template summary</h3><p>Version under review: {review.version} · {duration == null ? 'Duration not submitted' : `${duration} minutes`} · {configuration.normalCheckpointCount} checkpoints</p><PersistedValue value={review.content.mission} /></section>
+    {review.category !== 'universal' && <details className={panel}><summary className="cursor-pointer font-bold">Saved geography</summary><HuntMapInspection configuration={configuration} /><PersistedValue value={{ checkpointPositions: configuration.checkpointPositions, finishPoint: configuration.finishPoint }} /></details>}
+    <details className={panel}><summary className="cursor-pointer font-bold">Checkpoints, answers and hints</summary><div className="mt-3 space-y-3">{review.content.checkpoints.map((checkpoint, index) => <section key={index}><h4 className="font-bold">Checkpoint {index + 1}</h4><PersistedValue value={checkpoint} /></section>)}</div></details>
+    <details className={panel}><summary className="cursor-pointer font-bold">Scoring</summary><PersistedValue value={review.content.scoring} /></details>
+    <details className={panel}><summary className="cursor-pointer font-bold">Other saved settings</summary><PersistedValue value={review.category === 'universal' ? Object.fromEntries(Object.entries(configuration).filter(([field]) => !['checkpointPositions', 'finishPoint'].includes(field))) : configuration} /><PersistedValue value={additionalContent} /></details></>
 }

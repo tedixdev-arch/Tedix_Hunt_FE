@@ -1,15 +1,22 @@
 import { apiClient, type ApiClient } from './client.ts'
-import type { CreatorTemplateContent, CreatorTemplateStatus } from './creatorTemplates.ts'
+import type { CreatorTemplate, CreatorTemplateContent, CreatorTemplateStatus } from './creatorTemplates.ts'
 
 export interface AdminTemplateReview {
   key: string
   version: number
   status: CreatorTemplateStatus
+  category?: 'universal' | 'local' | null
+  localityId?: string | null
+  localitySnapshot?: import('./geography.ts').LocalitySnapshot | null
+  currentLocality?: import('./geography.ts').Locality | null
+  localApprovedVersion?: number | null
+  localApproval?: CreatorTemplate['localApproval']
+  localSuspension?: CreatorTemplate['localSuspension']
   origin: string
   creator: {
     id: string
-    name: string
-    email: string
+    name: string | null
+    email: string | null
   }
   content: CreatorTemplateContent
 }
