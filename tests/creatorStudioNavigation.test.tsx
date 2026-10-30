@@ -69,20 +69,12 @@ test('Mechanics Library is read-only and separates configuration, simulation and
   noMutations()
 })
 
-test.each(['Local'])('%s creation is a noninteractive Coming soon card, including old deep links', async type => {
-  await render(`/creator?studio=${type.toLowerCase()}`)
-  const card = [...container.querySelectorAll('nav > div')].find(node => node.textContent?.startsWith(`Create ${type} Template`))!
-  expect(card.textContent).toContain('Coming soon')
-  expect(card.querySelector('button,a,input,[tabindex]')).toBeNull()
-  expect(card.hasAttribute('tabindex')).toBe(false)
-  expect(card.hasAttribute('role')).toBe(false)
-  expect(button(`Create ${type} Template`)).toBeUndefined()
-  await act(async () => card.dispatchEvent(new MouseEvent('click', { bubbles: true })))
-  expect(container.querySelector('dialog')).toBeNull()
-  expect(container.textContent).not.toContain('F7-FE-03')
-  if (type === 'Universal') expect(card.textContent).toContain('without fixed locations')
-  else expect(card.textContent).toContain('approved Universal Template or from scratch')
-  noMutations()
+test('Local entry opens inline source choices and scratch shared editor link', async () => {
+  await render('/creator'); await click('Create Local Template')
+  expect(container.textContent).toContain('Choose your starting point')
+  expect(container.querySelector('a[href="/create?category=local"]')).not.toBeNull()
+  await click('Start from an approved Universal')
+  expect(container.textContent).toContain('Universal Library')
 })
 
 test('browser history back and forward open and close guidance without mutation', async () => {

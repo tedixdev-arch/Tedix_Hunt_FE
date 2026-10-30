@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
@@ -27,7 +28,7 @@ beforeEach(() => {
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
 afterEach(() => { act(() => root.unmount()); container.remove(); vi.unstubAllGlobals() })
-async function render() { await act(async () => root.render(<UniversalLibrary />)) }
+async function render() { await act(async () => root.render(<MemoryRouter><UniversalLibrary /></MemoryRouter>)) }
 async function click(text: string) { await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === text)!.click()) }
 function deferred<T>() { let resolve!: (value: T) => void; let reject!: (reason: unknown) => void; const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 
@@ -44,7 +45,7 @@ test('F7-FE-06 cross-Creator approved product opens exact approved story and ter
   expect(container.querySelector('input,select,textarea,a')).toBeNull()
   expect(container.textContent).not.toContain('another-creator')
   expect(document.activeElement?.textContent).toBe('Shared story')
-  expect(container.querySelectorAll('button')).toHaveLength(2)
+  expect(container.querySelectorAll('button')).toHaveLength(3)
 })
 
 test('F7-FE-06 current publication replaces stale list reference without history selection', async () => {
