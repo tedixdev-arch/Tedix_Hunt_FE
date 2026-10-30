@@ -1,6 +1,6 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { CreatorTemplateEditorPage } from '../src/pages/CreatorStudio'
 import { ApiError } from '../src/services/api/client'
@@ -44,4 +44,26 @@ test.each(['approved','changes_requested'] as const)('04 %s starts a new immutab
 })
 test.each([401,403,404])('04 owner detail denial %s reveals no content', async status => {
   api.get.mockRejectedValue(new ApiError('Denied', status, 'http')); await render(); expect(container.querySelector('input')).toBeNull(); expect(container.textContent).not.toContain('Saved mystery')
+})
+
+test('04 duplicate save during stale-state preflight creates only one next version', async () => {
+  await render(); await name('One immutable save')
+  let resolve!: (value: CreatorTemplate) => void
+  api.get.mockReturnValueOnce(new Promise(done => resolve = done))
+  await act(async () => { button('Save draft').click(); button('Save draft').click() })
+  expect(api.createVersion).not.toHaveBeenCalled()
+  await act(async () => resolve(structuredClone(record)))
+  expect(api.createVersion).toHaveBeenCalledTimes(1)
+})
+
+test('04 late owner read cannot replace a newly opened Template', async () => {
+  let resolve!: (value: CreatorTemplate) => void
+  api.get.mockReturnValueOnce(new Promise(done => resolve = done))
+  const newest = { ...record, key: 'newest', content: { ...record.content, key: 'newest', displayName: 'Newest owned draft' } }
+  api.get.mockResolvedValueOnce(newest)
+  function Navigation() { const navigate = useNavigate(); return <button onClick={() => navigate('/create?template=newest')}>Open newest</button> }
+  await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=older']}><Navigation /><CreatorTemplateEditorPage /></MemoryRouter>))
+  await click('Open newest')
+  await act(async () => resolve(structuredClone(record)))
+  expect((container.querySelector('input') as HTMLInputElement).value).toBe('Newest owned draft')
 })
