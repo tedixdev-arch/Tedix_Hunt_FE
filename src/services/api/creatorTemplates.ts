@@ -92,8 +92,8 @@ export class CreatorTemplatesApi {
     return this.client.delete(`/api/creator/templates/${encodeURIComponent(key)}`)
   }
 
-  create(content: CreatorTemplateContent): Promise<CreatorTemplate> {
-    return this.client.post('/api/creator/templates', { key: content.key, content })
+  create(content: CreatorTemplateContent, category?: 'universal'): Promise<CreatorTemplate> {
+    return this.client.post('/api/creator/templates', { key: content.key, content, ...(category ? { category } : {}) })
   }
 
   createVersion(key: string, content: CreatorTemplateContent): Promise<CreatorTemplate> {

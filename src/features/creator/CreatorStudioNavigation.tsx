@@ -1,5 +1,6 @@
+import { UniversalLibrary } from './UniversalLibrary'
 import { useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { gameplayPresentation } from './CheckpointGameplayEditor'
 import { supportedGameplay } from './checkpointGameplay'
 
@@ -61,13 +62,15 @@ export function CreatorStudioNavigation() {
   const close = () => setParams(current => { const next = new URLSearchParams(current); next.delete('studio'); return next })
   return <>
     <nav aria-label="Creator Studio entries" className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {entries.map(([key, label, description]) => key === 'universal' || key === 'local' ? <div key={key} className="min-h-28 min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-slate-600">
+      {entries.map(([key, label, description]) => key === 'universal' ? <Link key={key} to="/create?category=universal" className={`min-h-28 min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-emerald-500 ${focus}`}><span className="block font-bold">{label}</span><span className="mt-2 block text-sm text-slate-600">{description}</span></Link> : key === 'local' ? <div key={key} className="min-h-28 min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-slate-600">
         <span className="block font-bold">{label}</span><span className="mt-2 inline-block rounded-full bg-slate-200 px-2 py-1 text-xs font-bold">Coming soon</span><p className="mt-2 text-sm">{description}</p>
       </div> : <button key={key} type="button" aria-haspopup={key === 'templates' ? undefined : 'dialog'} onClick={() => {
         if (key === 'templates') { const heading = document.getElementById('my-templates'); heading?.focus(); heading?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }); return }
         setParams(current => { const next = new URLSearchParams(current); next.set('studio', key); return next })
       }} className={`min-h-28 min-w-0 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-emerald-500 ${focus}`}><span className="block font-bold">{label}</span><span className="mt-2 block text-sm text-slate-600">{description}</span></button>)}
     </nav>
-    {view === 'mechanics' && <MechanicsLibraryDialog onClose={close} />}
+    <button type="button" aria-expanded={view === 'library'} onClick={() => setParams(current => { const next = new URLSearchParams(current); if (view === 'library') next.delete('studio'); else next.set('studio', 'library'); return next })} className={`mt-4 min-h-12 rounded-xl border border-slate-300 bg-white px-4 font-bold ${focus}`}>{view === 'library' ? 'Close Universal Library' : 'Browse Universal Library'}</button>
+    {view === 'library' && <UniversalLibrary />}
+    {view === 'mechanics'  && <MechanicsLibraryDialog onClose={close} />}
   </>
 }
