@@ -15,14 +15,14 @@ export function templateContentEqual(current: CreatorTemplateContent, persisted:
   return JSON.stringify({ ...current, version: persisted.version }) === JSON.stringify(persisted)
 }
 
-export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'create' | 'createVersion'>, current: CreatorTemplateContent, persisted: CreatorTemplate | null, category?: 'universal' | 'local'): Promise<CreatorTemplate> {
-  if (persisted && templateContentEqual(current, persisted.content)) return persisted
+export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'create' | 'createVersion'>, current: CreatorTemplateContent, persisted: CreatorTemplate | null, category?: 'universal' | 'local', localityId?: string | null): Promise<CreatorTemplate> {
+  if (localityId === undefined && persisted && templateContentEqual(current, persisted.content)) return persisted
   current = { ...current, mission: serializeMission(current.mission) }
   const validation = finishPointValidation(current.configuration) || gameplayValidation(current)
   if (validation) throw new Error(validation)
-  if (!persisted) return category ? api.create({ ...current, version: 1 }, category) : api.create({ ...current, version: 1 })
-  if (templateContentEqual(current, persisted.content)) return persisted
-  return api.createVersion(persisted.key, { ...current, key: persisted.key, version: persisted.version + 1 })
+  if (!persisted) return category ? api.create({ ...current, version: 1 }, category, ...(localityId !== undefined ? [localityId] as const : [])) : api.create({ ...current, version: 1 })
+  if (localityId === undefined && templateContentEqual(current, persisted.content)) return persisted
+  return api.createVersion(persisted.key, { ...current, key: persisted.key, version: persisted.version + 1 }, ...(localityId !== undefined ? [localityId] as const : []))
 }
 
 export function hydratePersistedGeography(configuration: CreatorGeographyConfiguration): {

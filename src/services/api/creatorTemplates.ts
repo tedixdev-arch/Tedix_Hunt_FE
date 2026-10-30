@@ -1,3 +1,4 @@
+import type { LocalitySnapshot } from './geography.ts'
 import type { TemplateMission } from '../../features/creator/mission.ts'
 import { apiClient, type ApiClient } from './client.ts'
 import type { CreatorGeographyConfiguration } from '../../features/creator/checkpointGeography.ts'
@@ -21,9 +22,11 @@ export interface CreatorTemplate {
   version: number
   status: CreatorTemplateStatus
   content: CreatorTemplateContent
+  localityId?: string | null
+  localitySnapshot?: LocalitySnapshot | null
   origin?: unknown
   // C2 classification and C6b-5 private owner projections. Omitted on legacy/older responses.
-  category?: 'universal' | 'local' | 'local' | null
+  category?: 'universal' | 'local' | null
   // F7-BE-01: Universal owner GETs only. Null means never published; omission means unavailable.
   publishedVersion?: number | null
   localApprovedVersion?: number | null
@@ -96,12 +99,12 @@ export class CreatorTemplatesApi {
     return this.client.post(`/api/creator/templates/from-universal/${encodeURIComponent(sourceKey)}`, { key, publishedReference: { templateId: publishedReference.templateId, version: publishedReference.version } })
   }
 
-  create(content: CreatorTemplateContent, category?: 'universal' | 'local'): Promise<CreatorTemplate> {
-    return this.client.post('/api/creator/templates', { key: content.key, content, ...(category ? { category } : {}) })
+  create(content: CreatorTemplateContent, category?: 'universal' | 'local', localityId?: string | null): Promise<CreatorTemplate> {
+    return this.client.post('/api/creator/templates', { key: content.key, content, ...(category ? { category } : {}), ...(localityId !== undefined ? { localityId } : {}) })
   }
 
-  createVersion(key: string, content: CreatorTemplateContent): Promise<CreatorTemplate> {
-    return this.client.post(`/api/creator/templates/${encodeURIComponent(key)}/versions`, { content })
+  createVersion(key: string, content: CreatorTemplateContent, localityId?: string | null): Promise<CreatorTemplate> {
+    return this.client.post(`/api/creator/templates/${encodeURIComponent(key)}/versions`, { content, ...(localityId !== undefined ? { localityId } : {}) })
   }
 
   submit(key: string, version: number): Promise<CreatorTemplate> {
