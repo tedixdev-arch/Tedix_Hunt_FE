@@ -21,6 +21,14 @@ export interface AdminTemplateReview {
   content: CreatorTemplateContent
 }
 
+export interface RetainedLocalReview extends Omit<AdminTemplateReview, 'version' | 'content'> {
+  version: number | null
+  content: CreatorTemplateContent | null
+  candidateVersion: number | null
+  candidateStatus: CreatorTemplateStatus
+  submittedVersion: number | null
+}
+
 interface AdminTemplateReviewsResponse {
   templates: AdminTemplateReview[]
 }
@@ -40,6 +48,10 @@ export class AdminTemplateReviewsApi {
 
   get(key: string): Promise<AdminTemplateReview> {
     return this.client.get(`/api/admin/templates/review/${encodeURIComponent(key)}`)
+  }
+
+  approved(key: string): Promise<RetainedLocalReview> {
+    return this.client.get(`/api/admin/templates/review/${encodeURIComponent(key)}?view=approved`)
   }
 
   approve(key: string, version?: number): Promise<AdminTemplateReview> {

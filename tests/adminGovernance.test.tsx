@@ -54,3 +54,17 @@ test.each([401, 403])('02 %s decision denial clears private inspection and shows
 test('02 legacy decisions preserve optional body behavior', async () => {
   api.get.mockResolvedValue(fixture()); api.requestChanges.mockResolvedValue({ ...fixture(), status: 'changes_requested' }); await render('/admin/reviews/legacy'); await click('Request changes'); expect(api.requestChanges).toHaveBeenCalledExactlyOnceWith('legacy', undefined)
 })
+const locality = { id: 'place', countryCode: 'RO', countryDisplayName: 'Romania', name: 'Saved town', administrativeContext: 'North', latitude: 46, longitude: 23 }
+const retained = () => ({ ...fixture('local'), status: 'draft', version: 2, candidateVersion: 7, candidateStatus: 'draft', submittedVersion: null, localityId: 'place', localitySnapshot: locality, currentLocality: { ...locality, active: true }, localApprovedVersion: 2, localApproval: { version: 2, authority: 'approved', independentEvidence: true, localityBound: true }, localSuspension: null })
+test('03 retained exact approval remains inspectable during draft revisions', async () => {
+  api.approved.mockResolvedValue(retained()); await render('/admin/reviews/local?category=Local&view=approved')
+  expect(api.get).not.toHaveBeenCalled(); expect(api.approved).toHaveBeenCalledWith('local'); expect(container.textContent).toContain('Candidate version: 7 · draft. Retained version: 2.'); expect(container.textContent).toContain('Saved town'); expect(button('Approve template')).toBeUndefined()
+})
+test.each([{ name: 'Corrected town' }, { latitude: 47 }, { active: false }])('03 saved snapshot stays distinct from registry %j', async change => {
+  api.approved.mockResolvedValue({ ...retained(), currentLocality: { ...locality, active: true, ...change } }); await render('/admin/reviews/local?view=approved')
+  expect(container.textContent).toContain('Saved town'); expect(container.textContent).toMatch(/labels changed|coordinates, country or identity changed|locality is inactive/)
+})
+test('03 historical unresolved authority exposes missing evidence and never substitutes candidate', async () => {
+  api.approved.mockResolvedValue({ ...retained(), version: null, content: null, localitySnapshot: null, currentLocality: null, localApproval: { version: 2, authority: 'integrity_exception', independentEvidence: false, localityBound: false } })
+  await render('/admin/reviews/local?view=approved'); expect(container.textContent).toContain('Retained content is unresolved'); expect(container.textContent).toContain('does not establish eligibility'); expect(container.textContent).not.toContain('Exact story v3')
+})

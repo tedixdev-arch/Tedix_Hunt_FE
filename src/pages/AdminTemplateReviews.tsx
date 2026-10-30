@@ -1,10 +1,11 @@
 import { ApiError } from '../services/api/client'
 import { useAuth } from '../app/providers/AuthProvider'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { HuntMapInspection } from '../components/HuntMapPreview'
 import { AdminShell } from './AdminConsole.tsx'
 import { adminTemplateReviewsApi, type AdminTemplateReview } from '../services/api/adminTemplateReviews.ts'
+import { RetainedLocalInspection, LocalBindingDetails } from '../features/admin/LocalInspection'
 import { PersistedValue } from '../features/admin/PersistedValue'
 import { reviewCategories, reviewCategory, reviewError, type ReviewCategory } from '../features/admin/reviewState'
 
@@ -16,6 +17,7 @@ export function AdminTemplateReviewDetailPage() { return <ReviewWorkspace /> }
 
 function ReviewWorkspace() {
   const { key = '' } = useParams()
+  const navigate = useNavigate()
   const [params] = useSearchParams()
   const [category, setCategory] = useState<ReviewCategory>(() => reviewCategories.find(value => value === params.get('category')) ?? 'Universal')
   const [reviews, setReviews] = useState<AdminTemplateReview[] | null>(null)
@@ -38,12 +40,15 @@ function ReviewWorkspace() {
       {error && <p className="mt-4" role="alert">{error}</p>}
       {reviews && !reviews.some(item => reviewCategory(item) === category) && <p className="mt-4">No items awaiting review in this category.</p>}
       <ul className="mt-3 space-y-2">{reviews?.filter(item => reviewCategory(item) === category).map(item => <li key={item.key}><Link className="block min-h-12 break-words rounded-xl border p-3 focus-visible:outline" aria-current={key === item.key ? 'true' : undefined} to={`/admin/reviews/${encodeURIComponent(item.key)}?category=${encodeURIComponent(category)}`}><strong>{item.content.displayName}</strong><span className="block text-sm">{item.creator.name ?? 'Creator'} · Submitted version {item.version}</span></Link></li>)}</ul>
-    </section><div className="min-w-0">{key ? <TemplateInspection key={key} templateKey={key} onDecision={load} /> : <section className={panel}>Select an item to inspect its exact submitted version.</section>}</div></div>
+      {category === 'Local' && <form className="mt-5" onSubmit={event => { event.preventDefault(); const value = new FormData(event.currentTarget).get('key'); if (typeof value === 'string' && value.trim()) navigate(`/admin/reviews/${encodeURIComponent(value.trim())}?category=Local&view=approved`) }}><label className="block text-sm font-bold" htmlFor="retained-key">Find retained Local approval</label><input id="retained-key" name="key" required className="mt-2 min-h-12 w-full rounded-lg border p-2" placeholder="Template key" /><button className={button + ' mt-2'}>Inspect approval</button></form>}
+    </section><div className="min-w-0">{key ? <TemplateInspection key={`${key}:${params.get('view')}`} templateKey={key} onDecision={load} /> : <section className={panel}>Select an item to inspect its exact submitted version.</section>}</div></div>
   </AdminShell>
 }
 
 function TemplateInspection({ templateKey, onDecision }: { templateKey: string; onDecision: () => Promise<void> }) {
   const { user } = useAuth()
+  const [params] = useSearchParams()
+  const retainedOnly = params.get('view') === 'approved'
   const decisionLock = useRef(false)
   const [review, setReview] = useState<AdminTemplateReview | null>(null)
   const [result, setResult] = useState<AdminTemplateReview | null>(null)
@@ -58,7 +63,7 @@ function TemplateInspection({ templateKey, onDecision }: { templateKey: string; 
     catch (cause) { if (request === generation.current) setError(reviewError(cause)) }
     finally { if (request === generation.current) setLoading(false) }
   }, [templateKey])
-  useEffect(() => { void load(); return () => { generation.current++ } }, [load])
+  useEffect(() => { if (!retainedOnly) void load(); else setLoading(false); return () => { generation.current++ } }, [load, retainedOnly])
   const decide = async (action: 'approve' | 'changes') => {
     if (decisionLock.current || saving || !review || result || review.status !== 'submitted') return
     if (action === 'approve' && (!user || review.creator.id === user.id)) return
@@ -85,15 +90,16 @@ function TemplateInspection({ templateKey, onDecision }: { templateKey: string; 
   if (loading) return <p role="status">Loading submitted Template…</p>
   return <div className="min-w-0 space-y-4">
     {error && <p className={panel + ' text-red-900'} role="alert">{error}</p>}
-    <button className={button} type="button" disabled={saving} onClick={() => void load()}>Refresh inspection</button>
+    {!retainedOnly && <button className={button} type="button" disabled={saving} onClick={() => void load()}>Refresh inspection</button>}
     {review && <><header className={panel}><p>{reviewCategory(review)} · {review.status}</p><h3 className="mt-2 break-words text-2xl font-bold">{review.content.displayName}</h3><p className="mt-2 break-words">{review.creator.name} ({review.creator.email}) · Submitted version {review.version}</p></header>
       <section className={panel} aria-label="Template decision"><h3 className="text-xl font-bold">Decision</h3>
         {result ? <p role="status">{result.status === 'approved' ? 'Template approved' : result.status === 'changes_requested' ? 'Changes requested' : 'Decision response received; refresh inspection'} · version {result.version}</p> : <div className="mt-3 flex flex-wrap gap-3"><button className={button + ' bg-emerald-100'} disabled={saving || !user || review.creator.id === user.id || review.status !== 'submitted'} onClick={() => void decide('approve')}>Approve template</button><button className={button} disabled={saving || review.status !== 'submitted'} onClick={() => void decide('changes')}>Request changes</button></div>}
       {review.creator.id === user?.id && <p className="mt-3">You cannot approve your own Template, including when you also have a Creator role.</p>}
-      </section><SubmittedContent review={review} /></>}
+      </section>{review.category === 'local' && <LocalBindingDetails review={review} />}<SubmittedContent review={review} /></>}
+    {(retainedOnly || review?.category === 'local' || (!review && !loading)) && <RetainedLocalInspection templateKey={templateKey} />}
   </div>
 }
-function SubmittedContent({ review }: { review: AdminTemplateReview }) {
+export function SubmittedContent({ review }: { review: AdminTemplateReview }) {
   const configuration = review.content.configuration
   const duration = configuration.durationMinutes
   const additionalContent = Object.fromEntries(Object.entries(review.content).filter(([field]) => !['key', 'version', 'displayName', 'theme', 'mission', 'configuration', 'checkpoints', 'scoring'].includes(field)))
