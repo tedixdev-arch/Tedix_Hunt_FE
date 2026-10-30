@@ -1,5 +1,5 @@
-import { ApiError, apiClient, type ApiClient } from './client.ts';
-import { sessionStore, type SessionStore } from './session.ts';
+import { apiClient, type ApiClient } from './client.ts';
+import { clearSession, replaceSession, sameSession, sessionSnapshot, sessionStore, type SessionStore } from './session.ts';
 
 export type GlobalRole = 'participant' | 'organizer' | 'creator' | 'admin';
 
@@ -83,7 +83,7 @@ export class AuthApi {
 
   private async authenticate(path: string, input: unknown): Promise<AuthResponse> {
     const response = await this.client.post<AuthResponse>(path, input, { authenticated: false });
-    this.session.saveSession(response.tokens);
+    replaceSession(this.session, response.tokens);
     return response;
   }
 
@@ -130,41 +130,22 @@ export class AuthApi {
   async createGuestSession(input: GuestSessionInput = {}): Promise<GuestAuthResponse> {
     const response = await this.client.post<GuestAuthResponse>('/api/auth/guest', input, { authenticated: false });
     // Guests are intentionally non-refreshable.
-    this.session.saveSession({ accessToken: response.tokens.accessToken });
+    replaceSession(this.session, { accessToken: response.tokens.accessToken });
     return response;
   }
 
   async refresh(): Promise<RefreshResponse> {
-    const refreshToken = this.session.getRefreshToken();
-    if (!refreshToken) throw new ApiError('No refresh session is available.', 401, 'unauthorized');
-    try {
-      const response = await this.client.post<RefreshResponse>('/api/auth/refresh', { refreshToken }, {
-        authenticated: false, retryOnUnauthorized: false,
-      });
-      this.session.saveSession({
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken ?? refreshToken,
-      });
-      return response;
-    } catch (error) {
-      this.session.clearSession();
-      throw error;
-    }
+    return this.client.refreshSession();
   }
 
   async logout(): Promise<void> {
     const refreshToken = this.session.getRefreshToken();
-    if (!refreshToken) {
-      this.session.clearSession();
-      return;
-    }
-    try {
-      await this.client.post<void>('/api/auth/logout', { refreshToken }, {
-        retryOnUnauthorized: false,
-      });
-    } finally {
-      this.session.clearSession();
-    }
+    // Invalidate immediately, before any pending refresh or logout response settles.
+    clearSession(this.session);
+    if (!refreshToken) return;
+    await this.client.post<void>('/api/auth/logout', { refreshToken }, {
+      authenticated: false, retryOnUnauthorized: false,
+    });
   }
 
   me(): Promise<PublicUser> {
@@ -173,10 +154,12 @@ export class AuthApi {
 
   async bootstrapSession(): Promise<PublicUser | null> {
     if (!this.session.getAccessToken()) return null;
+    const snapshot = sessionSnapshot(this.session);
     try {
-      return await this.me();
+      const user = await this.me();
+      return sameSession(this.session, snapshot) ? user : null;
     } catch {
-      this.session.clearSession();
+      // ApiClient owns expiry; a network error or obsolete bootstrap cannot clear a newer login.
       return null;
     }
   }

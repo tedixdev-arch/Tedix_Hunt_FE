@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 import { authApi, sessionStore, type ActivateAdminInput, type ChangePasswordInput, type GuestSessionInput, type LoginInput, type PublicUser, type RegisterInput } from '../../services/api'
 
 type AuthContextValue = {
@@ -21,18 +21,21 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const operation = useRef(0)
   const [user, setUser] = useState<PublicUser | null>(null)
   const [isBootstrapping, setIsBootstrapping] = useState(true)
 
   useEffect(() => {
     let active = true
-    authApi.bootstrapSession().then(current => { if (active) setUser(current) }).finally(() => { if (active) setIsBootstrapping(false) })
+    const version = operation.current
+    authApi.bootstrapSession().then(current => { if (active && operation.current === version) setUser(current) }).finally(() => { if (active) setIsBootstrapping(false) })
     return () => { active = false }
   }, [])
 
   const authenticate = useCallback(async (request: Promise<{ user: PublicUser }>) => {
+    const version = ++operation.current
     const response = await request
-    setUser(response.user)
+    if (operation.current === version) setUser(response.user)
     return response.user
   }, [])
   const loginParticipant = useCallback((input: LoginInput) => authenticate(authApi.loginParticipant(input)), [authenticate])
@@ -49,7 +52,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     sessionStore.clearSession()
     setUser(null)
   }, [])
-  const logout = useCallback(async () => { try { await authApi.logout() } finally { setUser(null) } }, [])
+  const logout = useCallback(async () => {
+    operation.current += 1
+    setUser(null)
+    await authApi.logout()
+  }, [])
 
   const value = useMemo(() => ({ user, isAuthenticated: user !== null, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateDirectOrganizer, activateCreator, loginAdmin, changePassword, logout }), [user, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateDirectOrganizer, activateCreator, loginAdmin, changePassword, logout])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
