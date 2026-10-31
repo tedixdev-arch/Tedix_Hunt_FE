@@ -1,3 +1,4 @@
+import { TeamChallengeAuthoring } from './TeamChallengeAuthoring'
 import type { PersonalCreationContext } from './creationContext'
 import { PersonalChallengeAuthoring } from './PersonalChallengeAuthoring'
 import { authorPrototype } from './persistenceAdapter'
@@ -69,5 +70,5 @@ function ExistingChallengeAuthoring({ field, value, onChange, draft = { source: 
 export const teamCatalog = checkpointExercises.map(row => ({ id: row.teamKind as TeamType, title: row.title }))
 
 export function ChallengeAuthoring(props: Parameters<typeof ExistingChallengeAuthoring>[0] & { context?: PersonalCreationContext }) {
-  return props.field === 'kind' ? <PersonalChallengeAuthoring {...props} /> : <ExistingChallengeAuthoring {...props} />
+  return props.field === 'kind' ? <PersonalChallengeAuthoring {...props} /> : <TeamChallengeAuthoring {...props} legacy={<ExistingChallengeAuthoring {...props} />} />
 }

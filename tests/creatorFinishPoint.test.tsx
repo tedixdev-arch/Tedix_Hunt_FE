@@ -47,7 +47,7 @@ async function click(text: string) {
   if (text === '2.') { await currentStep(0); return }
   const oldSteps: Record<string, number> = { '3.': 1, '4.': 2, '5.': 3, '6.': 1, '9.': 6 }
   if (text === '6.') await currentStep(0)
-  const button = /^\d\.$/.test(text) ? container.querySelectorAll('nav')[1].querySelectorAll('button')[oldSteps[text] ?? 0] : Array.from(container.querySelectorAll('button')).findLast(item => item.textContent?.includes(text))!
+  const button = /^\d\.$/.test(text) ? container.querySelectorAll('nav')[1].querySelectorAll('button')[oldSteps[text] ?? 0] : Array.from(container.querySelectorAll('button')).findLast(item => item.textContent?.includes(text) || item.getAttribute('aria-label') === text)!
   expect(button, text).toBeDefined()
   if (text === '6.') {
     const toggle = [...container.querySelectorAll('button')].find(b => b.textContent === 'FinishPoint location details')!
@@ -503,7 +503,7 @@ for (const [featureNumber, label, field] of [['3.', 'Personal Challenge', 'kind'
     }
     for (let i = 0; i < 7; i++) {
       await choose(i)
-      expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe(`Draft ${i + 1}`)
+      expect((await titleField()).value).toBe(`Draft ${i + 1}`)
     }
     await click(featureNumber === '3.' ? '4.' : '3.'); await click(featureNumber)
     for (let i = 0; i < 7; i++) { await choose(i); await click('Predefined') }
@@ -514,8 +514,14 @@ for (const [featureNumber, label, field] of [['3.', 'Personal Challenge', 'kind'
 }
 
 
+async function titleField(): Promise<HTMLTextAreaElement> {
+  const existing = container.querySelector<HTMLTextAreaElement>('[aria-label$="content editor"] textarea, [role="group"][aria-label="Edit Title"] textarea')
+  if (existing) return existing
+  await click('Edit Title')
+  return container.querySelector<HTMLTextAreaElement>('[role="group"][aria-label="Edit Title"] textarea')!
+}
 async function experimentTitle(value: string) {
-  const title = container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement
+  const title = await titleField()
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(title, value)
     title.dispatchEvent(new Event('input', { bubbles: true }))
@@ -528,9 +534,9 @@ test('Use predefined assignment removes only the selected Personal checkpoint an
   await currentStep(1); await checkpointButton(1); await click('Discard changes')
   expect(container.querySelector('[aria-label$="content editor"]')).toBeNull()
   await checkpointButton(7)
-  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Personal FinishPoint')
+  expect((await titleField()).value).toBe('Personal FinishPoint')
   await currentStep(2); await checkpointButton(1)
-  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Team one')
+  expect((await titleField()).value).toBe('Team one')
   expect(mocks.createVersion).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled()
 })
 test.each(['personal', 'team'] as const)('%s custom content saves with backend identity, reloads and submits the exact version', async classification => {
@@ -555,7 +561,7 @@ test.each(['personal', 'team'] as const)('%s custom content saves with backend i
   const saved = structuredClone(record)
   await act(async () => root.unmount()); root = createRoot(container)
   await render(); await currentStep(classification === 'personal' ? 1 : 2)
-  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Persisted custom title')
+  expect((await titleField()).value).toBe('Persisted custom title')
   mocks.submit.mockResolvedValue({ ...record, status: 'submitted' })
   await click('Submit version to Admin'); expect(mocks.submit).toHaveBeenCalledWith('trail', saved.version)
   expect(record).toEqual(saved)
@@ -565,7 +571,7 @@ test('backend rejection preserves custom content and preview-only variants; expl
   await render(); await currentStep(1); await click('Create Your Own'); await experimentTitle('Retained after rejection'); await click('Apply to Hunt')
   mocks.createVersion.mockRejectedValueOnce(new Error('Connection lost'))
   await click('Save draft')
-  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained after rejection')
+  expect((await titleField()).value).toBe('Retained after rejection')
   expect(container.textContent).toContain('could not be confirmed')
   expect(mocks.submit).not.toHaveBeenCalled()
 })
@@ -600,7 +606,7 @@ test('choosing a predefined assignment retains the custom draft but explicitly r
   await click('Save draft')
   expect(mocks.createVersion.mock.calls[0][1].checkpoints[0].customExercises).toBeUndefined()
   await click('Create Your Own')
-  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained custom draft')
+  expect((await titleField()).value).toBe('Retained custom draft')
 })
 
 // Selection semantics apply identically to both classifications and the terminal slot.
@@ -621,22 +627,22 @@ for (const classification of ['personal', 'team'] as const) for (const terminal 
     await click('Predefined')
     expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toContain('Custom')
     await click('Create Your Own')
-    expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained authored variant')
+    expect((await titleField()).value).toBe('Retained authored variant')
     await click('Predefined')
-    if (classification === 'personal') await click('View saved challenge')
+    await click('View saved challenge')
     vi.mocked(window.confirm).mockReturnValueOnce(false)
-    await click(classification === 'personal' ? 'Use saved challenge' : 'Use predefined assignment')
+    await click(classification === 'personal' ? 'Use saved challenge' : 'Use saved Team Challenge')
     expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toContain('Custom')
-    await click(classification === 'personal' ? 'Use saved challenge' : 'Use predefined assignment')
-    expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge/)
+    await click(classification === 'personal' ? 'Use saved challenge' : 'Use saved Team Challenge')
+    expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge|Saved Team Challenge|No Team Challenge/)
     await click('Create Your Own') // Viewing retained content cannot silently reactivate it.
-    expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained authored variant')
-    expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge/)
+    expect((await titleField()).value).toBe('Retained authored variant')
+    expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge|Saved Team Challenge|No Team Challenge/)
     const chooseType = async (type: string) => act(async () => { const select = container.querySelector<HTMLSelectElement>('[aria-label$="Challenge authoring"] select')!; select.value = type; select.dispatchEvent(new Event('change', { bubbles: true })) })
     if (classification === 'team') await chooseType('distributed-information')
-    expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge/)
+    expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge|Saved Team Challenge|No Team Challenge/)
     if (classification === 'team') await chooseType('scrambled-word')
-    expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained authored variant')
+    expect((await titleField()).value).toBe('Retained authored variant')
     await click('Save draft')
     const payload = mocks.createVersion.mock.calls[0][1]
     expect(payload.checkpoints[index].customExercises[classification]).toBeUndefined()
@@ -646,7 +652,7 @@ for (const classification of ['personal', 'team'] as const) for (const terminal 
     expect(approvedArtifact).toEqual(previousApproved.content)
     expect(previousApproved.version).toBe(3); expect((previousApproved.content.checkpoints[index] as any).customExercises[classification].title).not.toBe('Retained authored variant')
     // Save acknowledged only the active selection, keeping the unrelated session variant.
-    expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained authored variant')
+    expect((await titleField()).value).toBe('Retained authored variant')
     mocks.submit.mockImplementation(async (key, version) => { expect(key).toBe(record.key); expect(version).toBe(record.version); return { ...record, status: 'submitted' } })
     await click('Submit version to Admin'); expect(mocks.submit).toHaveBeenCalledWith(record.key, 4)
     expect((record.content.checkpoints[index] as any).customExercises[classification]).toBeUndefined()
@@ -656,11 +662,11 @@ for (const classification of ['personal', 'team'] as const) for (const terminal 
     await click('Create Your Own')
     if (classification === 'team') await act(async () => { const select = container.querySelector<HTMLSelectElement>('[aria-label="Team Challenge authoring"] select')!; select.value = 'distributed-information'; select.dispatchEvent(new Event('change', { bubbles: true })) })
     await experimentTitle('New custom after predefined'); if (classification === 'personal') await click('Apply to Hunt')
-    if (classification === 'team') await click('Use this custom exercise'); await click('Save draft')
+    if (classification === 'team') await click('Apply Team Challenge'); await click('Save draft')
     expect((record.content.checkpoints[index] as any).customExercises[classification].title).toBe('New custom after predefined')
     await act(async () => root.unmount()); root = createRoot(container)
     await render(); await currentStep(feature); if (terminal) await checkpointButton(7)
-    expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('New custom after predefined')
+    expect((await titleField()).value).toBe('New custom after predefined')
   })
 }
 
@@ -671,8 +677,8 @@ test('discarding an unsaved persisted-custom variant requires confirmation and r
   const discard = () => container.querySelector<HTMLButtonElement>('[aria-label="Discard unsaved draft: Personal Challenge · Checkpoint 1"]')!
   vi.mocked(window.confirm).mockReturnValueOnce(false)
   await act(async () => discard().click())
-  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Do not discard silently')
+  expect((await titleField()).value).toBe('Do not discard silently')
   await act(async () => discard().click())
-  expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe(exerciseFixtures[1].title)
+  expect((await titleField()).value).toBe(exerciseFixtures[1].title)
   expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toContain('Custom')
 })

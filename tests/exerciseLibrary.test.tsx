@@ -191,8 +191,8 @@ test('Predefined selection is read-only and custom copies never mutate shared ex
 })
 test('Team custom editor offers exactly the seven existing mechanics', async () => {
   await render(<AuthoringHarness field="teamKind" />); await click('Create Your Own')
-  expect([...container.querySelector('select')!.options].map(o => o.value)).toEqual(Object.keys(teamNames))
-  expect(container.textContent).toContain('Letter contributions'); expect(container.textContent).toContain('Submission blocked')
+  expect([...container.querySelector('select')!.options].map(o => o.value)).toEqual(['', ...Object.keys(teamNames)])
+  expect(container.textContent).toContain('Edit with Preview'); expect(container.textContent).toContain('LO'); expect(container.textContent).toContain('Supported submission')
 })
 test('invalid unsaved configurations cannot launch a crashing simulator', async () => {
   await render(<ExercisePreview exercise={{ ...prototypes[0], data: { left: [], right: [] } }} onClose={() => {}} />)
