@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { PersonalChallengeCanvas } from './PersonalChallengeCanvas'
+import { personalMechanics } from './persistenceSchema'
 import { ChallengeCanvas, PencilField } from './ChallengeCanvas'
 import { PersonalVisualSurface } from './PersonalVisualSurface'
 import { ExerciseContentEditor } from './ExerciseContentEditor'
@@ -6,7 +8,8 @@ import type { Exercise } from './catalog'
 import { validateExercise } from './catalog'
 import { control } from './ExerciseRenderer'
 
-export const visualMechanics = ['tap-pair', 'single-choice', 'fill-blank']
+export const originalVisualMechanics = ['tap-pair', 'single-choice', 'fill-blank']
+export const visualMechanics = Object.keys(personalMechanics)
 type Props = { exercise: Exercise; onChange: (e: Exercise) => void }
 export function friendlyIssues(errors: string[]): string[] {
   return [...new Set(errors.map(error => {
@@ -53,7 +56,10 @@ export function PersonalMechanicSurface({ exercise, onChange, onlyIndex }: Props
   }}>Add blank</button><label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={expected.caseSensitive} onChange={e => change(activity, { ...expected, caseSensitive: e.target.checked })} />Match upper and lower case exactly</label></div>
 }
 
-export function PersonalMechanicEditor({ exercise, onChange }: Props) {
+export function PersonalMechanicEditor(props: Props) {
+  return originalVisualMechanics.includes(props.exercise.type) ? <OriginalPersonalMechanicEditor {...props} /> : <PersonalChallengeCanvas {...props} />
+}
+function OriginalPersonalMechanicEditor({ exercise, onChange }: Props) {
   const [mode, setMode] = useState('visual'), [step, setStep] = useState(0), [playing, setPlaying] = useState(false)
   const priority = visualMechanics.includes(exercise.type)
   const errors = friendlyIssues(validateExercise(exercise))

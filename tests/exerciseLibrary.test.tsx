@@ -186,7 +186,7 @@ test('Predefined selection is read-only and custom copies never mutate shared ex
   expect(container.textContent).toContain('Even product'); expect(container.querySelector('textarea')).toBeNull()
   expect(container.textContent).toContain('Supported submission')
   await click('Create Your Own'); expect(container.querySelector('select')?.value).toBe('true-false')
-  await input(container.querySelector('textarea')!, 'Independent statement'); expect(prototypes).toEqual(before)
+  await click('Edit Statement'); await input(container.querySelector('textarea')!, 'Independent statement'); expect(prototypes).toEqual(before)
   const first = independentExercise(prototypes[0]), second = independentExercise(prototypes[0]); expect(first.id).not.toBe(second.id)
 })
 test('Team custom editor offers exactly the seven existing mechanics', async () => {
@@ -233,10 +233,10 @@ test('discard targets a single checkpoint/classification slot and includes retai
 test('choosing another exercise type retains authored type variants until explicit discard', async () => {
   await render(<AuthoringHarness />); await click('Create Your Own')
   const chooseType = async (type: string) => input(container.querySelector('select')!, type)
-  await chooseType('true-false'); await input(container.querySelector('textarea')!, 'Retained truth statement')
-  await chooseType('number-line'); await input(container.querySelector('textarea')!, 'Retained numeric exercise')
-  await chooseType('true-false'); expect(container.querySelector('textarea')?.value).toBe('Retained truth statement')
-  await chooseType('number-line'); expect(container.querySelector('textarea')?.value).toBe('Retained numeric exercise')
+  await chooseType('true-false'); await click('Edit Statement'); await input(container.querySelector('textarea')!, 'Retained truth statement')
+  await chooseType('number-line'); await click('Edit Instructions'); await input(container.querySelector('textarea')!, 'Retained numeric exercise')
+  await chooseType('true-false'); await click('Edit Statement'); expect(container.querySelector('textarea')?.value).toBe('Retained truth statement')
+  await chooseType('number-line'); await click('Edit Instructions'); expect(container.querySelector('textarea')?.value).toBe('Retained numeric exercise')
   await click('Discard changes'); await click('Create Your Own'); await chooseType('true-false')
   expect(container.querySelector('textarea')?.value).not.toBe('Retained truth statement')
 })
