@@ -1,0 +1,103 @@
+{
+  "scenarios": 16,
+  "results": [
+    {
+      "width": 1440,
+      "classification": "personal",
+      "terminal": false,
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "classification": "personal",
+      "terminal": true,
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "classification": "team",
+      "terminal": false,
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "classification": "team",
+      "terminal": true,
+      "passed": true
+    },
+    {
+      "width": 768,
+      "classification": "personal",
+      "terminal": false,
+      "passed": true
+    },
+    {
+      "width": 768,
+      "classification": "personal",
+      "terminal": true,
+      "passed": true
+    },
+    {
+      "width": 768,
+      "classification": "team",
+      "terminal": false,
+      "passed": true
+    },
+    {
+      "width": 768,
+      "classification": "team",
+      "terminal": true,
+      "passed": true
+    },
+    {
+      "width": 390,
+      "classification": "personal",
+      "terminal": false,
+      "passed": true
+    },
+    {
+      "width": 390,
+      "classification": "personal",
+      "terminal": true,
+      "passed": true
+    },
+    {
+      "width": 390,
+      "classification": "team",
+      "terminal": false,
+      "passed": true
+    },
+    {
+      "width": 390,
+      "classification": "team",
+      "terminal": true,
+      "passed": true
+    },
+    {
+      "width": 320,
+      "classification": "personal",
+      "terminal": false,
+      "passed": true
+    },
+    {
+      "width": 320,
+      "classification": "personal",
+      "terminal": true,
+      "passed": true
+    },
+    {
+      "width": 320,
+      "classification": "team",
+      "terminal": false,
+      "passed": true
+    },
+    {
+      "width": 320,
+      "classification": "team",
+      "terminal": true,
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "backend": "Mocked Template operations; real Creator Studio components. No live database integration claimed."
+}

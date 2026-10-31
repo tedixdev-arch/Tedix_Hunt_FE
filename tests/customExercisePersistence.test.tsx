@@ -86,7 +86,7 @@ test('only explicitly preview-only content is excluded, and malformed intended c
   const content = customTemplateFixture(), drafts = hydrateExerciseDrafts(content)
   drafts['kind:0'].custom!.title = ''
   expect(applyExerciseDrafts(content.checkpoints, drafts).errors.join()).toContain('Checkpoint 1')
-  drafts['kind:0'].intendedForSubmission = false
+  drafts['kind:0'].assignment = 'predefined'
   const applied = applyExerciseDrafts(content.checkpoints, drafts)
   expect(applied.errors).toEqual([]); expect(applied.checkpoints[0].customExercises).toBeUndefined()
 })
@@ -185,4 +185,23 @@ test('reordering identified choices in the actual editor preserves answer identi
     expect(result.answer.optionId).toBe('a')
     expect(result.interaction.options.find(x => x.id === result.answer.optionId)?.text).toBe('A')
   } finally { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals() }
+})
+test('view changes never select an assignment; predefined saving excludes every retained variant without inventing Signal content', () => {
+  const content = customTemplateFixture(), drafts = hydrateExerciseDrafts(content), before = structuredClone(content)
+  delete content.checkpoints[0].kind
+  drafts['kind:0'].customByType = { 'single-choice': fromPersistence(fixtures[1]) }
+  drafts['kind:0'].customByType['single-choice']!.title = 'Unrelated unsaved variant'
+  drafts['kind:0'].source = 'saved'
+  expect(applyExerciseDrafts(content.checkpoints, drafts).checkpoints[0].customExercises!.personal).toEqual(content.checkpoints[0].customExercises.personal)
+  drafts['kind:0'].assignment = 'predefined'
+  drafts['kind:0'].source = 'custom' // Inspecting/editing a hidden retained custom cannot override the chosen assignment.
+  const sent = structuredClone(drafts), applied = applyExerciseDrafts(content.checkpoints, drafts)
+  expect(applied.errors).toEqual([]); expect(applied.checkpoints[0].customExercises).toBeUndefined(); expect(applied.checkpoints[0].kind).toBeUndefined()
+  const saved = { ...content, version: 2, checkpoints: applied.checkpoints }
+  const reconciled = reconcileExerciseDrafts(drafts, sent, saved)
+  expect(reconciled['kind:0'].custom).toMatchObject({ title: before.checkpoints[0].customExercises.personal.title })
+  expect(reconciled['kind:0'].customByType!['single-choice']!.title).toBe('Unrelated unsaved variant')
+  expect(reconciled['kind:0'].assignment).toBe('predefined')
+  expect(reconciled['kind:0'].custom!.persistedIdentity).toBeUndefined()
+  expect(hydrateExerciseDrafts(saved)).toEqual({})
 })

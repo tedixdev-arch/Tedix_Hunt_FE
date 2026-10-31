@@ -35,3 +35,13 @@ scope.fixtureLoad = (type: string) => {
   scope.fixtureCalls = []; scope.fixtureReopen()
 }
 scope.fixtureLoad('single-choice')
+scope.fixtureSelections = () => {
+  scope.fixtureLoad('single-choice')
+  for (const cp of record.content.checkpoints as any[]) cp.customExercises = Object.fromEntries(['personal', 'team'].map(classification => {
+    const e: any = structuredClone(exerciseFixtures.find(e => e.type === (classification === 'personal' ? 'single-choice' : 'distributed-information'))!)
+    e.id = crypto.randomUUID(); e.owner = { templateKey: record.key, version: record.version }
+    return [classification, e]
+  }))
+  record.status = 'approved'
+  scope.fixtureReopen()
+}

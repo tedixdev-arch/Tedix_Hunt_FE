@@ -197,3 +197,47 @@ No Master Execution Plan task IDs were added; the frozen 169-task reconciliation
 Browser screenshots are in `creator-custom-exercise-persistence/`. API/database writes are mocked in browser/component suites. Live authenticated Creator/Admin/database acceptance remains blocked as described above; no live database integration pass is claimed. Earlier verification runs exposed obsolete gate assertions, JSON key-order comparison, incomplete mocked response headers, and source-edit HMR interruptions during browser execution. Those were corrected; the results above describe the final completed runs.
 
 GitHub Actions [Frontend validation #281](https://github.com/tedixdev-arch/Tedix_Hunt_FE/actions/runs/41194097088) passed on implementation source `86e95a640f2ec1881c32a6824b6f6078e95b63b3`: clean install, typecheck, build and the full suite. Both deployment jobs were skipped. The follow-up adds three focused copy/error/reorder acceptance tests, explicitly strips persisted identity when cloning an independent FE instance, and adds this CI record; latest-head CI evidence is linked from [Draft PR #137](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/137). No deployment is requested or performed.
+
+## PR #137 selection correction for ChatGPT re-review
+
+This section supersedes earlier descriptions of the intent checkbox and of changing assignments merely by choosing an editor tab or editing the predefined dropdown.
+
+`AuthoringDraft` now separates three concerns: `source` is only the viewed editor tab; required `assignment: 'predefined' | 'custom'` is the active assignment for the next saved Template; `custom`, `exercise` and `customByType` retain authored session content. The former `intendedForSubmission` flag is removed. Serialization reads the explicit assignment and never infers it from the viewed tab or the presence of a retained custom object.
+
+| Creator action | Viewed tab | Assignment to save | Retained custom content |
+| --- | --- | --- | --- |
+| Reopen a persisted custom slot | Custom | Custom | Hydrated from that exact saved instance |
+| View Predefined while Custom is selected | Predefined | Custom, unchanged | Preserved |
+| Return to an existing Custom editor | Custom | Unchanged | Restored exactly, including unsaved edits |
+| Edit predefined candidate dropdown | Predefined | Unchanged | Preserved; changing a candidate is separate from activating it |
+| Click Use predefined assignment, then cancel confirmation | Predefined | Custom, unchanged | Preserved |
+| Click Use predefined assignment and confirm replacement | Predefined | Predefined | Preserved in this session |
+| Inspect/edit retained Custom after selecting Predefined | Custom | Predefined, unchanged | Preserved; edits do not silently reactivate it |
+| Click Use this custom exercise | Custom | Custom | Uses the retained authored content |
+| Start a new custom exercise when no custom draft exists | Custom | Custom | Independent content |
+| Choose another mechanic/example with a retained custom draft | Custom | Unchanged | Current content and other type variants retained; Use this custom exercise activates it |
+| Confirm Discard custom draft and use predefined | Predefined | Predefined | Explicitly discards only this slot's custom variants |
+| Confirm Discard unsaved draft in the slot summary | Saved editor for this slot | Saved assignment restored | Discards this slot's unsaved variants; cancellation leaves them intact |
+
+The panel explicitly displays `Saving: Custom exercise` or `Saving: Predefined assignment`. Viewing tabs alone never confirms replacement or discards anything. Both discard actions require confirmation. Replacement confirmation preserves the custom content; discarding and selecting are distinct operations.
+
+For a Predefined assignment, `applyExerciseDrafts()` removes only that checkpoint/classification's `customExercises` entry, even while the Custom editor is open and holds authored variants. It removes the enclosing object only when both custom slots are absent. It never serializes retained custom objects or inactive variants into that selected predefined slot, and it never fabricates an existing Signal assignment when none is configured. The existing explicit predefined fields remain the selected candidate; an unconfigured optional slot remains unconfigured. Other Personal, Team, normal-checkpoint and FinishPoint assignments remain unchanged.
+
+For a Custom assignment, serialization validates and converts the selected authored instance, independently of the viewed tab. A missing selected custom instance is an explicit validation error. Reconciliation preserves the active assignment and all unrelated session variants after saving, while replacing/clearing backend identity only according to the authoritative saved slot. After saving a predefined replacement, the next immutable version has no custom instance in that slot; returning to retained Custom in the same session restores authored content, and Use this custom exercise can activate it again. A page reload reconstructs only persisted assignments, never an inactive session variant. Prior approved versions remain untouched.
+
+Submission still requires working selected content to equal the exact persisted Template version. Inactive retained variants may remain in the session without leaking into the submitted artifact. Selected unsaved changes still block submission.
+
+Regression coverage now includes the ten requested cases: view-only switching without loss; explicit predefined selection/save/reload; approved persisted-custom replacement in a new version; predefined-to-custom save/reload; Personal/Team independence; terminal independence; exact submitted version/selection; absence of hidden custom serialization; unchanged approved artifacts; and survival of inactive unsaved variants after saving. A four-case real-component lifecycle matrix covers Personal/Team × normal/FinishPoint, including cancellation of replacement, and a separate test covers cancellation of discard. Browser operations use real Creator Studio components with mocked Template operations; no live FE–BE/database pass is claimed.
+
+Verification results for this correction are recorded below. Backend code and the frozen execution plan remain unchanged. Update existing Draft PR #137 only; stop for ChatGPT re-review, with no merge or deployment.
+
+### Selection-correction verification
+
+- `npm run typecheck`: passed.
+- `npm run build`: passed; existing bundle-size warning only.
+- Full `npm test`: **42 Node test-file entries and 687 Vitest tests across 33 files passed**, zero failures/skips. This includes the selection lifecycle matrix, retained inactive variants, confirmed/cancelled replacement and confirmed/cancelled discard.
+- New Chromium selection suite: **16 scenarios passed** (Personal/Team × normal/FinishPoint × 1440/768/390/320 px), zero page errors or horizontal overflow. [Results](Creator_Exercise_Selection_Browser_Results.json); current selection screenshots are in `creator-exercise-selection/`.
+- Existing Chromium mechanic persistence suite: **88 scenarios passed** (all 22 mechanics at four widths), zero page errors. Existing checkpoint browser regression: **4 viewport workflows passed**, zero page errors or horizontal overflow. Existing backend/database acceptance limitations remain unchanged.
+- `git diff --check`: passed. Latest source CI evidence is linked from existing Draft PR #137; no second PR is created.
+
+The first lifecycle run exposed an invalid newly seeded Team word fixture: its existing Signal prose contributions do not reconstruct a word under BE #93. The inverse-transition test now explicitly selects the valid distributed-information mechanic rather than weakening validation or substituting saved content. Final results above supersede that fixture failure.
