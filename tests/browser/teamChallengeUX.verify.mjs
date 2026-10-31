@@ -32,6 +32,7 @@ try {
     await page.getByRole('button', { name: 'Continue to Hunt builder', exact: true }).click()
     await page.getByRole('textbox', { name: 'Template name', exact: true }).fill('Team adventure'); await save(); const original = await page.evaluate(() => window.fixtureRecord())
     await feature(); const selector = panel().getByRole('combobox', { name: 'Team Challenge', exact: true }); assert.equal(await selector.locator('option').count(), 8); await selector.selectOption(type)
+    if (type === 'distributed-information') await shot(`team-selector-${width}`, panel())
     const example = await page.evaluate(type => window.examples.find(e => e.type === type), type)
     assert.equal(await canvas().count(), 1); assert.equal(await panel().getByRole('button', { name: 'Test Challenge', exact: true }).count(), 0); assert.equal(await panel().getByRole('button', { name: 'Edit Title', exact: true }).count(), 0)
     await solve(example); await shot(`${type}-predefined-${width}`); assert.deepEqual(await page.evaluate(() => window.fixtureRecord()), original)
