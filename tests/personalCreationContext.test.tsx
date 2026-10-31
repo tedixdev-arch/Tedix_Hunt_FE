@@ -11,6 +11,10 @@ import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 
 const api = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
+vi.mock('../src/services/api/geography', () => {
+  const city = { id: '11111111-1111-4111-8111-111111111111', countryCode:'FR', countryDisplayName:'France', name:'Paris', administrativeContext:'Île-de-France', latitude:48.8566, longitude:2.3522, active:true }
+  return { geographyApi: { countries: async () => ({ countries:[{code:'FR',displayName:'France'}] }), search: async () => ({localities:[city]}), get:async () => city } }
+})
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 vi.mock('../src/features/creator/RouteEditor', () => ({ RouteEditor: (props: any) => <output aria-label="Position names">{props.drafts.map((p: any) => p.name).join('|')}</output> }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: () => null }))
@@ -37,6 +41,7 @@ for (const category of ['local', 'universal'] as const) test(`new ${category}: c
   const protectedSignal = structuredClone(checkpointExercises)
   api.create.mockImplementation(async (content, savedCategory) => ({ key: content.key, version: 1, status: 'draft', category: savedCategory, content: structuredClone(content) }))
   await act(async () => root.render(<MemoryRouter initialEntries={[`/create?category=${category}`]}><CreatorTemplateEditorPage /></MemoryRouter>))
+  if (category === 'local') await completeLocalSetup()
   const name = [...container.querySelectorAll('label')].find(label => label.firstChild?.textContent === 'Template name')!.querySelector('input')!
   expect(name.value).toBe(''); await input(name, 'My new challenge')
   await click('Save draft'); expect(api.create).toHaveBeenCalledTimes(1)
@@ -91,6 +96,7 @@ test('explicit null category retains unclassified compatibility, with only origi
 
 test('the unclassified scratch URL starts a clean Local draft too', async () => {
   await act(async () => root.render(<MemoryRouter initialEntries={['/create']}><CreatorTemplateEditorPage /></MemoryRouter>))
+  await completeLocalSetup()
   await feature('Personal Challenge')
   expect(container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options).toHaveLength(16)
   expect(container.textContent).not.toContain('Restore the Signal')
@@ -107,7 +113,7 @@ test('route changes cannot reuse Legacy or another creation context state', asyn
   await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=chosen-source']}><Routes /></MemoryRouter>))
   await feature('Personal Challenge')
   expect(container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options).toHaveLength(3)
-  await click('New Local route'); await feature('Personal Challenge')
+  await click('New Local route'); await completeLocalSetup(); await feature('Personal Challenge')
   expect(container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options).toHaveLength(16)
   expect(container.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')).toBeNull()
   await click('Create Your Own'); await input(container.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!, 'Local draft only')
@@ -204,3 +210,10 @@ for (const category of ['local', 'universal'] as const) test(`${category} catego
   expect(container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options).toHaveLength(16)
   expect(modern.content.checkpoints).toEqual(approved.content.checkpoints)
 })
+
+async function completeLocalSetup() {
+  for (const [selector,value] of [['#local-geography select','FR'],['#local-geography input','Paris']]) {
+    await act(async () => { const node = container.querySelector(selector)!; Object.getOwnPropertyDescriptor(node.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype,'value')!.set!.call(node,value); node.dispatchEvent(new Event(node.tagName === 'SELECT' ? 'change':'input',{bubbles:true})) })
+  }
+  for (const text of ['Paris · Île-de-France · France','Continue to Hunt builder']) await act(async () => [...container.querySelectorAll('button')].find(button=>button.textContent===text)!.click())
+}

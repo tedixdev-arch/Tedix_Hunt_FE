@@ -6,6 +6,10 @@ import { beforeEach, afterEach, test, expect, vi } from 'vitest'
 import { CreatorTemplateEditorPage } from '../src/pages/CreatorStudio'
 import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 
+vi.mock('../src/services/api/geography', () => {
+  const city = { id:'11111111-1111-4111-8111-111111111111', countryCode:'FR', countryDisplayName:'France', name:'Paris', administrativeContext:'Île-de-France', latitude:48.8566, longitude:2.3522, active:true }
+  return { geographyApi: { countries:async () => ({ countries:[{code:'FR',displayName:'France'}] }), search:async () => ({localities:[city]}), get:async () => city } }
+})
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn() }))
@@ -419,6 +423,11 @@ test('navigation displays a disabled numbered FinishPoint and permits checkpoint
 })
 test.each(['universal', 'local'] as const)('%s creation uses seven confirmation steps; opening alone never completes a feature', async category => {
   await act(async () => root.render(<MemoryRouter initialEntries={[`/create?category=${category}`]}><CreatorTemplateEditorPage /></MemoryRouter>))
+  if (category === 'local') {
+    await act(async () => { const select=container.querySelector<HTMLSelectElement>('#local-geography select')!; select.value='FR'; select.dispatchEvent(new Event('change',{bubbles:true})) })
+    await act(async () => { const input=container.querySelector<HTMLInputElement>('#local-geography input')!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'Paris'); input.dispatchEvent(new Event('input',{bubbles:true})) })
+    await click('Paris · Île-de-France · France'); await click('Continue to Hunt builder')
+  }
   expect(container.textContent).toContain('0 of 7 complete')
   await currentStep(3); expect(container.textContent).toContain('0 of 7 complete')
   await click('Continue'); expect(container.textContent).toContain('1 of 7 complete')

@@ -11,7 +11,10 @@
       "recenter": true,
       "checkpointAndFinishBounds": true,
       "cityChangeConfirmation": true,
-      "coordinatesPreserved": true
+      "coordinatesPreserved": true,
+      "explicitContinueGate": true,
+      "continueFocus": true,
+      "savedDraftRegistryRecovery": true
     },
     {
       "width": 768,
@@ -23,7 +26,10 @@
       "recenter": true,
       "checkpointAndFinishBounds": true,
       "cityChangeConfirmation": true,
-      "coordinatesPreserved": true
+      "coordinatesPreserved": true,
+      "explicitContinueGate": true,
+      "continueFocus": true,
+      "savedDraftRegistryRecovery": true
     },
     {
       "width": 390,
@@ -35,7 +41,10 @@
       "recenter": true,
       "checkpointAndFinishBounds": true,
       "cityChangeConfirmation": true,
-      "coordinatesPreserved": true
+      "coordinatesPreserved": true,
+      "explicitContinueGate": true,
+      "continueFocus": true,
+      "savedDraftRegistryRecovery": true
     },
     {
       "width": 320,
@@ -47,7 +56,10 @@
       "recenter": true,
       "checkpointAndFinishBounds": true,
       "cityChangeConfirmation": true,
-      "coordinatesPreserved": true
+      "coordinatesPreserved": true,
+      "explicitContinueGate": true,
+      "continueFocus": true,
+      "savedDraftRegistryRecovery": true
     }
   ],
   "errors": []
