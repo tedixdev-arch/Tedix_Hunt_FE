@@ -13,7 +13,7 @@ beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllM
 afterEach(() => { act(() => root.unmount()); container.remove(); vi.unstubAllGlobals() })
 async function render() { await act(async () => root.render(<MemoryRouter initialEntries={['/create?category=local']}><CreatorTemplateEditorPage /></MemoryRouter>)) }
 function save() { return [...container.querySelectorAll('button')].find(b => b.textContent === 'Save draft')! }
-async function name() { const input = container.querySelector('input')!; await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Local mystery'); input.dispatchEvent(new Event('input', { bubbles: true })) }) }
+async function name() { const input = container.querySelector('#template-setup input')!; await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Local mystery'); input.dispatchEvent(new Event('input', { bubbles: true })) }) }
 test('08 route-free creation uses shared editor and returned identity; synchronous duplicate clicks create once', async () => {
   let resolve!: (v: any) => void; api.create.mockReturnValue(new Promise(done => resolve = done)); await render(); await name()
   expect(container.textContent).toContain('Local Template'); expect(container.textContent).toContain('Safety checkboxes')
@@ -21,11 +21,11 @@ test('08 route-free creation uses shared editor and returned identity; synchrono
   expect(api.create).toHaveBeenCalledTimes(1); const [content, category] = api.create.mock.calls[0]
   expect(category).toBe('local'); expect(content.configuration.checkpointPositions).toEqual([]); expect(content.configuration.finishPoint).toBeUndefined()
   await act(async () => resolve({ key: 'server-key', version: 1, status: 'draft', category: 'local', content: { ...content, key: 'server-key', displayName: 'Server title' } }))
-  expect((container.querySelector('input') as HTMLInputElement).value).toBe('Server title'); expect(api.submit).not.toHaveBeenCalled()
+  expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Server title'); expect(api.submit).not.toHaveBeenCalled()
 })
 test.each([400,403,409])('08 error %s preserves authored input and permits correction', async status => {
   api.create.mockRejectedValue(new ApiError('Failed', status, 'http')); await render(); await name(); await act(async () => save().click())
-  expect(container.querySelector('[role=alert]')).not.toBeNull(); expect((container.querySelector('input') as HTMLInputElement).value).toBe('Local mystery'); expect(save().disabled).toBe(false)
+  expect(container.querySelector('[role=alert]')).not.toBeNull(); expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Local mystery'); expect(save().disabled).toBe(false)
 })
 test('08 uncertain creation prevents blind retry and links to owned recovery', async () => {
   api.create.mockRejectedValue(new ApiError('Lost', null, 'network')); await render(); await name(); await act(async () => save().click())

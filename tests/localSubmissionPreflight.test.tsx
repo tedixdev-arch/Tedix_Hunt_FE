@@ -55,7 +55,7 @@ test.each(['version', 'locality ID', 'locality snapshot', 'status', 'content'])(
   expect(api.get).toHaveBeenCalledTimes(2); expect(api.submit).not.toHaveBeenCalled(); expect(api.createVersion).not.toHaveBeenCalled()
   expect(container.querySelector('[role=alert]')?.textContent).toContain('saved version changed')
   expect(button('Submit version').disabled).toBe(true); expect(button('Reopen saved version')).toBeDefined()
-  expect((container.querySelector('input') as HTMLInputElement).value).toBe('Local mystery')
+  expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Local mystery')
 })
 test.each([401, 403, 404, 409])('Local preflight denial/conflict %s sends no submission', async status => {
   await ready(); api.get.mockRejectedValueOnce(new ApiError('Denied', status, 'http'))

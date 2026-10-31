@@ -21,28 +21,28 @@ afterEach(() => { act(() => root.unmount()); container.remove(); vi.unstubAllGlo
 async function render() { await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=owned']}><CreatorTemplateEditorPage /></MemoryRouter>)) }
 const button = (text: string) => [...container.querySelectorAll('button')].find(b => b.textContent?.startsWith(text))!
 async function click(text: string) { await act(async () => button(text).click()) }
-async function name(value: string) { const input = container.querySelector('input')!; await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) }) }
+async function name(value: string) { const input = container.querySelector('#template-setup input')!; await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) }) }
 test('09 reopen preserves full story/gameplay/terminal; explicit immutable save hydrates server content', async () => {
   await render(); await click('Save draft'); expect(api.createVersion).not.toHaveBeenCalled()
   await name('Changed'); expect(api.createVersion).not.toHaveBeenCalled()
   api.createVersion.mockImplementationOnce(async (_key, content) => ({ ...record, version: 4, content: { ...content, displayName: 'Canonical server name' } }))
   await click('Save draft'); expect(api.createVersion).toHaveBeenCalledTimes(1)
   const [key, content] = api.createVersion.mock.calls[0]; expect(key).toBe('owned'); expect(content.version).toBe(4); expect(content.mission).toEqual(record.content.mission); expect(content.checkpoints).toEqual(record.content.checkpoints); expect(content.scoring).toEqual(record.content.scoring); expect(content.configuration).toEqual(record.content.configuration)
-  expect((container.querySelector('input') as HTMLInputElement).value).toBe('Canonical server name')
+  expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Canonical server name')
 })
 test('09 stale save retains input, sends no version, explicit reopen discards for latest authority', async () => {
   await render(); await name('Working edit'); record = { ...record, version: 4, content: { ...record.content, version: 4, displayName: 'Other session' } }
-  await click('Save draft'); expect(api.createVersion).not.toHaveBeenCalled(); expect(container.textContent).toContain('changed on the server'); expect((container.querySelector('input') as HTMLInputElement).value).toBe('Working edit'); expect(button('Save draft').disabled).toBe(true)
-  await click('Reopen saved version'); expect((container.querySelector('input') as HTMLInputElement).value).toBe('Other session')
+  await click('Save draft'); expect(api.createVersion).not.toHaveBeenCalled(); expect(container.textContent).toContain('changed on the server'); expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Working edit'); expect(button('Save draft').disabled).toBe(true)
+  await click('Reopen saved version'); expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Other session')
 })
 test.each([400,403,409,500])('09 failed save %s keeps input and prior snapshot', async status => {
-  await render(); await name('Unsent edit'); api.createVersion.mockRejectedValue(new ApiError('Failed', status, 'http')); await click('Save draft'); expect((container.querySelector('input') as HTMLInputElement).value).toBe('Unsent edit'); expect(container.querySelector('[role=alert]')).not.toBeNull(); expect(record.version).toBe(3)
+  await render(); await name('Unsent edit'); api.createVersion.mockRejectedValue(new ApiError('Failed', status, 'http')); await click('Save draft'); expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Unsent edit'); expect(container.querySelector('[role=alert]')).not.toBeNull(); expect(record.version).toBe(3)
 })
 test('09 submitted Local is read-only, approved/changes-requested can create a new candidate', async () => {
-  record.status = 'submitted'; await render(); expect(container.querySelector('input')).toBeNull(); expect(container.textContent).toContain('submitted for Admin review'); expect(api.createVersion).not.toHaveBeenCalled()
+  record.status = 'submitted'; await render(); expect(container.querySelector('#template-setup input')).toBeNull(); expect(container.textContent).toContain('submitted for Admin review'); expect(api.createVersion).not.toHaveBeenCalled()
 })
 test.each([401,403,404])('09 owner detail denial %s reveals no content', async status => {
-  api.get.mockRejectedValue(new ApiError('Denied', status, 'http')); await render(); expect(container.querySelector('input')).toBeNull(); expect(container.textContent).not.toContain('Saved mystery')
+  api.get.mockRejectedValue(new ApiError('Denied', status, 'http')); await render(); expect(container.querySelector('#template-setup input')).toBeNull(); expect(container.textContent).not.toContain('Saved mystery')
 })
 
 test('09 duplicate save during stale-state preflight creates only one next version', async () => {
@@ -64,7 +64,7 @@ test('09 late owner read cannot replace a newly opened Template', async () => {
   await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=older']}><Navigation /><CreatorTemplateEditorPage /></MemoryRouter>))
   await click('Open newest')
   await act(async () => resolve(structuredClone(record)))
-  expect((container.querySelector('input') as HTMLInputElement).value).toBe('Newest owned draft')
+  expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Newest owned draft')
 })
 
 const snapshot = { id: '11111111-1111-4111-8111-111111111111', countryCode: 'RO', countryDisplayName: 'Romania', name: 'Saved town', administrativeContext: 'North', latitude: 46, longitude: 23 }

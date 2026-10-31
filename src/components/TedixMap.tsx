@@ -40,7 +40,12 @@ function validPosition(point: { latitude?: number; longitude?: number }): point 
     && typeof point.longitude === 'number' && Number.isFinite(point.longitude) && Math.abs(point.longitude) <= 180
 }
 
+export type MapCamera = { latitude: number; longitude: number; zoom: number }
+
 export type TedixMapProps = {
+  /** Session-only camera memory; never serialized as Template content. */
+  onCameraChange?: (camera: MapCamera) => void
+  cityCameraRequest?: MapCamera
   /** Explicit Creator selection of a display location; never authors geography. */
   focusPosition?: Partial<Pick<FinishPoint, 'latitude' | 'longitude'>>
   /** Known Template area only, used when no checkpoint locations are available. */
@@ -82,7 +87,7 @@ export type TedixMapProps = {
 }
 
 export function TedixMap({
-  focusPosition, positionArea, fitPositionsRequest, hideFitPositionsControl = false, positionPins, initialFitPoints, selectedLocationLabel,
+  onCameraChange, cityCameraRequest, focusPosition, positionArea, fitPositionsRequest, hideFitPositionsControl = false, positionPins, initialFitPoints, selectedLocationLabel,
   initialLongitude,
   initialLatitude,
   initialZoom = 12,
@@ -121,6 +126,8 @@ export function TedixMap({
   const didFitLandmarks = useRef(false)
   const handledFocus = useRef<typeof focusPosition>(undefined)
   const handledFit = useRef(0)
+  const handledCity = useRef<MapCamera | undefined>(undefined)
+  const cameraListener = useRef(onCameraChange); cameraListener.current = onCameraChange
   const suppressClickUntil = useRef(0)
   const clickHandler = useRef(onMapClick)
   clickHandler.current = onMapClick
@@ -138,6 +145,12 @@ export function TedixMap({
     const failed = () => { setMapError('Map could not load. Check the Mapbox token and network access. Saved stop details remain available.'); setMapLoading(false) }
     const loaded = () => { setMapLoading(false); setMapError('') }
     const styleLoaded = () => setCameraReadyRevision(value => value + 1)
+    const rememberCamera = () => {
+      if (!cameraListener.current) return
+      const center = map.getCenter()
+      cameraListener.current?.({ latitude: center.lat, longitude: center.lng, zoom: map.getZoom() })
+    }
+    map.on?.('moveend', rememberCamera)
     map.on?.('error', failed)
     map.on?.('load', loaded)
     map.on?.('style.load', styleLoaded)
@@ -150,6 +163,7 @@ export function TedixMap({
     observer.observe(containerRef.current)
 
     return () => {
+      map.off?.('moveend', rememberCamera)
       map.off?.('error', failed)
       map.off?.('load', loaded)
       map.off?.('style.load', styleLoaded)
@@ -159,11 +173,18 @@ export function TedixMap({
     }
   }, [accessToken])
 
+  useEffect(() => {
+    const map = mapRef.current
+    if (!cityCameraRequest || !validPosition(cityCameraRequest) || !map || !map.isStyleLoaded() || handledCity.current === cityCameraRequest) return
+    handledCity.current = cityCameraRequest
+    map.flyTo({ center: [cityCameraRequest.longitude, cityCameraRequest.latitude], zoom: cityCameraRequest.zoom, duration: cameraDuration() })
+  }, [cityCameraRequest, accessToken, mapLoading, cameraReadyRevision])
+
   function fitPositions(points: Pick<PositionPin, 'latitude' | 'longitude'>[] | undefined = positionPins) {
     if (!points?.length || !mapRef.current) return
     const bounds = new mapboxgl.LngLatBounds()
     points.forEach(point => bounds.extend([point.longitude, point.latitude]))
-    mapRef.current.fitBounds(bounds, { padding: 64, maxZoom: 16, duration: 0 })
+    mapRef.current.fitBounds(bounds, { padding: positionCameraPadding(), maxZoom: 16.5, retainPadding: false, duration: 0 })
   }
 
   function positionCameraPadding() {

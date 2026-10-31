@@ -13,7 +13,7 @@ vi.mock('../src/components/TedixMap', () => ({ TedixMap: () => <div /> }))
 let root: Root, container: HTMLDivElement, record: CreatorTemplate
 const place = { id: 'place', countryCode: 'RO', countryDisplayName: 'Romania', name: 'Town', administrativeContext: 'North', latitude: 46, longitude: 23, active: true }
 beforeEach(() => {
-  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks(); Element.prototype.scrollIntoView = vi.fn()
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('confirm', vi.fn(() => true)); vi.resetAllMocks(); Element.prototype.scrollIntoView = vi.fn()
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
   record = { key: 'owned', version: 3, category: 'local', status: 'draft', localityId: 'place', localitySnapshot: place, content: {
     key: 'owned', version: 3, displayName: 'Local mystery', theme: 'City', mission: { name: 'Story' }, configuration: { normalCheckpointCount: 1, checkpointPositions: [{ checkpointNumber: 1, name: 'Museum', latitude: 46, longitude: 23, radiusMeters: 30 }], finishPoint: { name: 'Finish', latitude: 46.1, longitude: 23.1, radiusMeters: 20 } }, scoring: { model: 'platform' }, checkpoints: [{ checkpoint: 1, role: 'normal' }, { role: 'terminal' }],
@@ -26,7 +26,7 @@ afterEach(() => { act(() => root.unmount()); container.remove(); vi.unstubAllGlo
 const button = (text: string) => [...container.querySelectorAll('button')].find(b => b.textContent?.startsWith(text))!
 async function click(text: string) { await act(async () => button(text).click()) }
 async function render() { await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=owned']}><CreatorTemplateEditorPage /></MemoryRouter>)) }
-async function name(value: string) { const input = container.querySelector('input')!; await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) }) }
+async function name(value: string) { const input = container.querySelector('#template-setup input')!; await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) }) }
 test('12 complete saved Local requires explicit validation, then exact submission without repeating completed sections', async () => {
   await render(); expect(button('Submit version').disabled).toBe(true); await click('Run template validation'); expect(button('Submit version').disabled).toBe(false)
   await click('Submit version'); expect(api.submit).toHaveBeenCalledExactlyOnceWith('owned', 3); expect(api.createVersion).not.toHaveBeenCalled(); expect(container.textContent).toContain('submitted for Admin review')

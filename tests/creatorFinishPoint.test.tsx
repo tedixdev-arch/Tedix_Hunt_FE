@@ -443,6 +443,7 @@ test('geographic controls remain locked with the rest of the editor during an im
 
 test.each(['local', undefined] as const)('Feature 1 contains one positioning editor for geographic category %s; Continue requires no route verification', async category => {
   sixCheckpointRecord(); record.category = category
+  if (category === 'local') { record.localityId = 'city'; record.localitySnapshot = { id: 'city', name: 'Paris', countryCode: 'FR', countryDisplayName: 'France', administrativeContext: 'Île-de-France', latitude: 48.85, longitude: 2.35 } }
   await render()
   const article = container.querySelector('[aria-label="Hunt Features"]')!.nextElementSibling!
   expect(article.querySelector('[aria-label="Total checkpoint count"]')).not.toBeNull()
