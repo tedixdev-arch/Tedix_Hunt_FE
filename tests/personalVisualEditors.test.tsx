@@ -125,3 +125,37 @@ for (const [type, add, remove, key, minimum] of [
   expect(buttons().filter(b => b.textContent?.startsWith(`${remove} `)).every(b => b.disabled)).toBe(true)
   expect(document.activeElement?.getAttribute('aria-label')).toMatch(/^Edit /)
 }, 20000)
+
+
+for (const type of ['shape-pattern', 'number-pattern'] as const) test(`${type}: successive missing-position changes survive assignment, save and reload`, async () => {
+  const initial = authorPrototype(prototypes.find(e => e.type === type)!)
+  const shape = type === 'shape-pattern', field = shape ? 'shapeId' : 'value'
+  const values = shape ? ['circle', 'square', 'triangle', 'square'] : [2, 4, 8, 16]
+  const terms = values.map((value, i) => ({ id: `term-${i}`, ...(i === 3 ? {} : { [field]: value }) }))
+  initial.authored = {
+    ...initial.authored!,
+    activity: { terms, missingId: 'term-3', ...(shape ? { shapes: [{ id: 'circle', text: 'Circle' }, { id: 'square', text: 'Square' }, { id: 'triangle', text: 'Triangle' }] } : {}) },
+    expected: { [field]: values[3] },
+  } as Exercise['authored']
+  await act(async () => root.render(<Harness key="initial" initial={initial} />))
+  const identities = terms.map(term => term.id)
+  for (const [revision, position] of [0, 1, 2, 3, 0].entries()) {
+    const before: any = structuredClone(state.authored)
+    await click(`Make position ${position + 1} missing`)
+    const authored: any = state.authored
+    expect(authored.expected).toEqual({ [field]: values[position] })
+    expect(authored.activity.terms.find((term: any) => term.id === before.activity.missingId)).toEqual({ id: before.activity.missingId, [field]: before.expected[field] })
+    expect(authored.activity.terms).toEqual(values.map((value, i) => ({ id: identities[i], ...(i === position ? {} : { [field]: value }) })))
+    expect(authored.activity.missingId).toBe(identities[position])
+    expect(validateExercise(state)).toEqual([])
+
+    const applied = applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': { source: 'custom', assignment: 'custom', custom: state } })
+    expect(applied.errors).toEqual([])
+    const wire = structuredClone(applied.checkpoints[0].customExercises!.personal!)
+    const reloaded = hydrateExerciseDrafts({ checkpoints: applied.checkpoints } as any)['kind:0'].custom!
+    expect(toPersistence(reloaded)).toEqual(wire)
+    expect(reloaded.authored).toEqual(authored)
+    await act(async () => root.render(<Harness key={`reload-${revision}`} initial={reloaded} />))
+    expect((state.authored!.activity as any).terms.map((term: any) => term.id)).toEqual(identities)
+  }
+})
