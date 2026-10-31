@@ -17,8 +17,8 @@ export function applyExerciseDrafts(checkpoints: unknown[], drafts: AuthoringDra
   for (const [key, draft] of Object.entries(drafts)) {
     const [field, index] = key.split(':'), slot = field === 'teamKind' ? 'team' : 'personal'
     const cp = result.find(cp => index === 'terminal' ? cp.role === 'terminal' : cp.role !== 'terminal' && cp.checkpoint === Number(index) + 1)
-    const selected = draft.custom ?? draft.exercise
-    if (!cp) { if (selected && selectedAssignment(draft) === 'custom') errors.push(`${experimentLabel(key)}: checkpoint was removed. Discard its exercise or restore the checkpoint count.`); continue }
+    const selected = selectedAssignment(draft) === 'custom' ? draft.appliedCustom ?? draft.custom : undefined
+    if (!cp) { if (selected) errors.push(`${experimentLabel(key)}: checkpoint was removed. Discard its exercise or restore the checkpoint count.`); continue }
     if (selectedAssignment(draft) === 'predefined') {
       if (cp.customExercises) { delete cp.customExercises[slot]; if (!Object.keys(cp.customExercises).length) delete cp.customExercises }
       continue
@@ -33,17 +33,12 @@ export function applyExerciseDrafts(checkpoints: unknown[], drafts: AuthoringDra
   return { checkpoints: result, errors }
 }
 /** A response acknowledges only its sent snapshot; newer drafts keep their data, with refreshed same-slot ownership. */
-export function reconcileExerciseDrafts(current: AuthoringDrafts, sent: AuthoringDrafts, saved: CreatorTemplateContent): AuthoringDrafts {
-  const acknowledged = hydrateExerciseDrafts(saved), next = { ...current }
-  for (const [key, draft] of Object.entries(current)) {
-    const persisted = acknowledged[key]?.custom
-    const custom = draft.custom
-    const identity = persisted?.persistedIdentity
-    const customByType = Object.fromEntries(Object.entries(draft.customByType ?? {}).map(([type, variant]) => [type, { ...variant, persistedIdentity: identity }]))
-    next[key] = { ...draft, customByType, ...(custom ? { custom: { ...custom, persistedIdentity: identity } } : {}) }
-    if (!custom || !sent[key]?.custom || !persisted) continue
-    if (JSON.stringify(draft) === JSON.stringify(sent[key])) next[key] = { ...draft, custom: { ...persisted, id: custom.id }, customByType: { ...customByType, [persisted.type]: { ...persisted, id: custom.id } } }
-    else next[key] = { ...next[key], custom: { ...custom, persistedIdentity: persisted.persistedIdentity } }
-  }
-  return next
+export function reconcileExerciseDrafts(current: AuthoringDrafts, _sent: AuthoringDrafts, saved: CreatorTemplateContent): AuthoringDrafts {
+  const acknowledged = hydrateExerciseDrafts(saved)
+  return Object.fromEntries(Object.entries(current).map(([key, draft]) => {
+    const identity = acknowledged[key]?.custom?.persistedIdentity
+    const rebase = (exercise: typeof draft.custom) => exercise ? { ...exercise, persistedIdentity: identity } : undefined
+    return [key, { ...draft, custom: rebase(draft.custom), appliedCustom: rebase(draft.appliedCustom),
+      customByType: Object.fromEntries(Object.entries(draft.customByType ?? {}).map(([type, exercise]) => [type, rebase(exercise)])) }]
+  }))
 }

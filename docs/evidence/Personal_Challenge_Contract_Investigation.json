@@ -1,0 +1,160 @@
+{
+  "repository": "tedixdev-arch/Tedix_Hunt_BE",
+  "ref": "4e6cb521ba6ac930d28cd513935d83367ee80f91",
+  "method": "Execute pinned, unmodified backend pure validator/allocation/readiness/projection functions in scratch. No backend repository edit, database write, API authentication or live publication.",
+  "legacyKinds": [
+    "hidden-rule",
+    "find-sabotage",
+    "square",
+    "build-key",
+    "radial",
+    "identify-signal",
+    "shared-final-key"
+  ],
+  "canonicalSignalReadinessPassed": true,
+  "checks": [
+    {
+      "type": "tap-pair",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "single-choice",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "true-false",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "memory-card",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "number-line",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "multiple-choice",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "match-columns",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "drag-drop",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "fill-blank",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "sequence",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "find-mistake",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "build-problem",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "number-pattern",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "shape-pattern",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    },
+    {
+      "type": "rule-discovery",
+      "customAccepted": true,
+      "publicationBlocked": true,
+      "participantSnapshotWithheld": true,
+      "metadataRetainedByAllocator": true,
+      "metadataOmissionCannotBypassGuard": true,
+      "notALegacyKind": true
+    }
+  ],
+  "metadata": "Generic checkpoint extension survives source allocation/cloning and is accepted by source validators. Model stores full content in JSONB. No dedicated provenance schema, lookup or guarantee; deployed round-trip retention is unverified.",
+  "deployedOpenAPI": {
+    "observedDate": "2026-10-31",
+    "readOnly": true,
+    "pathCount": 70,
+    "checkpointExerciseDeliveryOrAnswerPaths": [],
+    "authenticatedPersistenceVerified": false
+  }
+}

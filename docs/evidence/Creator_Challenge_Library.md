@@ -1,5 +1,7 @@
 # Creator challenge library and interactive exercise preview
 
+**PR #138 current architecture:** [Signal assignments, preview-only examples and explicit Custom authoring](#personal-challenge-architecture-correction--pr-138). Earlier implementation sections are historical where superseded.
+
 **Current status:** Template-owned custom exercise persistence is integrated against BE #93. See “Current integration” below for authoritative behavior, evidence and remaining live-database acceptance. The FE #136 sections that follow are historical evidence; their experimental save/submission gate has been retired.
 
 31 October 2026 (Europe/Bucharest). Existing Draft FE PR #136, stabilized for ChatGPT review. No merge or deployment. Custom exercise persistence and live FE–BE integration remain blocked/unverified. Supported template settings can be saved after explicit confirmation that experimental drafts are excluded.
@@ -241,3 +243,86 @@ Verification results for this correction are recorded below. Backend code and th
 - `git diff --check`: passed. Latest source CI evidence is linked from existing Draft PR #137; no second PR is created.
 
 The first lifecycle run exposed an invalid newly seeded Team word fixture: its existing Signal prose contributions do not reconstruct a word under BE #93. The inverse-transition test now explicitly selects the valid distributed-information mechanic rather than weakening validation or substituting saved content. Final results above supersede that fixture failure.
+
+## Personal Challenge architecture correction — PR #138
+
+**Current behavior (31 October 2026):** only the seven legacy Signal choices are assignable in Personal **Predefined** mode. The 15 complete mechanic examples remain selectable for read-only preview, simulation and explicit custom authoring; they cannot be assigned directly as publication-safe predefined instances. All three visual editors remain available. This section supersedes the initial PR #138 architecture at `8efd928`, which incorrectly treated example snapshots as ready-to-use predefined assignments. Update existing Draft PR #138 only; stop for ChatGPT re-review, no backend change, merge or deployment.
+
+### Actual contracts inspected
+
+FE base `main`: `3d64b5b46d52067974bf45d1d662429a78309e5f` (merged #137). BE source inspected read-only through GitHub at `4e6cb521ba6ac930d28cd513935d83367ee80f91` (merged #93). No backend checkout was edited and no database write or authenticated production operation was performed.
+
+- BE `src/domain/checkpointGameplay.ts`, `creatorTemplates.ts`, `customExerciseSchemas.ts`, `customExercises.ts`, `huntReadiness.ts`; `models/HuntTemplate.ts`; `routes/creatorTemplates.ts`, `hunts.ts`, `huntAccess.ts`; `app.ts`, custom integration tests and `docs/Custom_Exercise_Persistence.md`.
+- FE `checkpointGameplay.ts`, `templatePersistence.ts`, adapters/authoring/preview, `data/templateOne.ts`, `pages/template-one/TemplateOneExperience.tsx`, `hooks/useTemplateOneMission.ts`, the older `pages/student/CheckpointChallenge.tsx`, API services and existing lifecycle/Team tests.
+- Read-only deployed `/api/docs.json`: 70 paths, **no checkpoint delivery, exercise delivery or answer-submission endpoint**. This verifies the documented route surface, not authenticated persistence or database behavior.
+
+### What can be published today
+
+| Category | Representation | Save/review | Hunt publication and Participant boundary |
+| --- | --- | --- | --- |
+| Existing supported Signal assignments | Original checkpoint `kind`, answers, hints, story and existing terminal role; no Personal `customExercises` slot | Existing Template operations | Does not trigger the custom-exercise publication block. Existing eligibility, approval, geography, Hunt setup and pilot requirements still apply. |
+| Fifteen complete mechanic examples | Creator example content only; no direct predefined assignment action | Preview without writing. **Open custom editor**, then **Apply to Hunt**, then Template **Save draft** explicitly saves an independent custom instance | Not available as publication-safe predefined instances. No legacy identifier is invented or substituted. |
+| Independently authored Custom exercises, including customized examples and older saved example snapshots | `checkpoints[].customExercises.personal` with the authoritative UUID/owner returned by BE #93 | Save and submit for review supported | Backend returns `422 hunt_not_ready` when publishing a custom-bearing Hunt; custom snapshots are withheld from non-organizer Hunt readers. |
+
+The only accepted flat Personal `kind` values are **`hidden-rule`, `find-sabotage`, `square`, `build-key`, `radial`, `identify-signal`, `shared-final-key`**. BE derives these from canonical Signal content; the FE uses the same vocabulary. These values are not interchangeable aliases for the 15 example snapshots. For example, a custom Single Choice snapshot is not made publication-safe by writing `identify-signal`; its options/content still require the custom contract.
+
+The Participant Signal experience renders the seven canonical exercises from imported `checkpointExercises`, with local checks in `useTemplateOneMission`. It does not consume Creator `customExercises` or the generic authored renderer. The older student challenge also reads static `eventData`. Thus a passing no-custom publication readiness result is **not proof of dynamic delivery of arbitrary Creator edits**. This PR preserves supported Signal assignments and never promotes a catalog entry or Creator simulator into Participant authority.
+
+Authoritative sources: [BE publication readiness](https://github.com/tedixdev-arch/Tedix_Hunt_BE/blob/4e6cb521ba6ac930d28cd513935d83367ee80f91/src/domain/huntReadiness.ts), [legacy vocabulary](https://github.com/tedixdev-arch/Tedix_Hunt_BE/blob/4e6cb521ba6ac930d28cd513935d83367ee80f91/src/domain/checkpointGameplay.ts), [custom allocation/projection](https://github.com/tedixdev-arch/Tedix_Hunt_BE/blob/4e6cb521ba6ac930d28cd513935d83367ee80f91/src/domain/customExercises.ts), [existing persistence model](https://github.com/tedixdev-arch/Tedix_Hunt_BE/blob/4e6cb521ba6ac930d28cd513935d83367ee80f91/src/models/HuntTemplate.ts).
+
+### Exact remaining integration gap
+
+All 15 examples—Tap & Pair, Single Choice, True / False, Memory Card, Number Line, Multiple Choice, Match the Columns, Drag & Drop, Fill in the Blank, Sequence, Find the Mistake, Build the Problem, Number Pattern, Shape Pattern and Rule Discovery—have valid custom persistence schemas. They do **not** have a supported predefined-instance registry/reference contract, a publication-safe mapping of their complete content into legacy `kind`, or generic Participant consumption of those version-owned snapshots.
+
+Required follow-up: an explicit version-owned predefined/example identity and provenance policy if shared predefined-instance uniqueness is required; authenticated checkpoint-specific delivery and controlled hint/solution projection; server-authoritative answer validation for every mechanic/stage; Participant rendering/resolution of the selected version-owned slot; and acceptance against existing scoring, rewards, FinishPoint, eligibility and permissions. Publication policy can be reconsidered only when that integration is implemented and verified. This FE correction implements none of those backend changes and preserves every current guard.
+
+### Honest selection, authoring and save semantics
+
+The redesigned Personal shell keeps **one dropdown**. In Predefined it contains two clearly labeled, disjoint groups: **Signal assignments · existing Hunt contract** and **Examples · preview or customize only**. Each choice appears once; the duplicate “Current challenge” alias is removed. All 15 examples remain visible/selectable in both authoring paths. No raw JSON or misleading “Ready to play” label appears in the Personal experience.
+
+Selecting a Signal candidate only changes the viewed candidate. **Use this challenge** explicitly selects the existing flat assignment and removes only the selected Personal custom slot when the working Template is composed. It preserves every unrelated Personal/Team field and the unnumbered FinishPoint. Eligibility and delivery are not promised by the preview.
+
+Selecting an example displays a read-only overview, a nearby capability notice and the real Creator simulator. It offers **Open custom editor**, never **Use this challenge**. Browsing/testing it produces no persistence call and does not replace the selected challenge. Opening it initializes a fresh independent custom draft. Replacing a retained same-mechanic draft requires confirmation, and the previous assigned snapshot stays selected until confirmed **Apply to Hunt**. The main Create Your Own tab can still resume retained drafts.
+
+**Apply to Hunt** selects a valid Custom candidate in the Template working draft; it is not backend persistence. The existing Template **Save draft** operation creates the immutable version and waits for authoritative content/identity confirmation. Custom capability is visible beside its editor and selected-assignment status. Saving, revising, copying, exact-version submission, failed-save retention and conflict/ambiguous-outcome handling continue to use BE #93's existing contract. No new persistence store or API endpoint is introduced.
+
+Tap & Pair, Single Choice and Fill in the Blank retain shared Step by Step / Edit with Preview drafts, direct card/option/question editing, stable IDs, relationship-aware add/remove, keyboard reorder, hints/feedback, selected-text blank insertion and separate Test / Return play state. The other 12 mechanics keep detailed authoring, validation, inline preview and persistence and are explicitly labeled as awaiting visual editing. The Team editor and its seven mechanic identifiers are unchanged.
+
+### Metadata retention and duplicate prevention
+
+`personalChallengePreset` is **not a declared BE provenance field**. Current source accepts it as an ordinary checkpoint extension: `isTemplateContent` checks known fields without stripping checkpoint extensions, `allocateCustomExercises` clones the whole snapshot, the model inserts complete content JSONB, and the read routes return that content. The pinned allocator was executed and retained the field for all 15 samples. This is source-level retention evidence; no authenticated deployed save/reload or database round-trip is claimed.
+
+The corrected FE does **not read, create, rewrite or depend on that marker**. Existing marker values are carried as uninterpreted legacy checkpoint data. All saved Personal custom snapshots hydrate as Custom, whether the marker is valid, missing, forged or changed. Optional content recognition only says that a custom draft *matches example content*; it never infers provenance or publication rights. A missing marker no longer prevents acknowledging an otherwise exact, correctly owned saved snapshot. Missing/changed exercise content or invalid server ownership still rejects confirmation. A backend rejection retains the complete draft, with no automatic retry that strips content or attempts publication.
+
+The old same-preset-key assignment rule is replaced by capability gating: there is **no direct example/predefined assignment path to duplicate before or after reload**. Each dropdown entry appears once; older saved example snapshots remain custom. Explicit customization creates independent instances, which may repeat a mechanic or even its content. Text equality is not treated as shared instance identity, especially for True / False and Memory Card, whose schemas contain no item-ID collections. Duplicating a saved custom UUID into another checkpoint or FinishPoint still fails the complete-payload duplicate-ID validator and BE same-slot ownership rules, independently of preset metadata. A future shared predefined-instance rule needs the missing authoritative BE identity/provenance contract; the UI does not fabricate one.
+
+### Verification and limitations
+
+[Executed pinned BE contract checks](Personal_Challenge_Contract_Investigation.json): canonical Signal passes `isTemplateContent` and Hunt readiness with valid other fields. All 15 **actual FE example payloads** pass custom allocation/validation, retain generic metadata in source allocation, fail Hunt publication readiness with or without that metadata, and are withheld from non-organizer snapshot reads. Substituting each example type into legacy `kind` is rejected by the typed checkpoint contract. These are executions of unchanged pure BE source functions in scratch, **not database tests or live API integration**.
+
+New/updated FE regressions cover all 15 example-only selections and explicit Custom conversion; seven Signal choices and FinishPoint; no duplicate menu or direct example assignment path after save/reload; missing/forged/rejected metadata; unchanged complete content and authoritative identity checks; independent repeated Custom instances; duplicate saved UUID rejection; cancelled replacement; the three visual editors and shared draft/test state; and unchanged Team slots. Existing full lifecycle and all 22 mechanic tests remain included.
+
+Browser evidence uses the real Creator components with mocked Template operations, not live FE–BE persistence. The three redesigned mechanics are verified at 1440/768/390/320 px, with all 48 screenshots refreshed to show the corrected example/custom boundary. The all-mechanic and checkpoint regressions remain available:
+
+- [Builder results](Personal_Challenge_Builder_Browser_Results.json)
+- [All 22 mechanics](Personal_Challenge_All_Mechanics_Browser_Results.json)
+- [Checkpoint/FinishPoint workflows](Personal_Challenge_Checkpoint_Browser_Results.json)
+
+| Mechanic | Example selection (1440) | Guided Custom editor (768) | Visual Custom editor (390) | Custom test (320) |
+| --- | --- | --- | --- | --- |
+| Tap & Pair | [View](personal-challenge-builder/tap-pair-1440-predefined.png) | [View](personal-challenge-builder/tap-pair-768-step-by-step.png) | [View](personal-challenge-builder/tap-pair-390-visual-edit.png) | [View](personal-challenge-builder/tap-pair-320-test.png) |
+| Single Choice | [View](personal-challenge-builder/single-choice-1440-predefined.png) | [View](personal-challenge-builder/single-choice-768-step-by-step.png) | [View](personal-challenge-builder/single-choice-390-visual-edit.png) | [View](personal-challenge-builder/single-choice-320-test.png) |
+| Fill in the Blank | [View](personal-challenge-builder/fill-blank-1440-predefined.png) | [View](personal-challenge-builder/fill-blank-768-step-by-step.png) | [View](personal-challenge-builder/fill-blank-390-visual-edit.png) | [View](personal-challenge-builder/fill-blank-320-test.png) |
+
+No authenticated Creator/Admin account or disposable database binding was supplied. Deployed metadata round-trip retention, live Participant delivery and deployed acceptance remain unverified. No backend, permission, scoring/reward, execution-plan or frozen inventory changes. Existing Draft PR #138 only; STOP for ChatGPT re-review, no merge or deployment.
+
+Final correction verification:
+
+- `npm run typecheck`: passed.
+- `npm run build`: passed; existing bundle-size warning only.
+- Full `npm test`: **42 Node test-file entries and 723 Vitest tests across 34 files passed**, zero failures/skips.
+- Focused capability suite: **36 tests passed**, including every example, all seven Signal assignments, FinishPoint, metadata loss/rejection, and duplicate UUID rejection.
+- Chromium: **12 builder scenarios**, **88 all-mechanic scenarios**, and **four checkpoint workflows** passed at 1440/768/390/320 px, with zero page errors or horizontal overflow; 48 refreshed screenshots.
+- Pinned pure BE checks: canonical Signal readiness passed; all **15 actual FE examples** accepted only as custom snapshots, blocked from Hunt publication and withheld from non-organizer reads. Generic checkpoint metadata retention verified in source allocation, not in a live database.
+- Deployed read-only OpenAPI: 70 paths; no checkpoint/exercise delivery or answer-submission endpoint.
+- `git diff --check`: passed. No live FE–BE/database acceptance, backend change, merge or deployment is claimed.

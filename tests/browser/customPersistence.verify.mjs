@@ -9,7 +9,7 @@ await fs.mkdir('work/custom-persistence-browser', { recursive: true })
 const feature = name => page.getByRole('navigation', { name: 'Hunt Features', exact: true }).getByRole('button', { name })
 for (const width of [1440, 768, 390, 320]) {
   await page.setViewportSize({ width, height: 900 })
-  await page.goto('http://127.0.0.1:5173/tests/browser/customPersistence.html')
+  await page.goto(`${process.env.TEDIX_BROWSER_URL || 'http://127.0.0.1:5173'}/tests/browser/customPersistence.html`)
   await page.waitForFunction(() => window.exercises?.length === 22)
   const exercises = await page.evaluate(() => window.exercises)
   for (const e of exercises) {
@@ -18,11 +18,12 @@ for (const width of [1440, 768, 390, 320]) {
     const panel = page.getByRole('region', { name: `${e.classification === 'personal' ? 'Personal' : 'Team'} Challenge authoring`, exact: true })
     const title = `Edited ${e.type} at ${width}`
     await panel.getByLabel('Title', { exact: true }).fill(title)
-    const trigger = panel.getByRole('button', { name: 'Preview Exercise', exact: true }); await trigger.click()
-    const dialog = page.getByRole('dialog', { name: 'Exercise preview' })
+    const personal = e.classification === 'personal'
+    const trigger = panel.getByRole('button', { name: personal ? 'Test Challenge' : 'Preview Exercise', exact: true }); await trigger.click()
+    const dialog = personal ? panel.locator(`[aria-label="${e.type} interactive exercise"]`) : page.getByRole('dialog', { name: 'Exercise preview' })
     await dialog.waitFor()
-    assert.match(await dialog.textContent(), new RegExp(e.type))
-    assert.equal(await dialog.getByRole('button', { name: 'Close exercise preview' }).evaluate(node => document.activeElement === node), true)
+    if (!personal) assert.match(await dialog.textContent(), new RegExp(e.type))
+    if (!personal) assert.equal(await dialog.getByRole('button', { name: 'Close exercise preview' }).evaluate(node => document.activeElement === node), true)
     await dialog.getByRole('button', { name: 'Check answer', exact: true }).click()
     assert.equal(await dialog.locator('[role="status"]').textContent(), e.feedback.incorrect)
     const d = e.interaction, a = e.answer
@@ -61,9 +62,12 @@ for (const width of [1440, 768, 390, 320]) {
     await dialog.getByRole('button', { name: 'Solution', exact: true }).click(); assert.equal(await dialog.getByLabel('Exercise solution', { exact: true }).textContent(), e.solution)
     await dialog.getByRole('button', { name: 'Reset', exact: true }).click(); assert.equal(await dialog.locator('[role="status"]').count(), 0)
     assert.equal(await dialog.evaluate(node => node.scrollWidth > node.clientWidth), false)
-    await dialog.getByRole('button', { name: 'Close exercise preview' }).focus(); await page.keyboard.press('Shift+Tab')
-    assert.equal(await dialog.getByRole('button', { name: 'Reset', exact: true }).evaluate(node => document.activeElement === node), true)
-    await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' }); assert.equal(await trigger.evaluate(node => document.activeElement === node), true)
+    if (personal) await panel.getByRole('button', { name: 'Return to Edit', exact: true }).click()
+    else {
+      await dialog.getByRole('button', { name: 'Close exercise preview' }).focus(); await page.keyboard.press('Shift+Tab')
+      assert.equal(await dialog.getByRole('button', { name: 'Reset', exact: true }).evaluate(node => document.activeElement === node), true)
+      await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' }); assert.equal(await trigger.evaluate(node => document.activeElement === node), true)
+    }
     await page.getByRole('button', { name: 'Save draft', exact: true }).click()
     await page.getByRole('status').filter({ hasText: 'Template version saved by the backend' }).waitFor()
     const saved = await page.evaluate(() => window.fixtureRecord())

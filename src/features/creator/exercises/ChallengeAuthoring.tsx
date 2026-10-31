@@ -1,3 +1,4 @@
+import { PersonalChallengeAuthoring } from './PersonalChallengeAuthoring'
 import { authorPrototype } from './persistenceAdapter'
 import { useState } from 'react'
 import type { CheckpointGameplay } from '../checkpointGameplay'
@@ -12,7 +13,7 @@ import { savedExercise } from './savedExercises'
 import { hasExperiment, selectedAssignment, viewExercise, persistenceExplanation, type AuthoringDraft } from './experimentDrafts'
 export type { AuthoringDraft, AuthoringDrafts } from './experimentDrafts'
 
-export function ChallengeAuthoring({ field, value, onChange, draft = { source: 'saved', assignment: 'predefined' }, onDraftChange }: {
+function ExistingChallengeAuthoring({ field, value, onChange, draft = { source: 'saved', assignment: 'predefined' }, onDraftChange }: {
   field: 'kind' | 'teamKind'; value: CheckpointGameplay; onChange: (value: CheckpointGameplay) => void
   draft?: AuthoringDraft; onDraftChange: (draft: AuthoringDraft) => void
 }) {
@@ -65,3 +66,7 @@ export function ChallengeAuthoring({ field, value, onChange, draft = { source: '
 }
 // Naming is a Creator UI layer; the seven stored team identifiers remain unchanged.
 export const teamCatalog = checkpointExercises.map(row => ({ id: row.teamKind as TeamType, title: row.title }))
+
+export function ChallengeAuthoring(props: Parameters<typeof ExistingChallengeAuthoring>[0]) {
+  return props.field === 'kind' ? <PersonalChallengeAuthoring {...props} /> : <ExistingChallengeAuthoring {...props} />
+}
