@@ -35,7 +35,7 @@ test('N normal + one unnumbered terminal preserves geography and does not fabric
     assert.equal('checkpoint' in entries[count], false)
     assert.equal('checkpointNumber' in entries[count], false)
     assert.equal('kind' in entries[count], false)
-    if (count > 6) assert.equal('kind' in entries[6], false)
+    assert.ok(normal.every(entry => !entry.kind && !entry.teamKind && !entry.navigationMode))
   }
   const value = content(); const before = structuredClone(value)
   assert.equal(gameplayValidation(value, true), '')

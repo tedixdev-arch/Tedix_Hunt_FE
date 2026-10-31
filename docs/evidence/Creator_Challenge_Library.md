@@ -1,6 +1,8 @@
 # Creator challenge library and interactive exercise preview
 
-**PR #138 current architecture:** [Signal assignments, preview-only examples and explicit Custom authoring](#personal-challenge-architecture-correction--pr-138). Earlier implementation sections are historical where superseded.
+**Current UX correction:** [Clean creation contexts and mobile visual authoring](#personal-challenge-ux-correction--31-october-2026). The sections below retain historical evidence.
+
+**PR #138 architecture baseline:** [Signal assignments, preview-only examples and explicit Custom authoring](#personal-challenge-architecture-correction--pr-138). Earlier implementation sections are historical where superseded.
 
 **Current status:** Template-owned custom exercise persistence is integrated against BE #93. See “Current integration” below for authoritative behavior, evidence and remaining live-database acceptance. The FE #136 sections that follow are historical evidence; their experimental save/submission gate has been retired.
 
@@ -326,3 +328,60 @@ Final correction verification:
 - Pinned pure BE checks: canonical Signal readiness passed; all **15 actual FE examples** accepted only as custom snapshots, blocked from Hunt publication and withheld from non-organizer reads. Generic checkpoint metadata retention verified in source allocation, not in a live database.
 - Deployed read-only OpenAPI: 70 paths; no checkpoint/exercise delivery or answer-submission endpoint.
 - `git diff --check`: passed. No live FE–BE/database acceptance, backend change, merge or deployment is claimed.
+
+
+## Personal Challenge UX correction — 31 October 2026
+
+### Inspected baseline and backend boundary
+
+Based on FE `eed6717ca46eb3f87e5aa5ee577b9af55ac0cf27`, current main after merged #136, #137 and #138. Inspected their PR descriptions and the actual merged implementation: CreatorStudio, PersonalChallengeAuthoring, PersonalMechanicEditor, PredefinedChallengeContent, ExerciseRenderer/AuthoredExerciseRenderer, ExerciseContentEditor/AuthoredContentEditor, personalExamples, templateExercises, experimentDrafts, starter/Universal-copy operations, checkpoint gameplay, API/persistence adapters, lifecycle tests and browser fixtures. BE #93 and `docs/Custom_Exercise_Persistence.md` at `4e6cb521ba6ac930d28cd513935d83367ee80f91` were inspected read-only. No backend files, protected Signal data, publication checks, scoring rules or reward rules changed.
+
+The existing BE contract is unchanged: the server allocates exercise UUIDs and version ownership; saved custom snapshots live in one Personal/Team slot per checkpoint; new immutable versions and explicit Universal copies allocate independent identities. Custom-bearing Hunts cannot be published. Creator simulation does not establish Participant delivery or server answer checking. Full catalog examples still have no publication-safe predefined wire identity, so **there is no predefined-example assignment button**. This also prevents assigning one shared predefined instance twice. Independent custom copies can reuse a mechanic; persisted instance UUID duplication remains rejected by full-payload validation and backend ownership checks.
+
+### Exact Signal leak and creation isolation
+
+The leak was not just a dropdown. `CreatorTemplateEditorPage` cleared the name/mission fields for `blankNew` but unconditionally initialized `normalGameplay` through `createNormalGameplay(6)`. That helper inserted six canonical Signal `kind`, `teamKind` and `navigationMode` assignments. Geographic checkpoint drafts also unconditionally used `normalCheckpointNames`, which selected Signal names. Those working values reached `serializeGameplay` and the create/version payload. A second isolation risk was that changing the route from a saved Template to scratch creation reused the existing React editor state. Separately, PersonalChallengeAuthoring always appended all seven Signal choices to every Predefined selector.
+
+New Universal and Local scratch initialization now uses clean numbered gameplay with no activities, generic checkpoint names, no positions, an empty story and one unnumbered terminal entry. The old unclassified `/create` scratch URL also starts a clean Local draft; the compatibility chooser directs scratch creation to the explicit Local URL. `createNormalGameplay` defaults to clean modern data; canonical defaults require the explicit legacy context. New classified creation never runs Signal geographic prefill. A loaded record hydrates its own complete content, not new-template defaults. The complete editor is keyed by the saved Template key or new creation category, so navigating between records/creation paths cannot carry the previous context, story, route or challenge draft into the destination. The route-transition regression exercises Legacy → new Local → new Universal without remounting the surrounding router.
+
+`personalCreationContext` supplies explicit session context to CheckpointEditor/ChallengeAuthoring. All new creation is modern. Existing records with explicit flat legacy assignments (including supported old component indexes interpreted by the existing hydration adapter), or an unclassified Legacy record, retain Legacy context. Actual saved identifiers are the evidence, never a checkpoint name, Template display name, city or a count of seven. Historically classified records already containing legacy assignments are preserved rather than silently migrated. The Legacy selector contains only identifiers already present in that Template, plus the optional unconfigured state. Its original payload stays intact, including unknown fields and original checkpoint ordering. Existing custom snapshots in these records remain editable; explicit custom authoring and assignment do not migrate their original flat content.
+
+Local-from-Universal still uses the existing `fromUniversal(source.key, destination, publishedReference)` API, pinned to the explicitly selected publication. The destination hydrates only the returned content and independent destination identities. No source default or unrelated Signal fallback is introduced. Existing copy/lifecycle tests and new destination-isolation tests cover this path; this is frontend fixture evidence, not a claim about a live database operation.
+
+### One selector and shared draft
+
+Modern Predefined and Create Your Own share one **Personal Challenge** selector: the 15 requested friendly labels plus **No challenge (optional)**. It has no optgroups, mechanic IDs, difficulty suffixes or legacy choices. Switching tabs retains the currently selected modern mechanic. Predefined shows the complete, immediately playable read-only example through the existing engine. Gameplay inputs are temporary attempt state, not editing controls. Create Your Own creates or restores an independent editable copy and retains session variants by type.
+
+Assignment remains explicit. Browsing another mechanic, an example or another tab never replaces the selected exercise. Apply to Hunt confirms replacement when there is an existing assignment; cancellation retains it. Removing a challenge is also explicit. `appliedCustom` preserves the selected instance while a replacement is drafted. Existing same-slot save reconciliation, authoritative ownership, revision, submission and conflict handling are unchanged. One concise contextual publication notice replaces repeated architecture explanations; an unsaved indicator and relevant errors remain.
+
+### Mobile canvas and contextual editing
+
+**Edit with Preview** is the default. Its prominent segmented control sits immediately below the common title/instructions. The centered canvas is at most 390px wide on desktop and uses the available width without another phone frame on small screens. It displays title, instructions, cards/options/blanks and assistance content in the participant-style layout.
+
+Tap & Pair, Single Choice and Fill in the Blank have real contextual pencil controls. Opening a pencil reveals only that element's compact live editor. Text changes render immediately. Escape/Done closes the panel and restores pencil focus. Item addition/removal moves focus to a surviving/new edit control. Pair/card relationships and option/blank answers use stable identities rather than label matching. Removing the correct option requires choosing another. Blank accepted answers and case matching remain editable.
+
+The **Edit | Play** control separates answer-key authoring from gameplay. Play uses the existing ExerciseRenderer/AuthoredExerciseRenderer and its existing validation, hint, solution and reset behavior. There is no duplicated answer-validation engine and no Test Challenge button in Personal authoring. Reset clears only simulation state. Switching back to Edit or changing editor modes preserves the same authored draft.
+
+### Guided editing and remaining work
+
+For the three priority mechanics, Step by Step presents one pair, option or blank question at a time, followed by separate hint, feedback, solution and play tasks. Task count follows the actual item count. Back/Next, local required-field validation and inline messages guide the Creator; unrelated incomplete later items do not block reaching them. Existing keyboard reorder controls and selected-text blank insertion remain available here. Both editing modes write the same parent-owned exercise; checkpoint and feature navigation retain that state.
+
+The other twelve mechanics keep their full detailed editors under **Step by Step** and inline engine play under **Edit with Preview**. The shell explicitly says to use Step by Step for content changes; it does not describe those conventional editors as finished visual editors. Common fields are not duplicated in the detailed form. Friendly content/answer labels replace reference-field terminology. Remaining work: add contextual visual editing and per-task guided flows for those twelve mechanics, after this PR; Participant delivery and server answer authority remain backend integration work outside this PR.
+
+### Map investigation only
+
+`RouteEditor` currently chooses its initial center from saved checkpoint/FinishPoint positions, positioned working drafts, or route-research references. It identifies Cluj context only from the existing Signal/research handling. If none exist, it falls back to Cluj's existing app center **at zoom 3**, a Europe-wide overview. The selected registry locality is held by `LocalGeographySelector`/CreatorStudio and is not a RouteEditor camera input. `TedixMap.initialOptions` is captured once in a ref, so a later city selection alone cannot correct the initial view. This explains the observed selected-city/wide-zoom mismatch without inventing checkpoint coordinates.
+
+Smallest follow-up: pass the already validated selected/saved registry locality as optional **initial camera context**, after authored/route positions in the precedence chain; use its actual coordinates and the existing city zoom or actual known bounds. Apply it only before user camera interaction, or through an explicit “Show selected city” action. Do not write it into checkpoint drafts, use Template names as locality authority, recreate the map on every edit, or override a panned camera. New unsaved locality selection currently returns only its ID, so that callback contract must also expose the validated registry record. No map code or coordinates changed here; existing camera regressions are retained.
+
+### Verification for this correction
+
+- Full final `npm test`: **42 Node test-file entries + 732 Vitest tests across 35 files passed**, zero failures/skips. The final route/context/FinishPoint/navigation subset also passed 60 tests. `git diff --check` passed.
+- Typecheck and production build: passed; existing large-bundle warning remains.
+- Focused component coverage includes all 15 modern selectors and examples; three visual mechanics; stable identities, correct-answer changes, item addition/removal, pencil focus/Escape, guided local validation/reordering, shared drafts, simulation isolation, assignment replacement, immutable versions, rejection/conflict handling, protected Signal data and creation/copy isolation.
+- New real Chromium UX workflow: **12 scenarios**, three priority mechanics at **1440, 768, 390 and 320px**. Clean Local payload, selector contents, immediately playable examples, visual/pencil/guided editing, keyboard focus, item removal, correct-answer selection, assignment, save/reload and checkpoint retention passed, with no page errors or horizontal overflow. [Results](personal-challenge-ux/results.json).
+- Existing real-component all-mechanic browser suite: **88 scenarios** (all 15 Personal and seven Team mechanics at all four widths), including correct/incorrect answers, hint/solution/reset, detailed-editor availability, same-slot save/reload and checkpoint navigation. [Results](Personal_Challenge_UX_All_Mechanics_Browser_Results.json).
+- Existing checkpoint browser regression: **4 workflows** at all requested widths passed, including terminal Personal/Team assignments, disabled onward navigation at FinishPoint and checkpoint-count changes, with no page errors/overflow. [Results](Personal_Challenge_UX_Checkpoint_Browser_Results.json).
+- [Clean Local, desktop](personal-challenge-ux/clean-local-1440.png) · [Modern selector](personal-challenge-ux/modern-selector-1440.png) · [Predefined](personal-challenge-ux/tap-pair-predefined-1440.png) · [Visual canvas](personal-challenge-ux/tap-pair-visual-1440.png) · [Pencil editor](personal-challenge-ux/single-choice-pencil-1440.png) · [Guided flow](personal-challenge-ux/fill-blank-guided-1440.png) · [390px](personal-challenge-ux/tap-pair-visual-390.png) · [320px](personal-challenge-ux/fill-blank-visual-320.png).
+
+Browser/component Template operations use mocked frontend API fixtures and actual rendered components. **No authenticated FE–BE or database integration pass is claimed.** Existing version ownership/publication safeguards remain intact. No merge or deployment. One Draft PR; stop for ChatGPT PR review.

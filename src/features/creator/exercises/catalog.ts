@@ -2,13 +2,13 @@ import type { AuthoredContent, PersistedIdentity } from './persistenceTypes.ts'
 import { exerciseIssues, toPersistence } from './persistenceAdapter.ts'
 /** Local authoring vocabulary. Never substitute these IDs for persisted Signal kinds. */
 export const personalTypes = [
-  ['tap-pair', 'Tap & pair the relevant', 'Easy'], ['single-choice', 'Single choice', 'Easy'],
-  ['true-false', 'True / False', 'Easy'], ['memory-card', 'Memory card', 'Easy'], ['number-line', 'Number line', 'Easy'],
-  ['multiple-choice', 'Multiple choice', 'Medium'], ['match-columns', 'Match the columns', 'Medium'],
-  ['drag-drop', 'Drag & drop', 'Medium'], ['fill-blank', 'Fill in the blank', 'Medium'],
-  ['sequence', 'Sequence', 'Hard'], ['find-mistake', 'Find the mistake', 'Hard'],
-  ['build-problem', 'Build the problem (LEGO-like)', 'Hard'], ['number-pattern', 'Number pattern', 'Hard'],
-  ['shape-pattern', 'Shape pattern', 'Hard'], ['rule-discovery', 'Rule discovery', 'Hard'],
+  ['tap-pair', 'Tap & Pair', 'Easy'], ['single-choice', 'Single Choice', 'Easy'],
+  ['true-false', 'True / False', 'Easy'], ['memory-card', 'Memory Card', 'Easy'], ['number-line', 'Number Line', 'Easy'],
+  ['multiple-choice', 'Multiple Choice', 'Medium'], ['match-columns', 'Match the Columns', 'Medium'],
+  ['drag-drop', 'Drag & Drop', 'Medium'], ['fill-blank', 'Fill in the Blank', 'Medium'],
+  ['sequence', 'Sequence', 'Hard'], ['find-mistake', 'Find the Mistake', 'Hard'],
+  ['build-problem', 'Build the Problem', 'Hard'], ['number-pattern', 'Number Pattern', 'Hard'],
+  ['shape-pattern', 'Shape Pattern', 'Hard'], ['rule-discovery', 'Rule Discovery', 'Hard'],
 ] as const
 export type PersonalType = typeof personalTypes[number][0]
 export const teamNames = {

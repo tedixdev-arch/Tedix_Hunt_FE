@@ -139,13 +139,13 @@ test('FinishPoint uses shared gameplay choices and saves one unnumbered terminal
   const before = structuredClone(record)
   await render(); await verify(); await click('6.')
   expect(container.textContent).not.toContain('Multi-Stage Boss Challenge')
-  await selectGameplay('Personal Challenge', 'square')
+  await selectGameplay('Personal Challenge', 'hidden-rule')
   await selectGameplay('Team Challenge', 'hypothesis')
   await save()
   const saved = mocks.createVersion.mock.calls[0][1]
   expect(saved.checkpoints).toHaveLength(2)
   expect(saved.checkpoints[0].checkpoint).toBe(1)
-  expect(saved.checkpoints[1]).toEqual({ role: 'terminal', kind: 'square', teamKind: 'hypothesis' })
+  expect(saved.checkpoints[1]).toEqual({ role: 'terminal', kind: 'hidden-rule', teamKind: 'hypothesis' })
   expect(saved.checkpoints[1]).not.toHaveProperty('checkpoint')
   expect(saved.checkpoints[1]).not.toHaveProperty('checkpointNumber')
   expect(saved.configuration).toEqual(before.content.configuration)
@@ -164,9 +164,9 @@ test('saved terminal gameplay reloads, edits preserve custom data, and exact sav
   const selects = Array.from(container.querySelectorAll('section[aria-label="Checkpoint gameplay"] select')) as HTMLSelectElement[]
   expect(selects.map(select => select.value)).toEqual(['radial'])
   expect(container.querySelector('section[aria-label="FinishPoint scoring"]')?.textContent).toContain('250')
-  await selectGameplay('Personal Challenge', 'build-key'); await save()
+  await selectGameplay('Personal Challenge', 'square'); await save()
   const next = mocks.createVersion.mock.calls[0][1]
-  expect(next.checkpoints[0]).toEqual({ ...original.content.checkpoints[0] as object, kind: 'build-key' })
+  expect(next.checkpoints[0]).toEqual({ ...original.content.checkpoints[0] as object, kind: 'square' })
   expect(next.checkpoints[1]).toEqual(original.content.checkpoints[1])
   expect(next.scoring).toEqual(original.content.scoring)
   await click('Preview full journey'); await click('Exit preview'); await click('Run template validation')
@@ -205,6 +205,7 @@ test('approved Template content is read-only and never normalized or saved', asy
 })
 
 test('editing a normal checkpoint writes the same flat fields as FinishPoint', async () => {
+  ;(record.content.checkpoints[0] as any).personal = 5
   await render(); await verify(); await click('3.')
   await selectGameplay('Personal Challenge', 'identify-signal')
   await click('6.'); await click('Configure FinishPoint gameplay'); await save()
@@ -295,7 +296,7 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   await currentStep(0)
   change('input[maxlength="100"]', 'Unsaved Finish')
   await click('6.')
-  await selectGameplay('Personal Challenge', 'radial')
+  await selectGameplay('Personal Challenge', 'hidden-rule')
   await click('3.'); await click('Create Your Own')
   const authoring = container.querySelector('[aria-label$="content editor"]')!
   const input = authoring.querySelector('textarea')!
@@ -316,7 +317,7 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   await click('Continue to next checkpoint')
   expect(dialog.textContent).toContain('Unsaved Finish')
   await click('Simulate arrival'); await click('Inspect Personal Challenge')
-  expect(dialog.querySelector('pre')!.textContent).toContain('radial')
+  expect(dialog.querySelector('pre')!.textContent).toContain('hidden-rule')
   await click('Exit preview')
   expect(container.querySelector('[role="dialog"]')).toBeNull()
   expect(container.querySelector('div[hidden]')).toBeNull()
@@ -328,7 +329,7 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   await currentStep(0)
   expect((container.querySelector('input[maxlength="100"]') as HTMLInputElement).value).toBe('Unsaved Finish')
   await click('6.'); await click('Predefined')
-  expect((container.querySelectorAll('section[aria-label="Checkpoint gameplay"] select')[0] as HTMLSelectElement).value).toBe('radial')
+  expect((container.querySelectorAll('section[aria-label="Checkpoint gameplay"] select')[0] as HTMLSelectElement).value).toBe('hidden-rule')
   await click('Journey previewed')
   expect(container.querySelector('[role="dialog"]')!.textContent).toContain('Start preview')
   expect(container.querySelector('[role="dialog"]')!.textContent).not.toContain('Simulated arrival')
@@ -395,15 +396,15 @@ test.each(['personal', 'team'])('%s offers all seven checkpoints and edits termi
   const finish = container.querySelector('[aria-label="Checkpoint 7, FinishPoint"]') as HTMLButtonElement
   expect(finish.textContent).toContain('FinishPoint 🚩'); expect(finish.disabled).toBe(false)
   await checkpointButton(7)
-  await selectGameplay(feature === 'personal' ? 'Personal Challenge' : 'Team Challenge', feature === 'personal' ? 'build-key' : 'hypothesis')
+  await selectGameplay(feature === 'personal' ? 'Personal Challenge' : 'Team Challenge', feature === 'personal' ? 'square' : 'hypothesis')
   await click('Save draft')
   const saved = mocks.createVersion.mock.calls[0][1]
-  expect(saved.checkpoints[6]).toEqual({ ...before as object, [feature === 'personal' ? 'kind' : 'teamKind']: feature === 'personal' ? 'build-key' : 'hypothesis' })
+  expect(saved.checkpoints[6]).toEqual({ ...before as object, [feature === 'personal' ? 'kind' : 'teamKind']: feature === 'personal' ? 'square' : 'hypothesis' })
   expect(saved.checkpoints.slice(0,6)).toEqual(record.content.checkpoints.slice(0,6))
   mocks.get.mockResolvedValue({ ...record, version: saved.version, content: saved })
   await act(async () => root.unmount()); root = createRoot(container)
   await render(); await currentStep(feature === 'personal' ? 1 : 2); await checkpointButton(7)
-  expect((container.querySelector('[aria-label="Checkpoint gameplay"] select') as HTMLSelectElement).value).toBe(feature === 'personal' ? 'build-key' : 'hypothesis')
+  expect((container.querySelector('[aria-label="Checkpoint gameplay"] select') as HTMLSelectElement).value).toBe(feature === 'personal' ? 'square' : 'hypothesis')
 })
 test('navigation displays a disabled numbered FinishPoint and permits checkpoint six departure to it', async () => {
   sixCheckpointRecord(); await render(); await currentStep(1); await checkpointButton(7); await currentStep(3)
@@ -496,8 +497,8 @@ for (const [featureNumber, label, field] of [['3.', 'Personal Challenge', 'kind'
     }
     await click(featureNumber === '3.' ? '4.' : '3.'); await click(featureNumber)
     for (let i = 0; i < 7; i++) { await choose(i); await click('Predefined') }
-    await choose(6); await selectGameplay(label, field === 'kind' ? 'radial' : 'clue-synthesis')
-    expect((container.querySelector('section[aria-label="Checkpoint gameplay"] select') as HTMLSelectElement).value).toBe(field === 'kind' ? 'radial' : 'clue-synthesis')
+    await choose(6); await selectGameplay(label, field === 'kind' ? 'hidden-rule' : 'clue-synthesis')
+    expect((container.querySelector('section[aria-label="Checkpoint gameplay"] select') as HTMLSelectElement).value).toBe(field === 'kind' ? 'hidden-rule' : 'clue-synthesis')
     expect(record).toEqual(before); expect(mocks.createVersion).not.toHaveBeenCalled()
   })
 }
@@ -621,9 +622,9 @@ for (const classification of ['personal', 'team'] as const) for (const terminal 
     expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained authored variant')
     expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge/)
     const chooseType = async (type: string) => act(async () => { const select = container.querySelector<HTMLSelectElement>('[aria-label$="Challenge authoring"] select')!; select.value = type; select.dispatchEvent(new Event('change', { bubbles: true })) })
-    await chooseType(classification === 'personal' ? 'true-false' : 'distributed-information')
+    if (classification === 'team') await chooseType('distributed-information')
     expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge/)
-    await chooseType(classification === 'personal' ? 'tap-pair' : 'scrambled-word')
+    if (classification === 'team') await chooseType('scrambled-word')
     expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained authored variant')
     await click('Save draft')
     const payload = mocks.createVersion.mock.calls[0][1]
