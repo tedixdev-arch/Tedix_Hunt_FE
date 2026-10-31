@@ -15,7 +15,7 @@ export type { AuthoringDraft, AuthoringDrafts } from './experimentDrafts'
 
 function ExistingChallengeAuthoring({ field, value, onChange, draft = { source: 'saved', assignment: 'predefined' }, onDraftChange }: {
   field: 'kind' | 'teamKind'; value: CheckpointGameplay; onChange: (value: CheckpointGameplay) => void
-  draft?: AuthoringDraft; onDraftChange: (draft: AuthoringDraft) => void; unavailablePredefined?: Record<string, string>
+  draft?: AuthoringDraft; onDraftChange: (draft: AuthoringDraft) => void
 }) {
   const [conversionError, setConversionError] = useState('')
   const [preview, setPreview] = useState(false)

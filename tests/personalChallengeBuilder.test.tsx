@@ -1,14 +1,18 @@
+import { exerciseFixtures } from './fixtures/customExercises'
 import { CheckpointStoryPreview } from '../src/features/creator/CheckpointStoryPreview'
 import { verifyCustomSave } from '../src/features/creator/templatePersistence'
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { beforeEach, afterEach, test, expect, vi } from 'vitest'
 import { ChallengeAuthoring } from '../src/features/creator/exercises/ChallengeAuthoring'
-import { predefinedPersonal, predefinedAssignments, personalChallengeStatus } from '../src/features/creator/exercises/predefinedPersonal'
-import { prototypes, type Exercise, validateExercise } from '../src/features/creator/exercises/catalog'
+import { personalExamples, exampleContentKey, personalChallengeStatus } from '../src/features/creator/exercises/personalExamples'
+import { prototypes, personalTypes, type Exercise, validateExercise } from '../src/features/creator/exercises/catalog'
 import { authorPrototype, toPersistence } from '../src/features/creator/exercises/persistenceAdapter'
 import { applyExerciseDrafts, hydrateExerciseDrafts, reconcileExerciseDrafts } from '../src/features/creator/exercises/templateExercises'
 import type { AuthoringDraft } from '../src/features/creator/exercises/experimentDrafts'
+import { hasCustomExercises } from '../src/features/creator/exercises/persistenceValidation'
+import { ApiError } from '../src/services/api/client'
+import { persistCreatorTemplate } from '../src/features/creator/templatePersistence'
 import { checkpointExercises } from '../src/data/templateOne'
 
 let container: HTMLDivElement, root: Root, state: AuthoringDraft
@@ -18,12 +22,12 @@ beforeEach(() => {
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
 afterEach(() => { act(() => root.unmount()); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
-function Harness({ initial, unavailable = {} }: { initial?: AuthoringDraft; unavailable?: Record<string, string> }) {
+function Harness({ initial }: { initial?: AuthoringDraft }) {
   const [draft, setDraft] = useState<AuthoringDraft>(initial ?? { source: 'saved', assignment: 'predefined' })
   state = draft
-  return <ChallengeAuthoring field="kind" value={{ kind: 'hidden-rule' }} onChange={() => {}} draft={draft} onDraftChange={setDraft} unavailablePredefined={unavailable} />
+  return <ChallengeAuthoring field="kind" value={{ kind: 'hidden-rule' }} onChange={() => {}} draft={draft} onDraftChange={setDraft} />
 }
-async function mount(initial?: AuthoringDraft, unavailable?: Record<string, string>) { await act(async () => root.render(<Harness initial={initial} unavailable={unavailable} />)) }
+async function mount(initial?: AuthoringDraft) { await act(async () => root.render(<Harness initial={initial} />)) }
 const button = (name: string) => [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === name || b.getAttribute('aria-label') === name)!
 async function click(name: string) { expect(button(name), name).toBeDefined(); await act(async () => button(name).click()) }
 async function input(node: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, value: string) {
@@ -38,18 +42,25 @@ const custom = (type: string) => authorPrototype(prototypes.find(e => e.type ===
 const content = (checkpoints: any[]): any => ({ key: 'test', version: 2, displayName: 'Test', theme: 'City', mission: 'Go', configuration: { normalCheckpointCount: 2 }, scoring: {}, checkpoints })
 const asDraft = (e: Exercise): AuthoringDraft => ({ source: 'custom', assignment: 'custom', custom: e })
 
-for (const preset of predefinedPersonal) test(`${preset.type}: complete read-only predefined content, test and single dropdown`, async () => {
+for (const preset of personalExamples) test(`${preset.type}: read-only example, test and explicit custom authoring without a predefined persistence path`, async () => {
   expect(validateExercise(preset)).toEqual([]); expect(toPersistence(preset).type).toBe(preset.type)
   const before = structuredClone(preset)
   await mount(); await choose(preset.type)
   expect(container.querySelectorAll('select')).toHaveLength(1)
   expect(container.querySelectorAll('textarea, input')).toHaveLength(0)
-  expect(container.querySelectorAll('select option:not(:disabled)')).toHaveLength(24) // 15 mechanics + preserved story choices + optional/current
-  expect(state.assignment).toBe('predefined'); expect(state.predefined).toBeUndefined()
+  expect(container.querySelectorAll('select option:not(:disabled)')).toHaveLength(23) // 15 examples + seven distinct Signal choices + optional; no duplicate Current alias
+  expect(state.assignment).toBe('predefined'); expect(state.custom).toBeUndefined()
   await click('Test Challenge'); await click('Check answer'); await click('Reset'); await click('Return to Edit')
-  expect(predefinedPersonal.find(e => e.type === preset.type)).toEqual(before)
-  await click('Use this challenge'); expect(state.predefinedKey).toBe(preset.type)
-  expect(toPersistence(state.predefined!)).toEqual(toPersistence(preset))
+  expect(personalExamples.find(e => e.type === preset.type)).toEqual(before)
+  expect(button('Use this challenge')).toBeUndefined()
+  expect(container.textContent).toContain('Example for preview and authoring only')
+  expect(applyExerciseDrafts([{ checkpoint: 1, kind: 'hidden-rule' }], { 'kind:0': state }).checkpoints[0].customExercises).toBeUndefined()
+  await click('Open custom editor'); expect(state.assignment).toBe('predefined')
+  await click('Apply to Hunt'); expect(state.assignment).toBe('custom')
+  const applied = applyExerciseDrafts([{ checkpoint: 1, kind: 'hidden-rule' }], { 'kind:0': state })
+  expect(applied.checkpoints[0].customExercises!.personal!.type).toBe(preset.type)
+  expect(applied.checkpoints[0].personalChallengePreset).toBeUndefined()
+  expect(hasCustomExercises(content(applied.checkpoints))).toBe(true)
 })
 
 for (const type of ['tap-pair', 'single-choice', 'fill-blank']) test(`${type}: shared draft, stable IDs, keyboard reordering, invalid additions and independent testing`, async () => {
@@ -115,47 +126,51 @@ test('switching custom mechanics retains selected instance until explicit confir
   await choose('tap-pair'); expect(state.custom).toEqual(original)
 })
 
-test('predefined uniqueness survives serialization/reload; replacement releases only its own slot; separate Templates and custom copies stay independent', () => {
-  const preset = predefinedPersonal[0], original = structuredClone(checkpointExercises)
-  const first: AuthoringDraft = { source: 'example', assignment: 'predefined', predefined: preset, predefinedKey: preset.type }
-  const checkpoints = [{ ...structuredClone(checkpointExercises[0]), checkpoint: 1 }, { ...structuredClone(checkpointExercises[1]), checkpoint: 2 }, { role: 'terminal' as const }]
-  const assigned = applyExerciseDrafts(checkpoints, { 'kind:0': first })
-  expect(assigned.errors).toEqual([])
-  expect(assigned.checkpoints[0].kind).toBe(checkpoints[0].kind); expect(assigned.checkpoints[0].teamKind).toBe(checkpoints[0].teamKind)
-  const drafts = hydrateExerciseDrafts(content(assigned.checkpoints)); expect(drafts['kind:0'].predefinedKey).toBe(preset.type)
-  expect(predefinedAssignments(assigned.checkpoints, drafts)).toEqual({ 'tap-pair': '0' })
-  expect(applyExerciseDrafts(checkpoints, { 'kind:0': first, 'kind:terminal': first }).errors).toHaveLength(1)
-  expect(applyExerciseDrafts(checkpoints, { 'kind:0': first }).errors).toEqual([]) // independent Template
-  const moved = applyExerciseDrafts(assigned.checkpoints, { 'kind:0': asDraft(custom('single-choice')), 'kind:terminal': first })
-  expect(moved.errors).toEqual([]); expect(moved.checkpoints[0].personalChallengePreset).toBeUndefined()
-  expect(moved.checkpoints[2].personalChallengePreset).toBe('tap-pair'); expect(moved.checkpoints[2].checkpoint).toBeUndefined()
-  const copies = [custom('tap-pair'), custom('tap-pair')]
-  expect(copies[0].id).not.toBe(copies[1].id)
-  expect(applyExerciseDrafts(checkpoints, { 'kind:0': asDraft(copies[0]), 'kind:1': asDraft(copies[1]) }).errors).toEqual([])
-  expect(checkpointExercises).toEqual(original)
+test('reload and metadata loss cannot introduce duplicate predefined selections or promote example snapshots', async () => {
+  const before = structuredClone(checkpointExercises)
+  const canonical = toPersistence(personalExamples[0])
+  canonical.id = crypto.randomUUID(); canonical.owner = { templateKey: 'test', version: 2 }
+  const checkpoints: any[] = [{ checkpoint: 1, kind: 'hidden-rule', personalChallengePreset: 'tap-pair', customExercises: { personal: canonical } }, { role: 'terminal', kind: 'shared-final-key' }]
+  for (const metadata of ['tap-pair', undefined, 'hidden-rule', { forged: true }]) {
+    checkpoints[0].personalChallengePreset = metadata
+    const restored = hydrateExerciseDrafts(content(checkpoints))['kind:0']
+    expect(restored.source).toBe('custom'); expect(restored.assignment).toBe('custom')
+    expect(exampleContentKey(restored.custom!)).toBe('tap-pair') // content recognition, never provenance authority
+    expect(toPersistence(restored.custom!)).toEqual(canonical)
+    expect(hasCustomExercises(content(applyExerciseDrafts(checkpoints, { 'kind:0': restored }).checkpoints))).toBe(true)
+  }
+  delete checkpoints[0].personalChallengePreset
+  await mount(hydrateExerciseDrafts(content(checkpoints))['kind:0'])
+  expect(container.textContent).toContain('not available in published Hunts')
+  await click('Predefined'); await choose('tap-pair')
+  const values = [...container.querySelector('select')!.options].map(o => o.value)
+  expect(new Set(values).size).toBe(values.length)
+  expect(values.filter(value => value === 'tap-pair')).toHaveLength(1)
+  expect(button('Use this challenge')).toBeUndefined() // no duplicate-assignment path, including after reload
+  expect(checkpointExercises).toEqual(before)
 })
 
-test('used predefined options are visible and disabled; attempting replacement keeps current draft when cancelled', async () => {
-  await mount(asDraft(custom('tap-pair')), { 'single-choice': 'FinishPoint' }); await click('Predefined')
-  const used = container.querySelector<HTMLOptionElement>('option[value="single-choice"]')!
-  expect(used.disabled).toBe(true); expect(used.textContent).toContain('FinishPoint')
-  await choose('fill-blank'); const before = structuredClone(state)
-  vi.mocked(window.confirm).mockReturnValueOnce(false); await click('Use this challenge'); expect(state).toEqual(before)
-  await click('Use this challenge'); expect(state.assignment).toBe('predefined'); expect(state.custom).toEqual(before.custom)
+test('independent Custom copies may repeat every mechanic, including mechanics without item IDs', () => {
+  for (const [type] of personalTypes) {
+    const copies = [custom(type), custom(type)]
+    expect(copies[0].id).not.toBe(copies[1].id)
+    const applied = applyExerciseDrafts([{ checkpoint: 1 }, { role: 'terminal' }], { 'kind:0': asDraft(copies[0]), 'kind:terminal': asDraft(copies[1]) })
+    expect(applied.errors).toEqual([])
+    expect(applied.checkpoints[1].checkpoint).toBeUndefined()
+    expect(applied.checkpoints.every(cp => cp.customExercises?.personal?.type === type)).toBe(true)
+    expect(applied.checkpoints.every(cp => cp.personalChallengePreset === undefined)).toBe(true)
+  }
 })
 
-test('authoritative identities rebase selected predefined and retained custom drafts for later same-slot revision', () => {
-  const draft: AuthoringDraft = { source: 'example', assignment: 'predefined', predefined: predefinedPersonal[0], predefinedKey: 'tap-pair', custom: custom('single-choice') }
+test('metadata-free custom snapshots retain authoritative same-slot identity across saving and newer edits', () => {
+  const exercise = custom('single-choice'), draft = asDraft(exercise)
   const applied = applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': draft })
   const persisted = applied.checkpoints[0].customExercises!.personal!
   persisted.id = crypto.randomUUID(); persisted.owner = { templateKey: 'test', version: 2 }
   const rebased = reconcileExerciseDrafts({ 'kind:0': draft }, { 'kind:0': draft }, content(applied.checkpoints))['kind:0']
-  expect(rebased.predefined!.persistedIdentity).toEqual({ id: persisted.id, owner: persisted.owner })
-  expect(rebased.custom!.persistedIdentity).toEqual(rebased.predefined!.persistedIdentity)
+  expect(rebased.custom!.persistedIdentity).toEqual({ id: persisted.id, owner: persisted.owner })
   expect(personalChallengeStatus(applied.checkpoints[0], rebased)).toBe('Challenge assigned')
-  const next = applyExerciseDrafts(applied.checkpoints, { 'kind:0': { ...rebased, assignment: 'custom' } })
-  expect(next.checkpoints[0].customExercises!.personal!.id).toBe(persisted.id)
-  expect(next.checkpoints[0].personalChallengePreset).toBeUndefined()
+  expect(applyExerciseDrafts(applied.checkpoints, { 'kind:0': rebased }).checkpoints[0].customExercises!.personal!.id).toBe(persisted.id)
 })
 
 test('selecting question text and inserting a blank captures the accepted answer without changing its identity', async () => {
@@ -171,23 +186,77 @@ test('selecting question text and inserting a blank captures the accepted answer
   expect(expected.values[0]).toEqual({ blankId: before.blanks[0].id, value: 'bridge' })
 })
 
-test('a dropped, changed or unexpectedly retained predefined selection cannot be acknowledged as saved', () => {
-  const draft: AuthoringDraft = { source: 'saved', assignment: 'predefined', predefined: predefinedPersonal[0], predefinedKey: 'tap-pair' }
-  const sent = content(applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': draft }).checkpoints)
+test('preset metadata is advisory: loss/change does not hide content, missing or altered exercise data still rejects save confirmation', () => {
+  const sent = content(applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': asDraft(personalExamples[0]) }).checkpoints)
+  sent.checkpoints[0].personalChallengePreset = 'tap-pair'
   const saved: any = { key: 'test', version: 2, status: 'draft', content: structuredClone(sent) }
   saved.content.checkpoints[0].customExercises.personal.id = crypto.randomUUID()
   saved.content.checkpoints[0].customExercises.personal.owner = { templateKey: 'test', version: 2 }
-  expect(verifyCustomSave(sent, saved)).toBe(saved)
   delete saved.content.checkpoints[0].personalChallengePreset
-  expect(() => verifyCustomSave(sent, saved)).toThrow('predefined challenge selection')
-  saved.content.checkpoints[0].personalChallengePreset = 'single-choice'
-  expect(() => verifyCustomSave(sent, saved)).toThrow('predefined challenge selection')
-  const removed = structuredClone(sent); delete removed.checkpoints[0].personalChallengePreset
-  expect(() => verifyCustomSave(removed, saved)).toThrow('predefined challenge selection')
+  expect(verifyCustomSave(sent, saved)).toBe(saved)
+  expect(hydrateExerciseDrafts(saved.content)['kind:0'].assignment).toBe('custom')
+  saved.content.checkpoints[0].personalChallengePreset = 'hidden-rule'
+  expect(verifyCustomSave(sent, saved)).toBe(saved)
+  saved.content.checkpoints[0].customExercises.personal.title = 'Changed by response'
+  expect(() => verifyCustomSave(sent, saved)).toThrow('differs from the authored exercise')
+  delete saved.content.checkpoints[0].customExercises.personal
+  expect(() => verifyCustomSave(sent, saved)).toThrow()
+})
+
+test('a backend rejection of historical metadata preserves the full custom draft and performs no retry or guard bypass', async () => {
+  const current = content(applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': asDraft(custom('tap-pair')) }).checkpoints)
+  current.configuration = {}; current.mission = { name: 'Find it' }; current.scoring = { startingScore: 100 }
+  current.checkpoints[0].personalChallengePreset = 'tap-pair'
+  const before = structuredClone(current)
+  const rejection = new ApiError('Invalid preset metadata', 400, 'bad_request', { error: 'invalid_input' })
+  const api = { create: vi.fn().mockRejectedValue(rejection), createVersion: vi.fn() }
+  await expect(persistCreatorTemplate(api, current, null)).rejects.toBe(rejection)
+  expect(current).toEqual(before); expect(api.create).toHaveBeenCalledTimes(1)
+  expect(hasCustomExercises(api.create.mock.calls[0][0])).toBe(true)
+  expect(api.createVersion).not.toHaveBeenCalled()
 })
 
 test('Personal story context presents nested saved text without raw JSON or backend labels', async () => {
   await act(async () => root.render(<CheckpointStoryPreview friendly value={{ story: { message: 'Keep the light', clues: ['Gate', 'Tower'] } }} />))
   expect(container.textContent).toContain('Keep the light'); expect(container.textContent).toContain('Gate')
   expect(container.textContent).not.toContain('Backend'); expect(container.textContent).not.toContain('{')
+})
+
+test('a persisted example/custom instance cannot be duplicated into FinishPoint after reload, even with preset metadata missing', async () => {
+  const original = toPersistence(personalExamples[0])
+  original.id = crypto.randomUUID(); original.owner = { templateKey: 'test', version: 2 }
+  const savedContent = content([{ checkpoint: 1, customExercises: { personal: original } }, { role: 'terminal' }])
+  const restored = hydrateExerciseDrafts(savedContent)['kind:0']
+  const attempted = content(applyExerciseDrafts(savedContent.checkpoints, { 'kind:0': restored, 'kind:terminal': restored }).checkpoints)
+  const api = { create: vi.fn(), createVersion: vi.fn() }
+  const record: any = { key: 'test', version: 2, status: 'draft', category: 'universal', content: savedContent }
+  await expect(persistCreatorTemplate(api, attempted, record)).rejects.toThrow('Duplicate exercise instance ID')
+  expect(api.create).not.toHaveBeenCalled(); expect(api.createVersion).not.toHaveBeenCalled()
+  expect(original.owner).toEqual({ templateKey: 'test', version: 2 })
+})
+
+for (const [index, signal] of checkpointExercises.entries()) test(`${signal.kind}: existing Signal assignment restores only Personal legacy content, including FinishPoint`, async () => {
+  const terminal = index === 6
+  const original: any = { ...structuredClone(signal), role: terminal ? 'terminal' : 'normal', customExercises: { personal: toPersistence(custom('single-choice')), team: structuredClone(exerciseFixtures.find(e => e.type === 'distributed-information')!) } }
+  if (terminal) delete original.checkpoint
+  let checkpoint = original
+  function SignalHarness() {
+    const [value, setValue] = useState(original)
+    const [draft, setDraft] = useState<AuthoringDraft>(asDraft(custom('single-choice')))
+    checkpoint = value; state = draft
+    return <ChallengeAuthoring field="kind" value={value} onChange={setValue} draft={draft} onDraftChange={setDraft} />
+  }
+  await act(async () => root.render(<SignalHarness />))
+  await click('Predefined'); await choose(signal.kind); await click('Use this challenge')
+  expect(state.assignment).toBe('predefined')
+  const slot = terminal ? 'kind:terminal' : `kind:${index}`
+  const applied = applyExerciseDrafts([checkpoint], { [slot]: state })
+  expect(applied.errors).toEqual([])
+  expect(applied.checkpoints[0].customExercises!.personal).toBeUndefined()
+  expect(applied.checkpoints[0].customExercises!.team).toEqual(original.customExercises.team)
+  const { customExercises: _custom, ...legacy } = applied.checkpoints[0]
+  const { customExercises: _oldCustom, ...oldLegacy } = original
+  expect(legacy).toEqual(oldLegacy)
+  expect(applied.checkpoints[0].role).toBe(terminal ? 'terminal' : 'normal')
+  if (terminal) expect(applied.checkpoints[0].checkpoint).toBeUndefined()
 })

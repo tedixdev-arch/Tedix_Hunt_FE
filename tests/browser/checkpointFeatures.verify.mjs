@@ -9,7 +9,7 @@ await page.route('https://api.mapbox.com/**', route => route.fulfill({json: {ver
 await fs.mkdir('work/checkpoint-features-browser', {recursive:true})
 for (const width of [1440,768,390,320]) {
   await page.setViewportSize({width,height:900})
-  await page.goto('http://127.0.0.1:5173/tests/browser/creatorPositions.html')
+  await page.goto(`${process.env.TEDIX_BROWSER_URL || 'http://127.0.0.1:5173'}/tests/browser/creatorPositions.html`)
   const nav = page.getByRole('navigation', {name:'Hunt Features'})
   await nav.waitFor()
   assert.equal(await nav.getByRole('button').count(), 7)

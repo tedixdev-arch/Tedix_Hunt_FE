@@ -9,7 +9,7 @@ await fs.mkdir('work/custom-persistence-browser', { recursive: true })
 const feature = name => page.getByRole('navigation', { name: 'Hunt Features', exact: true }).getByRole('button', { name })
 for (const width of [1440, 768, 390, 320]) {
   await page.setViewportSize({ width, height: 900 })
-  await page.goto('http://127.0.0.1:5173/tests/browser/customPersistence.html')
+  await page.goto(`${process.env.TEDIX_BROWSER_URL || 'http://127.0.0.1:5173'}/tests/browser/customPersistence.html`)
   await page.waitForFunction(() => window.exercises?.length === 22)
   const exercises = await page.evaluate(() => window.exercises)
   for (const e of exercises) {

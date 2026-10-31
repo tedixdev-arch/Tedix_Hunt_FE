@@ -25,10 +25,6 @@ export function verifyCustomSave(sent: CreatorTemplateContent, saved: CreatorTem
   const before = sent.checkpoints as CheckpointGameplay[], after = saved.content.checkpoints as CheckpointGameplay[]
   const issues = validateCustomExercises(saved.content)
   if (issues.length) throw new Error('Saving could not be confirmed: the server returned invalid custom content.')
-  for (const cp of before) {
-    const destination = after.find(row => cp.role === 'terminal' ? row.role === 'terminal' : row.role !== 'terminal' && (row.checkpoint ?? row.checkpointNumber) === (cp.checkpoint ?? cp.checkpointNumber))
-    if (cp.personalChallengePreset !== destination?.personalChallengePreset) throw new Error('Saving could not be confirmed: the server changed the predefined challenge selection. Your draft is kept.')
-  }
   for (const cp of before) for (const slot of ['personal', 'team'] as const) {
     const expected = cp.customExercises?.[slot]
     if (!expected) continue
