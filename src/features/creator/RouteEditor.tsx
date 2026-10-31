@@ -1,4 +1,7 @@
-import { useMemo, useRef, useState } from 'react'
+import type { RefObject } from 'react'
+import type { LocalitySnapshot } from '../../services/api/geography'
+import type { MapCamera } from '../../components/TedixMap'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './positionWorkspace.css'
 import { isSignalClujProposal, researchReferences, signalLandmarkReferences } from './signalLandmarks'
 import { type RouteProposal, candidateReference } from './routeResearch'
@@ -33,6 +36,9 @@ const safetyLabels: Record<string, string> = {
 const safetyItems = ['Safe standing area', 'Accessible walking route', 'Road crossings reviewed', 'No restricted areas', 'Day and night suitability checked', 'Emergency access available']
 
 interface Props {
+  city?: LocalitySnapshot | null
+  cameraMemory?: RefObject<MapCamera | null>
+  cityCameraRequest?: MapCamera
   templateName?: string
   finishDraft?: FinishPointDraft
   onFinishChange?: (point: FinishPointDraft) => void
@@ -48,7 +54,7 @@ interface Props {
   onConfigurationChange: (configuration: CreatorGeographyConfiguration) => void
 }
 
-export function RouteEditor({ templateName, finishDraft, onFinishChange, onArrivalNotesChange, savedConfiguration, proposal, drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
+export function RouteEditor({ city, cameraMemory, cityCameraRequest, templateName, finishDraft, onFinishChange, onArrivalNotesChange, savedConfiguration, proposal, drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
   const signalProposal = isSignalClujProposal(templateName ?? '', proposal) ? proposal : undefined
   const references = useMemo(() => signalProposal ? signalLandmarkReferences(signalProposal) : proposal ? researchReferences(proposal) : [], [signalProposal, proposal])
   const [activeNumber, setActiveNumber] = useState<number | undefined>(drafts[0]?.checkpointNumber)
@@ -116,10 +122,16 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
   const researchCenter = proposal && [...proposal.candidates].sort((a, b) => a.order - b.order)
     .map(candidate => candidateReference(candidate, proposal)).find(point => !!point)
   const researchContext = isSignalCluj ? undefined : researchCenter
-  const initialLatitude = center?.latitude ?? researchContext?.latitude ?? CLUJ_NAPOCA_VIEW.center[0]
-  const initialLongitude = center?.longitude ?? researchContext?.longitude ?? CLUJ_NAPOCA_VIEW.center[1]
-  // Without geographic context, show a regional overview around the existing app default.
-  const initialZoom = center || researchContext || isSignalCluj ? CLUJ_NAPOCA_VIEW.zoom : 3
+  const rememberedCamera = useRef(cameraMemory?.current)
+  const validCity = city && Number.isFinite(city.latitude) && Math.abs(city.latitude) <= 90 && Number.isFinite(city.longitude) && Math.abs(city.longitude) <= 180 ? city : undefined
+  const initialBounds = useRef(rememberedCamera.current ? [] : [...positioned, ...(validFinish ? [validFinish] : [])])
+  const initialLatitude = rememberedCamera.current?.latitude ?? center?.latitude ?? validCity?.latitude ?? researchContext?.latitude ?? (isSignalCluj ? CLUJ_NAPOCA_VIEW.center[0] : 0)
+  const initialLongitude = rememberedCamera.current?.longitude ?? center?.longitude ?? validCity?.longitude ?? researchContext?.longitude ?? (isSignalCluj ? CLUJ_NAPOCA_VIEW.center[1] : 0)
+  // A world view has no implied city; established Signal reference context remains available.
+  const initialZoom = rememberedCamera.current?.zoom ?? (validCity ? 12 : center || researchContext || isSignalCluj ? CLUJ_NAPOCA_VIEW.zoom : 2)
+  const [recenterCity, setRecenterCity] = useState<MapCamera>()
+  const openingCityRequest = useRef(cityCameraRequest)
+  useEffect(() => setRecenterCity(undefined), [cityCameraRequest])
   function select(number: number) {
     setEditing(current => current?.number === number ? current : undefined); setEditError(''); setActiveNumber(number)
     // The latest explicit action wins while Mapbox is still loading.
@@ -218,7 +230,7 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
     onConfigurationChange(buildGeographyConfiguration(drafts.length, next.drafts))
   }
   return <section className="position-editor" aria-label="Checkpoint position editor">
-    <div className="position-progress"><p>Search to explore, then select a checkpoint and tap the map or drag its pin to position it.</p><span>{verified.size}/{drafts.length} confirmed</span></div>
+    <div className="position-progress"><p>Search to explore, then select a checkpoint and tap the map or drag its pin to position it.</p><span>{verified.size}/{drafts.length} confirmed</span><button type="button" className="min-h-11 rounded-lg px-2 text-sm font-bold" onClick={() => { if (validCity) { setFocusPosition(undefined); setFitPositionsRequest(0); setRecenterCity({ latitude: validCity.latitude, longitude: validCity.longitude, zoom: 12 }) } else showAllPositions() }}>Recenter map</button></div>
     <div className="position-workspace">
       <div className="position-map" data-testid="position-map">
         <div role="toolbar" aria-label="Checkpoint positioning" className="position-toolbar min-w-0">
@@ -230,11 +242,12 @@ export function RouteEditor({ templateName, finishDraft, onFinishChange, onArriv
           <p role="status" className="sr-only">{historyMessage}</p>
         </div>
         <TedixMap
+        cityCameraRequest={recenterCity ?? (cityCameraRequest !== openingCityRequest.current ? cityCameraRequest : undefined)} onCameraChange={cameraMemory ? camera => { cameraMemory.current = camera } : undefined}
         initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
         mapStyle={mapMode === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/streets-v12'}
         hideFitPositionsControl fitPositionsRequest={fitPositionsRequest} focusPosition={focusPosition}
-        positionArea={isSignalCluj ? { latitude: CLUJ_NAPOCA_VIEW.center[0], longitude: CLUJ_NAPOCA_VIEW.center[1], zoom: CLUJ_NAPOCA_VIEW.zoom } : undefined}
-        positionPins={pins} initialFitPoints={references}
+        positionArea={validCity ? { latitude: validCity.latitude, longitude: validCity.longitude, zoom: 12 } : isSignalCluj ? { latitude: CLUJ_NAPOCA_VIEW.center[0], longitude: CLUJ_NAPOCA_VIEW.center[1], zoom: CLUJ_NAPOCA_VIEW.zoom } : undefined}
+        positionPins={pins} initialFitPoints={initialBounds.current.length ? initialBounds.current : rememberedCamera.current ? [] : references}
         locationSearch
         onCheckpointSelect={select} onCheckpointMove={(number, latitude, longitude) => place(number, latitude, longitude)}
         onMapClick={placeSelected}

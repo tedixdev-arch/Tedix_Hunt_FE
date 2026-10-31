@@ -1,0 +1,66 @@
+{
+  "mode": "Real React components and Mapbox GL; fixture API/registry and intercepted background style; no authenticated BE integration or live tiles",
+  "results": [
+    {
+      "width": 1440,
+      "overflow": false,
+      "localSetup": true,
+      "universalSetup": true,
+      "cityCentered": true,
+      "manualCameraPreserved": true,
+      "recenter": true,
+      "checkpointAndFinishBounds": true,
+      "cityChangeConfirmation": true,
+      "coordinatesPreserved": true,
+      "explicitContinueGate": true,
+      "continueFocus": true,
+      "savedDraftRegistryRecovery": true
+    },
+    {
+      "width": 768,
+      "overflow": false,
+      "localSetup": true,
+      "universalSetup": true,
+      "cityCentered": true,
+      "manualCameraPreserved": true,
+      "recenter": true,
+      "checkpointAndFinishBounds": true,
+      "cityChangeConfirmation": true,
+      "coordinatesPreserved": true,
+      "explicitContinueGate": true,
+      "continueFocus": true,
+      "savedDraftRegistryRecovery": true
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "localSetup": true,
+      "universalSetup": true,
+      "cityCentered": true,
+      "manualCameraPreserved": true,
+      "recenter": true,
+      "checkpointAndFinishBounds": true,
+      "cityChangeConfirmation": true,
+      "coordinatesPreserved": true,
+      "explicitContinueGate": true,
+      "continueFocus": true,
+      "savedDraftRegistryRecovery": true
+    },
+    {
+      "width": 320,
+      "overflow": false,
+      "localSetup": true,
+      "universalSetup": true,
+      "cityCentered": true,
+      "manualCameraPreserved": true,
+      "recenter": true,
+      "checkpointAndFinishBounds": true,
+      "cityChangeConfirmation": true,
+      "coordinatesPreserved": true,
+      "explicitContinueGate": true,
+      "continueFocus": true,
+      "savedDraftRegistryRecovery": true
+    }
+  ],
+  "errors": []
+}

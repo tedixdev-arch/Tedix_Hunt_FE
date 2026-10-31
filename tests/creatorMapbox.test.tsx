@@ -19,6 +19,7 @@ vi.mock('mapbox-gl', () => ({ default: {
     layers = new Map<string, any>()
     flyTo = vi.fn()
     getZoom = vi.fn(() => 12)
+    getCenter = vi.fn(() => ({ lat: 51, lng: 3 }))
     fitBounds = vi.fn()
     setStyle = vi.fn(() => { this.sources.clear(); this.layers.clear(); this.emit('style.load') })
     project = vi.fn(([longitude, latitude]: number[]) => ({ x: longitude * 100000, y: latitude * 100000 }))
@@ -61,6 +62,9 @@ let initial: CheckpointDraft[]
 let finishInitial: FinishPointDraft | undefined
 let latestFinish: FinishPointDraft | undefined
 let latestVerified: Set<number>
+let city: any
+let cameraMemory: any
+let cityCameraRequest: any
 let latest: CheckpointDraft[]
 const saved = { checkpointNumber: 1, name: 'Museum', latitude: 46.77, longitude: 23.59, radiusMeters: 30 }
 
@@ -72,7 +76,7 @@ function Editor() {
   latestFinish = finish
   latestVerified = verified
   latest = drafts
-  return <RouteEditor templateName={templateName} savedConfiguration={{ normalCheckpointCount: initial.length, checkpointPositions: initial.filter(point => point.latitude !== undefined) as typeof saved[], finishPoint: undefined }} finishDraft={finish} onFinishChange={finishInitial ? setFinish : undefined} proposal={proposal} drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
+  return <RouteEditor city={city} cameraMemory={cameraMemory} cityCameraRequest={cityCameraRequest} templateName={templateName} savedConfiguration={{ normalCheckpointCount: initial.length, checkpointPositions: initial.filter(point => point.latitude !== undefined) as typeof saved[], finishPoint: undefined }} finishDraft={finish} onFinishChange={finishInitial ? setFinish : undefined} proposal={proposal} drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
     onVerifiedChange={setVerified} onSafetyChange={setSafety} onConfigurationChange={mocks.configuration} />
 }
 
@@ -82,6 +86,7 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
   vi.stubGlobal('confirm', vi.fn(() => true))
+  city = undefined; cameraMemory = undefined; cityCameraRequest = undefined
   finishInitial = undefined
   templateName = undefined
   proposal = undefined
@@ -453,7 +458,7 @@ test('local edit Save applies one history entry, Cancel restores draft, invalid 
 })
 
 test('selection, pan, zoom, fit and deselect preserve geography, confirmation and history; general search stays camera-only', async () => {
-  render(); clickMap(48, 25); act(() => button('Confirm position').click()); select('1')
+  render(); mocks.maps[0].fitBounds.mockClear(); clickMap(48, 25); act(() => button('Confirm position').click()); select('1')
   const geography = structuredClone(latest)
   select('2'); select('1')
   act(() => { mocks.maps[0].emit('moveend'); mocks.maps[0].emit('zoomend'); button('Deselect').click() })
@@ -570,7 +575,7 @@ test('selected reference pins use blue outlining; green fill means session confi
 })
 
 test('search bounds use a constrained inspection zoom without positioning', async () => {
-  render()
+  render(); mocks.maps[0].fitBounds.mockClear()
   vi.useFakeTimers()
   vi.stubGlobal('fetch', vi.fn()
     .mockResolvedValueOnce({ ok: true, json: async () => ({ suggestions: [{ mapbox_id: 'landmark', name: 'Landmark' }] }) })
@@ -756,7 +761,7 @@ test('Show all fits every reference-only Signal location', () => {
 
 test('Show all with one point uses capped zoom and reduced motion, and can repeat', () => {
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })))
-  render(); showAll(); showAll()
+  render(); mocks.maps[0].fitBounds.mockClear(); showAll(); showAll()
   const map = mocks.maps[0]
   expect(map.fitBounds).toHaveBeenCalledTimes(2)
   expect(map.fitBounds.mock.calls[0][0].coordinates).toEqual([[23.59, 46.77]])
@@ -829,6 +834,7 @@ test.each(['focus', 'fit'])('pending %s request survives map initialization and 
 test.each(['focus', 'fit'])('latest %s request waits for style readiness and uses fresh checkpoint data', action => {
   render()
   const map = mocks.maps[0]
+  map.fitBounds.mockClear()
   map.isStyleLoaded = () => false
   select('1')
   clickMap(48, 25)
@@ -851,4 +857,53 @@ test('selection supersedes a pending Show all; another Show all remains repeatab
   act(() => map.emit('style.load'))
   expect(map.flyTo).toHaveBeenCalledOnce(); expect(map.fitBounds).not.toHaveBeenCalled()
   showAll(); expect(map.fitBounds).toHaveBeenCalledOnce()
+})
+
+const paris = { id: 'paris', name: 'Paris', countryCode: 'FR', countryDisplayName: 'France', administrativeContext: 'Île-de-France', latitude: 48.8566, longitude: 2.3522 }
+test('selected city initializes a city-level camera without authoring positions or geocoding', () => {
+  initial = createCheckpointDrafts(2, []); city = paris
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch)
+  render(); const map = mocks.maps[0]
+  expect(map.options).toMatchObject({ center: [2.3522, 48.8566], zoom: 12 })
+  render(); render(); expect(fetch).not.toHaveBeenCalled(); expect(map.flyTo).not.toHaveBeenCalled()
+  expect(latest.every(point => point.latitude === undefined)).toBe(true)
+  expect(mocks.configuration).not.toHaveBeenCalled()
+})
+test('opening existing checkpoint route fits every positioned checkpoint and FinishPoint before city context', () => {
+  city = paris; initial = [{ ...saved }, { ...saved, checkpointNumber: 2, latitude: 47, longitude: 24 }]
+  finishInitial = { name: 'Finish', latitude: 48, longitude: 25, radiusMeters: 15 }
+  render(); expect(mocks.maps[0].fitBounds.mock.calls[0][0].coordinates).toEqual([[23.59,46.77], [24,47], [25,48]])
+  render(); expect(mocks.maps[0].fitBounds).toHaveBeenCalledTimes(1)
+})
+test('camera memory preserves manual pan and zoom across feature unmount and return', () => {
+  city = paris; cameraMemory = { current: null }; render(); const map = mocks.maps[0]
+  map.getZoom.mockReturnValue(9); act(() => map.emit('moveend'))
+  expect(cameraMemory.current).toEqual({ latitude: 51, longitude: 3, zoom: 9 })
+  act(() => root.render(<div>Another Hunt Feature</div>)); render()
+  expect(mocks.maps[1].options).toMatchObject({ center: [3,51], zoom: 9 })
+  expect(mocks.maps[1].fitBounds).not.toHaveBeenCalled()
+})
+test('explicit Recenter map returns to the selected city and can repeat after pan', () => {
+  city = paris; render(); const before = structuredClone(latest)
+  act(() => button('Recenter map').click()); act(() => button('Recenter map').click())
+  expect(mocks.maps[0].flyTo).toHaveBeenCalledTimes(2)
+  expect(mocks.maps[0].flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [2.3522,48.8566], zoom: 12 }))
+  expect(latest).toEqual(before); expect(mocks.configuration).not.toHaveBeenCalled()
+})
+test('city camera changes override a previous recenter without moving checkpoint coordinates', () => {
+  city = paris; render(); const before = structuredClone(latest)
+  act(() => button('Recenter map').click())
+  cityCameraRequest = { latitude: 52.52, longitude: 13.405, zoom: 12 }; city = { ...paris, id: 'berlin', ...cityCameraRequest }; render()
+  expect(mocks.maps[0].flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [13.405,52.52], zoom: 12 }))
+  expect(latest).toEqual(before); expect(mocks.configuration).not.toHaveBeenCalled()
+})
+test('returning to features does not replay an old city change after manual navigation', () => {
+  city = paris; initial = createCheckpointDrafts(2, []); cameraMemory = { current: { latitude: 51, longitude: 3, zoom: 9 } }
+  cityCameraRequest = { latitude: paris.latitude, longitude: paris.longitude, zoom: 12 }; render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [3,51], zoom: 9 }); expect(mocks.maps[0].flyTo).not.toHaveBeenCalled()
+})
+test('invalid city coordinates never create a city target or an unrelated Cluj camera', () => {
+  city = { ...paris, latitude: NaN }; initial = createCheckpointDrafts(2, []); render()
+  expect(mocks.maps[0].options).toMatchObject({ center: [0,0], zoom: 2 })
+  act(() => button('Recenter map').click()); expect(mocks.maps[0].flyTo).not.toHaveBeenCalled(); expect(latest.every(point => point.latitude === undefined)).toBe(true)
 })
