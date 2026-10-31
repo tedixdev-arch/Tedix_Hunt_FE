@@ -7,7 +7,7 @@ import { validateCustomExercises } from '../src/features/creator/exercises/persi
 import { applyExerciseDrafts, hydrateExerciseDrafts, reconcileExerciseDrafts } from '../src/features/creator/exercises/templateExercises'
 import { AuthoredContentEditor } from '../src/features/creator/exercises/AuthoredContentEditor'
 import { checkAuthoredAnswer } from '../src/features/creator/exercises/AuthoredExerciseRenderer'
-import { prototypes, emptyAttempt, type Exercise } from '../src/features/creator/exercises/catalog'
+import { prototypes, independentExercise, emptyAttempt, type Exercise } from '../src/features/creator/exercises/catalog'
 import type { CustomExercise } from '../src/features/creator/exercises/persistenceTypes'
 import { persistCreatorTemplate, verifyCustomSave } from '../src/features/creator/templatePersistence'
 const fixtures = exerciseFixtures as CustomExercise[]
@@ -16,6 +16,8 @@ for (const wire of fixtures) {
     const saved = { ...structuredClone(wire), id: '22a8945d-01fb-49ac-b18b-34c1f779be85', owner: { templateKey: 'fixture', version: 3 } } as CustomExercise
     const e = fromPersistence(saved)
     expect(e.id).not.toBe(saved.id); expect(toPersistence(e)).toEqual(saved)
+    const independent = toPersistence(independentExercise(e))
+    expect(independent.id).toBeUndefined(); expect(independent.owner).toBeUndefined()
     expect(toPersistence(fromPersistence(wire))).toEqual(wire)
     expect(validateCustomExercises(customTemplateFixture('fixture', 3, [saved]))).toEqual([])
     const d: any = e.authored!.activity, a: any = e.authored!.expected, attempt = emptyAttempt()
@@ -133,4 +135,54 @@ test('missing identity, dropped custom content and altered exercise responses ca
   const e = saved.content.checkpoints[0].customExercises.personal
   e.id = crypto.randomUUID(); e.owner = { templateKey: saved.key, version: 1 }; e.title = 'Unexpected replacement'
   expect(() => verifyCustomSave(content, saved)).toThrow('differs from the authored exercise')
+})
+test('Universal copying consumes independent destination-owned instances and never mutates source content', async () => {
+  const { CreatorTemplatesApi } = await import('../src/services/api/creatorTemplates')
+  const { ApiClient } = await import('../src/services/api/client')
+  const source = customTemplateFixture('source', 3)
+  source.checkpoints[0].customExercises.personal.id = crypto.randomUUID()
+  source.checkpoints[0].customExercises.personal.owner = { templateKey: 'source', version: 3 }
+  const before = structuredClone(source), destination = structuredClone(source)
+  destination.key = 'destination'; destination.version = 1
+  const copied = destination.checkpoints[0].customExercises.personal
+  copied.id = crypto.randomUUID(); copied.owner = { templateKey: 'destination', version: 1 }
+  const calls: any[] = []
+  const api = new CreatorTemplatesApi(new ApiClient('https://api.test', undefined, async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(String(init?.body)) })
+    return new Response(JSON.stringify({ key: 'destination', version: 1, category: 'local', status: 'draft', content: destination }), { status: 201, headers: { 'content-type': 'application/json' } })
+  }))
+  const result = await api.fromUniversal('source', 'destination', { templateId: 'source-template-id', version: 3 })
+  expect(calls).toEqual([{ url: 'https://api.test/api/creator/templates/from-universal/source', body: { key: 'destination', publishedReference: { templateId: 'source-template-id', version: 3 } } }])
+  const drafts = hydrateExerciseDrafts(result.content)
+  expect(drafts['kind:0'].custom!.persistedIdentity).toEqual({ id: copied.id, owner: { templateKey: 'destination', version: 1 } })
+  expect(copied.id).not.toBe(source.checkpoints[0].customExercises.personal.id)
+  drafts['kind:0'].custom!.title = 'Destination-only change'
+  expect(applyExerciseDrafts(result.content.checkpoints, drafts).checkpoints[0].customExercises!.personal!.title).toBe('Destination-only change')
+  expect(source).toEqual(before); expect(result.content).toEqual(destination)
+})
+test('structured backend custom errors retain the field/checkpoint and preserve the working draft', async () => {
+  const { ApiError } = await import('../src/services/api/client')
+  const { creatorTemplateError } = await import('../src/features/creator/templatePersistence')
+  const content = customTemplateFixture(), before = structuredClone(content)
+  const error = new ApiError('Validation failed', 400, 'http', { error: 'invalid_custom_exercises', details: [{ path: 'content.checkpoints[0].customExercises.personal.answer.pairs', message: 'Instance must belong to the latest source version and same checkpoint slot' }] })
+  const create = vi.fn().mockRejectedValue(error)
+  await expect(persistCreatorTemplate({ create, createVersion: vi.fn() }, content, null)).rejects.toBe(error)
+  expect(creatorTemplateError(error, 'save')).toContain('content.checkpoints[0].customExercises.personal.answer.pairs')
+  expect(creatorTemplateError(error, 'save')).toContain('same checkpoint slot')
+  expect(content).toEqual(before)
+})
+test('reordering identified choices in the actual editor preserves answer identity and meaning', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const container = document.createElement('div'); document.body.append(container); const root = createRoot(container)
+  const wire = fixtures[1]
+  let latest = fromPersistence(wire)
+  function Harness() { const [e, update] = useState(latest); return <AuthoredContentEditor exercise={e} onChange={value => { latest = value; update(value) }} /> }
+  try {
+    await act(async () => root.render(<Harness />))
+    await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Move options 2 up"]')!.click())
+    const result = toPersistence(latest) as Extract<CustomExercise, { type: 'single-choice' }>
+    expect(result.interaction.options.map(x => x.id)).toEqual(['b', 'a'])
+    expect(result.answer.optionId).toBe('a')
+    expect(result.interaction.options.find(x => x.id === result.answer.optionId)?.text).toBe('A')
+  } finally { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals() }
 })

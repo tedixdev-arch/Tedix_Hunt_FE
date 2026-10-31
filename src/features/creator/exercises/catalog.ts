@@ -55,7 +55,8 @@ export const prototypes: readonly Exercise[] = [
   example('rule-discovery', 'Discover the machine', 'Find the rule and predict the output for 5.', { examples: ['1 → 3', '2 → 5', '3 → 7'], rules: ['Double, then add one', 'Add two', 'Triple'], rule: 'Double, then add one', answer: '11', predictionInput: 5 }, 'Compare twice the input with each output.', 'The rule is y = 2x + 1, so 5 → 11.'),
 ]
 export function independentExercise(exercise: Exercise): Exercise {
-  return { ...structuredClone(exercise), id: `custom:${crypto.randomUUID()}` }
+  const { persistedIdentity: _sourceIdentity, ...content } = structuredClone(exercise)
+  return { ...content, id: `custom:${crypto.randomUUID()}` }
 }
 
 /** Each schema describes content fields only; no executable rules or code are accepted. */

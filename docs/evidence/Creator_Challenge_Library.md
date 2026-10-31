@@ -188,7 +188,7 @@ No Master Execution Plan task IDs were added; the frozen 169-task reconciliation
 
 - `npm run typecheck`: passed.
 - `npm run build`: passed; existing large-bundle warning remains non-failing.
-- Full `npm test`: **42 Node test-file entries and 678 Vitest tests across 33 files passed**, zero failures/skips.
+- Full `npm test`: **42 Node test-file entries and 681 Vitest tests across 33 files passed**, zero failures/skips.
 - Chromium custom persistence: **88 scenarios passed** (22 mechanics × 1440/768/390/320 px), zero page errors or page/modal horizontal overflow. [Results](Creator_Custom_Exercise_Persistence_Browser_Results.json).
 - Existing checkpoint Chromium regression: **four viewport workflows passed**, covering all seven features, count resizing, terminal challenges, disabled terminal navigation and checkpoint-six departure. [Results](Creator_Custom_Exercise_Persistence_Checkpoint_Results.json).
 - Deployed read-only OpenAPI: all **22 variants exactly match** the local closed schema snapshots. This checks the deployed contract, not authenticated persistence.
@@ -196,4 +196,4 @@ No Master Execution Plan task IDs were added; the frozen 169-task reconciliation
 
 Browser screenshots are in `creator-custom-exercise-persistence/`. API/database writes are mocked in browser/component suites. Live authenticated Creator/Admin/database acceptance remains blocked as described above; no live database integration pass is claimed. Earlier verification runs exposed obsolete gate assertions, JSON key-order comparison, incomplete mocked response headers, and source-edit HMR interruptions during browser execution. Those were corrected; the results above describe the final completed runs.
 
-GitHub Actions evidence is linked from the Draft PR after its source checks complete. No deployment is requested or performed.
+GitHub Actions [Frontend validation #281](https://github.com/tedixdev-arch/Tedix_Hunt_FE/actions/runs/41194097088) passed on implementation source `86e95a640f2ec1881c32a6824b6f6078e95b63b3`: clean install, typecheck, build and the full suite. Both deployment jobs were skipped. The follow-up adds three focused copy/error/reorder acceptance tests, explicitly strips persisted identity when cloning an independent FE instance, and adds this CI record; latest-head CI evidence is linked from [Draft PR #137](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/137). No deployment is requested or performed.
