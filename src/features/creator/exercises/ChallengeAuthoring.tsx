@@ -1,3 +1,4 @@
+import type { PersonalCreationContext } from './creationContext'
 import { PersonalChallengeAuthoring } from './PersonalChallengeAuthoring'
 import { authorPrototype } from './persistenceAdapter'
 import { useState } from 'react'
@@ -67,6 +68,6 @@ function ExistingChallengeAuthoring({ field, value, onChange, draft = { source: 
 // Naming is a Creator UI layer; the seven stored team identifiers remain unchanged.
 export const teamCatalog = checkpointExercises.map(row => ({ id: row.teamKind as TeamType, title: row.title }))
 
-export function ChallengeAuthoring(props: Parameters<typeof ExistingChallengeAuthoring>[0]) {
+export function ChallengeAuthoring(props: Parameters<typeof ExistingChallengeAuthoring>[0] & { context?: PersonalCreationContext }) {
   return props.field === 'kind' ? <PersonalChallengeAuthoring {...props} /> : <ExistingChallengeAuthoring {...props} />
 }

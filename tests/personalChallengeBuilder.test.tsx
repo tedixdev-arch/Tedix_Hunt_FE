@@ -42,75 +42,77 @@ const custom = (type: string) => authorPrototype(prototypes.find(e => e.type ===
 const content = (checkpoints: any[]): any => ({ key: 'test', version: 2, displayName: 'Test', theme: 'City', mission: 'Go', configuration: { normalCheckpointCount: 2 }, scoring: {}, checkpoints })
 const asDraft = (e: Exercise): AuthoringDraft => ({ source: 'custom', assignment: 'custom', custom: e })
 
-for (const preset of personalExamples) test(`${preset.type}: read-only example, test and explicit custom authoring without a predefined persistence path`, async () => {
-  expect(validateExercise(preset)).toEqual([]); expect(toPersistence(preset).type).toBe(preset.type)
+for (const preset of personalExamples) test(`${preset.type}: one modern selector, immediate read-only play and independent custom authoring`, async () => {
   const before = structuredClone(preset)
   await mount(); await choose(preset.type)
-  expect(container.querySelectorAll('select')).toHaveLength(1)
-  expect(container.querySelectorAll('textarea, input')).toHaveLength(0)
-  expect(container.querySelectorAll('select option:not(:disabled)')).toHaveLength(23) // 15 examples + seven distinct Signal choices + optional; no duplicate Current alias
+  const selector = container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!
+  expect([...selector.options].map(o => o.value)).toEqual(['', ...personalTypes.map(row => row[0])])
+  expect(selector.querySelector('optgroup')).toBeNull()
+  expect(container.querySelector('[aria-label="Mobile challenge canvas"]')).not.toBeNull()
+  expect(container.querySelector('textarea')).toBeNull()
+  expect(button('Test Challenge')).toBeUndefined(); expect(button('Apply to Hunt')).toBeUndefined()
+  expect(container.querySelector('[aria-label^="Edit "]')).toBeNull()
   expect(state.assignment).toBe('predefined'); expect(state.custom).toBeUndefined()
-  await click('Test Challenge'); await click('Check answer'); await click('Reset'); await click('Return to Edit')
+  await click('Check answer'); await click('Reset')
   expect(personalExamples.find(e => e.type === preset.type)).toEqual(before)
-  expect(button('Use this challenge')).toBeUndefined()
-  expect(container.textContent).toContain('Example for preview and authoring only')
-  expect(applyExerciseDrafts([{ checkpoint: 1, kind: 'hidden-rule' }], { 'kind:0': state }).checkpoints[0].customExercises).toBeUndefined()
-  await click('Open custom editor'); expect(state.assignment).toBe('predefined')
-  await click('Apply to Hunt'); expect(state.assignment).toBe('custom')
-  const applied = applyExerciseDrafts([{ checkpoint: 1, kind: 'hidden-rule' }], { 'kind:0': state })
-  expect(applied.checkpoints[0].customExercises!.personal!.type).toBe(preset.type)
-  expect(applied.checkpoints[0].personalChallengePreset).toBeUndefined()
-  expect(hasCustomExercises(content(applied.checkpoints))).toBe(true)
+  expect(applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': state }).checkpoints[0].customExercises).toBeUndefined()
+  await click('Create Your Own'); expect(state.custom!.type).toBe(preset.type)
+  expect(state.custom!.id).not.toBe(preset.id); expect(state.assignment).toBe('predefined')
+  await click('Apply to Hunt')
+  expect(applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': state }).checkpoints[0].customExercises!.personal!.type).toBe(preset.type)
+  expect(personalExamples.find(e => e.type === preset.type)).toEqual(before)
 })
 
-for (const type of ['tap-pair', 'single-choice', 'fill-blank']) test(`${type}: shared draft, stable IDs, keyboard reordering, invalid additions and independent testing`, async () => {
-  await mount(); await click('Create Your Own'); await choose(type)
-  expect(container.querySelectorAll('select')).toHaveLength(1)
-  const original = structuredClone(state.custom!), originalContent = JSON.stringify(original.authored)
-  const firstText = container.querySelector<HTMLInputElement>('input')!
-  await input(firstText, 'Edited visible content')
-  const edited = JSON.stringify(state.custom!.authored)
-  expect(edited).not.toBe(originalContent)
-  await click('Edit with Preview'); expect(JSON.stringify(state.custom!.authored)).toBe(edited)
-  await click('Move row 1 down')
-  const a: any = state.custom!.authored!.activity, answer: any = state.custom!.authored!.expected
-  const old: any = original.authored!.activity, oldAnswer: any = original.authored!.expected
-  if (type === 'tap-pair') { expect(answer.pairs[1]).toEqual(oldAnswer.pairs[0]); expect(a.left[1].id).toBe(old.left[0].id); expect(a.right[1].id).toBe(oldAnswer.pairs[0].rightId) }
-  if (type === 'single-choice') { expect(a.options[1].id).toBe(old.options[0].id); expect(answer.optionId).toBe(oldAnswer.optionId) }
-  if (type === 'fill-blank') { expect(a.blanks[1].id).toBe(old.blanks[0].id); expect(answer.values).toEqual(oldAnswer.values) }
-  const beforeTest = structuredClone(state)
-  await click('Test Challenge'); await click('Check answer'); await click('Hint'); await click('Solution'); await click('Reset'); await click('Return to Edit')
-  expect(state).toEqual(beforeTest)
-  await click('Test Challenge'); expect(container.querySelector('[role="status"]')?.textContent).not.toContain('Not quite'); await click('Return to Edit')
-  await click(type === 'tap-pair' ? 'Add pair' : type === 'single-choice' ? 'Add option' : 'Add blank')
-  expect(validateExercise(state.custom!)).not.toEqual([])
-  expect(button('Test Challenge').disabled).toBe(true); expect(button('Apply to Hunt').disabled).toBe(true)
-  const count = type === 'tap-pair' ? a.left.length + 1 : type === 'single-choice' ? a.options.length + 1 : a.blanks.length + 1
-  await click(`Remove row ${count}`); expect(validateExercise(state.custom!)).toEqual([])
+for (const type of ['tap-pair', 'single-choice', 'fill-blank']) test(`${type}: pencil editing, simulation isolation, shared guided draft and stable identities`, async () => {
+  await mount(asDraft(custom(type)))
+  expect(button('Edit with Preview').getAttribute('aria-pressed')).toBe('true')
+  const before = structuredClone(state.custom!), key = type === 'tap-pair' ? 'Card 1' : type === 'single-choice' ? 'Option 1' : 'Question 1'
+  await click(`Edit ${key}`)
+  const field = container.querySelector<HTMLTextAreaElement>(`[role="group"][aria-label="Edit ${key}"] textarea`)!
+  expect(document.activeElement).toBe(field)
+  await input(field, type === 'fill-blank' ? 'Edited ___ question' : 'Edited card')
+  const authored: any = state.custom!.authored!, old: any = before.authored!
+  if (type === 'tap-pair') { expect(authored.activity.left[0].id).toBe(old.activity.left[0].id); expect(authored.expected).toEqual(old.expected) }
+  if (type === 'single-choice') { expect(authored.activity.options[0].id).toBe(old.activity.options[0].id); expect(authored.expected).toEqual(old.expected) }
+  if (type === 'fill-blank') { expect(authored.activity.blanks[0].id).toBe(old.activity.blanks[0].id); expect(authored.expected).toEqual(old.expected) }
+  await act(async () => field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+  expect(document.activeElement).toBe(button(`Edit ${key}`)); expect(container.querySelector('[role="group"]')).toBeNull()
+  const edited = structuredClone(state)
+  await click('Play'); await click('Check answer'); await click('Hint'); await click('Solution'); await click('Reset')
+  expect(state).toEqual(edited)
+  await click('Edit'); expect(container.textContent).toContain(type === 'fill-blank' ? 'Edited ___ question' : 'Edited card')
   await click('Step by Step'); expect(container.textContent).toContain('Step 1')
-  await click('Next'); expect(container.textContent).toContain('Hints and feedback')
-  await click('Next'); expect(container.textContent).toContain('Review and test')
-  await click('Back'); await click('Back'); expect(JSON.stringify(state.custom!.authored)).not.toBe(originalContent)
+  const surface = container.querySelector(`[aria-label="${type === 'tap-pair' ? 'Pair cards' : type === 'single-choice' ? 'Answer options' : 'Blank questions'} editor"]`)!
+  expect(surface.querySelectorAll('input:not([type="radio"]):not([type="checkbox"])')).toHaveLength(type === 'single-choice' ? 1 : 2)
+  await click('Next'); await click('Back'); await click('Edit with Preview')
+  expect(state).toEqual(edited)
+  await click(type === 'tap-pair' ? 'Add pair' : type === 'single-choice' ? 'Add option' : 'Add blank')
+  expect(validateExercise(state.custom!)).not.toEqual([]); expect(button('Play').disabled).toBe(true); expect(button('Apply to Hunt').disabled).toBe(true)
+  const count = type === 'tap-pair' ? authored.activity.left.length + 1 : type === 'single-choice' ? authored.activity.options.length + 1 : authored.activity.blanks.length + 1
+  await click(`Edit ${type === 'tap-pair' ? 'Card' : type === 'single-choice' ? 'Option' : 'Question'} ${count}`)
+  await click(`${type === 'tap-pair' ? 'Remove pair' : type === 'single-choice' ? 'Remove option' : 'Remove question'} ${count}`)
+  expect(validateExercise(state.custom!)).toEqual([])
+  expect(state.custom!.authored).toEqual(edited.custom!.authored)
 })
 
-test('marking a choice correct survives text changes and removing it requires a new correct answer', async () => {
-  await mount(asDraft(custom('single-choice')))
-  await act(async () => (container.querySelectorAll('input[type="radio"]')[0] as HTMLInputElement).click())
+test('marking a choice correct uses stable identity and removing it requires another correct answer', async () => {
+  await mount(asDraft(custom('single-choice'))); await click('Edit Option 1')
   const id = (state.custom!.authored!.activity as any).options[0].id
-  await input(container.querySelector('input')!, 'Renamed correct option')
+  await act(async () => (container.querySelector('input[type="radio"]') as HTMLInputElement).click())
+  await input(container.querySelector('[role="group"] textarea')!, 'Renamed option')
   expect((state.custom!.authored!.expected as any).optionId).toBe(id)
-  await click('Remove row 1'); expect((state.custom!.authored!.expected as any).optionId).toBe('')
+  await click('Remove option 1'); expect((state.custom!.authored!.expected as any).optionId).toBe('')
   expect(button('Apply to Hunt').disabled).toBe(true)
 })
 
-test('blank answers retain their own identity through edit/add/remove and case sensitivity changes', async () => {
+test('blank accepted answer edits and removals retain other identities', async () => {
   await mount(asDraft(custom('fill-blank')))
-  const expected: any = state.custom!.authored!.expected
-  await input(container.querySelectorAll('input')[1], 'New answer')
+  const expected: any = structuredClone(state.custom!.authored!.expected)
+  await click('Edit Accepted answer 1'); await input(container.querySelector('[role="group"] textarea')!, 'New answer'); await click('Done')
   expect((state.custom!.authored!.expected as any).values[0]).toEqual({ ...expected.values[0], value: 'New answer' })
   await act(async () => (container.querySelector('input[type="checkbox"]') as HTMLInputElement).click())
   expect((state.custom!.authored!.expected as any).caseSensitive).toBe(true)
-  await click('Remove row 1')
+  await click('Edit Question 1'); await click('Remove question 1')
   expect((state.custom!.authored!.expected as any).values).toEqual([expected.values[1]])
 })
 
@@ -174,7 +176,7 @@ test('metadata-free custom snapshots retain authoritative same-slot identity acr
 })
 
 test('selecting question text and inserting a blank captures the accepted answer without changing its identity', async () => {
-  await mount(asDraft(custom('fill-blank')))
+  await mount(asDraft(custom('fill-blank'))); await click('Step by Step')
   const before: any = state.custom!.authored!.activity
   const question = container.querySelector('input')!
   await input(question, 'The treasure is under the bridge.')
@@ -244,7 +246,7 @@ for (const [index, signal] of checkpointExercises.entries()) test(`${signal.kind
     const [value, setValue] = useState(original)
     const [draft, setDraft] = useState<AuthoringDraft>(asDraft(custom('single-choice')))
     checkpoint = value; state = draft
-    return <ChallengeAuthoring field="kind" value={value} onChange={setValue} draft={draft} onDraftChange={setDraft} />
+    return <ChallengeAuthoring context={{ mode: 'legacy', kinds: [signal.kind] }} field="kind" value={value} onChange={setValue} draft={draft} onDraftChange={setDraft} />
   }
   await act(async () => root.render(<SignalHarness />))
   await click('Predefined'); await choose(signal.kind); await click('Use this challenge')
@@ -259,4 +261,20 @@ for (const [index, signal] of checkpointExercises.entries()) test(`${signal.kind
   expect(legacy).toEqual(oldLegacy)
   expect(applied.checkpoints[0].role).toBe(terminal ? 'terminal' : 'normal')
   if (terminal) expect(applied.checkpoints[0].checkpoint).toBeUndefined()
+})
+
+for (const type of ['tap-pair', 'single-choice', 'fill-blank']) test(`${type}: guided reordering keeps answer references and validates only the current task`, async () => {
+  await mount(asDraft(custom(type))); await click('Step by Step')
+  const before: any = structuredClone(state.custom!.authored)
+  await click('Move row 1 down')
+  const after: any = state.custom!.authored
+  if (type === 'tap-pair') { expect(after.activity.left[1].id).toBe(before.activity.left[0].id); expect(after.expected.pairs[1]).toEqual(before.expected.pairs[0]) }
+  if (type === 'single-choice') { expect(after.activity.options[1].id).toBe(before.activity.options[0].id); expect(after.expected).toEqual(before.expected) }
+  if (type === 'fill-blank') { expect(after.activity.blanks[1].id).toBe(before.activity.blanks[0].id); expect(after.expected).toEqual(before.expected) }
+  await click(type === 'tap-pair' ? 'Add pair' : type === 'single-choice' ? 'Add option' : 'Add blank')
+  expect(button('Next').disabled).toBe(false)
+  const count = type === 'tap-pair' ? after.activity.left.length : type === 'single-choice' ? after.activity.options.length : after.activity.blanks.length
+  for (let i = 0; i < count; i++) await click('Next')
+  expect(button('Next').disabled).toBe(true)
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Complete the text and answer')
 })

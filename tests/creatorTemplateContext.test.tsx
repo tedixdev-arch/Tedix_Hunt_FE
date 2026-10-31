@@ -24,7 +24,7 @@ const retry = async () => { await act(async () => [...container.querySelectorAll
 test.each(['universal', 'local', null, undefined] as const)('explicit category %s never derives from Signal, city or geography', async category => {
   api.list.mockResolvedValue([projection(category)])
   await render()
-  expect(cards()[0].textContent).toContain(`Type: ${category === 'universal' ? 'Universal' : category === 'local' ? 'Local' : 'Legacy'}`)
+  expect(cards()[0].textContent).toContain(`Type: ${category === 'universal' ? 'Universal' : category === 'local' ? 'Local' : category === null ? 'Legacy' : 'Unavailable'}`)
   expect(cards()[0].textContent).not.toContain('undefined checkpoints')
   expect(cards()[0].querySelector('a')?.getAttribute('href')).toBe(`/create?template=${category ?? 'legacy'}-draft`)
 })

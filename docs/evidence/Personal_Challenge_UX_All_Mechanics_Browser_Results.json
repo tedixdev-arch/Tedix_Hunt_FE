@@ -1,0 +1,447 @@
+{
+  "scenarios": 88,
+  "results": [
+    {
+      "width": 1440,
+      "mechanic": "tap-pair",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "single-choice",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "true-false",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "memory-card",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "number-line",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "multiple-choice",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "match-columns",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "drag-drop",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "fill-blank",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "sequence",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "find-mistake",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "build-problem",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "number-pattern",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "shape-pattern",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "rule-discovery",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "scrambled-word",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "distributed-information",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "hypothesis",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "assemble-machine",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "clue-synthesis",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "filter-noise",
+      "passed": true
+    },
+    {
+      "width": 1440,
+      "mechanic": "shared-final-key",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "tap-pair",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "single-choice",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "true-false",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "memory-card",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "number-line",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "multiple-choice",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "match-columns",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "drag-drop",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "fill-blank",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "sequence",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "find-mistake",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "build-problem",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "number-pattern",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "shape-pattern",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "rule-discovery",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "scrambled-word",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "distributed-information",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "hypothesis",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "assemble-machine",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "clue-synthesis",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "filter-noise",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "mechanic": "shared-final-key",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "tap-pair",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "single-choice",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "true-false",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "memory-card",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "number-line",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "multiple-choice",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "match-columns",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "drag-drop",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "fill-blank",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "sequence",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "find-mistake",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "build-problem",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "number-pattern",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "shape-pattern",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "rule-discovery",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "scrambled-word",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "distributed-information",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "hypothesis",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "assemble-machine",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "clue-synthesis",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "filter-noise",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "mechanic": "shared-final-key",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "tap-pair",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "single-choice",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "true-false",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "memory-card",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "number-line",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "multiple-choice",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "match-columns",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "drag-drop",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "fill-blank",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "sequence",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "find-mistake",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "build-problem",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "number-pattern",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "shape-pattern",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "rule-discovery",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "scrambled-word",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "distributed-information",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "hypothesis",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "assemble-machine",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "clue-synthesis",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "filter-noise",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "mechanic": "shared-final-key",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "backend": "Mocked Template operations, real Creator Studio and preview components; not live FE–BE integration."
+}

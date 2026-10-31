@@ -412,7 +412,7 @@ test('Overload shared map editor exposes reversed seven pins and separate F, and
   expect(map.props.finishPoint).toBeUndefined()
   expect(map.props.proposedSequence).toBeUndefined()
   expect(map.props.routeOverview).toBeUndefined()
-  await feature('Personal Challenge')
+  await feature('Personal Challenge'); await click('Edit existing challenges')
   expect(container.querySelector('[aria-label="Checkpoint story preview"]')?.textContent).toContain('Backend ACCESS revelation')
   expect(container.textContent).toContain('Backend next destination')
 })

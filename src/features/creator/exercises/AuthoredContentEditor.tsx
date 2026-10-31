@@ -3,7 +3,8 @@ import { schemas } from './catalog'
 import { mechanics, type Schema } from './persistenceSchema'
 import type { AuthoredContent } from './persistenceTypes'
 const control = 'min-h-11 min-w-0 max-w-full rounded-lg border border-slate-300 p-2 text-sm'
-const label = (name: string) => name.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())
+const friendly: Record<string, string> = { optionId: 'Correct option', optionIds: 'Correct options', leftId: 'First card', rightId: 'Matching card', itemId: 'Item', targetId: 'Destination', blankId: 'Question', stepId: 'Incorrect step', explanationId: 'Explanation', shapeId: 'Shape', ruleId: 'Rule', frequencyId: 'Frequency', trustedSignalIds: 'Trusted signals', missingId: 'Missing term', caseSensitive: 'Match upper and lower case exactly', revealDelayMs: 'Recall time (milliseconds)' }
+const label = (name: string) => { const base = name.replace(/ \d+$/, ''), suffix = name.slice(base.length); return friendly[base] ? friendly[base] + suffix : name.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()) }
 function initial(s: Schema): any {
   if (s.type === 'object') return Object.fromEntries((s.required ?? []).map(k => [k, k === 'id' ? `item-${crypto.randomUUID()}` : initial(s.properties![k])]))
   if (s.type === 'array') return Array.from({ length: s.minItems ?? 0 }, () => initial(s.items!))
@@ -25,5 +26,5 @@ export function AuthoredContentEditor({ exercise, onChange }: { exercise: Exerci
   const authored = exercise.authored!
   const mechanic = mechanics[authored.mechanic]
   const update = (patch: Partial<AuthoredContent>) => onChange({ ...exercise, authored: { ...authored, ...patch } as AuthoredContent })
-  return <div className="min-w-0 space-y-3"><p className="text-sm text-slate-600">{schemas[exercise.type].map(f => f.label).join(' · ')}. Choices retain their identity when their text or order changes.</p><Field name="Interaction" schema={mechanic.interaction} value={authored.activity} activity={authored.activity} onChange={activity => update({ activity })} /><Field name="Correct answers and validation" schema={mechanic.answer} value={authored.expected} activity={authored.activity} onChange={expected => update({ expected })} /><Field name="Hints" schema={{ type: 'array', items: { type: 'string' }, minItems: 0, maxItems: 10 }} value={authored.hints} activity={authored.activity} onChange={hints => update({ hints })} /></div>
+  return <div className="min-w-0 space-y-3"><p className="text-sm text-slate-600">{schemas[exercise.type].map(f => f.label).join(' · ')}. Choices retain their identity when their text or order changes.</p><Field name="Challenge content" schema={mechanic.interaction} value={authored.activity} activity={authored.activity} onChange={activity => update({ activity })} /><Field name="Correct answers" schema={mechanic.answer} value={authored.expected} activity={authored.activity} onChange={expected => update({ expected })} /><Field name="Hints" schema={{ type: 'array', items: { type: 'string' }, minItems: 0, maxItems: 10 }} value={authored.hints} activity={authored.activity} onChange={hints => update({ hints })} /></div>
 }

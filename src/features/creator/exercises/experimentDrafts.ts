@@ -5,6 +5,9 @@ export interface AuthoringDraft {
   /** Viewed editor tab only. Never use this to choose the persisted exercise. */
   source: 'saved' | 'example' | 'custom'
   assignment: 'predefined' | 'custom'
+  /** Session-only editor choice for an owner response that omits classification. Not provenance. */
+  contextChoice?: 'modern' | 'compatibility'
+  emptySelection?: boolean
   legacyKind?: string
   exercise?: Exercise
   /** Retains the selected custom instance while a replacement is being edited. */

@@ -20,10 +20,10 @@ export const supportedGameplay = Object.fromEntries(gameplayFields.map(field =>
 
 const isObject = (value: unknown): value is CheckpointGameplay => !!value && typeof value === 'object' && !Array.isArray(value)
 
-export function createNormalGameplay(count: number): CheckpointGameplay[] {
+export function createNormalGameplay(count: number, context: 'legacy' | 'modern' = 'modern'): CheckpointGameplay[] {
   return Array.from({ length: count }, (_, index) => {
     const existing = checkpointExercises[index]
-    return { checkpoint: index + 1, ...(index < 6 && existing ? {
+    return { checkpoint: index + 1, ...(context === 'legacy' && index < 6 && existing ? {
       kind: existing.kind, teamKind: existing.teamKind, navigationMode: existing.navigationMode,
     } : {}) }
   })

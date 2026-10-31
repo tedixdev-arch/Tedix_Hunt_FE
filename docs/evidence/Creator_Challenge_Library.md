@@ -1,6 +1,8 @@
 # Creator challenge library and interactive exercise preview
 
-**PR #138 current architecture:** [Signal assignments, preview-only examples and explicit Custom authoring](#personal-challenge-architecture-correction--pr-138). Earlier implementation sections are historical where superseded.
+**Current UX correction:** [Clean creation contexts and mobile visual authoring](#personal-challenge-ux-correction--31-october-2026). The sections below retain historical evidence.
+
+**PR #138 architecture baseline:** [Signal assignments, preview-only examples and explicit Custom authoring](#personal-challenge-architecture-correction--pr-138). Earlier implementation sections are historical where superseded.
 
 **Current status:** Template-owned custom exercise persistence is integrated against BE #93. See “Current integration” below for authoritative behavior, evidence and remaining live-database acceptance. The FE #136 sections that follow are historical evidence; their experimental save/submission gate has been retired.
 
@@ -326,3 +328,104 @@ Final correction verification:
 - Pinned pure BE checks: canonical Signal readiness passed; all **15 actual FE examples** accepted only as custom snapshots, blocked from Hunt publication and withheld from non-organizer reads. Generic checkpoint metadata retention verified in source allocation, not in a live database.
 - Deployed read-only OpenAPI: 70 paths; no checkpoint/exercise delivery or answer-submission endpoint.
 - `git diff --check`: passed. No live FE–BE/database acceptance, backend change, merge or deployment is claimed.
+
+
+## Personal Challenge UX correction — 31 October 2026
+
+### Inspected baseline and backend boundary
+
+Based on FE `eed6717ca46eb3f87e5aa5ee577b9af55ac0cf27`, current main after merged #136, #137 and #138. Inspected their PR descriptions and the actual merged implementation: CreatorStudio, PersonalChallengeAuthoring, PersonalMechanicEditor, PredefinedChallengeContent, ExerciseRenderer/AuthoredExerciseRenderer, ExerciseContentEditor/AuthoredContentEditor, personalExamples, templateExercises, experimentDrafts, starter/Universal-copy operations, checkpoint gameplay, API/persistence adapters, lifecycle tests and browser fixtures. BE #93 and `docs/Custom_Exercise_Persistence.md` at `4e6cb521ba6ac930d28cd513935d83367ee80f91` were inspected read-only. No backend files, protected Signal data, publication checks, scoring rules or reward rules changed.
+
+The existing BE contract is unchanged: the server allocates exercise UUIDs and version ownership; saved custom snapshots live in one Personal/Team slot per checkpoint; new immutable versions and explicit Universal copies allocate independent identities. Custom-bearing Hunts cannot be published. Creator simulation does not establish Participant delivery or server answer checking. Full catalog examples still have no publication-safe predefined wire identity, so **there is no predefined-example assignment button**. This also prevents assigning one shared predefined instance twice. Independent custom copies can reuse a mechanic; persisted instance UUID duplication remains rejected by full-payload validation and backend ownership checks.
+
+### Exact Signal leak and creation isolation
+
+The leak was not just a dropdown. `CreatorTemplateEditorPage` cleared the name/mission fields for `blankNew` but unconditionally initialized `normalGameplay` through `createNormalGameplay(6)`. That helper inserted six canonical Signal `kind`, `teamKind` and `navigationMode` assignments. Geographic checkpoint drafts also unconditionally used `normalCheckpointNames`, which selected Signal names. Those working values reached `serializeGameplay` and the create/version payload. A second isolation risk was that changing the route from a saved Template to scratch creation reused the existing React editor state. Separately, PersonalChallengeAuthoring always appended all seven Signal choices to every Predefined selector.
+
+New Universal and Local scratch initialization now uses clean numbered gameplay with no activities, generic checkpoint names, no positions, an empty story and one unnumbered terminal entry. The old unclassified `/create` scratch URL also starts a clean Local draft; the compatibility chooser directs scratch creation to the explicit Local URL. `createNormalGameplay` defaults to clean modern data; canonical defaults require the explicit legacy context. New classified creation never runs Signal geographic prefill. A loaded record hydrates its own complete content, not new-template defaults. The complete editor is keyed by the saved Template key or new creation category, so navigating between records/creation paths cannot carry the previous context, story, route or challenge draft into the destination. The route-transition regression exercises Legacy → new Local → new Universal without remounting the surrounding router.
+
+`personalCreationContext` uses immutable server category, not challenge content: Universal/Local is always modern; explicit `category: null` is unclassified/Legacy; omitted or unrecognized category is unresolved. The original identifier-based implementation in the first PR #139 commit was rejected and is superseded by the [classification correction below](#pr-139-re-review--authoritative-context-classification). Saved identifier inventories constrain compatibility choices only after context resolution or an explicit session editor choice. They never establish Template classification. Existing assignments, unknown fields and original ordering remain intact.
+
+Local-from-Universal still uses the existing `fromUniversal(source.key, destination, publishedReference)` API, pinned to the explicitly selected publication. The destination hydrates only the returned content and independent destination identities. No source default or unrelated Signal fallback is introduced. Existing copy/lifecycle tests and new destination-isolation tests cover this path; this is frontend fixture evidence, not a claim about a live database operation.
+
+### One selector and shared draft
+
+Modern Predefined and Create Your Own share one **Personal Challenge** selector: the 15 requested friendly labels plus **No challenge (optional)**. It has no optgroups, mechanic IDs, difficulty suffixes or legacy choices. Switching tabs retains the currently selected modern mechanic. Predefined shows the complete, immediately playable read-only example through the existing engine. Gameplay inputs are temporary attempt state, not editing controls. Create Your Own creates or restores an independent editable copy and retains session variants by type.
+
+Assignment remains explicit. Browsing another mechanic, an example or another tab never replaces the selected exercise. Apply to Hunt confirms replacement when there is an existing assignment; cancellation retains it. Removing a challenge is also explicit. `appliedCustom` preserves the selected instance while a replacement is drafted. Existing same-slot save reconciliation, authoritative ownership, revision, submission and conflict handling are unchanged. One concise contextual publication notice replaces repeated architecture explanations; an unsaved indicator and relevant errors remain.
+
+### Mobile canvas and contextual editing
+
+**Edit with Preview** is the default. Its prominent segmented control sits immediately below the common title/instructions. The centered canvas is at most 390px wide on desktop and uses the available width without another phone frame on small screens. It displays title, instructions, cards/options/blanks and assistance content in the participant-style layout.
+
+Tap & Pair, Single Choice and Fill in the Blank have real contextual pencil controls. Opening a pencil reveals only that element's compact live editor. Text changes render immediately. Escape/Done closes the panel and restores pencil focus. Item addition/removal moves focus to a surviving/new edit control. Pair/card relationships and option/blank answers use stable identities rather than label matching. Removing the correct option requires choosing another. Blank accepted answers and case matching remain editable.
+
+The **Edit | Play** control separates answer-key authoring from gameplay. Play uses the existing ExerciseRenderer/AuthoredExerciseRenderer and its existing validation, hint, solution and reset behavior. There is no duplicated answer-validation engine and no Test Challenge button in Personal authoring. Reset clears only simulation state. Switching back to Edit or changing editor modes preserves the same authored draft.
+
+### Guided editing and remaining work
+
+For the three priority mechanics, Step by Step presents one pair, option or blank question at a time, followed by separate hint, feedback, solution and play tasks. Task count follows the actual item count. Back/Next, local required-field validation and inline messages guide the Creator; unrelated incomplete later items do not block reaching them. Existing keyboard reorder controls and selected-text blank insertion remain available here. Both editing modes write the same parent-owned exercise; checkpoint and feature navigation retain that state.
+
+The other twelve mechanics keep their full detailed editors under **Step by Step** and inline engine play under **Edit with Preview**. The shell explicitly says to use Step by Step for content changes; it does not describe those conventional editors as finished visual editors. Common fields are not duplicated in the detailed form. Friendly content/answer labels replace reference-field terminology. Remaining work: add contextual visual editing and per-task guided flows for those twelve mechanics, after this PR; Participant delivery and server answer authority remain backend integration work outside this PR.
+
+### Map investigation only
+
+`RouteEditor` currently chooses its initial center from saved checkpoint/FinishPoint positions, positioned working drafts, or route-research references. It identifies Cluj context only from the existing Signal/research handling. If none exist, it falls back to Cluj's existing app center **at zoom 3**, a Europe-wide overview. The selected registry locality is held by `LocalGeographySelector`/CreatorStudio and is not a RouteEditor camera input. `TedixMap.initialOptions` is captured once in a ref, so a later city selection alone cannot correct the initial view. This explains the observed selected-city/wide-zoom mismatch without inventing checkpoint coordinates.
+
+Smallest follow-up: pass the already validated selected/saved registry locality as optional **initial camera context**, after authored/route positions in the precedence chain; use its actual coordinates and the existing city zoom or actual known bounds. Apply it only before user camera interaction, or through an explicit “Show selected city” action. Do not write it into checkpoint drafts, use Template names as locality authority, recreate the map on every edit, or override a panned camera. New unsaved locality selection currently returns only its ID, so that callback contract must also expose the validated registry record. No map code or coordinates changed here; existing camera regressions are retained.
+
+### Verification for this correction
+
+- Full final `npm test`: **42 Node test-file entries + 732 Vitest tests across 35 files passed**, zero failures/skips. The final route/context/FinishPoint/navigation subset also passed 60 tests. `git diff --check` passed.
+- Typecheck and production build: passed; existing large-bundle warning remains.
+- Focused component coverage includes all 15 modern selectors and examples; three visual mechanics; stable identities, correct-answer changes, item addition/removal, pencil focus/Escape, guided local validation/reordering, shared drafts, simulation isolation, assignment replacement, immutable versions, rejection/conflict handling, protected Signal data and creation/copy isolation.
+- New real Chromium UX workflow: **12 scenarios**, three priority mechanics at **1440, 768, 390 and 320px**. Clean Local payload, selector contents, immediately playable examples, visual/pencil/guided editing, keyboard focus, item removal, correct-answer selection, assignment, save/reload and checkpoint retention passed, with no page errors or horizontal overflow. [Results](personal-challenge-ux/results.json).
+- Existing real-component all-mechanic browser suite: **88 scenarios** (all 15 Personal and seven Team mechanics at all four widths), including correct/incorrect answers, hint/solution/reset, detailed-editor availability, same-slot save/reload and checkpoint navigation. [Results](Personal_Challenge_UX_All_Mechanics_Browser_Results.json).
+- Existing checkpoint browser regression: **4 workflows** at all requested widths passed, including terminal Personal/Team assignments, disabled onward navigation at FinishPoint and checkpoint-count changes, with no page errors/overflow. [Results](Personal_Challenge_UX_Checkpoint_Browser_Results.json).
+- [Clean Local, desktop](personal-challenge-ux/clean-local-1440.png) · [Modern selector](personal-challenge-ux/modern-selector-1440.png) · [Predefined](personal-challenge-ux/tap-pair-predefined-1440.png) · [Visual canvas](personal-challenge-ux/tap-pair-visual-1440.png) · [Pencil editor](personal-challenge-ux/single-choice-pencil-1440.png) · [Guided flow](personal-challenge-ux/fill-blank-guided-1440.png) · [390px](personal-challenge-ux/tap-pair-visual-390.png) · [320px](personal-challenge-ux/fill-blank-visual-320.png).
+
+Browser/component Template operations use mocked frontend API fixtures and actual rendered components. **No authenticated FE–BE or database integration pass is claimed.** Existing version ownership/publication safeguards remain intact. No merge or deployment. One Draft PR; stop for ChatGPT PR review.
+
+
+## PR #139 re-review — authoritative context classification
+
+### Contract inspected, read-only
+
+Backend main `4e6cb521ba6ac930d28cd513935d83367ee80f91`:
+
+- `src/db/migrations/022_template_classification.ts`: `category` is constrained to Universal/Local or database NULL (unclassified, including shipped Signal/starters). The identity trigger makes category and source binding immutable. Source provenance (`source_template_id`, `source_version`, `source_creator_user_id`, `source_review_decision`) exists for Local-from-Universal copies; it is not a Legacy marker.
+- `src/models/HuntTemplate.ts`: Template and immutable version rows carry category. Revision copies the existing category, not a caller-selected replacement. `origin` is `platform|creator`, describing ownership, not gameplay generation. Approval/publication/submission pins identify immutable artifacts and lifecycle authority, not Legacy context.
+- `src/models/PublishedUniversal.ts`: the server pins the selected approved publication, records source provenance and creates a destination with `category: local`. Its response explicitly returns that category. The source's older challenge identifiers cannot downgrade the destination context.
+- `src/routes/creatorTemplates.ts`: both explicit Signal starter endpoints call unclassified `createCreatorDraft` and copy original puzzles; ordinary creation accepts an optional immutable category; version endpoints do not accept category/source changes. The owner list/detail, create, version and submit projections use conditional spreads that **omit a NULL category**. They do not return the stored Universal-copy source columns or a persistent starter-copy identity.
+
+### Exact provenance gap and explicit handling
+
+The FE cannot distinguish database NULL/unclassified from an older/incomplete owner projection by testing whether optional `category` is absent. Neither a legacy `kind`, seven checkpoints, Signal names, a copy-looking key, `origin`, version number nor a review/publication pin repairs that gap. The frontend therefore does not synthesize a category, a source ancestry field or a versioned gameplay-context marker.
+
+Resolution is explicit:
+
+| Authoritative input | Personal authoring behavior |
+| --- | --- |
+| New Local/Universal scratch route | Modern, clean 15-mechanic selector |
+| Saved `category: universal` or `local` | Modern, regardless of old identifiers or copy contents |
+| Explicit `category: null` | Unclassified/Legacy compatibility using only saved identifiers |
+| Missing/unrecognized category | Unresolved; existing challenge is playable read-only; no classification-derived selector is chosen |
+
+For an unresolved record, **Edit existing challenges** and **Use modern challenge editor** choose an editor for that checkpoint in the current session. This choice is not a statement that the Template is Legacy/modern. **Choose editor** can change the view without changing assignment. The session draft's `contextChoice` is never serialized into Template content, category or provenance. Save reconciliation can retain the view in-session; a fresh reload with an omitted category asks explicitly again. The Template summary says **Type: Unavailable**, not Legacy, for an omitted category.
+
+Explicit Legacy copies retain all original content and supported assignments. A current starter copy's real owner projection omits category/source identity, so it receives the unresolved handling above rather than a fabricated persistent Legacy classification; the explicit compatibility editor remains available. Protected Signal records remain subject to existing read-only/ownership/lifecycle rules. Known source names/keys receive no classification bypass. A backend contract improvement would need to expose a required, authoritative nullable category (or equally explicit server classification) consistently in all owner/mutation responses; copy provenance would additionally need a declared projection if separate Legacy-copy ancestry is required. That is documented only; no backend change is included.
+
+### Existing assignments and mobile editing
+
+A modern Template may still contain an older assigned challenge. Its dropdown remains the 15 modern mechanics. The saved challenge remains visible in the read-only canvas; it is neither stripped nor mapped to a modern mechanic. When browsing an example, **View saved challenge** returns to that existing content. **Use saved challenge** explicitly restores the existing predefined slot after a custom assignment, with the existing replacement confirmation. It does not assign a catalog example under an unsupported identity. Saving an unchanged view preserves the old fields; assigning a custom challenge uses the existing custom slot and preserves the underlying original fields. Approved content changes only through the existing explicit immutable revision operation.
+
+The phone canvas, contextual pencils, shared drafts, Edit/Play isolation, guided editor, all 15 Personal mechanics, seven Team mechanics and BE publication guard are preserved. Adding checkpoint names in an unresolved context uses generic names, not Signal defaults.
+
+### Re-review verification
+
+- `npm run typecheck` and production build passed (existing bundle-size warning). Full `npm test`: **42 Node test-file entries and 742 Vitest tests across 35 files passed**, zero failures/skips.
+- [Context browser checks](Personal_Challenge_Context_Browser_Results.json): four workflows at 1440/768/390/320px passed with no page errors or horizontal overflow. Explicit category stays authoritative with older identifiers; missing category requires a session-only view choice; choices preserve assignments; reload remains unresolved without provenance.
+- Existing checkpoint browser regression passed all four widths after explicitly choosing compatibility for its omitted-category fixture. The all-mechanic browser regression passed **88 scenarios** (15 Personal + seven Team at all four widths), including save/reload, engine answers, hints/solutions/reset and retained mobile editors, with zero page errors. Its initial 10-second navigation timeout under concurrent validation was retried at 30 seconds; assertions were unchanged.
+New/updated tests cover both new scratch paths, modern records with old identifiers, modern Local-from-Universal content, explicit null-category Legacy records, actual omitted-category starter-copy shapes, protected Signal read-only state, missing/invalid provenance, session-only view choices, full assignment retention, save/reload, exact category retention in immutable revisions and prior approved artifact independence. The former mixed-context persistence tests now use the modern selector and explicit saved-assignment restoration, not old-identifier-based classification.
+
+Component/browser APIs are mocked; no authenticated FE–BE/database integration is claimed. Backend files were inspected in an untracked read-only working checkout and were not changed. The existing Draft PR #139 is updated; no new PR, merge or deployment. Stop for ChatGPT re-review.

@@ -45,7 +45,7 @@ function correctAttempt(e: Exercise): Attempt {
 }
 
 test('canonical names, levels and stable type IDs are complete and independent of story names', () => {
-  expect(personalTypes.map(row => row[1])).toEqual(['Tap & pair the relevant', 'Single choice', 'True / False', 'Memory card', 'Number line', 'Multiple choice', 'Match the columns', 'Drag & drop', 'Fill in the blank', 'Sequence', 'Find the mistake', 'Build the problem (LEGO-like)', 'Number pattern', 'Shape pattern', 'Rule discovery'])
+  expect(personalTypes.map(row => row[1])).toEqual(['Tap & Pair', 'Single Choice', 'True / False', 'Memory Card', 'Number Line', 'Multiple Choice', 'Match the Columns', 'Drag & Drop', 'Fill in the Blank', 'Sequence', 'Find the Mistake', 'Build the Problem', 'Number Pattern', 'Shape Pattern', 'Rule Discovery'])
   expect(personalTypes.map(row => row[2])).toEqual([...Array(5).fill('Easy'), ...Array(4).fill('Medium'), ...Array(6).fill('Hard')])
   expect(new Set(prototypes.map(e => e.type)).size).toBe(15)
 })
@@ -173,8 +173,8 @@ test('custom copy, inline testing and toggling preserve independent editor state
   await render(<AuthoringHarness />); await click('Create Your Own')
   await input(container.querySelector('textarea')!, 'Unsaved title')
   await click('Apply to Hunt'); expect(container.textContent).toContain('Submission blocked')
-  await click('Test Challenge'); expect(container.querySelector('[aria-label="Test Challenge"]')?.textContent).toContain('Unsaved title')
-  await click('Return to Edit'); expect(container.querySelector('textarea')?.value).toBe('Unsaved title')
+  await click('Play'); expect(container.querySelector('[aria-label="Mobile challenge canvas"]')?.textContent).toContain('Unsaved title')
+  await click('Edit'); expect(container.querySelector('textarea')?.value).toBe('Unsaved title')
   await click('Predefined'); expect(container.textContent).toContain('Submission blocked')
   await click('Create Your Own'); expect(container.querySelector('textarea')?.value).toBe('Unsaved title')
   expect(prototypes).toEqual(before)
@@ -215,7 +215,7 @@ test('viewing Predefined retains custom content and only explicit actions change
   await input(container.querySelector('textarea')!, 'Retained experiment')
   expect(container.textContent).toContain('Supported submission')
   await click('Apply to Hunt'); await click('Predefined'); expect(container.textContent).toContain('Submission blocked')
-  await click('Use this challenge'); expect(container.textContent).toContain('Supported submission')
+  await input(container.querySelector('[aria-label="Personal Challenge"]')!, ''); await click('Remove challenge'); expect(container.textContent).toContain('Supported submission')
   await click('Create Your Own'); expect(container.querySelector('textarea')?.value).toBe('Retained experiment')
   await click('Discard changes'); await click('Create Your Own'); expect(container.querySelector('textarea')?.value).not.toBe('Retained experiment')
 })

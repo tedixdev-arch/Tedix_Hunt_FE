@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] })
-const page = await browser.newPage(); page.setDefaultTimeout(10000)
+const page = await browser.newPage(); page.setDefaultTimeout(30000)
 const errors = [], results = []
 page.on('pageerror', error => errors.push(String(error)))
 await fs.mkdir('work/custom-persistence-browser', { recursive: true })
@@ -19,7 +19,8 @@ for (const width of [1440, 768, 390, 320]) {
     const title = `Edited ${e.type} at ${width}`
     await panel.getByLabel('Title', { exact: true }).fill(title)
     const personal = e.classification === 'personal'
-    const trigger = panel.getByRole('button', { name: personal ? 'Test Challenge' : 'Preview Exercise', exact: true }); await trigger.click()
+    const priority = personal && ['tap-pair', 'single-choice', 'fill-blank'].includes(e.type)
+    const trigger = panel.getByRole('button', { name: personal ? 'Play' : 'Preview Exercise', exact: true }); if (!personal || priority) await trigger.click()
     const dialog = personal ? panel.locator(`[aria-label="${e.type} interactive exercise"]`) : page.getByRole('dialog', { name: 'Exercise preview' })
     await dialog.waitFor()
     if (!personal) assert.match(await dialog.textContent(), new RegExp(e.type))
@@ -62,7 +63,8 @@ for (const width of [1440, 768, 390, 320]) {
     await dialog.getByRole('button', { name: 'Solution', exact: true }).click(); assert.equal(await dialog.getByLabel('Exercise solution', { exact: true }).textContent(), e.solution)
     await dialog.getByRole('button', { name: 'Reset', exact: true }).click(); assert.equal(await dialog.locator('[role="status"]').count(), 0)
     assert.equal(await dialog.evaluate(node => node.scrollWidth > node.clientWidth), false)
-    if (personal) await panel.getByRole('button', { name: 'Return to Edit', exact: true }).click()
+    if (personal && priority) await panel.getByRole('button', { name: 'Edit', exact: true }).click()
+    else if (personal) { await panel.getByRole('button', { name: 'Step by Step', exact: true }).click(); assert.equal(await panel.getByRole('textbox').count() > 2, true); await panel.getByRole('button', { name: 'Edit with Preview', exact: true }).click() }
     else {
       await dialog.getByRole('button', { name: 'Close exercise preview' }).focus(); await page.keyboard.press('Shift+Tab')
       assert.equal(await dialog.getByRole('button', { name: 'Reset', exact: true }).evaluate(node => document.activeElement === node), true)
