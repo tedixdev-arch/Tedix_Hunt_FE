@@ -1,0 +1,150 @@
+{
+  "results": [
+    {
+      "type": "tap-pair",
+      "width": 1440,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "single-choice",
+      "width": 1440,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "fill-blank",
+      "width": 1440,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "tap-pair",
+      "width": 768,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "single-choice",
+      "width": 768,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "fill-blank",
+      "width": 768,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "tap-pair",
+      "width": 390,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "single-choice",
+      "width": 390,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "fill-blank",
+      "width": 390,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "tap-pair",
+      "width": 320,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "single-choice",
+      "width": 320,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    },
+    {
+      "type": "fill-blank",
+      "width": 320,
+      "predefined": true,
+      "readOnly": true,
+      "duplicateDisabled": true,
+      "sharedDraft": true,
+      "keyboardReorder": true,
+      "inlineTest": true,
+      "saveReload": true,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "backend": "Mocked Template operations; live integration unverified"
+}

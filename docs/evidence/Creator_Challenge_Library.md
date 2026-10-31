@@ -241,3 +241,72 @@ Verification results for this correction are recorded below. Backend code and th
 - `git diff --check`: passed. Latest source CI evidence is linked from existing Draft PR #137; no second PR is created.
 
 The first lifecycle run exposed an invalid newly seeded Team word fixture: its existing Signal prose contributions do not reconstruct a word under BE #93. The inverse-transition test now explicitly selects the valid distributed-information mechanic rather than weakening validation or substituting saved content. Final results above supersede that fixture failure.
+
+## Personal Challenge game builder — 31 October 2026
+
+This section supersedes the Personal authoring presentation described above. Base: current `main`, `3d64b5b46d52067974bf45d1d662429a78309e5f` (merged FE #137). Reviewed merged FE #136/#137 and merged BE #93, the existing evidence above, CreatorStudio, challenge/content/preview/rendering components, checkpoint gameplay hydration/serialization, typed adapters and existing component/browser lifecycle tests. No AGENTS.md was present. Backend implementation, Team editor, frozen task inventory and execution plan are unchanged. This is one Draft FE PR for ChatGPT review; do not merge or deploy.
+
+### Selection and predefined content
+
+Personal authoring has Predefined / Create Your Own and one **Personal Challenge** dropdown. All 15 friendly mechanic names/difficulties are present in both modes. Existing Signal story choices remain in a separate option group in that same Predefined dropdown, preserving their previous selection capability and exact content; there is no second Exercise Catalog selector. Existing checkpoint story context remains read-only. No JSON or developer provenance labels appear in the new Personal shell. The retained-draft overview is collapsed by default.
+
+`predefinedPersonal.ts` converts exactly one complete existing example for each of the 15 mechanics into the BE #93 content contract and validates each at initialization. All 15 examples on this base convert and validate successfully, including rule discovery's explicit prediction input; no prototype correction or protected Signal data edit was necessary. Their item identities are deterministic; definitions should be treated as immutable. A future changed definition needs explicit preset versioning rather than silently changing an existing assigned snapshot.
+
+Predefined selection displays a read-only content overview, hints/solution disclosure and inline testing through the existing renderer. **Use this challenge** selects its complete content for the current checkpoint. Browsing candidates does not choose what will be saved. Assigned candidates remain visible but disabled and labeled with their checkpoint, including FinishPoint. The duplicate guard is scoped to this Template's current version/working draft and is checked again when composing the save payload. To reassign, explicitly replace/remove the existing assignment, then use the released challenge at the target checkpoint. No silent move or cross-Template restriction is introduced.
+
+### Persistence representation and confirmation
+
+A ready-to-use definition is a complete instance, not a mechanic reference. Its complete, validated content is embedded in the existing `customExercises.personal` slot and receives authoritative backend identity/ownership through the existing Template operation. It never changes legacy Signal `kind`, answers or content. **Important boundary:** these new predefined snapshots consequently share BE #93's custom-bearing Hunt publication restriction; “ready to play” means ready for authoring assignment/testing, not approved live participant delivery. The UI states that saving/submitting for review is supported and live publication is not yet available.
+
+The optional checkpoint extension `personalChallengePreset` records the selected ready-to-use definition key beside existing checkpoint fields, within the same Template snapshot. It does not add a field to the closed custom-exercise wire schema, create an independent record or introduce a persistence system. BE #93 preserves these checkpoint extension fields. FE hydration recognizes a preset only if its complete content also matches the canonical snapshot. A custom copy has fresh item identities and no preset key, so independently authored exercises of the same mechanic remain unrestricted, including mechanics without item collections. A save response that drops, changes or unexpectedly retains the preset selection cannot be acknowledged as saved. Actual deployed round-trip retention still requires the live acceptance below; mock results are not proof of it.
+
+For a chosen custom challenge the preset extension is removed; for a legacy story challenge the Personal custom slot and preset extension are removed. Other fields and Team/other checkpoint slots remain intact. New instances omit backend ID/owner. Same-slot revision references, new version allocation, copies, approved version immutability, conflict/ambiguous-outcome handling, whole-content limits and exact persisted submission remain in the existing flow. After any save, selected snapshots and retained variants rebase only their identity metadata to the authoritative same-slot result, preserving newer edits. No custom validation/schema rule has been weakened.
+
+### Custom editing and testing
+
+**Apply to Hunt** selects the valid challenge for the Template working draft. It makes no backend call and does not claim persistence. The existing Template **Save draft** action persists the whole selected Hunt through create/create-version and waits for authoritative confirmation. Merely opening Custom, switching mechanic or viewing a retained variant does not replace the selected challenge. Replacements require confirmation; cancellation preserves the selected snapshot and retained content. Discard changes confirms before restoring this checkpoint's saved challenge. The global retained-draft discard continues to restore the exact saved slot.
+
+The new guided and visual editors support **Tap & Pair**, **Single Choice**, and **Fill in the Blank**. They share the same authored draft and contract adapter. Common title/question fields remain visible; Step by Step has three logical tasks: content, hints/feedback, review/test. Back/Next and an accessible current-step indicator provide progression. The content step uses the same relationship-aware controls as visual editing rather than asking for duplicate answer mappings.
+
+- Tap & Pair: directly editable paired cards, atomic add/remove, keyboard Up/Down reorder. Text/order changes retain item IDs and pairing relationships.
+- Single Choice: directly editable option cards, correct-answer radio, add/remove/reorder. Correct answers reference stable IDs; removing the correct option requires choosing a replacement.
+- Fill in the Blank: editable questions and accepted answers, add/remove/reorder and case sensitivity. Insert blank replaces a selected word/phrase with `___` and captures that text as the accepted answer; it can also insert at the caret. Question/answer relationships retain their IDs.
+- Hints: ordered hints with add/remove; solution and both feedback messages remain editable. Friendly validation and field feedback are shown; invalid drafts cannot be tested/applied. Backend validation remains authoritative.
+- Edit with Preview defaults to Edit. Test Challenge temporarily presents the existing interactive renderer; Return to Edit restores the unchanged draft. Play attempts, hints, solutions and reset remain local to the renderer and reset when a new test starts. Keyboard focus follows the Test / Return transition. Reordering has button alternatives and does not require drag-and-drop.
+
+The remaining 12 mechanics retain their full detailed content editor, contract validation, inline preview/test and persistence in the same simplified selection shell. They are explicitly labeled as awaiting visual editing. No new Organizer editor or permission behavior is introduced; the reusable mechanic editor accepts only exercise/onChange props.
+
+Checkpoint buttons retain navigation and now show compact assigned/incomplete/unsaved indicators, with a readable status below the selected checkpoint name. FinishPoint is visibly named and remains the existing unnumbered terminal slot. Navigation departure from FinishPoint remains disabled.
+
+### Verification for this redesign
+
+The final automated counts and browser results are recorded below. New coverage in `tests/personalChallengeBuilder.test.tsx` checks all 15 valid/read-only definitions, one dropdown, shared draft state, stable item/answer relationships, add/remove/reorder, invalid content, selected-text blank creation, independent testing, explicit/cancelled replacements, duplicate prevention/release, independent custom copies and Template scope, saved provenance hydration and authoritative identity/selection confirmation. Existing Creator lifecycle tests retain save/reopen/revise/copy/submit, removed checkpoints, FinishPoint, errors/conflicts, Personal/Team independence and protected Signal checks; their presentation interactions now use the new controls.
+
+Browser scripts:
+
+- `personalChallengeBuilder.verify.mjs`: 3 redesigned mechanics × 4 widths (1440/768/390/320), predefined read-only selection/test/assignment, duplicate-disabled options after reload, guided/visual shared edits, keyboard reorder, inline correct-answer/reset behavior, custom save/reload, preserved unrelated checkpoints and overflow checks. Four screenshots per mechanic/width: predefined, guided editing, visual editing and testing.
+- `customPersistence.verify.mjs`: all 22 mechanics × 4 widths, complete editor/answer/hint/solution/reset/save/reload checks. Personal now uses inline testing; Team retains its modal keyboard/focus checks.
+- `checkpointFeatures.verify.mjs`: four-width regression covering seven features, count/position resizing, normal/FinishPoint Personal and Team choices, terminal navigation restriction and horizontal overflow.
+
+All browser Template operations are mocked using the existing fixture, which allocates response identities. No authenticated Creator/Admin account or disposable database binding is provided. Live FE–BE/database acceptance and deployed acceptance remain unverified. In addition to the manual acceptance above, verify that a real saved/reloaded predefined snapshot retains `personalChallengePreset`; reject a dropped extension without claiming save success, verify same-Template duplicate disabling after reload, and verify independent Local copy/revision identities. Backend publication must remain blocked for these custom-bearing snapshots.
+
+[Builder browser results](Personal_Challenge_Builder_Browser_Results.json) · [All-mechanic regression results](Personal_Challenge_All_Mechanics_Browser_Results.json) · [Checkpoint regression results](Personal_Challenge_Checkpoint_Browser_Results.json).
+
+Representative screenshots (all 48 captures are in `personal-challenge-builder/`):
+
+| Mechanic | Predefined (1440) | Guided (768) | Visual (390) | Test (320) |
+| --- | --- | --- | --- | --- |
+| Tap & Pair | [View](personal-challenge-builder/tap-pair-1440-predefined.png) | [View](personal-challenge-builder/tap-pair-768-step-by-step.png) | [View](personal-challenge-builder/tap-pair-390-visual-edit.png) | [View](personal-challenge-builder/tap-pair-320-test.png) |
+| Single Choice | [View](personal-challenge-builder/single-choice-1440-predefined.png) | [View](personal-challenge-builder/single-choice-768-step-by-step.png) | [View](personal-challenge-builder/single-choice-390-visual-edit.png) | [View](personal-challenge-builder/single-choice-320-test.png) |
+| Fill in the Blank | [View](personal-challenge-builder/fill-blank-1440-predefined.png) | [View](personal-challenge-builder/fill-blank-768-step-by-step.png) | [View](personal-challenge-builder/fill-blank-390-visual-edit.png) | [View](personal-challenge-builder/fill-blank-320-test.png) |
+
+Final verification for this redesign:
+
+- Full `npm test`: **42 Node test-file entries and 714 Vitest tests across 34 files passed**, zero failures/skips.
+- `npm run build` (includes TypeScript checking): passed. Existing bundle-size warning remains non-failing.
+- Builder Chromium: **12 scenarios passed**, three redesigned mechanics × four widths, zero page errors or page/editor horizontal overflow; **48 screenshots** captured.
+- All-mechanic Chromium regression: **88 scenarios passed**, 15 Personal + seven Team × four widths, zero page errors or horizontal overflow.
+- Checkpoint Chromium regression: **four viewport workflows passed**, zero page errors/overflow.
+- `git diff --check`: passed. No live integration pass, production data change, merge or deployment is claimed.
+
+Browser tooling was installed under ignored/uncommitted `work/browser-tools` and invoked via `PLAYWRIGHT_MODULE`, using the environment's `/usr/bin/chromium`; this adds no application dependency. Intermediate build/test logs and tooling are not part of the PR. Committed screenshots/results use mocked operations and are review evidence only.
