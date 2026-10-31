@@ -1,13 +1,16 @@
-import { signalFeatureDefaults } from '../../../data/organizerTemplates'
-import { checkpointExercises } from '../../../data/templateOne'
-import type { CheckpointGameplay } from '../checkpointGameplay'
-import { prototypes, type Exercise, type TeamType, teamNames } from './catalog'
+import { fromPersistence } from './persistenceAdapter.ts'
+import { signalFeatureDefaults } from '../../../data/organizerTemplates.ts'
+import { checkpointExercises } from '../../../data/templateOne.ts'
+import type { CheckpointGameplay } from '../checkpointGameplay.ts'
+import { prototypes, type Exercise, type TeamType, teamNames } from './catalog.ts'
 
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 const text = (value: unknown, fallback = '') => typeof value === 'string' ? value : fallback
 const strings = (value: unknown): string[] => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 /** Read saved overrides before immutable defaults. Never writes or migrates the assignment. */
 export function savedExercise(value: CheckpointGameplay, field: 'kind' | 'teamKind'): Exercise | undefined {
+  const custom = value.customExercises?.[field === 'kind' ? 'personal' : 'team']
+  if (custom) return fromPersistence(custom)
   const base = checkpointExercises.find(row => row[field] === value[field])
   if (!base) return undefined
   const nested = object(value[field === 'kind' ? 'personalChallenge' : 'teamChallenge'] ?? value[field === 'kind' ? 'challenge' : 'teamPuzzle'])

@@ -1,0 +1,29 @@
+import type { Exercise } from './catalog'
+import { schemas } from './catalog'
+import { mechanics, type Schema } from './persistenceSchema'
+import type { AuthoredContent } from './persistenceTypes'
+const control = 'min-h-11 min-w-0 max-w-full rounded-lg border border-slate-300 p-2 text-sm'
+const label = (name: string) => name.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())
+function initial(s: Schema): any {
+  if (s.type === 'object') return Object.fromEntries((s.required ?? []).map(k => [k, k === 'id' ? `item-${crypto.randomUUID()}` : initial(s.properties![k])]))
+  if (s.type === 'array') return Array.from({ length: s.minItems ?? 0 }, () => initial(s.items!))
+  if (s.type === 'boolean') return false
+  if (s.type === 'integer' || s.type === 'number') return s.minimum && s.minimum > 0 ? s.minimum : 0
+  return ''
+}
+/** Content controls from the closed mechanic schema. No raw JSON or engine configuration. */
+function Field({ name, schema, value, onChange, activity }: { name: string; schema: Schema; value: any; onChange: (v: any) => void; activity: any }) {
+  if (schema.type === 'object') return <fieldset className="min-w-0 space-y-3 rounded-xl border p-3"><legend>{label(name)}</legend>{Object.entries(schema.properties!).filter(([k]) => k !== 'id').map(([key, s]) => <div key={key}>{!(schema.required ?? []).includes(key) && <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={Object.hasOwn(value, key)} onChange={e => { const next = { ...value }; if (e.target.checked) next[key] = initial(s); else delete next[key]; onChange(next) }} />Include {label(key)} (leave absent for the missing term)</label>}{Object.hasOwn(value, key) && <Field name={key} schema={s} value={value[key]} activity={activity} onChange={v => onChange({ ...value, [key]: v })} />}</div>)}</fieldset>
+  if (schema.type === 'array') return <fieldset className="min-w-0 space-y-2 rounded-xl border p-3"><legend>{label(name)}</legend>{(value ?? []).map((v: any, i: number) => <div key={v?.id ?? i} className="min-w-0 space-y-2 rounded-lg bg-slate-50 p-2"><Field name={`${name} ${i + 1}`} schema={schema.items!} value={v} activity={activity} onChange={next => onChange(value.map((old: any, j: number) => i === j ? next : old))} /><div className="flex flex-wrap gap-2"><button type="button" className={control} aria-label={`Move ${name} ${i + 1} up`} disabled={i === 0} onClick={() => { const next = [...value]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; onChange(next) }}>Up</button><button type="button" className={control} onClick={() => onChange(value.filter((_: any, j: number) => j !== i))}>Remove {name} {i + 1}</button></div></div>)}<button type="button" className={control} disabled={value.length >= (schema.maxItems ?? 40)} onClick={() => onChange([...value, initial(schema.items!)])}>Add {name}</button></fieldset>
+  const collections: Record<string, string> = { optionId: 'options', optionIds: 'options', leftId: 'left', rightId: 'right', itemId: 'items', targetId: 'targets', blankId: 'blanks', stepId: 'steps', explanationId: 'explanations', shapeId: 'shapes', ruleId: 'rules', frequencyId: 'frequencies', trustedSignalIds: 'signals', missingId: 'terms', construction: 'pieces' }
+  const base = name.replace(/ \d+$/, '')
+  const source = base === 'order' ? activity.elements ?? activity.contributions : activity[collections[base]]
+  if (Array.isArray(source)) return <label className="block text-sm font-bold">{label(name)}<select className={`${control} mt-1 w-full`} value={value ?? ''} onChange={e => onChange(e.target.value)}><option value="">Choose item</option>{source.map((item: any, i: number) => <option key={item.id} value={item.id}>{i + 1}. {item.text ?? item.prompt ?? item.digits ?? item.value ?? 'Missing term'}</option>)}</select></label>
+  return <label className="block text-sm font-bold">{label(name)}{schema.type === 'boolean' ? <select className={`${control} mt-1 w-full`} value={String(value)} onChange={e => onChange(e.target.value === 'true')}><option value="false">False</option><option value="true">True</option></select> : ['number', 'integer'].includes(schema.type) ? <input aria-label={label(name)} type="number" step="any" className={`${control} mt-1 w-full`} value={Number.isFinite(value) ? value : ''} onChange={e => onChange(e.target.value === '' ? NaN : Number(e.target.value))} /> : <textarea aria-label={label(name)} className={`${control} mt-1 w-full`} value={value ?? ''} onChange={e => onChange(e.target.value)} />}</label>
+}
+export function AuthoredContentEditor({ exercise, onChange }: { exercise: Exercise; onChange: (e: Exercise) => void }) {
+  const authored = exercise.authored!
+  const mechanic = mechanics[authored.mechanic]
+  const update = (patch: Partial<AuthoredContent>) => onChange({ ...exercise, authored: { ...authored, ...patch } as AuthoredContent })
+  return <div className="min-w-0 space-y-3"><p className="text-sm text-slate-600">{schemas[exercise.type].map(f => f.label).join(' · ')}. Choices retain their identity when their text or order changes.</p><Field name="Interaction" schema={mechanic.interaction} value={authored.activity} activity={authored.activity} onChange={activity => update({ activity })} /><Field name="Correct answers and validation" schema={mechanic.answer} value={authored.expected} activity={authored.activity} onChange={expected => update({ expected })} /><Field name="Hints" schema={{ type: 'array', items: { type: 'string' }, minItems: 0, maxItems: 10 }} value={authored.hints} activity={authored.activity} onChange={hints => update({ hints })} /></div>
+}

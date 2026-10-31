@@ -188,7 +188,7 @@ test('Predefined local example selection never mutates shared prototypes or chan
   const before = structuredClone(prototypes)
   await render(<AuthoringHarness />)
   const catalog = container.querySelector('select')!
-  await input(catalog, 'local-example:true-false'); expect(container.textContent).toContain('not approved'); expect(container.textContent).toContain('Submission blocked')
+  await input(catalog, 'local-example:true-false'); expect(container.textContent).toContain('Template-owned'); expect(container.textContent).toContain('Submission blocked')
   await click('Create Your Own'); expect(container.querySelector('select')?.value).toBe('true-false')
   await input(container.querySelector('textarea')!, 'Independent statement'); expect(prototypes).toEqual(before)
   const first = independentExercise(prototypes[0]), second = independentExercise(prototypes[0]); expect(first.id).not.toBe(second.id)
@@ -218,12 +218,12 @@ test('viewing Predefined retains experimental content and explicit submission in
   await render(<AuthoringHarness />); await click('Create Your Own')
   await input(container.querySelector('textarea')!, 'Retained experiment')
   await click('Predefined'); expect(container.textContent).toContain('Submission blocked')
-  expect(container.textContent).toContain('session drafts only')
+  expect(container.textContent).toContain('saved with this Template version')
   const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement
   await act(async () => checkbox.click()); expect(container.textContent).toContain('Supported submission')
   await click('Create Your Own'); expect(container.querySelector('textarea')?.value).toBe('Retained experiment')
-  expect(container.textContent).toContain('Preview only: submission uses the supported assignment')
-  await click('Discard Experiment'); expect(container.querySelector('[aria-label="Experiment status"]')).toBeNull()
+  expect(container.textContent).toContain('Included on the next Template save')
+  await click('Discard custom draft and use predefined'); expect(container.querySelector('[aria-label="Experiment status"]')).toBeNull()
   await click('Create Your Own'); expect(container.querySelector('textarea')?.value).not.toBe('Retained experiment')
 })
 test('discard targets a single checkpoint/classification slot and includes retained inactive examples', () => {
@@ -244,6 +244,6 @@ test('choosing another exercise type retains authored type variants until explic
   await chooseType('number-line'); await input(container.querySelector('textarea')!, 'Retained numeric exercise')
   await chooseType('true-false'); expect(container.querySelector('textarea')?.value).toBe('Retained truth statement')
   await chooseType('number-line'); expect(container.querySelector('textarea')?.value).toBe('Retained numeric exercise')
-  await click('Discard Experiment'); await click('Create Your Own'); await chooseType('true-false')
+  await click('Discard custom draft and use predefined'); await click('Create Your Own'); await chooseType('true-false')
   expect(container.querySelector('textarea')?.value).not.toBe('Retained truth statement')
 })

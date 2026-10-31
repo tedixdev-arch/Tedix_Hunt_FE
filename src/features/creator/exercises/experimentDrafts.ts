@@ -1,4 +1,4 @@
-import type { Exercise, Mechanic } from './catalog'
+import type { Exercise, Mechanic } from './catalog.ts'
 
 /** Session-only state. This structure is never part of CreatorTemplateContent. */
 export interface AuthoringDraft {
@@ -21,5 +21,5 @@ export function discardExperiment(drafts: AuthoringDrafts, key: string): Authori
   delete next[key]
   return next
 }
-export const persistenceExplanation = 'Experimental exercises are session drafts only. They are not saved or approved. You can save supported template settings after confirming that experiments will be excluded; your experiments stay in this editing session.'
-export const submissionExplanation = 'Submission is blocked because an intended experimental exercise cannot be persisted yet. Discard that experiment or explicitly mark it preview only before submitting supported template settings.'
+export const persistenceExplanation = 'Custom exercises are saved with this Template version. Other type variants stay in this session. Save draft before leaving or submitting.'
+export const submissionExplanation = 'Save all intended custom exercises before submitting the exact persisted Template version.'

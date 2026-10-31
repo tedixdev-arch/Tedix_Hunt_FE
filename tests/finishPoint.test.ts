@@ -46,7 +46,7 @@ test('saving emits exact FinishPoint shape, keeps checkpoints and count, and pre
   const calls: { url: string; body: unknown }[] = []
   const client = new ApiClient('https://api.test', undefined, async (url, init) => {
     calls.push({ url: String(url), body: JSON.parse(String(init?.body)) })
-    return new Response(JSON.stringify({ ...persisted, version: 2, content: { ...next, version: 2 } }), { status: 200 })
+    return new Response(JSON.stringify({ ...persisted, version: 2, content: { ...next, version: 2 } }), { status: 200, headers: { 'content-type': 'application/json' } })
   })
   const api = new CreatorTemplatesApi(client)
   await persistCreatorTemplate(api, next, persisted)

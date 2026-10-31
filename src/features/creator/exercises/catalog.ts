@@ -1,3 +1,5 @@
+import type { AuthoredContent, PersistedIdentity } from './persistenceTypes.ts'
+import { exerciseIssues, toPersistence } from './persistenceAdapter.ts'
 /** Local authoring vocabulary. Never substitute these IDs for persisted Signal kinds. */
 export const personalTypes = [
   ['tap-pair', 'Tap & pair the relevant', 'Easy'], ['single-choice', 'Single choice', 'Easy'],
@@ -18,6 +20,8 @@ export type TeamType = keyof typeof teamNames
 export type Mechanic = PersonalType | TeamType | 'legacy-fields'
 export interface Exercise {
   id: string
+  authored?: AuthoredContent
+  persistedIdentity?: PersistedIdentity
   type: Mechanic
   title: string
   instructions: string
@@ -48,7 +52,7 @@ export const prototypes: readonly Exercise[] = [
   example('build-problem', 'Build twenty-four', 'Snap the pieces into an expression equal to 24. Use each piece at most once.', { pieces: ['2', '×', '3', '×', '4', '+'], construction: ['2', '×', '3', '×', '4'] }, 'Use multiplication between 2, 3 and 4.', '2 × 3 × 4 = 24. The two multiplication pieces occupy separate slots.'),
   example('number-pattern', 'Repeated multiplication', 'Complete the missing term.', { terms: ['3', '12', '48', '192', '___'], answer: '768' }, 'Compare each term with the term before it.', 'Each term is four times the previous term: 192 × 4 = 768.'),
   example('shape-pattern', 'Alternating shapes', 'Select the next shape in the pattern.', { terms: ['●', '▲', '●', '▲', '___'], options: ['■', '●', '▲'], answer: '●' }, 'The pattern repeats every two shapes.', 'The shapes alternate circle and triangle. A circle follows the triangle.'),
-  example('rule-discovery', 'Discover the machine', 'Find the rule and predict the output for 5.', { examples: ['1 → 3', '2 → 5', '3 → 7'], rules: ['Double, then add one', 'Add two', 'Triple'], rule: 'Double, then add one', answer: '11' }, 'Compare twice the input with each output.', 'The rule is y = 2x + 1, so 5 → 11.'),
+  example('rule-discovery', 'Discover the machine', 'Find the rule and predict the output for 5.', { examples: ['1 → 3', '2 → 5', '3 → 7'], rules: ['Double, then add one', 'Add two', 'Triple'], rule: 'Double, then add one', answer: '11', predictionInput: 5 }, 'Compare twice the input with each output.', 'The rule is y = 2x + 1, so 5 → 11.'),
 ]
 export function independentExercise(exercise: Exercise): Exercise {
   return { ...structuredClone(exercise), id: `custom:${crypto.randomUUID()}` }
@@ -85,6 +89,9 @@ export const schemas: Record<Mechanic, ContentField[]> = {
 const norm = (value: string) => value.trim().toLocaleLowerCase()
 export const textEqual = (a: string, b: string) => norm(a) === norm(b)
 export function validateExercise(value: Exercise): string[] {
+  if (value.authored) {
+    try { return exerciseIssues(toPersistence(value)) } catch (error) { return [error instanceof Error ? error.message : 'Invalid exercise'] }
+  }
   const errors: string[] = []
   const data = value.data
   const fail = (condition: boolean, message: string) => { if (condition) errors.push(message) }

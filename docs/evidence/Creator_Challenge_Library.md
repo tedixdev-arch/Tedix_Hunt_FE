@@ -1,5 +1,7 @@
 # Creator challenge library and interactive exercise preview
 
+**Current status:** Template-owned custom exercise persistence is integrated against BE #93. See “Current integration” below for authoritative behavior, evidence and remaining live-database acceptance. The FE #136 sections that follow are historical evidence; their experimental save/submission gate has been retired.
+
 31 October 2026 (Europe/Bucharest). Existing Draft FE PR #136, stabilized for ChatGPT review. No merge or deployment. Custom exercise persistence and live FE–BE integration remain blocked/unverified. Supported template settings can be saved after explicit confirmation that experimental drafts are excluded.
 
 ## Inspected sources and scope
@@ -114,3 +116,84 @@ This section supersedes the initial blanket-save restriction and its correspondi
 - `git diff --check` passed. Catalog, mechanic renderers/editors/preview, API services, immutable Signal data/defaults, gameplay hydration/serialization, persistence/lifecycle source and frozen reconciliation are unchanged from initial PR #136 head `c827252`.
 
 Interim test corrections: the save fixture was updated to return category metadata like the real Template response; the browser's initial supported save remains part of its mutation count; editor reopen preserves the mock backend record instead of resetting its module with a whole-page navigation. These fixture corrections do not establish real backend persistence. Final results above supersede interim assertion failures. No backend implementation, localStorage persistence, new PR, merge or deployment.
+
+
+## Current integration: Template-owned custom exercises (31 October 2026)
+
+This section supersedes the experimental persistence/submission restrictions described above. Base FE main: `7f9b3d05820774df33be7d5c6574e0f37a8a83a3` (merged #136). Authoritative contract: merged BE [#93](https://github.com/tedixdev-arch/Tedix_Hunt_BE/pull/93), merge `4e6cb521ba6ac930d28cd513935d83367ee80f91`. The backend checkout was inspected read-only: persistence documentation, schemas, domain validation/allocation, Creator routes, generated OpenAPI and real-database test sources. No backend code, schema, endpoint, publication guard or execution-plan reconciliation was changed.
+
+### Schema mapping and authoring
+
+`persistenceTypes.ts` defines the closed discriminated union for all 15 Personal and seven Team mechanics. FE `Exercise.id` remains a temporary session ID. `Exercise.authored` holds typed mechanic content (`mechanic`, `activity`, `expected`, ordered `hints`); `persistedIdentity` holds backend-issued instance ID/owner separately. `persistenceAdapter.ts` converts explicitly between the old label-based examples and this identified content and projects only the validated, closed wire fields. Prototype `data` objects are never sent. Unsupported mechanics, versions, extra fields, invalid relations, nonfinite numbers and unconvertible examples produce explicit errors.
+
+| FE prototype content | Persistence representation / lossless editor |
+| --- | --- |
+| Label-based single/multiple choices | Identified options and selected IDs; duplicate visible labels are distinguishable by position |
+| Corresponding pair lists | Original left/right collection order plus explicit bijective ID pairs |
+| Drag targets | Item/target collections and item-to-target assignments |
+| Blank prompts/answers | Identified prompts and one answer per blank, including case sensitivity |
+| Sequence/construction | Identified inventory, complete order, independent duplicate pieces and authored slot labels |
+| Recall answer | Independent reveal-card text, 1–60-second delay and case-sensitive answer validation |
+| Numeric range/pattern | Finite numeric values, tick grid/tolerance, identified missing term |
+| Shapes/rule discovery | Identified shapes/rules, identified missing term, numeric input/output examples, explicit prediction input |
+| Find mistake | Independent identified step and explanation choices, two-stage preview |
+| Team mechanics | Identified contributions/facts/packets/clues/signals, decoder key/pattern, labeled numeric frequencies, trusted IDs and digit contributions/order/code |
+| Single old hint | Zero or one ordered hint; full editor supports 0–10 ordered hints |
+| Solution/feedback | Exact text, including whitespace, newlines and Unicode |
+
+The content editor exposes every supported contract field through text, number, boolean, ordered collection and reference-choice controls. It never accepts executable engine configuration. Generated item IDs remain stable when labels or collection order change. New collection entries receive fresh client-owned item IDs; these are distinct from backend-owned exercise instance IDs. Pattern terms can explicitly omit their value/shape for the missing position. Type variants stay in session state until explicitly discarded. Team examples inherited from Signal may need correction (e.g. contribution text must actually reconstruct the authored word; final-key contributions must contain digits and ordering instructions). These are explicit validation errors, never inferred from prose or silently replaced with unrelated content.
+
+`persistenceSchema.ts` and `persistenceValidation.ts` are browser-compatible contract snapshots from BE #93. Validation includes closed fields, bounded traversal, 100-KiB complete content, numbering/terminal constraints, paired identity fields, all mechanic relations and exact backend text/collection limits. Server validation remains authoritative. Contract changes require an explicit snapshot/types/adapter update. Read-only deployed `/api/docs.json` verification found all 22 variants exactly equal to the local exercise schemas.
+
+### Saving, reload, revision and copying
+
+Selected content is embedded only in `checkpoints[].customExercises.personal|team`. Each checkpoint supports independent optional slots, including the existing unnumbered terminal FinishPoint. Existing predefined kind/teamKind, navigation, geography, scoring, reward and unknown legacy fields remain intact. Selecting an example for actual authoring creates an independent custom instance. No shared exercise library, approval claim, new persistence system, endpoint or localStorage store was introduced.
+
+Save draft validates the complete intended payload, calls the existing create or create-version operation, and waits for the authoritative response. New instances omit ID/owner. Revisions echo the most recently returned same-slot identity; the backend allocates fresh identities and destination ownership for each immutable version. Response verification rejects missing/dropped/changed custom content or missing/wrong ownership, so uncertain results cannot be reported as saved. Successful saves hydrate returned identities. Comparison ignores object key ordering while preserving array order and exact values.
+
+The editor rechecks server lifecycle/version before mutation, preserves edits on rejection/conflict/network failure, and blocks blind retries after an ambiguous outcome. No extra Template is automatically created. A response acknowledges only its sent snapshot: newer working edits and inactive type variants are retained, with same-slot metadata rebased to the returned version. Only chosen content is persisted; preview-only and inactive variants remain session drafts. Unsaved intended changes block submission. Unload/reload and link navigation warn about unsaved content/session variants where browser APIs permit. No guarantee is made for process termination or every browser Back/Forward navigation.
+
+Reducing checkpoint count requires explicit confirmation. Surviving slots retain their checkpoint assignment. Retained intended custom drafts for removed checkpoints block saving until restored or explicitly discarded; content is never moved to another slot. FinishPoint is not added to normal checkpoint numbering.
+
+Approved Universal/Local revision behavior is unchanged: create a new draft candidate without modifying prior approved content. Existing `from-universal` copying stays server-owned; the returned Local destination has independent instance IDs/ownership and is hydrated into independent FE state. No automatic migration of existing Templates occurs. Legacy and both Signal starters retain their predefined payloads and lifecycle behavior.
+
+### Submission and publication boundary
+
+The old blanket custom-exercise submission restriction and save-exclusion confirmation are removed. Submission requires valid content equal to the latest saved version and sends that exact version through the existing Admin workflow. Local locality/geography and existing Universal/Legacy checks remain in force. API errors preserve path/message details for `invalid_custom_exercises`, and access, conflict, immutability, network and ambiguous outcomes remain explicit.
+
+Custom exercises can be saved and submitted for review. **Hunts containing custom exercises still cannot be published.** Creator preview is a simulator, with no claim of live participant delivery or authoritative answer validation. Remaining BE/Participant work: authenticated checkpoint projections, controlled hint/solution release, server-side validation of every mechanic and multi-stage/team contribution behavior, and resolution of the correct version-owned slots before the backend publication gate can be reconsidered. No answer keys were added to Participant endpoints.
+
+### Verification and remaining acceptance
+
+Current automated results are recorded below after verification. `tests/customExercisePersistence.test.tsx` includes all 22 lossless round-trips, invalid contracts, real editor item identity, answer checks, independent snapshots, revision/identity rebasing, response integrity and retained newer edits. Creator workflow tests cover save/reopen/exact-version submit, terminal custom saving, count removal and failed-save retention. Existing Universal/Local/Legacy, Signal, navigation, scoring and starter tests remain included in the full suite.
+
+Browser verification uses real Creator Studio/editor/preview components with mocked Template operations. It is not live FE–BE/database integration. `tests/browser/customPersistence.verify.mjs` replaces the prototype-only and exclusion-confirmation scripts (their old entry points forward to it). Across 1440/768/390/320 px it verifies every mechanic's correct/incorrect interaction, hints, solution, reset, modal initial focus/trap/return/Escape, save/authoritative identity/reopen, checkpoint navigation and horizontal overflow.
+
+**Live persistence acceptance blocker:** this environment provides the deployed API URL, but no authenticated Creator/Admin test account or disposable integration database binding. The deployed OpenAPI was checked read-only; no production data was changed. Do not treat mock-backed tests or the BE PR's historical database results as a live FE integration result.
+
+Manual acceptance against a permitted test database/account:
+
+1. Sign in as Creator against the deployed BE #93 contract. Create a Universal draft (then repeat for a Local draft bound to a valid active locality with complete route geography). In Personal/Team authoring create each supported mechanic and supply valid content, including all hints, answer stages and contributions. Preview correct/incorrect answers, hint, solution and reset before saving.
+2. Save and inspect the real create/version request: custom slots must be complete, new IDs/owners absent, predefined/navigation/geography/scoring unchanged. Inspect the response and database `hunt_template_versions.content`: UUIDv4 IDs and exact destination key/version ownership must be present. Compare all authored fields exactly.
+3. Leave and reopen from My Templates, switch checkpoints/classifications and reopen the preview. Verify exact content, stable item IDs and one unnumbered FinishPoint. Save a FinishPoint custom slot. Reduce checkpoint count and verify explicit removal handling without reassignment.
+4. Submit the exact saved version; approve it using an authorized test Admin. Revise as Creator, change one custom exercise and save. Verify fresh version-owned IDs, unchanged previous approved row and no changed publication authority until the established review completes.
+5. Copy a published Universal using Use as Local. Verify destination-owned independent IDs and no mutable/source references; change destination content and confirm source content/database row remain unchanged.
+6. In two sessions create a version conflict; reject malformed/schema/foreign-owner data; expire authentication; interrupt a save response after server commit. Verify retained work, meaningful errors, exact-version submit blocking and no duplicate create/retry. Reopen My Templates to reconcile ambiguous outcomes.
+7. Recheck both Signal starters and a pre-existing Legacy Template without custom slots: no automatic custom migration and unchanged checkpoint/geography/scoring/reward/navigation data. Repeat on all four viewport widths.
+8. Select a custom-bearing approved Template into a test Organizer draft. Publication must still fail backend readiness (`422 hunt_not_ready`); no client-completed participant challenge or answer-authority bypass is introduced.
+
+No Master Execution Plan task IDs were added; the frozen 169-task reconciliation is unchanged. One Draft FE PR only; stop for ChatGPT PR review. Do not merge or deploy.
+
+### Results for this FE integration
+
+- `npm run typecheck`: passed.
+- `npm run build`: passed; existing large-bundle warning remains non-failing.
+- Full `npm test`: **42 Node test-file entries and 678 Vitest tests across 33 files passed**, zero failures/skips.
+- Chromium custom persistence: **88 scenarios passed** (22 mechanics × 1440/768/390/320 px), zero page errors or page/modal horizontal overflow. [Results](Creator_Custom_Exercise_Persistence_Browser_Results.json).
+- Existing checkpoint Chromium regression: **four viewport workflows passed**, covering all seven features, count resizing, terminal challenges, disabled terminal navigation and checkpoint-six departure. [Results](Creator_Custom_Exercise_Persistence_Checkpoint_Results.json).
+- Deployed read-only OpenAPI: all **22 variants exactly match** the local closed schema snapshots. This checks the deployed contract, not authenticated persistence.
+- `git diff --check`: passed. Backend checkout and the Master Execution Plan are unchanged.
+
+Browser screenshots are in `creator-custom-exercise-persistence/`. API/database writes are mocked in browser/component suites. Live authenticated Creator/Admin/database acceptance remains blocked as described above; no live database integration pass is claimed. Earlier verification runs exposed obsolete gate assertions, JSON key-order comparison, incomplete mocked response headers, and source-edit HMR interruptions during browser execution. Those were corrected; the results above describe the final completed runs.
+
+GitHub Actions evidence is linked from the Draft PR after its source checks complete. No deployment is requested or performed.

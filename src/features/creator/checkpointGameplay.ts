@@ -1,8 +1,10 @@
+import type { CustomSlots } from './exercises/persistenceTypes'
 import { checkpointExercises } from '../../data/templateOne.ts'
 import type { CreatorTemplateContent } from '../../services/api/creatorTemplates.ts'
 
 export type GameplayField = 'kind' | 'teamKind' | 'navigationMode'
 export interface CheckpointGameplay extends Record<string, unknown> {
+  customExercises?: CustomSlots
   role?: 'normal' | 'terminal'
   checkpoint?: number
   kind?: string

@@ -1,3 +1,5 @@
+import type { CheckpointGameplay } from './checkpointGameplay.ts'
+import { validateCustomExercises } from './exercises/persistenceValidation.ts'
 import { serializeMission } from './mission.ts'
 import { createCheckpointDrafts } from './checkpointGeography.ts'
 import { gameplayValidation } from './checkpointGameplay.ts'
@@ -12,18 +14,40 @@ export function normalizeTemplateKey(name: string): string {
 }
 
 export function templateContentEqual(current: CreatorTemplateContent, persisted: CreatorTemplateContent): boolean {
-  return JSON.stringify({ ...current, version: persisted.version }) === JSON.stringify(persisted)
+  const canonical = (value: unknown): unknown => Array.isArray(value) ? value.map(canonical)
+    : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, canonical(v)])) : value
+  return JSON.stringify(canonical({ ...current, version: persisted.version })) === JSON.stringify(canonical(persisted))
+}
+
+/** A custom save is confirmed only by a complete, correctly owned authoritative response. */
+export function verifyCustomSave(sent: CreatorTemplateContent, saved: CreatorTemplate): CreatorTemplate {
+  if (!saved?.content) throw new Error('Saving could not be confirmed: the server returned no Template content.')
+  const before = sent.checkpoints as CheckpointGameplay[], after = saved.content.checkpoints as CheckpointGameplay[]
+  const issues = validateCustomExercises(saved.content)
+  if (issues.length) throw new Error('Saving could not be confirmed: the server returned invalid custom content.')
+  for (const cp of before) for (const slot of ['personal', 'team'] as const) {
+    const expected = cp.customExercises?.[slot]
+    if (!expected) continue
+    const destination = after.find(row => cp.role === 'terminal' ? row.role === 'terminal' : row.role !== 'terminal' && (row.checkpoint ?? row.checkpointNumber) === (cp.checkpoint ?? cp.checkpointNumber))
+    const actual = destination?.customExercises?.[slot]
+    if (!actual?.id || actual.owner?.templateKey !== saved.key || actual.owner.version !== saved.version) throw new Error('Saving could not be confirmed: custom exercise identity or ownership is missing from the server response.')
+    const data = (e: typeof expected) => { const { id: _id, owner: _owner, ...rest } = e; return rest }
+    if (!templateContentEqual({ ...sent, checkpoints: [data(expected)] }, { ...sent, checkpoints: [data(actual)] })) throw new Error('Saving could not be confirmed: the server response differs from the authored exercise. Your draft is kept.')
+  }
+  return saved
 }
 
 export async function persistCreatorTemplate(api: Pick<CreatorTemplatesApi, 'create' | 'createVersion'>, current: CreatorTemplateContent, persisted: CreatorTemplate | null, category?: 'universal' | 'local', localityId?: string | null): Promise<CreatorTemplate> {
+  const issues = validateCustomExercises(current)
+  if (issues.length) throw new Error(issues.map(issue => `${issue.path}: ${issue.message}`).join('\n'))
   const revision = persisted?.category && ['approved', 'changes_requested'].includes(persisted.status)
   if (!revision && localityId === undefined && persisted && templateContentEqual(current, persisted.content)) return persisted
   current = { ...current, mission: serializeMission(current.mission) }
   const validation = finishPointValidation(current.configuration) || gameplayValidation(current)
   if (validation) throw new Error(validation)
-  if (!persisted) return category ? api.create({ ...current, version: 1 }, category, ...(localityId !== undefined ? [localityId] as const : [])) : api.create({ ...current, version: 1 })
+  if (!persisted) return verifyCustomSave(current, await (category ? api.create({ ...current, version: 1 }, category, ...(localityId !== undefined ? [localityId] as const : [])) : api.create({ ...current, version: 1 })))
   if (!revision && localityId === undefined && templateContentEqual(current, persisted.content)) return persisted
-  return api.createVersion(persisted.key, { ...current, key: persisted.key, version: persisted.version + 1 }, ...(localityId !== undefined ? [localityId] as const : []))
+  return verifyCustomSave(current, await api.createVersion(persisted.key, { ...current, key: persisted.key, version: persisted.version + 1 }, ...(localityId !== undefined ? [localityId] as const : [])))
 }
 
 export function hydratePersistedGeography(configuration: CreatorGeographyConfiguration): {
@@ -45,7 +69,11 @@ export function hydratePersistedGeography(configuration: CreatorGeographyConfigu
 }
 
 export function creatorTemplateError(error: unknown, operation: 'save' | 'submit' | 'load' | 'starter' | 'delete'): string {
-  if (!(error instanceof ApiError)) return 'The backend is unavailable. Please try again.'
+  if (!(error instanceof ApiError)) return error instanceof Error ? error.message : 'The backend is unavailable. Please try again.'
+  const payload = error.details && typeof error.details === 'object' ? error.details as { error?: string; details?: { path: string; message: string }[] } : {}
+  if (payload.error === 'invalid_custom_exercises') return `Custom exercise validation failed. ${payload.details?.map(issue => `${issue.path}: ${issue.message}`).join(' ') ?? 'Check schema version, mechanic, checkpoint assignment, and same-slot ownership, then save again.'}`
+  if (error.status === 409 && operation === 'save') return 'This Template version changed or is immutable. Your edits are kept; reopen the latest version before saving again.'
+  if (operation === 'save' && (error.status === null || error.status >= 500)) return 'Saving could not be confirmed. Your work is kept. Check My Templates and reopen the latest version before retrying.'
   if (error.status === 401) return 'Your session has expired. Please sign in again.'
   if (error.status === 403) return 'Your Creator account is not authorized to perform this action.'
   if (operation === 'delete') {
