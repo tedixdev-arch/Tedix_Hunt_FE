@@ -61,7 +61,7 @@ for (const category of ['local', 'universal'] as const) test(`new ${category}: c
   await click('Checkpoint 2'); expect(container.querySelector('[aria-label="Title"]')).toBeNull()
   await click('Checkpoint 1'); expect(container.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!.value).toBe('Checkpoint one only')
   await click('Checkpoint 7, FinishPoint'); expect(container.textContent).toContain('FinishPoint'); expect(container.querySelector('[aria-label="Title"]')).toBeNull()
-  await feature('Team Challenge'); expect(container.querySelector<HTMLSelectElement>('[aria-label="Checkpoint gameplay"] select')!.value).toBe('')
+  await feature('Team Challenge'); expect(container.querySelector<HTMLSelectElement>('[aria-label="Team Challenge"]')!.value).toBe('')
   expect(checkpointExercises).toEqual(protectedSignal)
 })
 
