@@ -45,3 +45,10 @@ scope.fixtureSelections = () => {
   record.status = 'approved'
   scope.fixtureReopen()
 }
+
+// Test-only projection control: simulate the documented nullable/omitted category responses.
+scope.fixtureCategory = (category?: CreatorTemplate['category']) => {
+  if (category === undefined) delete record.category
+  else record.category = category
+  scope.fixtureReopen()
+}

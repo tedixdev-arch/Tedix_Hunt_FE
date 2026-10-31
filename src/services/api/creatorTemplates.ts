@@ -25,7 +25,8 @@ export interface CreatorTemplate {
   localityId?: string | null
   localitySnapshot?: LocalitySnapshot | null
   origin?: unknown
-  // C2 classification and C6b-5 private owner projections. Omitted on legacy/older responses.
+  // Immutable C2 classification. Explicit null is unclassified/Legacy; omission is ambiguous
+  // (current owner projections omit database null, and older responses may lack category).
   category?: 'universal' | 'local' | null
   // F7-BE-01: Universal owner GETs only. Null means never published; omission means unavailable.
   publishedVersion?: number | null

@@ -61,7 +61,7 @@ for (const category of ['local', 'universal'] as const) test(`new ${category}: c
 })
 
 test('Local from a selected Universal hydrates only returned content; source and canonical Signal stay independent', async () => {
-  const source = record('universal', [...createNormalGameplay(6, 'modern'), { role: 'terminal', story: { message: 'Selected ending' } }])
+  const source = record('universal', [...createNormalGameplay(6, 'modern').map((cp, i) => i === 0 ? { ...cp, kind: 'square' } : cp), { role: 'terminal', story: { message: 'Selected ending' } }])
   const destination = structuredClone(source); destination.key = destination.content.key = 'destination'; destination.category = 'local'
   const before = structuredClone(source), signal = structuredClone(checkpointExercises)
   api.get.mockResolvedValue(destination)
@@ -71,10 +71,10 @@ test('Local from a selected Universal hydrates only returned content; source and
   expect(container.textContent).not.toContain('Restore the Signal')
   await click('Create Your Own'); await input(container.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!, 'Destination edit')
   expect(source).toEqual(before); expect(checkpointExercises).toEqual(signal)
-  expect(hydrateGameplay(destination.content).normal.every(cp => !cp.kind && !cp.teamKind && !cp.navigationMode)).toBe(true)
+  expect(hydrateGameplay(destination.content).normal[0].kind).toBe('square'); expect(personalCreationContext(destination)).toEqual({ mode: 'modern' })
 })
 
-test('Legacy remains Legacy based on explicit records/identifiers, with only original relevant choices', async () => {
+test('explicit null category retains unclassified compatibility, with only original relevant choices', async () => {
   const legacy = record(null, [{ checkpoint: 1, kind: 'square', prompt: 'Original question', correctAnswers: { answer: '8' }, navigationMode: 'compass' }, { role: 'terminal', kind: 'radial' }])
   const original = structuredClone(legacy)
   api.get.mockResolvedValue(legacy)
@@ -86,7 +86,7 @@ test('Legacy remains Legacy based on explicit records/identifiers, with only ori
   expect(personalCreationContext(record('local', createNormalGameplay(6, 'modern')))).toEqual({ mode: 'modern' }) // Signal name and seven stops are not authority.
   const copiedLegacy = { ...structuredClone(legacy), key: 'explicit-copy' }
   expect(personalCreationContext(copiedLegacy)).toEqual({ mode: 'legacy', kinds: ['square', 'radial'] })
-  expect(personalCreationContext(record('local', [{ checkpoint: 1, kind: 'square' }]))).toEqual({ mode: 'legacy', kinds: ['square'] }) // Never silently migrate historical classified content.
+  expect(personalCreationContext(record('local', [{ checkpoint: 1, kind: 'square' }]))).toEqual({ mode: 'modern' }) // Contents cannot override immutable category.
 })
 
 test('the unclassified scratch URL starts a clean Local draft too', async () => {
@@ -115,4 +115,92 @@ test('route changes cannot reuse Legacy or another creation context state', asyn
   expect(container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options).toHaveLength(16)
   expect(container.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')).toBeNull()
   expect(container.textContent).not.toContain('Local draft only'); expect(container.textContent).not.toContain('Legacy only')
+})
+
+for (const category of ['local', 'universal'] as const) test(`${category} stays modern with older identifiers, source-looking keys and lifecycle pins`, async () => {
+  const modern = record(category, [{ checkpoint: 1, kind: 'square', prompt: 'Existing assigned question', correctAnswers: { answer: '8' } }, { role: 'terminal', kind: 'radial' }])
+  modern.origin = 'creator'; modern.submittedVersion = 1; modern.publishedVersion = 1
+  const before = structuredClone(modern)
+  api.get.mockResolvedValue(modern)
+  await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=chosen-source']}><CreatorTemplateEditorPage /></MemoryRouter>))
+  await feature('Personal Challenge')
+  const selector = container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!
+  expect([...selector.options].map(o => o.value)).toEqual(['', ...personalTypes.map(row => row[0])])
+  expect(container.textContent).toContain('Existing assigned question')
+  expect(personalCreationContext(modern)).toEqual({ mode: 'modern' })
+  await input(selector, 'single-choice'); await click('Create Your Own')
+  expect(container.querySelector('[aria-label="Mobile challenge canvas"]')).not.toBeNull()
+  expect(button('Edit with Preview').getAttribute('aria-pressed')).toBe('true')
+  expect(modern).toEqual(before); expect(api.createVersion).not.toHaveBeenCalled()
+})
+
+for (const origin of [undefined, 'creator', 'platform', { source: 'legacy' }]) test(`missing category is unresolved even with origin ${JSON.stringify(origin)}`, async () => {
+  const ambiguous = record(undefined, [{ checkpoint: 1, kind: 'square', prompt: 'Keep this assignment', correctAnswers: { answer: '8' } }, { role: 'terminal', kind: 'radial' }])
+  delete ambiguous.category; ambiguous.origin = origin
+  const before = structuredClone(ambiguous)
+  expect(personalCreationContext(ambiguous)).toEqual({ mode: 'unresolved', kinds: ['square', 'radial'] })
+  api.get.mockResolvedValue(ambiguous)
+  await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=chosen-source']}><CreatorTemplateEditorPage /></MemoryRouter>))
+  await feature('Personal Challenge')
+  expect(container.textContent).toContain('Template type information is unavailable')
+  expect(container.textContent).toContain('Keep this assignment')
+  expect(container.querySelector('[aria-label="Personal Challenge"]')).toBeNull()
+  await click('Edit existing challenges')
+  expect([...container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options].map(o => o.value)).toEqual(['', 'square', 'radial'])
+  expect(ambiguous).toEqual(before)
+  await act(async () => root.unmount()); root = createRoot(container)
+  await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=chosen-source']}><CreatorTemplateEditorPage /></MemoryRouter>))
+  await feature('Personal Challenge'); expect(container.textContent).toContain('Template type information is unavailable')
+  await click('Use modern challenge editor')
+  expect(container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options).toHaveLength(16)
+  expect(ambiguous).toEqual(before); expect(api.createVersion).not.toHaveBeenCalled()
+})
+
+test('explicit starter copy with omitted category offers compatibility without inventing persisted provenance', async () => {
+  // Actual starter operation/GET shape: origin=creator; database null category is omitted.
+  const copy = record(undefined, checkpointExercises.map((cp, i) => { const entry: any = { ...structuredClone(cp), role: i === 6 ? 'terminal' : 'normal' }; if (i === 6) delete entry.checkpoint; return entry }))
+  delete copy.category; copy.origin = 'creator'; copy.key = copy.content.key = 'explicit-starter-copy'
+  const before = structuredClone(copy)
+  api.get.mockResolvedValue(copy)
+  await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=explicit-starter-copy']}><CreatorTemplateEditorPage /></MemoryRouter>))
+  await feature('Personal Challenge'); await click('Edit existing challenges')
+  expect([...container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options].map(o => o.value)).toEqual(['', ...checkpointExercises.map(cp => cp.kind)])
+  api.createVersion.mockImplementation(async (_key, content) => ({ ...copy, content, version: content.version }))
+  await click('Save draft')
+  expect(api.createVersion.mock.calls[0][1].checkpoints).toEqual(before.content.checkpoints)
+  expect(JSON.stringify(api.createVersion.mock.calls[0][1])).not.toContain('contextChoice')
+  expect(copy).toEqual(before)
+})
+
+test('protected Signal approved record stays read-only with original assignments', async () => {
+  const protectedSignal = record(null, structuredClone(checkpointExercises))
+  protectedSignal.origin = 'platform'; protectedSignal.status = 'approved'; protectedSignal.key = 'signal-cluj-napoca'
+  const before = structuredClone(protectedSignal)
+  api.get.mockResolvedValue(protectedSignal)
+  await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=signal-cluj-napoca']}><CreatorTemplateEditorPage /></MemoryRouter>))
+  expect(container.textContent).toContain('read-only')
+  expect(container.querySelector('[aria-label="Personal Challenge"]')).toBeNull()
+  expect(api.createVersion).not.toHaveBeenCalled(); expect(protectedSignal).toEqual(before)
+})
+
+for (const category of ['local', 'universal'] as const) test(`${category} category survives unchanged save, explicit revision and reload without stripping older assignments`, async () => {
+  let modern = record(category, [{ checkpoint: 1, role: 'normal', kind: 'square', marker: 'preserve' }, { role: 'terminal', kind: 'radial' }])
+  modern.status = 'approved'; modern.content.configuration.normalCheckpointCount = 1
+  if (category === 'local') modern.localApproval = { version: 2, authority: 'approved', independentEvidence: true, localityBound: false }
+  const approved = structuredClone(modern)
+  api.get.mockImplementation(async () => structuredClone(modern))
+  api.createVersion.mockImplementation(async (_key, content) => { modern = { ...modern, content: structuredClone(content), version: content.version, status: 'draft' }; return structuredClone(modern) })
+  await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=chosen-source']}><CreatorTemplateEditorPage /></MemoryRouter>))
+  await feature('Personal Challenge')
+  expect(container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options).toHaveLength(16)
+  await click('Save draft')
+  expect(api.createVersion).toHaveBeenCalledTimes(1); expect(modern.version).toBe(3)
+  expect(modern.category).toBe(category); expect(modern.content.checkpoints).toEqual(approved.content.checkpoints)
+  expect(approved.version).toBe(2); expect(approved.status).toBe('approved')
+  await click('Save draft'); expect(api.createVersion).toHaveBeenCalledTimes(1)
+  await act(async () => root.unmount()); root = createRoot(container)
+  await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=chosen-source']}><CreatorTemplateEditorPage /></MemoryRouter>))
+  await feature('Personal Challenge')
+  expect(container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!.options).toHaveLength(16)
+  expect(modern.content.checkpoints).toEqual(approved.content.checkpoints)
 })

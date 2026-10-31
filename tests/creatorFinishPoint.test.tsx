@@ -28,7 +28,7 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
   vi.spyOn(window, 'confirm').mockReturnValue(true)
   Object.values(mocks).forEach(mock => mock.mockReset())
-  record = { key: 'trail', version: 3, status: 'draft', content: {
+  record = { key: 'trail', version: 3, status: 'draft', category: null, content: {
     key: 'trail', version: 3, displayName: 'Trail', theme: 'City', mission: 'Go',
     configuration: { normalCheckpointCount: 1, checkpointPositions: [checkpoint], finishPoint, customSetting: 'preserved', summary: '', category: '', ageRange: '', durationMinutes: 45, language: '', participants: '', teamSize: '', format: '', environment: '', equipment: '', difficulty: '', briefing: '' },
     scoring: { model: 'platform', selections: { final: 1 }, extra: 'preserved' }, checkpoints: [{ checkpointNumber: 1, name: 'Museum', personal: 0, team: 0, navigation: 0, extra: 'preserved' }],
@@ -586,7 +586,7 @@ test('choosing a predefined assignment retains the custom draft but explicitly r
   sixCheckpointRecord(); record.category = 'universal'
   ;(record.content.checkpoints[0] as any).customExercises = { personal: structuredClone(exerciseFixtures[1]) }
   await render(); await currentStep(1); await experimentTitle('Retained custom draft')
-  await click('Predefined'); await selectGameplay('Personal Challenge', 'radial')
+  await click('Predefined'); await click('View saved challenge'); await click('Use saved challenge')
   await click('Save draft')
   expect(mocks.createVersion.mock.calls[0][1].checkpoints[0].customExercises).toBeUndefined()
   await click('Create Your Own')
@@ -613,10 +613,11 @@ for (const classification of ['personal', 'team'] as const) for (const terminal 
     await click('Create Your Own')
     expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained authored variant')
     await click('Predefined')
+    if (classification === 'personal') await click('View saved challenge')
     vi.mocked(window.confirm).mockReturnValueOnce(false)
-    await click(classification === 'personal' ? 'Use this challenge' : 'Use predefined assignment')
+    await click(classification === 'personal' ? 'Use saved challenge' : 'Use predefined assignment')
     expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toContain('Custom')
-    await click(classification === 'personal' ? 'Use this challenge' : 'Use predefined assignment')
+    await click(classification === 'personal' ? 'Use saved challenge' : 'Use predefined assignment')
     expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge/)
     await click('Create Your Own') // Viewing retained content cannot silently reactivate it.
     expect((container.querySelector('[aria-label$="content editor"] textarea') as HTMLTextAreaElement).value).toBe('Retained authored variant')

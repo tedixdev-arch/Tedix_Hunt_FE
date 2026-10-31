@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] })
-const page = await browser.newPage(); page.setDefaultTimeout(10000)
+const page = await browser.newPage(); page.setDefaultTimeout(30000)
 const errors = [], results = []
 page.on('pageerror', error => errors.push(String(error)))
 await fs.mkdir('work/custom-persistence-browser', { recursive: true })

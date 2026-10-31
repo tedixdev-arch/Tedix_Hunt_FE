@@ -1,14 +1,16 @@
 import type { CreatorTemplate } from '../../../services/api/creatorTemplates.ts'
 import { hydrateGameplay } from '../checkpointGameplay.ts'
 
-export type PersonalCreationContext = { mode: 'modern' } | { mode: 'legacy'; kinds: string[] }
+export type PersonalCreationContext = { mode: 'modern' } | { mode: 'legacy' | 'unresolved'; kinds: string[] }
 export const modernContext: PersonalCreationContext = { mode: 'modern' }
-/** Resolve once from the creation path or explicit saved assignments, never names/counts.
- * Old classified copies can contain legacy assignments too; preserve them without migration.
+/** Category is immutable server classification, not a description of checkpoint contents.
+ * Explicit null is the unclassified/Legacy contract. Owner projections currently omit that
+ * null, so omission is unresolved: origin, copy-looking keys and version pins cannot repair it.
  */
 export function personalCreationContext(record: CreatorTemplate | null): PersonalCreationContext {
-  if (!record) return modernContext
+  if (!record || record.category === 'universal' || record.category === 'local') return modernContext
   const gameplay = hydrateGameplay(record.content)
+  // Inventory only; these identifiers never decide the Template's classification.
   const kinds = [...new Set([...gameplay.normal, ...(gameplay.terminal ? [gameplay.terminal] : [])].flatMap(cp => typeof cp.kind === 'string' && cp.kind ? [cp.kind] : []))]
-  return kinds.length || !record.category ? { mode: 'legacy', kinds } : modernContext
+  return { mode: record.category === null ? 'legacy' : 'unresolved', kinds }
 }

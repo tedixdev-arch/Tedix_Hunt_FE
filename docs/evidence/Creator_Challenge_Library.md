@@ -344,7 +344,7 @@ The leak was not just a dropdown. `CreatorTemplateEditorPage` cleared the name/m
 
 New Universal and Local scratch initialization now uses clean numbered gameplay with no activities, generic checkpoint names, no positions, an empty story and one unnumbered terminal entry. The old unclassified `/create` scratch URL also starts a clean Local draft; the compatibility chooser directs scratch creation to the explicit Local URL. `createNormalGameplay` defaults to clean modern data; canonical defaults require the explicit legacy context. New classified creation never runs Signal geographic prefill. A loaded record hydrates its own complete content, not new-template defaults. The complete editor is keyed by the saved Template key or new creation category, so navigating between records/creation paths cannot carry the previous context, story, route or challenge draft into the destination. The route-transition regression exercises Legacy → new Local → new Universal without remounting the surrounding router.
 
-`personalCreationContext` supplies explicit session context to CheckpointEditor/ChallengeAuthoring. All new creation is modern. Existing records with explicit flat legacy assignments (including supported old component indexes interpreted by the existing hydration adapter), or an unclassified Legacy record, retain Legacy context. Actual saved identifiers are the evidence, never a checkpoint name, Template display name, city or a count of seven. Historically classified records already containing legacy assignments are preserved rather than silently migrated. The Legacy selector contains only identifiers already present in that Template, plus the optional unconfigured state. Its original payload stays intact, including unknown fields and original checkpoint ordering. Existing custom snapshots in these records remain editable; explicit custom authoring and assignment do not migrate their original flat content.
+`personalCreationContext` uses immutable server category, not challenge content: Universal/Local is always modern; explicit `category: null` is unclassified/Legacy; omitted or unrecognized category is unresolved. The original identifier-based implementation in the first PR #139 commit was rejected and is superseded by the [classification correction below](#pr-139-re-review--authoritative-context-classification). Saved identifier inventories constrain compatibility choices only after context resolution or an explicit session editor choice. They never establish Template classification. Existing assignments, unknown fields and original ordering remain intact.
 
 Local-from-Universal still uses the existing `fromUniversal(source.key, destination, publishedReference)` API, pinned to the explicitly selected publication. The destination hydrates only the returned content and independent destination identities. No source default or unrelated Signal fallback is introduced. Existing copy/lifecycle tests and new destination-isolation tests cover this path; this is frontend fixture evidence, not a claim about a live database operation.
 
@@ -385,3 +385,47 @@ Smallest follow-up: pass the already validated selected/saved registry locality 
 - [Clean Local, desktop](personal-challenge-ux/clean-local-1440.png) · [Modern selector](personal-challenge-ux/modern-selector-1440.png) · [Predefined](personal-challenge-ux/tap-pair-predefined-1440.png) · [Visual canvas](personal-challenge-ux/tap-pair-visual-1440.png) · [Pencil editor](personal-challenge-ux/single-choice-pencil-1440.png) · [Guided flow](personal-challenge-ux/fill-blank-guided-1440.png) · [390px](personal-challenge-ux/tap-pair-visual-390.png) · [320px](personal-challenge-ux/fill-blank-visual-320.png).
 
 Browser/component Template operations use mocked frontend API fixtures and actual rendered components. **No authenticated FE–BE or database integration pass is claimed.** Existing version ownership/publication safeguards remain intact. No merge or deployment. One Draft PR; stop for ChatGPT PR review.
+
+
+## PR #139 re-review — authoritative context classification
+
+### Contract inspected, read-only
+
+Backend main `4e6cb521ba6ac930d28cd513935d83367ee80f91`:
+
+- `src/db/migrations/022_template_classification.ts`: `category` is constrained to Universal/Local or database NULL (unclassified, including shipped Signal/starters). The identity trigger makes category and source binding immutable. Source provenance (`source_template_id`, `source_version`, `source_creator_user_id`, `source_review_decision`) exists for Local-from-Universal copies; it is not a Legacy marker.
+- `src/models/HuntTemplate.ts`: Template and immutable version rows carry category. Revision copies the existing category, not a caller-selected replacement. `origin` is `platform|creator`, describing ownership, not gameplay generation. Approval/publication/submission pins identify immutable artifacts and lifecycle authority, not Legacy context.
+- `src/models/PublishedUniversal.ts`: the server pins the selected approved publication, records source provenance and creates a destination with `category: local`. Its response explicitly returns that category. The source's older challenge identifiers cannot downgrade the destination context.
+- `src/routes/creatorTemplates.ts`: both explicit Signal starter endpoints call unclassified `createCreatorDraft` and copy original puzzles; ordinary creation accepts an optional immutable category; version endpoints do not accept category/source changes. The owner list/detail, create, version and submit projections use conditional spreads that **omit a NULL category**. They do not return the stored Universal-copy source columns or a persistent starter-copy identity.
+
+### Exact provenance gap and explicit handling
+
+The FE cannot distinguish database NULL/unclassified from an older/incomplete owner projection by testing whether optional `category` is absent. Neither a legacy `kind`, seven checkpoints, Signal names, a copy-looking key, `origin`, version number nor a review/publication pin repairs that gap. The frontend therefore does not synthesize a category, a source ancestry field or a versioned gameplay-context marker.
+
+Resolution is explicit:
+
+| Authoritative input | Personal authoring behavior |
+| --- | --- |
+| New Local/Universal scratch route | Modern, clean 15-mechanic selector |
+| Saved `category: universal` or `local` | Modern, regardless of old identifiers or copy contents |
+| Explicit `category: null` | Unclassified/Legacy compatibility using only saved identifiers |
+| Missing/unrecognized category | Unresolved; existing challenge is playable read-only; no classification-derived selector is chosen |
+
+For an unresolved record, **Edit existing challenges** and **Use modern challenge editor** choose an editor for that checkpoint in the current session. This choice is not a statement that the Template is Legacy/modern. **Choose editor** can change the view without changing assignment. The session draft's `contextChoice` is never serialized into Template content, category or provenance. Save reconciliation can retain the view in-session; a fresh reload with an omitted category asks explicitly again. The Template summary says **Type: Unavailable**, not Legacy, for an omitted category.
+
+Explicit Legacy copies retain all original content and supported assignments. A current starter copy's real owner projection omits category/source identity, so it receives the unresolved handling above rather than a fabricated persistent Legacy classification; the explicit compatibility editor remains available. Protected Signal records remain subject to existing read-only/ownership/lifecycle rules. Known source names/keys receive no classification bypass. A backend contract improvement would need to expose a required, authoritative nullable category (or equally explicit server classification) consistently in all owner/mutation responses; copy provenance would additionally need a declared projection if separate Legacy-copy ancestry is required. That is documented only; no backend change is included.
+
+### Existing assignments and mobile editing
+
+A modern Template may still contain an older assigned challenge. Its dropdown remains the 15 modern mechanics. The saved challenge remains visible in the read-only canvas; it is neither stripped nor mapped to a modern mechanic. When browsing an example, **View saved challenge** returns to that existing content. **Use saved challenge** explicitly restores the existing predefined slot after a custom assignment, with the existing replacement confirmation. It does not assign a catalog example under an unsupported identity. Saving an unchanged view preserves the old fields; assigning a custom challenge uses the existing custom slot and preserves the underlying original fields. Approved content changes only through the existing explicit immutable revision operation.
+
+The phone canvas, contextual pencils, shared drafts, Edit/Play isolation, guided editor, all 15 Personal mechanics, seven Team mechanics and BE publication guard are preserved. Adding checkpoint names in an unresolved context uses generic names, not Signal defaults.
+
+### Re-review verification
+
+- `npm run typecheck` and production build passed (existing bundle-size warning). Full `npm test`: **42 Node test-file entries and 742 Vitest tests across 35 files passed**, zero failures/skips.
+- [Context browser checks](Personal_Challenge_Context_Browser_Results.json): four workflows at 1440/768/390/320px passed with no page errors or horizontal overflow. Explicit category stays authoritative with older identifiers; missing category requires a session-only view choice; choices preserve assignments; reload remains unresolved without provenance.
+- Existing checkpoint browser regression passed all four widths after explicitly choosing compatibility for its omitted-category fixture. The all-mechanic browser regression passed **88 scenarios** (15 Personal + seven Team at all four widths), including save/reload, engine answers, hints/solutions/reset and retained mobile editors, with zero page errors. Its initial 10-second navigation timeout under concurrent validation was retried at 30 seconds; assertions were unchanged.
+New/updated tests cover both new scratch paths, modern records with old identifiers, modern Local-from-Universal content, explicit null-category Legacy records, actual omitted-category starter-copy shapes, protected Signal read-only state, missing/invalid provenance, session-only view choices, full assignment retention, save/reload, exact category retention in immutable revisions and prior approved artifact independence. The former mixed-context persistence tests now use the modern selector and explicit saved-assignment restoration, not old-identifier-based classification.
+
+Component/browser APIs are mocked; no authenticated FE–BE/database integration is claimed. Backend files were inspected in an untracked read-only working checkout and were not changed. The existing Draft PR #139 is updated; no new PR, merge or deployment. Stop for ChatGPT re-review.

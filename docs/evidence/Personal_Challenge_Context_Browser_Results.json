@@ -1,0 +1,50 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "modernOlderIdentifiers": true,
+      "localCategoryAuthoritative": true,
+      "missingCategoryUnresolved": true,
+      "explicitSessionChoices": true,
+      "assignmentsPreserved": true,
+      "reloadDoesNotInventProvenance": true,
+      "explicitNullCompatibility": true,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "modernOlderIdentifiers": true,
+      "localCategoryAuthoritative": true,
+      "missingCategoryUnresolved": true,
+      "explicitSessionChoices": true,
+      "assignmentsPreserved": true,
+      "reloadDoesNotInventProvenance": true,
+      "explicitNullCompatibility": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "modernOlderIdentifiers": true,
+      "localCategoryAuthoritative": true,
+      "missingCategoryUnresolved": true,
+      "explicitSessionChoices": true,
+      "assignmentsPreserved": true,
+      "reloadDoesNotInventProvenance": true,
+      "explicitNullCompatibility": true,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "modernOlderIdentifiers": true,
+      "localCategoryAuthoritative": true,
+      "missingCategoryUnresolved": true,
+      "explicitSessionChoices": true,
+      "assignmentsPreserved": true,
+      "reloadDoesNotInventProvenance": true,
+      "explicitNullCompatibility": true,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "backend": "Mocked owner projections; actual Creator Studio components. Not authenticated FE–BE integration."
+}

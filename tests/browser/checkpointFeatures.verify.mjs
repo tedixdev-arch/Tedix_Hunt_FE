@@ -32,6 +32,7 @@ for (const width of [1440,768,390,320]) {
     assert.equal(await terminal.isEnabled(),true)
     assert.match(await terminal.textContent(),/FinishPoint 🚩/)
     await terminal.focus(); await page.keyboard.press('Enter')
+    if (name === 'Personal Challenge' && await page.getByRole('button',{name:'Edit existing challenges',exact:true}).count()) await page.getByRole('button',{name:'Edit existing challenges',exact:true}).click()
     await page.getByRole('combobox',{name,exact:true}).selectOption(name==='Personal Challenge'?'square':'hypothesis')
     if (name === 'Personal Challenge') await page.getByRole('button',{name:'Use this challenge',exact:true}).click()
     await page.getByRole('button',{name:'Create Your Own',exact:true}).click()
