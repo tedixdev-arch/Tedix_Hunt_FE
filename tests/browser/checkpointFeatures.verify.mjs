@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox','--enable-unsafe-swiftshader'] })
 const page = await browser.newPage(), errors = [], results = []
+page.on('dialog', dialog => dialog.accept())
 page.on('pageerror', error => errors.push(String(error)))
 await page.route('https://api.mapbox.com/**', route => route.fulfill({json: {version:8,sources:{},layers:[]}}))
 await fs.mkdir('work/checkpoint-features-browser', {recursive:true})

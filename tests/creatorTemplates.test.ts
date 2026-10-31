@@ -82,7 +82,7 @@ test('persisted positions hydrate unchanged without inventing verification or sa
 })
 
 test('duplicate, invalid, authorization and session failures have actionable safe messages', () => {
-  assert.match(creatorTemplateError(new ApiError('raw', 409, 'conflict'), 'save'), /key is already in use/)
+  assert.match(creatorTemplateError(new ApiError('raw', 409, 'conflict'), 'save'), /version changed or is immutable/)
   assert.match(creatorTemplateError(new ApiError('raw', 400, 'bad_request'), 'save'), /content or key is invalid/)
   assert.match(creatorTemplateError(new ApiError('raw', 403, 'http'), 'save'), /not authorized/)
   assert.match(creatorTemplateError(new ApiError('raw', 401, 'unauthorized'), 'submit'), /session has expired/)

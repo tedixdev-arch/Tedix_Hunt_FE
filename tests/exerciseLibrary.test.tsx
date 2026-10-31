@@ -13,12 +13,13 @@ import { hydrateGameplay, serializeGameplay } from '../src/features/creator/chec
 
 let container: HTMLDivElement, root: Root
 beforeEach(() => {
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
-afterEach(() => { act(() => root.unmount()); container.remove(); vi.useRealTimers(); vi.unstubAllGlobals() })
+afterEach(() => { act(() => root.unmount()); container.remove(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 async function render(node: React.ReactNode) { await act(async () => root.render(node)) }
 async function click(label: string) {
   const button = [...container.querySelectorAll('button')].find(b => b.textContent === label || b.getAttribute('aria-label') === label)
@@ -164,7 +165,7 @@ test('saved overrides are simulated without replacing them with local story defa
   expect(e.instructions).toBe('Nested saved question'); expect(e.data.answers).toEqual(['99']); expect(e.hint).toBe('Nested hint'); expect(e.solution).toBe('Nested solution'); expect(saved).toEqual(before)
 })
 function AuthoringHarness({ field = 'kind' }: { field?: 'kind' | 'teamKind' }) {
-  const [draft, setDraft] = useState<AuthoringDraft>({ source: 'saved' })
+  const [draft, setDraft] = useState<AuthoringDraft>({ source: 'saved', assignment: 'predefined' })
   return <><output>{intendedExperiments({ current: draft }) ? 'Submission blocked' : 'Supported submission'}</output><ChallengeAuthoring field={field} value={{ kind: 'hidden-rule', teamKind: 'scrambled-word' }} onChange={() => {}} draft={draft} onDraftChange={setDraft} /></>
 }
 test('custom copy, unsaved preview, focus trap/dismissal and toggling preserve independent editor state', async () => {
@@ -188,7 +189,7 @@ test('Predefined local example selection never mutates shared prototypes or chan
   const before = structuredClone(prototypes)
   await render(<AuthoringHarness />)
   const catalog = container.querySelector('select')!
-  await input(catalog, 'local-example:true-false'); expect(container.textContent).toContain('not approved'); expect(container.textContent).toContain('Submission blocked')
+  await input(catalog, 'local-example:true-false'); expect(container.textContent).toContain('Template-owned'); expect(container.textContent).toContain('Submission blocked')
   await click('Create Your Own'); expect(container.querySelector('select')?.value).toBe('true-false')
   await input(container.querySelector('textarea')!, 'Independent statement'); expect(prototypes).toEqual(before)
   const first = independentExercise(prototypes[0]), second = independentExercise(prototypes[0]); expect(first.id).not.toBe(second.id)
@@ -218,17 +219,16 @@ test('viewing Predefined retains experimental content and explicit submission in
   await render(<AuthoringHarness />); await click('Create Your Own')
   await input(container.querySelector('textarea')!, 'Retained experiment')
   await click('Predefined'); expect(container.textContent).toContain('Submission blocked')
-  expect(container.textContent).toContain('session drafts only')
-  const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement
-  await act(async () => checkbox.click()); expect(container.textContent).toContain('Supported submission')
+  expect(container.textContent).toContain('saved with this Template version')
+  await click('Use predefined assignment'); expect(container.textContent).toContain('Supported submission')
   await click('Create Your Own'); expect(container.querySelector('textarea')?.value).toBe('Retained experiment')
-  expect(container.textContent).toContain('Preview only: submission uses the supported assignment')
-  await click('Discard Experiment'); expect(container.querySelector('[aria-label="Experiment status"]')).toBeNull()
+  expect(container.textContent).toContain('Saving: Predefined assignment')
+  await click('Discard custom draft and use predefined'); expect(container.querySelector('[aria-label="Experiment status"]')).toBeNull()
   await click('Create Your Own'); expect(container.querySelector('textarea')?.value).not.toBe('Retained experiment')
 })
 test('discard targets a single checkpoint/classification slot and includes retained inactive examples', () => {
   const e = independentExercise(prototypes[0])
-  const drafts = { 'kind:0': { source: 'saved' as const, custom: e }, 'kind:terminal': { source: 'example' as const, exercise: prototypes[1] }, 'teamKind:0': { source: 'custom' as const, custom: e, intendedForSubmission: false } }
+  const drafts = { 'kind:0': { source: 'saved' as const, assignment: 'custom' as const, custom: e }, 'kind:terminal': { source: 'example' as const, assignment: 'custom' as const, exercise: prototypes[1] }, 'teamKind:0': { source: 'custom' as const, custom: e, assignment: 'predefined' as const } }
   expect(experimentalEntries(drafts)).toHaveLength(3)
   expect(intendedExperiments(drafts)).toBe(true)
   const next = discardExperiment(drafts, 'kind:0')
@@ -244,6 +244,6 @@ test('choosing another exercise type retains authored type variants until explic
   await chooseType('number-line'); await input(container.querySelector('textarea')!, 'Retained numeric exercise')
   await chooseType('true-false'); expect(container.querySelector('textarea')?.value).toBe('Retained truth statement')
   await chooseType('number-line'); expect(container.querySelector('textarea')?.value).toBe('Retained numeric exercise')
-  await click('Discard Experiment'); await click('Create Your Own'); await chooseType('true-false')
+  await click('Discard custom draft and use predefined'); await click('Create Your Own'); await chooseType('true-false')
   expect(container.querySelector('textarea')?.value).not.toBe('Retained truth statement')
 })

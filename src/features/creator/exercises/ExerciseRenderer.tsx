@@ -1,9 +1,13 @@
+import { AuthoredExerciseRenderer } from './AuthoredExerciseRenderer'
 import { getRecallCountdownState, getNextCountdownTickDelay } from './recallCountdown'
 import { useEffect, useState } from 'react'
 import { checkAnswer, emptyAttempt, type Exercise } from './catalog'
 
 export const control = 'min-h-11 max-w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 disabled:opacity-50'
 export function ExerciseRenderer({ exercise }: { exercise: Exercise }) {
+  return exercise.authored ? <AuthoredExerciseRenderer exercise={exercise} /> : <PrototypeExerciseRenderer exercise={exercise} />
+}
+function PrototypeExerciseRenderer({ exercise }: { exercise: Exercise }) {
   const [attempt, setAttempt] = useState(emptyAttempt)
   const [feedback, setFeedback] = useState('')
   const [hint, showHint] = useState(false)
