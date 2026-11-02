@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { CreatorTemplateEditorPage } from '../src/pages/CreatorStudio'
 const api = vi.hoisted(() => ({ create: vi.fn(), createVersion: vi.fn(), get: vi.fn(), submit: vi.fn() }))
 const map = vi.hoisted(() => ({ props: null as any }))
-const geo = vi.hoisted(() => ({ countries: vi.fn(), search: vi.fn(), get: vi.fn() }))
+const geo = vi.hoisted(() => ({ countries: vi.fn(), search: vi.fn(), get: vi.fn(), regions: vi.fn(), cities: vi.fn(), resolveCity: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', async original => ({ ...await original<typeof import('../src/services/api/creatorTemplates')>(), creatorTemplatesApi: api }))
 vi.mock('../src/services/api/geography', () => ({ geographyApi: geo }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <div /> }))
@@ -17,6 +17,7 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks(); Element.prototype.scrollIntoView = vi.fn()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
   geo.countries.mockResolvedValue({ countries: [{ code: 'FR', displayName: 'France' }, { code: 'DE', displayName: 'Germany' }] }); geo.search.mockResolvedValue({ localities: [city, city] }); geo.get.mockResolvedValue(city)
+  geo.regions.mockImplementation(async countryCode => ({ regions: [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null })); geo.cities.mockResolvedValue({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }); geo.resolveCity.mockResolvedValue({ geographicId: '123', localityId: city.id, registeredActive: true, nextAction: 'bind_locality' })
   api.create.mockImplementation(async (content, category, localityId) => ({ key: content.key, version: 1, status: 'draft', category, content, localityId, localitySnapshot: localityId ? city : null }))
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
@@ -25,13 +26,13 @@ async function render(url = '/create?category=local') { await act(async () => ro
 const button = (text: string) => [...container.querySelectorAll('button')].find(b => b.textContent === text)!
 async function click(text: string) { await act(async () => button(text).click()) }
 async function change(selector: string, value: string) { await act(async () => { const el = container.querySelector(selector)!; Object.getOwnPropertyDescriptor(el.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype, 'value')!.set!.call(el,value); el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })) }) }
-async function selectCity() { await change('#local-geography select','FR'); await change('#local-geography input','Paris'); await click('Paris · Île-de-France · France'); await click('Continue to Template builder') }
+async function selectCity() { await change('#local-geography select','FR'); await change('#local-geography select[aria-label="Region *"]','11'); await change('#local-geography input','Paris'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); await click('Paris · Île-de-France · France'); await click('Continue to Template builder') }
 function record(category: 'local' | 'universal' | undefined = 'local', positioned = false): any { return { key: 'owned', version: 1, status: 'draft', category, content: { key: 'owned', version: 1, displayName: 'Adventure', theme: 'Mixed', mission: { name: 'Our story' }, configuration: { normalCheckpointCount: 1, checkpointPositions: positioned ? [{ checkpointNumber: 1, name: 'Museum', latitude: 48.8, longitude: 2.3, radiusMeters: 15 }] : [] }, scoring: { model: 'platform' }, checkpoints: [{ checkpoint: 1 }, { role: 'terminal' }] } } }
 test('Local starts with Hunt Setup and requires country and city before positioning; search deduplicates exact identities', async () => {
   await render(); expect(container.textContent).not.toMatch(/Curriculum|Grade/); expect(container.querySelector('fieldset section h2')!.textContent).toBe('Hunt Setup'); expect(container.querySelector('#checkpoint-positions')).toBeNull()
   await click('Continue to Template builder'); expect(container.textContent).toContain('Choose a country and city to continue.')
   await change('#local-geography select','FR'); await click('Continue to Template builder'); expect(container.querySelector('#checkpoint-positions')).toBeNull()
-  await change('#local-geography input','Paris'); expect(geo.search).toHaveBeenCalledWith('FR','Paris'); expect(container.querySelectorAll('#local-geography li')).toHaveLength(1)
+  await change('#local-geography select[aria-label="Region *"]','11'); await change('#local-geography input','Paris'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); expect(geo.cities).toHaveBeenCalledWith('FR','Paris','11',undefined); expect(container.querySelectorAll('#local-geography li')).toHaveLength(1)
   await click('Paris · Île-de-France · France'); expect(container.querySelector<HTMLFieldSetElement>('[aria-label="Template builder"]')!.disabled).toBe(true); expect(container.querySelector('#checkpoint-positions')).toBeNull(); await click('Continue to Template builder'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull(); expect(document.activeElement?.id).toBe('template-setup-heading')
 })
 test('Universal needs no locality or educational controls and fresh drafts omit educational metadata', async () => {
@@ -71,13 +72,13 @@ test('city change confirmation cancels all selection mutations or preserves orig
   expect(api.createVersion.mock.calls[0][1].configuration.checkpointPositions).toEqual(saved.content.configuration.checkpointPositions); expect(api.createVersion.mock.calls[0][2]).toBeNull()
 })
 test('search failure preserves selection and can retry without fake coordinates or repeated requests on rerender', async () => {
-  await render(); await selectCity(); const count = geo.search.mock.calls.length
-  await change('#template-setup input','A title'); expect(geo.search).toHaveBeenCalledTimes(count)
-  geo.search.mockRejectedValueOnce(new Error('offline')); await change('#local-geography input','Par'); expect(container.querySelector('[role=alert]')).not.toBeNull(); expect(container.textContent).toContain('Selected city: Paris')
-  await click('Retry registry'); expect(container.textContent).toContain('Paris · Île-de-France · France')
+  await render(); await selectCity(); const count = geo.cities.mock.calls.length
+  await change('#template-setup input','A title'); expect(geo.cities).toHaveBeenCalledTimes(count)
+  geo.cities.mockRejectedValueOnce(new Error('offline')); await change('#local-geography input','Par'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); expect(container.querySelector('[role=alert]')).not.toBeNull(); expect(container.textContent).toContain('Selected city: Paris')
+  await click('Retry geography'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); expect(container.textContent).toContain('Paris · Île-de-France · France')
 })
 test('invalid city camera remains selected and recovers through exact registry lookup', async () => {
-  geo.search.mockResolvedValue({ localities: [{ ...city, latitude: NaN }] }); await render(); await selectCity(); expect(container.textContent).toContain('The city location could not be loaded.')
+  geo.get.mockResolvedValueOnce({ ...city, latitude: NaN }); await render(); await selectCity(); expect(container.textContent).toContain('The city location could not be loaded.')
   geo.get.mockRejectedValueOnce(new Error('offline')); await click('Retry city location'); expect(container.textContent).toContain('Your selection is kept.')
   await click('Retry city location'); expect(geo.get).toHaveBeenCalledWith(city.id); expect(container.textContent).not.toContain('The city location could not be loaded.')
 })
@@ -91,7 +92,7 @@ test('new Local builder, feature navigation, save and review stay hidden and dis
   await render(); expect(builder().hidden).toBe(true); expect(builder().disabled).toBe(true)
   expect(button('Save draft').matches(':disabled')).toBe(true)
   expect(container.querySelector('nav[aria-label="Hunt Features"] button')!.matches(':disabled')).toBe(true)
-  await change('#local-geography select','FR'); await change('#local-geography input','Paris'); await click('Paris · Île-de-France · France')
+  await change('#local-geography select','FR'); await change('#local-geography select[aria-label="Region *"]','11'); await change('#local-geography input','Paris'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); await click('Paris · Île-de-France · France')
   expect(builder().hidden).toBe(true); expect(builder().disabled).toBe(true)
   await click('Continue to Template builder'); expect(builder().hidden).toBe(false); expect(builder().disabled).toBe(false)
   expect(document.activeElement?.id).toBe('template-setup-heading'); expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block:'start' })
@@ -123,58 +124,25 @@ test('a different City after Continue keeps the builder unlocked and never rewri
   await render(); await selectCity(); await change('#template-setup input','Two cities')
   await click('Checkpoints & Challenges'); await act(async () => map.props.onMapClick(48.8,2.3))
   const lyon = { ...city, id:'22222222-2222-4222-8222-222222222222', name:'Lyon', administrativeContext:'Auvergne-Rhône-Alpes', latitude:45.76,longitude:4.84 }
-  geo.search.mockResolvedValue({ localities:[lyon] }); await change('#local-geography input','Lyon')
+  geo.cities.mockResolvedValue({ cities:[{ ...lyon, geographicId: '124', admin1Code: '11', regionDisplayName: lyon.administrativeContext, regionStatus: 'resolved' }], nextAfter: null }); geo.resolveCity.mockResolvedValue({ geographicId: '124', localityId: lyon.id, registeredActive: true, nextAction: 'bind_locality' }); geo.get.mockResolvedValue(lyon); await change('#local-geography input','Lyon'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) })
   await click('Lyon · Auvergne-Rhône-Alpes · France'); expect(window.confirm).toHaveBeenCalledTimes(1); expect(builder().disabled).toBe(false); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
   await click('Save draft'); const [content,,localityId] = api.create.mock.calls[0]
   expect(localityId).toBe(lyon.id); expect(content.configuration.checkpointPositions).toEqual([expect.objectContaining({latitude:48.8,longitude:2.3})])
 })
 
-const cluj = { ...city, name: 'Cluj-Napoca', countryCode: 'RO', countryDisplayName: 'Romania', administrativeContext: 'Cluj', latitude: 46.7712, longitude: 23.6236 }
-test('development setup preselects real Cluj UUID, continues to builder and centers map without catalog import', async () => {
-  vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
-  geo.search.mockResolvedValue({ localities: [cluj] })
-  await render()
-  expect(geo.search).toHaveBeenCalledExactlyOnceWith('RO', 'Cluj'); expect(geo.countries).not.toHaveBeenCalled()
-  const country = container.querySelector<HTMLSelectElement>('[aria-label="Country *"]')!, citySelect = container.querySelector<HTMLSelectElement>('[aria-label="City *"]')!
-  expect([...country.options].map(option => option.text)).toEqual(['Romania']); expect(country.value).toBe('RO')
-  expect([...citySelect.options].map(option => option.text)).toEqual(['Cluj-Napoca']); expect(citySelect.value).toBe('Cluj-Napoca')
-  expect(container.querySelector('#local-geography input')).toBeNull(); expect(container.textContent).not.toContain('City options'); expect(container.textContent).not.toContain('not available yet')
-  expect(container.textContent).not.toMatch(/Curriculum|Grade/)
-  await click('Continue to Template builder'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
-  await click('Checkpoints & Challenges'); expect(map.props.positionArea).toEqual(expect.objectContaining({ latitude: cluj.latitude, longitude: cluj.longitude }))
-  await change('#template-setup input', 'Cluj adventure'); await click('Save draft')
-  expect(api.create.mock.calls[0][2]).toBe(cluj.id); expect(api.create.mock.calls[0][0].configuration).not.toHaveProperty('curriculum'); expect(api.create.mock.calls[0][0].configuration).not.toHaveProperty('grade')
+test.each(['development', 'production'])('development preset in %s mode cannot auto-select or bypass catalog selection', async mode => {
+  vi.stubEnv('MODE', mode); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  await render(); await click('Continue to Template builder')
+  expect(geo.search).not.toHaveBeenCalled(); expect(geo.countries).toHaveBeenCalledOnce(); expect(geo.resolveCity).not.toHaveBeenCalled()
+  expect(container.querySelectorAll('#local-geography select')).toHaveLength(2)
+  expect(container.querySelector('#checkpoint-positions')).toBeNull()
 })
 test('development preset preserves saved locality snapshots and never rebinds a draft', async () => {
-  vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
   api.get.mockResolvedValue({ ...record(), localityId: city.id, localitySnapshot: city })
   await render('/create?template=owned')
-  expect(geo.search).not.toHaveBeenCalled(); expect(container.querySelector<HTMLSelectElement>('[aria-label="City *"]')!.value).toBe('Paris')
+  expect(geo.search).not.toHaveBeenCalled(); expect(container.querySelector<HTMLInputElement>('[aria-label="City *"]')!.value).toBe('Paris')
   await change('#template-setup input', 'Preserved Paris draft'); await click('Save draft'); expect(api.createVersion.mock.calls[0][2]).toBeUndefined()
-})
-test.each([[], [{ ...cluj, active: false }], [cluj, { ...cluj, id: 'another' }]])('development preset refuses missing, inactive or ambiguous records', async localities => {
-  vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj'); geo.search.mockResolvedValue({ localities })
-  await render(); await click('Continue to Template builder')
-  expect(container.querySelector('#checkpoint-positions')).toBeNull(); expect(api.create).not.toHaveBeenCalled()
-})
-test('production API ignores development preset even if environment flag is set', async () => {
-  vi.stubEnv('MODE', 'production'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
-  vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-prod.anainfo.ai')
-  await render(); expect(geo.search).not.toHaveBeenCalled(); expect(geo.countries).toHaveBeenCalledOnce()
-})
-
-test('normal development deployment activates preset in Vite production mode', async () => {
-  vi.stubEnv('MODE', 'production'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
-  geo.search.mockResolvedValue({ localities: [cluj] }); await render(); await click('Continue to Template builder')
-  expect(geo.search).toHaveBeenCalledExactlyOnceWith('RO', 'Cluj'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
-})
-
-test('development deployment reuses the existing canonical city UUID with an existing administrative label', async () => {
-  vi.stubEnv('MODE', 'production'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
-  const existing = { ...cluj, name: 'Cluj Napoca', administrativeContext: 'Cluj County' }
-  geo.search.mockResolvedValue({ localities: [existing] })
-  await render(); await click('Continue to Template builder'); await change('#template-setup input', 'Reuse registered Cluj'); await click('Save draft')
-  expect(api.create.mock.calls[0][2]).toBe(existing.id)
 })
 
 for (const category of ['universal', 'local', undefined] as const) {

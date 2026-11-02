@@ -8,7 +8,7 @@ import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 
 const api = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }), get: async () => ({ id: 'place', active: true, countryCode: 'RO', latitude: 46, longitude: 23 }) } }))
+vi.mock('../src/services/api/geography', () => ({ geographyApi: { regions: async () => ({ regions: [], regionLabel: 'County', metadataStatus: 'ready', nextAfter: null }), cities: async () => ({ cities: [], nextAfter: null }), countries: async () => ({ countries: [] }), get: async () => ({ id: 'place', active: true, countryCode: 'RO', latitude: 46, longitude: 23 }) } }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: () => <div /> }))
 vi.mock('../src/features/creator/RouteEditor', () => ({ RouteEditor: (props: any) => <button type="button" onClick={() => {

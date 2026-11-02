@@ -13,7 +13,7 @@ const api = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
 vi.mock('../src/services/api/geography', () => {
   const city = { id: '11111111-1111-4111-8111-111111111111', countryCode:'FR', countryDisplayName:'France', name:'Paris', administrativeContext:'Île-de-France', latitude:48.8566, longitude:2.3522, active:true }
-  return { geographyApi: { countries: async () => ({ countries:[{code:'FR',displayName:'France'}] }), search: async () => ({localities:[city]}), get:async () => city } }
+  return { geographyApi: { regions: async (countryCode: string) => ({ regions: [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null }), cities: async () => ({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }), resolveCity: async () => ({ geographicId: '123', localityId: city.id, registeredActive: true, nextAction: 'bind_locality' }), countries: async () => ({ countries:[{code:'FR',displayName:'France'}] }), search: async () => ({localities:[city]}), get:async () => city } }
 })
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 vi.mock('../src/features/creator/RouteEditor', () => ({ RouteEditor: (props: any) => <output aria-label="Position names">{props.drafts.map((p: any) => p.name).join('|')}</output> }))
@@ -212,8 +212,9 @@ for (const category of ['local', 'universal'] as const) test(`${category} catego
 })
 
 async function completeLocalSetup() {
-  for (const [selector,value] of [['#local-geography select','FR'],['#local-geography input','Paris']]) {
+  for (const [selector,value] of [['#local-geography select','FR'],['#local-geography select[aria-label="Region *"]','11'],['#local-geography input','Paris']]) {
     await act(async () => { const node = container.querySelector(selector)!; Object.getOwnPropertyDescriptor(node.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype,'value')!.set!.call(node,value); node.dispatchEvent(new Event(node.tagName === 'SELECT' ? 'change':'input',{bubbles:true})) })
   }
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) })
   for (const text of ['Paris · Île-de-France · France','Continue to Template builder']) await act(async () => [...container.querySelectorAll('button')].find(button=>button.textContent===text)!.click())
 }

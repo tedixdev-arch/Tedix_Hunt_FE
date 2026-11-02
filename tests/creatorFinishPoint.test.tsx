@@ -8,7 +8,7 @@ import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 
 vi.mock('../src/services/api/geography', () => {
   const city = { id:'11111111-1111-4111-8111-111111111111', countryCode:'FR', countryDisplayName:'France', name:'Paris', administrativeContext:'Île-de-France', latitude:48.8566, longitude:2.3522, active:true }
-  return { geographyApi: { countries:async () => ({ countries:[{code:'FR',displayName:'France'}] }), search:async () => ({localities:[city]}), get:async () => city } }
+  return { geographyApi: { regions: async (countryCode: string) => ({ regions: [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null }), cities: async () => ({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }), resolveCity: async () => ({ geographicId: '123', localityId: city.id, registeredActive: true, nextAction: 'bind_locality' }), countries:async () => ({ countries:[{code:'FR',displayName:'France'}] }), search:async () => ({localities:[city]}), get:async () => city } }
 })
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 
@@ -429,8 +429,9 @@ test.each(['universal', 'local'] as const)('%s creation uses seven confirmation 
   await act(async () => root.render(<MemoryRouter initialEntries={[`/create?category=${category}`]}><CreatorTemplateEditorPage /></MemoryRouter>))
   if (category === 'local') {
     await act(async () => { const select=container.querySelector<HTMLSelectElement>('#local-geography select')!; select.value='FR'; select.dispatchEvent(new Event('change',{bubbles:true})) })
+    await act(async () => { const select=container.querySelector<HTMLSelectElement>('[aria-label="Region *"]')!; select.value='11'; select.dispatchEvent(new Event('change',{bubbles:true})) })
     await act(async () => { const input=container.querySelector<HTMLInputElement>('#local-geography input')!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'Paris'); input.dispatchEvent(new Event('input',{bubbles:true})) })
-    await click('Paris · Île-de-France · France'); await click('Continue to Template builder')
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); await click('Paris · Île-de-France · France'); await click('Continue to Template builder')
   }
   expect(container.textContent).toContain('0 of 7 acknowledged')
   await currentStep(3); expect(container.textContent).toContain('0 of 7 acknowledged')
