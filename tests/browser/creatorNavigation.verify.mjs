@@ -17,6 +17,10 @@ try {
     for (const name of ['Template Setup', 'Checkpoints & Challenges', 'Advanced', 'Review & Submit']) {
       await nav.getByRole('button', { name, exact: true }).click()
       assert.equal(await nav.getByRole('button', { name, exact: true }).getAttribute('aria-current'), 'page')
+      if (name === 'Checkpoints & Challenges' || name === 'Advanced') {
+        const features = page.getByRole('navigation', { name: 'Hunt Features', exact: true })
+        assert.equal(await features.getByRole('button').count(), name === 'Advanced' ? 3 : 4)
+      }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${width}: ${name} overflows`)
     }
     await button('Save draft').click()
@@ -28,6 +32,25 @@ try {
     await nav.getByRole('button', { name: 'Template Setup', exact: true }).click()
     await nav.getByRole('button', { name: 'Advanced', exact: true }).click()
     assert.equal(await page.getByLabel('Component name', { exact: true }).inputValue(), 'Unfinished history')
+    const features = page.getByRole('navigation', { name: 'Hunt Features', exact: true })
+    for (const label of ['Mission History', 'Results Display']) {
+      await features.getByRole('button').filter({ hasText: label }).click()
+      await button('Use Signal default').click()
+      const selection = page.getByRole('combobox', { name: 'Approved component', exact: true })
+      const index = Math.min(1, await selection.locator('option').count() - 1)
+      await selection.selectOption({ index })
+      await nav.getByRole('button', { name: 'Template Setup', exact: true }).click()
+      await nav.getByRole('button', { name: 'Advanced', exact: true }).click()
+      assert.equal(await selection.inputValue(), String(index))
+    }
+    await features.getByRole('button').filter({ hasText: 'Special Awards' }).click()
+    await page.getByLabel('Award name', { exact: true }).fill('Unfinished award')
+    await page.getByLabel('Winning rule and tie-breaker', { exact: true }).fill('Pending rule')
+    await nav.getByRole('button', { name: 'Template Setup', exact: true }).click()
+    await nav.getByRole('button', { name: 'Advanced', exact: true }).click()
+    assert.equal(await page.getByLabel('Award name', { exact: true }).inputValue(), 'Unfinished award')
+    assert.equal(await page.getByLabel('Winning rule and tie-breaker', { exact: true }).inputValue(), 'Pending rule')
+    assert.equal(await page.evaluate(() => window.fixtureCalls.filter(call => call.method === 'version').length), 1)
     await nav.getByRole('button', { name: 'Review & Submit', exact: true }).focus()
     await page.keyboard.press('Enter')
     assert.equal(await nav.getByRole('button', { name: 'Review & Submit', exact: true }).getAttribute('aria-current'), 'page')

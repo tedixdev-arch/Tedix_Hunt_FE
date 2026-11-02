@@ -55,7 +55,7 @@ function Shell({ children }: { children: ReactNode }) {
 
 function Progress({ done, total }: { done: number; total: number }) {
   const percent = Math.round(done / total * 100)
-  return <div className="min-w-44"><div className="flex justify-between text-xs font-bold"><span>{done} of {total} complete</span><span>{percent}%</span></div><div className="mt-2 h-2 rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${percent}%` }} /></div></div>
+  return <div className="min-w-44"><div className="flex justify-between text-xs font-bold"><span>{done} of {total} acknowledged</span><span>{percent}%</span></div><div className="mt-2 h-2 rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${percent}%` }} /></div></div>
 }
 
 function CheckpointCountEditor({ count, onChange }: { count: number; onChange: (count: number) => void }) {
@@ -379,7 +379,7 @@ function CreatorTemplateEditor() {
   }, [unsaved, sessionOnlyWork])
   const legacy = templateConfiguration.normalCheckpointCount === undefined && templateConfiguration.checkpointPositions === undefined
   const allInfo = hasRequiredCompletion(stepDone, requiredSetupIds), allFeatures = hasRequiredCompletion(featureDone, requiredFeatureIds)
-  const checks = useMemo(() => [['Template Setup complete', allInfo], ['Seven Hunt Features complete', allFeatures], ['Route reviewed this session', routeSafe], ['Participant journey previewed', previewed], ['Validation passed', tested]] as const, [allInfo, allFeatures, routeSafe, previewed, tested])
+  const checks = useMemo(() => [['Template Setup acknowledged', allInfo], ['Hunt Features acknowledged', allFeatures], ['Route reviewed this session', routeSafe], ['Participant journey previewed', previewed], ['Validation passed', tested]] as const, [allInfo, allFeatures, routeSafe, previewed, tested])
   const finishError = finishPointValidation(creatorTemplateContent.configuration, !universal) || gameplayValidation(creatorTemplateContent, true)
   const localErrors = localContentValidation(creatorTemplateContent)
   const localIdentity = JSON.stringify([creatorTemplateContent, localityChange, persisted?.localityId, persisted?.localitySnapshot])

@@ -432,9 +432,9 @@ test.each(['universal', 'local'] as const)('%s creation uses seven confirmation 
     await act(async () => { const input=container.querySelector<HTMLInputElement>('#local-geography input')!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'Paris'); input.dispatchEvent(new Event('input',{bubbles:true})) })
     await click('Paris · Île-de-France · France'); await click('Continue to Template builder')
   }
-  expect(container.textContent).toContain('0 of 7 complete')
-  await currentStep(3); expect(container.textContent).toContain('0 of 7 complete')
-  await click('Continue'); expect(container.textContent).toContain('1 of 7 complete')
+  expect(container.textContent).toContain('0 of 7 acknowledged')
+  await currentStep(3); expect(container.textContent).toContain('0 of 7 acknowledged')
+  await click('Continue'); expect(container.textContent).toContain('1 of 7 acknowledged')
   expect(container.querySelector('[aria-label="Creator sections"] [aria-current="page"]')?.textContent).toBe('Review & Submit')
   await currentStep(3); expect(container.textContent).toContain('Feature 4 of 7')
   expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled()
@@ -714,6 +714,8 @@ test('rejected completion keeps working content and permits a definite-error ret
 
 test('four primary sections start with Advanced collapsed and preserve mounted challenge editors', async () => {
   sixCheckpointRecord(); await render()
+  expect(container.textContent).toContain('7 of 7 acknowledged')
+  expect(container.textContent).not.toContain('7 of 7 complete')
   const nav = container.querySelector('[aria-label="Creator sections"]')!
   expect([...nav.querySelectorAll('button')].map(button => button.textContent)).toEqual(['Template Setup', 'Checkpoints & Challenges', 'Advanced', 'Review & Submit'])
   expect(nav.querySelector('[aria-expanded]')?.getAttribute('aria-expanded')).toBe('false')

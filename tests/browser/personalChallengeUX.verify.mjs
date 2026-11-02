@@ -1,13 +1,14 @@
+import { feature as openFeature, saveChallengeDraft } from './creatorNavigation.helpers.mjs'
 import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] })
 const page = await browser.newPage(); page.setDefaultTimeout(10000)
-const errors = [], results = [], output = 'docs/evidence/personal-challenge-ux'
+const errors = [], results = [], output = 'work/personal-challenge-ux'
 page.on('pageerror', error => errors.push(String(error))); page.on('dialog', dialog => dialog.accept())
 await fs.mkdir(output, { recursive: true })
 const panel = () => page.getByRole('region', { name: 'Personal Challenge authoring', exact: true })
-const feature = () => page.getByRole('navigation', { name: 'Hunt Features', exact: true }).getByRole('button', { name: /Personal Challenge/ }).click()
+const feature = () => openFeature(page, /Personal Challenge/)
 const choose = type => panel().getByRole('combobox', { name: 'Personal Challenge', exact: true }).selectOption(type)
 async function layout() {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth || document.querySelector('main').scrollWidth > innerWidth), false, 'page overflow')
@@ -16,7 +17,7 @@ async function layout() {
 async function shot(name, focus = panel()) {
   await layout(); await focus.evaluate(node => node.scrollIntoView({ block: 'start', behavior: 'instant' })); await page.screenshot({ path: `${output}/${name}.png` })
 }
-async function save() { await page.getByRole('button', { name: 'Save draft', exact: true }).click(); await page.getByRole('status').filter({ hasText: 'Template version saved by the backend' }).waitFor() }
+async function save() { await saveChallengeDraft(page); await page.getByRole('status').filter({ hasText: 'Template version saved by the backend' }).waitFor() }
 async function solve(e) {
   const play = panel().locator(`[aria-label="${e.type} interactive exercise"]`), d = e.interaction, a = e.answer
   if (e.type === 'tap-pair') {
@@ -75,7 +76,7 @@ try {
     await panel().getByRole('button', { name: `Edit ${key} ${count}`, exact: true }).click()
     await panel().getByRole('button', { name: `${type === 'tap-pair' ? 'Remove pair' : type === 'single-choice' ? 'Remove option' : 'Remove question'} ${count}`, exact: true }).click()
     assert.equal(await panel().getByRole('button', { name: 'Try challenge', exact: true }).isEnabled(), true)
-    await panel().getByRole('button', { name: 'Step by Step', exact: true }).click()
+    await panel().getByRole('button', { name: 'Complex / LaTeX', exact: true }).click()
     await shot(`${type}-guided-${width}`, panel().getByRole('region', { name: 'Guided challenge editor', exact: true }))
     await panel().getByRole('button', { name: 'Next', exact: true }).click(); await panel().getByRole('button', { name: 'Back', exact: true }).click()
     await panel().getByRole('button', { name: 'Edit with Preview', exact: true }).click()

@@ -41,6 +41,7 @@ try {
     })
     await page.route('https://events.mapbox.com/**', route => route.fulfill({ json: {} }))
     await page.goto(process.env.PREVIEW_URL || 'http://127.0.0.1:5173/tests/browser/mapboxSearch.html')
+    await page.getByRole('navigation', { name: 'Creator sections' }).getByRole('button', { name: 'Checkpoints & Challenges', exact: true }).click()
     await page.locator('#checkpoint-positions').scrollIntoViewIfNeeded()
     await page.waitForFunction(() => window.testMap?.isStyleLoaded())
     const original = await camera(page)
@@ -108,7 +109,13 @@ try {
       assert.deepEqual(await pins(page), confirmed)
     }
     await page.locator('[data-checkpoint="2"]').click()
-    await page.evaluate(() => window.testMap.jumpTo({ bearing: 25, pitch: 30 }))
+    // Keep the drag target in view before recording the camera contract.
+    const dragPoint = (await pins(page)).find(pin => pin.number === '2').coordinates
+    await page.evaluate(center => {
+      window.testMap.jumpTo({ center, bearing: 25, pitch: 30 })
+      // On narrow screens the search overlay covers the map centre.
+      window.testMap.panBy([0, -120], { duration: 0 })
+    }, dragPoint)
     const cameraBeforeStyles = await camera(page)
     const pinsBeforeStyles = await pins(page)
     for (const mode of ['Satellite', 'Map']) {
@@ -139,6 +146,8 @@ try {
       const canvas = await page.locator('.mapboxgl-canvas').boundingBox()
       const from = { x: marker.x + marker.width / 2, y: marker.y + marker.height / 2 }
       const to = { x: Math.min(canvas.x + canvas.width - 20, from.x + 35), y: Math.min(canvas.y + canvas.height - 20, from.y + 25) }
+      assert.ok(from.x >= canvas.x && from.x <= canvas.x + canvas.width && from.y >= canvas.y && from.y <= canvas.y + canvas.height, 'drag target must be inside the map')
+      assert.equal(await page.evaluate(({x,y}) => document.elementFromPoint(x,y)?.closest('[data-position-pin]')?.getAttribute('data-position-pin'), from), '2', 'drag target must not be covered by search or toolbar')
       await page.mouse.move(from.x, from.y); await page.mouse.down()
       await page.mouse.move(to.x, to.y, { steps: 8 }); await page.mouse.up()
       assert.notDeepEqual(await pins(page), pinsBeforeStyles)

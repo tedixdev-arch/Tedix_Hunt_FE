@@ -1,20 +1,21 @@
+import { feature as openFeature, saveChallengeDraft } from './creatorNavigation.helpers.mjs'
 import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || '/opt/codex/cua_node/lib/node_modules/playwright/index.mjs')
 const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] })
 const page = await browser.newPage(); page.setDefaultTimeout(10000)
-const errors = [], results = [], output = 'docs/evidence/team-challenge-ux'
+const errors = [], results = [], output = 'work/team-challenge-ux'
 page.on('pageerror', e => errors.push(String(e))); page.on('dialog', d => d.accept())
 await fs.mkdir(output, { recursive: true })
 const panel = () => page.getByRole('region', { name: 'Team Challenge authoring', exact: true })
-const feature = () => page.getByRole('navigation', { name: 'Hunt Features', exact: true }).getByRole('button', { name: /Team Challenge/ }).click()
+const feature = () => openFeature(page, /Team Challenge/)
 const canvas = () => panel().getByLabel('Mobile challenge canvas', { exact: true })
 async function layout() {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth || document.querySelector('main').scrollWidth > innerWidth), false, 'page overflow')
   assert.equal(await panel().evaluate(n => n.scrollWidth > n.clientWidth), false, 'editor overflow')
 }
 async function shot(name, focus = canvas()) { await layout(); await focus.evaluate(n => n.scrollIntoView({ block: 'start', behavior: 'instant' })); await page.screenshot({ path: `${output}/${name}.png` }) }
-async function save() { await page.getByRole('button', { name: 'Save draft', exact: true }).click(); await page.getByRole('status').filter({ hasText: 'Template version saved by the backend' }).waitFor() }
+async function save() { await saveChallengeDraft(page); await page.getByRole('status').filter({ hasText: 'Template version saved by the backend' }).waitFor() }
 async function solve(e, captureName) {
   const d = e.interaction, a = e.answer, play = canvas()
   await play.getByRole('button', { name: 'Check team answer', exact: true }).click(); assert.match(await play.textContent(), new RegExp(e.feedback.incorrect))

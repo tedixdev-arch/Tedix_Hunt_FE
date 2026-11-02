@@ -5,7 +5,7 @@ const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', hea
 const page = await browser.newPage(); page.setDefaultTimeout(10000)
 const errors = [], results = []
 page.on('pageerror', error => errors.push(String(error)))
-const feature = () => page.getByRole('navigation', { name: 'Hunt Features', exact: true }).getByRole('button', { name: /Personal Challenge/ }).click()
+const feature = async () => { await page.getByRole('navigation', { name: 'Creator sections' }).getByRole('button', { name: 'Checkpoints & Challenges', exact: true }).click(); await page.getByRole('navigation', { name: 'Hunt Features', exact: true }).getByRole('button', { name: /Personal Challenge/ }).click() }
 const panel = () => page.getByRole('region', { name: 'Personal Challenge authoring', exact: true })
 try {
   for (const width of [1440, 768, 390, 320]) {
