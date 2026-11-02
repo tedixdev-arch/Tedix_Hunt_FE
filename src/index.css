@@ -10,6 +10,9 @@
   font-display: swap;
 }
 
+/* Feature buttons remain mounted for session state; layout utilities must not reveal hidden groups. */
+#creator-checkpoints nav[aria-label="Hunt Features"] > button[hidden] { display: none; }
+
 /* Keep mobile app panels from gaining a horizontal scrollbar beside the vertical gutter. */
 main {
   overflow-x: hidden;

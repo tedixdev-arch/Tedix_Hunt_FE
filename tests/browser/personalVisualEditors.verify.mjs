@@ -1,16 +1,17 @@
+import { feature as openFeature, saveChallengeDraft } from './creatorNavigation.helpers.mjs'
 import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] })
 const page = await browser.newPage(); page.setDefaultTimeout(10000)
-const errors = [], results = [], output = 'docs/evidence/personal-visual-editors'
+const errors = [], results = [], output = 'work/personal-visual-editors'
 page.on('pageerror', e => errors.push(String(e))); page.on('dialog', d => d.accept())
 await fs.mkdir(output, { recursive: true })
 const panel = () => page.getByRole('region', { name: 'Personal Challenge authoring', exact: true })
 const btn = name => panel().getByRole('button', { name, exact: true })
-const feature = () => page.getByRole('navigation', { name: 'Hunt Features', exact: true }).getByRole('button', { name: /Personal Challenge/ }).click()
+const feature = () => openFeature(page, /Personal Challenge/)
 const play = () => panel().locator('[aria-label$="interactive exercise"]:visible')
-async function save() { await page.getByRole('button', { name: 'Save draft', exact: true }).click(); await page.getByRole('status').filter({ hasText: 'Template version saved by the backend' }).waitFor() }
+async function save() { await saveChallengeDraft(page); await page.getByRole('status').filter({ hasText: 'Template version saved by the backend' }).waitFor() }
 async function pencil(label, value, numeric = false) {
   const trigger = btn(`Edit ${label}`); await trigger.focus(); await page.keyboard.press('Enter')
   const field = panel().getByRole('group', { name: `Edit ${label}`, exact: true }).getByRole(numeric ? 'spinbutton' : 'textbox')
@@ -75,7 +76,7 @@ try {
     await btn('Apply challenge').click(); await save()
     const baseline = await page.evaluate(() => window.fixtureRecord().content.checkpoints[0].customExercises.personal)
     await edit(type, baseline); await shot(`${type}-edit-${width}`)
-    await btn('Step by Step').click()
+    await btn('Complex / LaTeX').click()
     for (let i = 0; i < 4; i++) await btn('Next').click()
     assert.equal(await play().count(), 1)
     await btn('Edit with Preview').click(); assert.match(await panel().textContent(), new RegExp(`Visual ${type}`))
@@ -85,7 +86,7 @@ try {
     assert.deepEqual(saved.content.checkpoints.slice(1), initial.content.checkpoints.slice(1))
     await btn('Try challenge').click(); await solve(e); await shot(`${type}-play-${width}`); assert.deepEqual(await page.evaluate(() => window.fixtureRecord()), saved)
     // A local attempt survives switching modes; no attempt data enters persistence.
-    await btn('Step by Step').click(); await btn('Edit with Preview').click()
+    await btn('Complex / LaTeX').click(); await btn('Edit with Preview').click()
     const checkpoints = page.getByLabel('Checkpoint selector', { exact: true }); await checkpoints.getByRole('button', { name: 'Checkpoint 2', exact: true }).click(); await checkpoints.getByRole('button', { name: 'Checkpoint 1', exact: true }).click()
     assert.match(await panel().textContent(), new RegExp(`Visual ${type}`))
     await page.evaluate(() => window.fixtureReopen()); await feature(); assert.match(await panel().textContent(), new RegExp(`Visual ${type}`))

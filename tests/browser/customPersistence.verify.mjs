@@ -1,3 +1,4 @@
+import { feature as openFeature, saveChallengeDraft } from './creatorNavigation.helpers.mjs'
 import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
@@ -6,21 +7,28 @@ const page = await browser.newPage(); page.setDefaultTimeout(30000)
 const errors = [], results = []
 page.on('pageerror', error => errors.push(String(error)))
 await fs.mkdir('work/custom-persistence-browser', { recursive: true })
-const feature = name => page.getByRole('navigation', { name: 'Hunt Features', exact: true }).getByRole('button', { name })
+const feature = name => ({ click: () => openFeature(page, name) })
 for (const width of [1440, 768, 390, 320]) {
   await page.setViewportSize({ width, height: 900 })
   await page.goto(`${process.env.TEDIX_BROWSER_URL || 'http://127.0.0.1:5173'}/tests/browser/customPersistence.html`)
   await page.waitForFunction(() => window.exercises?.length === 22)
   const exercises = await page.evaluate(() => window.exercises)
-  for (const e of exercises) {
+  // Team uses its inline canvas rather than the retired modal preview.
+  // The companion Team suite below covers all seven Team mechanics.
+  for (const e of exercises.filter(exercise => exercise.classification === 'personal')) {
     await page.evaluate(type => window.fixtureLoad(type), e.type)
     await feature(e.classification === 'personal' ? /Personal Challenge/ : /Team Challenge/).click()
     const panel = page.getByRole('region', { name: `${e.classification === 'personal' ? 'Personal' : 'Team'} Challenge authoring`, exact: true })
     const title = `Edited ${e.type} at ${width}`
-    await panel.getByLabel('Title', { exact: true }).fill(title)
+    const titlePencil = panel.getByRole('button', { name: 'Edit Title', exact: true })
+    if (await titlePencil.count()) {
+      await titlePencil.click()
+      await panel.getByRole('group', { name: 'Edit Title', exact: true }).getByRole('textbox').fill(title)
+      await page.keyboard.press('Escape')
+    } else await panel.getByLabel('Title', { exact: true }).fill(title)
     const personal = e.classification === 'personal'
     const priority = personal && ['tap-pair', 'single-choice', 'fill-blank'].includes(e.type)
-    const trigger = panel.getByRole('button', { name: personal ? 'Try challenge' : 'Try challenge', exact: true }); if (!personal || priority) await trigger.click()
+    const trigger = panel.getByRole('button', { name: personal ? 'Try challenge' : 'Try challenge', exact: true }); await trigger.click()
     const dialog = personal ? panel.locator(`[aria-label="${e.type} interactive exercise"]`) : page.getByRole('dialog', { name: 'Exercise preview' })
     await dialog.waitFor()
     if (!personal) assert.match(await dialog.textContent(), new RegExp(e.type))
@@ -63,14 +71,13 @@ for (const width of [1440, 768, 390, 320]) {
     await dialog.getByRole('button', { name: 'Solution', exact: true }).click(); assert.equal(await dialog.getByLabel('Exercise solution', { exact: true }).textContent(), e.solution)
     await dialog.getByRole('button', { name: 'Reset', exact: true }).click(); assert.equal(await dialog.locator('[role="status"]').count(), 0)
     assert.equal(await dialog.evaluate(node => node.scrollWidth > node.clientWidth), false)
-    if (personal && priority) await panel.getByRole('button', { name: 'Edit', exact: true }).click()
-    else if (personal) { await panel.getByRole('button', { name: 'Step by Step', exact: true }).click(); assert.equal(await panel.getByRole('textbox').count() > 2, true); await panel.getByRole('button', { name: 'Edit with Preview', exact: true }).click() }
+    if (personal) await panel.getByRole('button', { name: 'Edit', exact: true }).click()
     else {
       await dialog.getByRole('button', { name: 'Close exercise preview' }).focus(); await page.keyboard.press('Shift+Tab')
       assert.equal(await dialog.getByRole('button', { name: 'Reset', exact: true }).evaluate(node => document.activeElement === node), true)
       await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' }); assert.equal(await trigger.evaluate(node => document.activeElement === node), true)
     }
-    await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+    await saveChallengeDraft(page)
     await page.getByRole('status').filter({ hasText: 'Template version saved by the backend' }).waitFor()
     const saved = await page.evaluate(() => window.fixtureRecord())
     const output = saved.content.checkpoints[0].customExercises[e.classification]
@@ -78,10 +85,10 @@ for (const width of [1440, 768, 390, 320]) {
     assert.deepEqual(output.interaction, e.interaction); assert.deepEqual(output.answer, e.answer); assert.deepEqual(output.hints, e.hints)
     await page.evaluate(() => window.fixtureReopen())
     await feature(e.classification === 'personal' ? /Personal Challenge/ : /Team Challenge/).click()
-    assert.equal(await panel.getByLabel('Title', { exact: true }).inputValue(), title)
+    assert.equal((await panel.textContent()).includes(title), true)
     await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: 'Checkpoint 2', exact: true }).click()
     await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: 'Checkpoint 1', exact: true }).click()
-    assert.equal(await panel.getByLabel('Title', { exact: true }).inputValue(), title)
+    assert.equal((await panel.textContent()).includes(title), true)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     if (e.type === 'rule-discovery') await page.screenshot({ path: `work/custom-persistence-browser/editor-${width}.png` })
     results.push({ width, mechanic: e.type, passed: true })
@@ -91,3 +98,5 @@ assert.deepEqual(errors, [])
 await fs.writeFile('work/custom-persistence-browser/results.json', JSON.stringify({ scenarios: results.length, results, errors, backend: 'Mocked Template operations, real Creator Studio and preview components; not live FE–BE integration.' }, null, 2))
 console.log(JSON.stringify({ scenarios: results.length, widths: [1440, 768, 390, 320], errors }))
 await browser.close()
+
+await import('./teamChallengeUX.verify.mjs')
