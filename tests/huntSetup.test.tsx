@@ -28,17 +28,17 @@ async function change(selector: string, value: string) { await act(async () => {
 async function selectCity() { await change('#local-geography select','FR'); await change('#local-geography input','Paris'); await click('Paris · Île-de-France · France'); await click('Continue to Hunt builder') }
 function record(category: 'local' | 'universal' | undefined = 'local', positioned = false): any { return { key: 'owned', version: 1, status: 'draft', category, content: { key: 'owned', version: 1, displayName: 'Adventure', theme: 'Mixed', mission: { name: 'Our story' }, configuration: { normalCheckpointCount: 1, checkpointPositions: positioned ? [{ checkpointNumber: 1, name: 'Museum', latitude: 48.8, longitude: 2.3, radiusMeters: 15 }] : [] }, scoring: { model: 'platform' }, checkpoints: [{ checkpoint: 1 }, { role: 'terminal' }] } } }
 test('Local starts with Hunt Setup and requires country and city before positioning; search deduplicates exact identities', async () => {
-  await render(); expect(container.querySelector('fieldset section h2')!.textContent).toBe('Hunt Setup'); expect(container.querySelector('#checkpoint-positions')).toBeNull()
+  await render(); expect(container.textContent).not.toMatch(/Curriculum|Grade/); expect(container.querySelector('fieldset section h2')!.textContent).toBe('Hunt Setup'); expect(container.querySelector('#checkpoint-positions')).toBeNull()
   await click('Continue to Hunt builder'); expect(container.textContent).toContain('Choose a country and city to continue.')
   await change('#local-geography select','FR'); await click('Continue to Hunt builder'); expect(container.querySelector('#checkpoint-positions')).toBeNull()
   await change('#local-geography input','Paris'); expect(geo.search).toHaveBeenCalledWith('FR','Paris'); expect(container.querySelectorAll('#local-geography li')).toHaveLength(1)
   await click('Paris · Île-de-France · France'); expect(container.querySelector<HTMLFieldSetElement>('[aria-label="Hunt builder"]')!.disabled).toBe(true); expect(container.querySelector('#checkpoint-positions')).toBeNull(); await click('Continue to Hunt builder'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull(); expect(document.activeElement?.id).toBe('template-setup-heading')
 })
-test('Universal needs no locality and optional learning controls default to Mixed without adding metadata to untouched drafts', async () => {
+test('Universal needs no locality or educational controls and fresh drafts omit educational metadata', async () => {
   await render('/create?category=universal'); expect(container.querySelector('#local-geography input')).toBeNull(); expect(geo.countries).not.toHaveBeenCalled()
   await click('Continue to Hunt builder'); expect(container.textContent).not.toContain('Choose a country and city to continue.')
-  const controls = container.querySelectorAll<HTMLSelectElement>('#local-geography select'); expect(controls).toHaveLength(2)
-  for (const control of controls) { expect(control.disabled).toBe(false); expect(control.value).toBe('mixed'); expect([...control.options].some(option => option.value === 'mixed')).toBe(true) }
+  expect(container.querySelectorAll('#local-geography select')).toHaveLength(0)
+  expect(container.textContent).not.toMatch(/Curriculum|Grade/)
   await change('#template-setup input','Anywhere adventure'); await click('Save draft')
   const [content, category, localityId] = api.create.mock.calls[0]; expect(category).toBe('universal'); expect(localityId).toBeUndefined(); expect(content.configuration).not.toHaveProperty('curriculum'); expect(content.configuration).not.toHaveProperty('grade')
 })
@@ -52,8 +52,16 @@ test('selected city saves only UUID, reloads server snapshot, and leaves learnin
   expect(container.textContent).toContain('Selected city: Paris'); expect(content.configuration.checkpointPositions).toEqual([]); expect(JSON.stringify(content)).not.toContain('Signal')
 })
 test('Local copied from Universal still requires an explicit destination', async () => {
-  const saved = { ...record(), origin: { source: 'universal', templateKey: 'source', version: 2 } }; api.get.mockResolvedValue(saved)
+  const saved = { ...record(), origin: { source: 'universal', templateKey: 'source', version: 2 } }
+  Object.assign(saved.content.configuration, { curriculum: 'source-legacy', grade: 'unmapped-grade' })
+  const original = structuredClone(saved)
+  api.get.mockResolvedValue(saved)
+  api.createVersion.mockImplementation(async (_, content) => ({ ...saved, version: content.version, content }))
   await render('/create?template=owned'); await click('Continue to Hunt builder'); expect(container.querySelector('#checkpoint-positions')).toBeNull(); expect(container.textContent).toContain('Choose a country and city to continue.')
+  await change('#template-setup input', 'Edit copied Local'); await click('Save draft')
+  expect(api.createVersion.mock.calls[0][1].configuration).toMatchObject({ curriculum: 'source-legacy', grade: 'unmapped-grade' })
+  expect(api.createVersion.mock.calls[0][2]).toBeUndefined()
+  expect(saved).toEqual(original)
 })
 test('city change confirmation cancels all selection mutations or preserves original positioned checkpoints on acceptance', async () => {
   const saved = { ...record('local',true), localityId: city.id, localitySnapshot: city }; api.get.mockResolvedValue(saved); api.createVersion.mockImplementation(async (_,content,localityId) => ({ ...saved,version:2,content,localityId,localitySnapshot:null }))
@@ -131,14 +139,11 @@ test('development setup preselects real Cluj UUID, continues to builder and cent
   expect([...country.options].map(option => option.text)).toEqual(['Romania']); expect(country.value).toBe('RO')
   expect([...citySelect.options].map(option => option.text)).toEqual(['Cluj-Napoca']); expect(citySelect.value).toBe('Cluj-Napoca')
   expect(container.querySelector('#local-geography input')).toBeNull(); expect(container.textContent).not.toContain('City options'); expect(container.textContent).not.toContain('not available yet')
-  const curriculum = container.querySelector<HTMLSelectElement>('[aria-label="Curriculum (optional)"]')!, grade = container.querySelector<HTMLSelectElement>('[aria-label="Grade (optional)"]')!
-  expect([...curriculum.options].map(option => option.text)).toEqual(['Mixed', 'Math']); expect(curriculum.value).toBe('mixed')
-  expect([...grade.options].map(option => option.text)).toEqual(['Mixed', '9', '10', '11', '12']); expect(grade.value).toBe('mixed')
+  expect(container.textContent).not.toMatch(/Curriculum|Grade/)
   await click('Continue to Hunt builder'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
   expect(map.props.positionArea).toEqual(expect.objectContaining({ latitude: cluj.latitude, longitude: cluj.longitude }))
-  await change('[aria-label="Curriculum (optional)"]', 'math'); await change('[aria-label="Grade (optional)"]', '10')
   await change('#template-setup input', 'Cluj adventure'); await click('Save draft')
-  expect(api.create.mock.calls[0][2]).toBe(cluj.id); expect(api.create.mock.calls[0][0].configuration).toMatchObject({ curriculum: 'math', grade: '10' })
+  expect(api.create.mock.calls[0][2]).toBe(cluj.id); expect(api.create.mock.calls[0][0].configuration).not.toHaveProperty('curriculum'); expect(api.create.mock.calls[0][0].configuration).not.toHaveProperty('grade')
 })
 test('development preset preserves saved locality snapshots and never rebinds a draft', async () => {
   vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
@@ -171,3 +176,58 @@ test('development deployment reuses the existing canonical city UUID with an exi
   await render(); await click('Continue to Hunt builder'); await change('#template-setup input', 'Reuse registered Cluj'); await click('Save draft')
   expect(api.create.mock.calls[0][2]).toBe(existing.id)
 })
+
+for (const category of ['universal', 'local', undefined] as const) {
+  test.each([
+    { curriculum: 'math', grade: '10' },
+    { curriculum: ' legacy / unknown ', grade: 'pre-school-v0' },
+    { curriculum: { legacy: ['unmapped', 7] }, grade: null },
+    {},
+  ])(`${category ?? 'legacy'} preserves educational values and absence through save, reopen and revision: %j`, async education => {
+    const original = record(category)
+    if (category === undefined) delete original.category
+    Object.assign(original.content.configuration, education, { legacyExtra: { keep: ['untouched'] } })
+    if (category === 'local') Object.assign(original, { localityId: city.id, localitySnapshot: city })
+    const untouched = structuredClone(original)
+    let server = structuredClone(original)
+    api.get.mockImplementation(async () => structuredClone(server))
+    api.createVersion.mockImplementation(async (_key, content) => {
+      server = { ...server, status: 'draft', version: content.version, content: structuredClone(content) }
+      return structuredClone(server)
+    })
+    const preserved = (configuration: any) => {
+      for (const key of ['curriculum', 'grade'] as const) {
+        expect(Object.hasOwn(configuration, key)).toBe(Object.hasOwn(education, key))
+        expect(configuration[key]).toEqual((education as any)[key])
+      }
+      expect(configuration.legacyExtra).toEqual(untouched.content.configuration.legacyExtra)
+      expect(configuration.checkpointPositions).toEqual(untouched.content.configuration.checkpointPositions)
+    }
+    await render('/create?template=owned')
+    expect(container.textContent).not.toMatch(/Curriculum|Grade/)
+    await change('#template-setup input', 'Unrelated title edit'); await click('Save draft')
+    expect(api.createVersion).toHaveBeenCalledTimes(1)
+    preserved(api.createVersion.mock.calls[0][1].configuration)
+    expect(server.content.displayName).toBe('Unrelated title edit')
+    await act(async () => root.render(null))
+    await render('/create?template=owned')
+    expect(container.querySelector<HTMLInputElement>('#template-setup input')!.value).toBe('Unrelated title edit')
+    if (category) {
+      // Reopen an approved immutable version and create a separately reviewed draft.
+      server.status = 'approved'
+      if (category === 'local') server.localApproval = { independentEvidence: true, authority: 'approved', version: server.version }
+      await act(async () => root.render(null))
+      await render('/create?template=owned')
+    }
+    const previous = structuredClone(server)
+    await change('#template-setup input', 'Next revision title'); await click('Save draft')
+    expect(api.createVersion).toHaveBeenCalledTimes(2)
+    expect(api.createVersion.mock.calls[1][1].version).toBe(previous.version + 1)
+    expect(api.createVersion.mock.calls[1][2]).toBeUndefined()
+    preserved(api.createVersion.mock.calls[1][1].configuration)
+    preserved(previous.content.configuration)
+    expect(server.localityId).toBe(original.localityId)
+    expect(server.localitySnapshot).toEqual(original.localitySnapshot)
+    expect(original).toEqual(untouched)
+  })
+}

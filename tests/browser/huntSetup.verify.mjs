@@ -18,7 +18,7 @@ async function mapReady(){await page.locator('.mapboxgl-canvas').waitFor();await
 function close(a,b){assert.ok(Math.abs(a-b)<.001,`${a} close to ${b}`)}
 try {
  for(const width of [1440,768,390,320]){
-  await page.setViewportSize({width,height:1000});await page.goto(url());await setup().waitFor();assert.equal(await builder().isVisible(),false);assert.equal(await builder().evaluate(el=>el.disabled),true)
+  await page.setViewportSize({width,height:1000});await page.goto(url());await setup().waitFor();assert.equal(await setup().getByLabel(/Curriculum|Grade/).count(),0);assert.equal(await builder().isVisible(),false);assert.equal(await builder().evaluate(el=>el.disabled),true)
   await shot(`local-${width}`);await setup().getByRole('button',{name:'Continue to Hunt builder'}).click();await setup().getByRole('alert').waitFor();assert.equal(await page.locator('#checkpoint-positions').count(),0)
   await setup().getByLabel('Country *',{exact:true}).selectOption('FR');await setup().getByLabel('City *',{exact:true}).fill('Paris')
   const option=setup().getByRole('button',{name:'Paris · Île-de-France · France',exact:true});await option.waitFor();assert.equal(await option.count(),1);await shot(`selection-${width}`)
@@ -29,7 +29,7 @@ try {
   await page.getByRole('button',{name:'Recenter map',exact:true}).click();await page.waitForFunction(()=>Math.abs(window.fixtureMap.getCenter().lat-48.8566)<.001);await shot(`recenter-${width}`,page.locator('#checkpoint-positions'))
   await page.getByRole('textbox',{name:'Template name',exact:true}).fill('Paris adventure');await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.getByRole('status').filter({hasText:'Template version saved by the backend'}).waitFor()
   const record=await page.evaluate(()=>window.fixtureRecord());assert.equal(record.localityId,'11111111-1111-4111-8111-111111111111');assert.equal('curriculum' in record.content.configuration,false);assert.equal('grade' in record.content.configuration,false);assert.deepEqual(record.content.configuration.checkpointPositions,[])
-  await page.goto(url('?mode=universal'));await setup().waitFor();assert.equal(await setup().getByLabel('City *',{exact:true}).count(),0);assert.equal(await setup().getByLabel('Curriculum (optional)',{exact:true}).isDisabled(),true);await setup().getByRole('button',{name:'Continue to Hunt builder'}).click();await shot(`universal-${width}`)
+  await page.goto(url('?mode=universal'));await setup().waitFor();assert.equal(await setup().getByLabel('City *',{exact:true}).count(),0);assert.equal(await setup().getByLabel(/Curriculum|Grade/).count(),0);await setup().getByRole('button',{name:'Continue to Hunt builder'}).click();await shot(`universal-${width}`)
   await page.goto(url('?existing'));await mapReady();assert.equal(await builder().isVisible(),true);const bounds=await page.evaluate(()=>window.fixtureMap.getBounds().toArray());assert.ok(bounds[0][0]<=2.3212&&bounds[1][0]>=2.3376);assert.ok(bounds[0][1]<=48.8606&&bounds[1][1]>=48.8656)
   await shot(`existing-route-${width}`,page.locator('#checkpoint-positions'))
   const before=await page.evaluate(()=>window.fixtureRecord().content.configuration);message=''
