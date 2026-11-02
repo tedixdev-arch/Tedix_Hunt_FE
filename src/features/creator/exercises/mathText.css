@@ -1,0 +1,7 @@
+.math-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.math-display { display: block; max-width: 100%; overflow-x: auto; }
+.math-display .katex-display { margin: .5em 0; }
+.math-inline { display: inline-block; max-width: 100%; overflow-x: auto; vertical-align: middle; }
+.math-error { color: #9f1239; }
+.math-error-message { font-size: .75rem; }
+.math-field-preview { display: block; min-width: 0; max-width: 100%; margin-top: .5rem; font-weight: normal; }
