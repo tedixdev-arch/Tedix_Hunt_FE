@@ -109,7 +109,7 @@ test('saved Local missing locality stays editable during registry failure but ca
 test('changing City after Continue preserves builder access and checkpoint coordinates through confirmation and clear', async () => {
   await render(); await selectCity()
   await change('#template-setup input','Adventure with a positioned checkpoint')
-  await act(async () => map.props.onMapClick(48.8,2.3))
+  await click('Checkpoints & Challenges'); await act(async () => map.props.onMapClick(48.8,2.3))
   const count = container.querySelector<HTMLInputElement>('[aria-label="Total checkpoint count"]')!
   expect(count.matches(':disabled')).toBe(false)
   vi.mocked(window.confirm).mockReturnValue(false); await change('#local-geography select','DE'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
@@ -121,7 +121,7 @@ test('changing City after Continue preserves builder access and checkpoint coord
 
 test('a different City after Continue keeps the builder unlocked and never rewrites positioned checkpoints', async () => {
   await render(); await selectCity(); await change('#template-setup input','Two cities')
-  await act(async () => map.props.onMapClick(48.8,2.3))
+  await click('Checkpoints & Challenges'); await act(async () => map.props.onMapClick(48.8,2.3))
   const lyon = { ...city, id:'22222222-2222-4222-8222-222222222222', name:'Lyon', administrativeContext:'Auvergne-Rhône-Alpes', latitude:45.76,longitude:4.84 }
   geo.search.mockResolvedValue({ localities:[lyon] }); await change('#local-geography input','Lyon')
   await click('Lyon · Auvergne-Rhône-Alpes · France'); expect(window.confirm).toHaveBeenCalledTimes(1); expect(builder().disabled).toBe(false); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
@@ -141,7 +141,7 @@ test('development setup preselects real Cluj UUID, continues to builder and cent
   expect(container.querySelector('#local-geography input')).toBeNull(); expect(container.textContent).not.toContain('City options'); expect(container.textContent).not.toContain('not available yet')
   expect(container.textContent).not.toMatch(/Curriculum|Grade/)
   await click('Continue to Template builder'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
-  expect(map.props.positionArea).toEqual(expect.objectContaining({ latitude: cluj.latitude, longitude: cluj.longitude }))
+  await click('Checkpoints & Challenges'); expect(map.props.positionArea).toEqual(expect.objectContaining({ latitude: cluj.latitude, longitude: cluj.longitude }))
   await change('#template-setup input', 'Cluj adventure'); await click('Save draft')
   expect(api.create.mock.calls[0][2]).toBe(cluj.id); expect(api.create.mock.calls[0][0].configuration).not.toHaveProperty('curriculum'); expect(api.create.mock.calls[0][0].configuration).not.toHaveProperty('grade')
 })

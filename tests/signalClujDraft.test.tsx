@@ -489,7 +489,7 @@ test('positioning lives only inside Feature 1 of seven feature steps', async () 
   expect(navigation.querySelectorAll('button')).toHaveLength(7)
   expect(navigation.textContent).not.toContain('Final Checkpoint')
   await feature('Personal Challenge')
-  expect(container.querySelector('[aria-label="Checkpoint position editor"]')).toBeNull()
+  expect(container.querySelector('[aria-label="Checkpoint position editor"]')?.closest('article')?.hidden).toBe(true)
 })
 
 test('arrival notes edit existing research metadata and survive save/reopen', async () => {
