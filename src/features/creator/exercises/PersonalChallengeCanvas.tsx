@@ -1,3 +1,4 @@
+import { MathHelp } from './MathText'
 import { useState } from 'react'
 import { ChallengeCanvas, PencilField } from './ChallengeCanvas'
 import { PersonalExtendedSurface } from './PersonalExtendedSurface'
@@ -17,7 +18,8 @@ export function PersonalChallengeCanvas({ exercise: e, onChange }: Props) {
   const showPlay = mode === 'visual' ? playing : step === 4
   const stepIssues = issues.filter(issue => step === 0 ? /title|instructions/i.test(issue) : step === 1 ? /interaction|activity|Range|Pattern|Example/i.test(issue) : step === 2 ? /answer|expected|reference|Construction|tick/i.test(issue) : step === 3 ? /hint|feedback|solution/i.test(issue) : true)
   return <div className="min-w-0 space-y-4">
-    <div className="challenge-mode" aria-label="Editing mode">{[['visual', 'Edit with Preview'], ['steps', 'Step by Step']].map(([id, label]) => <button type="button" key={id} aria-pressed={mode === id} onClick={() => setMode(id)}>{label}</button>)}</div>
+    <div className="challenge-mode" aria-label="Editing mode">{[['visual', 'Edit with Preview'], ['steps', 'Complex / LaTeX']].map(([id, label]) => <button type="button" key={id} aria-pressed={mode === id} onClick={() => setMode(id)}>{label}</button>)}</div>
+    {mode === 'steps' && <MathHelp />}
     {mode === 'visual' ? <div className="flex justify-center gap-2" aria-label="Canvas interaction">{['Edit', 'Play'].map(label => <button type="button" key={label} className={control} aria-pressed={playing === (label === 'Play')} disabled={label === 'Play' && !!errors.length} onClick={() => setPlaying(label === 'Play')}>{label}</button>)}</div> : <section aria-label="Guided challenge editor" className="space-y-3 rounded-xl bg-slate-50 p-3"><p>Step {step + 1} of {steps.length}</p><h4 aria-live="polite" className="font-bold">{steps[step]}</h4><div className="flex justify-between gap-2"><button type="button" className={control} disabled={!step} onClick={() => setStep(step - 1)}>Back</button><button type="button" className={control} disabled={step === 4 || stepIssues.length > 0} onClick={() => setStep(step + 1)}>Next</button></div></section>}
     <div hidden={showPlay}>
       <ChallengeCanvas exercise={e} playing={false}><section className="space-y-5" aria-label="Personal visual authoring canvas">

@@ -28,7 +28,7 @@ for (const type of extended) test(`${type}: contextual focus, shared guided stat
   expect(document.activeElement).toBe(field); await input(field, `My ${type}`)
   await act(async () => field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
   expect(document.activeElement).toBe(button('Edit Title')); expect(state.id).toBe(id); expect(state.authored).toEqual(authored)
-  await click('Step by Step'); expect(container.querySelector('[aria-label="Guided challenge editor"]')).not.toBeNull()
+  await click('Complex / LaTeX'); expect(container.querySelector('[aria-label="Guided challenge editor"]')).not.toBeNull()
   await click('Next'); expect(container.querySelector(`[aria-label="${type} visual editor"]`)).not.toBeNull()
   await click('Next'); await click('Next'); await click('Next')
   expect(container.querySelector(`[aria-label="${type} interactive exercise"]`)).not.toBeNull()
@@ -90,7 +90,7 @@ test('invalid number-line edits block Play and guided continuation rather than c
   await click('Edit Maximum'); await input(container.querySelector('input[type="number"]')!, '')
   expect(Number.isNaN((state.authored!.activity as any).max)).toBe(true)
   expect(button('Play').disabled).toBe(true)
-  await click('Step by Step'); await click('Next'); expect(button('Next').disabled).toBe(true)
+  await click('Complex / LaTeX'); await click('Next'); expect(button('Next').disabled).toBe(true)
 })
 
 test('minimum number-line position is an explicit keyboard answer and survives mode switches', async () => {
@@ -101,7 +101,7 @@ test('minimum number-line position is an explicit keyboard answer and survives m
   const simulation = container.querySelector('[aria-label="number-line interactive exercise"]')!, slider = simulation.querySelector<HTMLInputElement>('input[type="range"]')!
   await act(async () => slider.dispatchEvent(new KeyboardEvent('keyup', { key: 'Home', bubbles: true })))
   await click('Check answer'); expect(simulation.querySelector('[role="status"]')?.textContent).toBe(state.correctFeedback)
-  await click('Step by Step'); await click('Edit with Preview')
+  await click('Complex / LaTeX'); await click('Edit with Preview')
   expect(simulation.querySelector('[role="status"]')?.textContent).toBe(state.correctFeedback)
   await click('Reset'); expect(simulation.querySelector('[role="status"]')).toBeNull()
   await click('Check answer'); expect(simulation.querySelector('[role="status"]')?.textContent).toBe(state.incorrectFeedback)

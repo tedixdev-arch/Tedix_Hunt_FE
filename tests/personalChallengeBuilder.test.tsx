@@ -81,7 +81,7 @@ for (const type of ['tap-pair', 'single-choice', 'fill-blank']) test(`${type}: p
   await click('Play'); await click('Check answer'); await click('Hint'); await click('Solution'); await click('Reset')
   expect(state).toEqual(edited)
   await click('Edit'); expect(container.textContent).toContain(type === 'fill-blank' ? 'Edited ___ question' : 'Edited card')
-  await click('Step by Step'); expect(container.textContent).toContain('Step 1')
+  await click('Complex / LaTeX'); expect(container.textContent).toContain('Step 1')
   const surface = container.querySelector(`[aria-label="${type === 'tap-pair' ? 'Pair cards' : type === 'single-choice' ? 'Answer options' : 'Blank questions'} editor"]`)!
   expect(surface.querySelectorAll('input:not([type="radio"]):not([type="checkbox"])')).toHaveLength(type === 'single-choice' ? 1 : 2)
   await click('Next'); await click('Back'); await click('Edit with Preview')
@@ -176,7 +176,7 @@ test('metadata-free custom snapshots retain authoritative same-slot identity acr
 })
 
 test('selecting question text and inserting a blank captures the accepted answer without changing its identity', async () => {
-  await mount(asDraft(custom('fill-blank'))); await click('Step by Step')
+  await mount(asDraft(custom('fill-blank'))); await click('Complex / LaTeX')
   const before: any = state.custom!.authored!.activity
   const question = container.querySelector('input')!
   await input(question, 'The treasure is under the bridge.')
@@ -264,7 +264,7 @@ for (const [index, signal] of checkpointExercises.entries()) test(`${signal.kind
 })
 
 for (const type of ['tap-pair', 'single-choice', 'fill-blank']) test(`${type}: guided reordering keeps answer references and validates only the current task`, async () => {
-  await mount(asDraft(custom(type))); await click('Step by Step')
+  await mount(asDraft(custom(type))); await click('Complex / LaTeX')
   const before: any = structuredClone(state.custom!.authored)
   await click('Move row 1 down')
   const after: any = state.custom!.authored
