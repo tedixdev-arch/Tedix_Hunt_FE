@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, afterEach, test, expect, vi } from 'vitest'
 import { TemplateOneExperience } from '../src/pages/template-one/TemplateOneExperience'
-import { ParticipantReadinessPage } from '../src/pages/ParticipantReadinessPage'
+import { ParticipantReadinessPrototype as ParticipantReadinessPage } from '../src/pages/ParticipantReadinessPrototype'
 import { OrganizerMonitorPage } from '../src/pages/OrganizerMonitor'
 
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <header>Organizer</header> }))
