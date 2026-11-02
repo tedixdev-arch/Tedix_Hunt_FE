@@ -1,3 +1,4 @@
+import { FormulaField, FormulaScope } from './FormulaEditor'
 import { MathFieldPreview } from './MathText'
 import { PredefinedChallengeContent } from './PredefinedChallengeContent'
 import { gameplayPresentation } from '../CheckpointGameplayEditor'
@@ -13,7 +14,10 @@ import { PersonalMechanicEditor, friendlyIssues, originalVisualMechanics } from 
 import { modernContext, type PersonalCreationContext } from './creationContext'
 
 type Props = { value: CheckpointGameplay; context?: PersonalCreationContext; draft?: AuthoringDraft; onChange: (cp: CheckpointGameplay) => void; onDraftChange: (d: AuthoringDraft) => void }
-export function PersonalChallengeAuthoring({ value, context = modernContext, onChange, draft = { source: 'saved', assignment: 'predefined' }, onDraftChange }: Props) {
+export function PersonalChallengeAuthoring(props: Props) {
+  return <FormulaScope><PersonalChallengeAuthoringContent {...props} /></FormulaScope>
+}
+function PersonalChallengeAuthoringContent({ value, context = modernContext, onChange, draft = { source: 'saved', assignment: 'predefined' }, onDraftChange }: Props) {
   const customMode = draft.source === 'custom', exampleMode = draft.source === 'example', existingMode = context.mode === 'legacy' || context.mode === 'unresolved' && draft.contextChoice === 'compatibility'
   const saved = savedExercise({ ...value, customExercises: undefined }, 'kind')
   const active = draft.emptySelection ? undefined : customMode ? draft.custom : exampleMode ? draft.exercise : savedExercise({ ...value, kind: existingMode ? draft.legacyKind ?? value.kind : value.kind, customExercises: undefined }, 'kind')
@@ -59,7 +63,7 @@ export function PersonalChallengeAuthoring({ value, context = modernContext, onC
     {(!existingMode || customMode) && <p role="note" className="text-sm text-slate-600">{!customMode && !exampleMode && saved ? 'Choose a mechanic to create a replacement. Your current challenge stays assigned until you apply a change.' : <>{customMode ? 'Save your own challenge for review. ' : 'Try an example, then choose Create Your Own to adapt it. '}These challenges are not available in published Hunts yet.</>}</p>}
     {!existingMode && !customMode && exampleMode && saved && <button type="button" className={control} onClick={() => changeView({ source: 'saved', emptySelection: false })}>View saved challenge</button>}
     {customMode && active ? <section aria-label={`${active.type} content editor`} className="space-y-4">
-      <div className="space-y-3">{(originalVisualMechanics.includes(active.type) ? ['title', 'instructions'] as const : []).map(key => <label key={key} className="block text-sm font-bold">{key === 'title' ? 'Title' : 'Instructions / Question'}<textarea aria-label={key === 'title' ? 'Title' : 'Instructions / Question'} required aria-invalid={!active[key].trim()} maxLength={key === 'title' ? 200 : 4000} className={`${control} mt-2 w-full`} value={active[key]} onChange={e => update({ ...active, [key]: e.target.value })} /><MathFieldPreview value={active[key]} /></label>)}</div>
+      <div className="space-y-3">{(originalVisualMechanics.includes(active.type) ? ['title', 'instructions'] as const : []).map(key => <FormulaField key={key} label={key === 'title' ? 'Title' : 'Instructions / Question'} value={active[key]} maxLength={key === 'title' ? 200 : 4000} onChange={value => update({ ...active, [key]: value })}><label className="block text-sm font-bold">{key === 'title' ? 'Title' : 'Instructions / Question'}<textarea aria-label={key === 'title' ? 'Title' : 'Instructions / Question'} required aria-invalid={!active[key].trim()} maxLength={key === 'title' ? 200 : 4000} className={`${control} mt-2 w-full`} value={active[key]} onChange={e => update({ ...active, [key]: e.target.value })} /><MathFieldPreview value={active[key]} /></label></FormulaField>)}</div>
       <PersonalMechanicEditor key={active.id} exercise={active} onChange={update} />
     </section> : active ? <><PredefinedChallengeContent key={active.id} exercise={active} />{errors.length > 0 && <p role="alert" className="text-sm text-red-800">{friendlyIssues(errors).join(' ')} Saved content is preserved.</p>}</> : <p className="text-sm text-slate-600">Choose a Personal Challenge to begin.</p>}
     {!(exampleMode && !draft.emptySelection) && (active || draft.emptySelection) && <button type="button" className={`${control} w-full bg-emerald-500 px-5 font-bold`} disabled={errors.length > 0} onClick={apply}>{customMode && active ? 'Apply to Hunt' : draft.emptySelection ? 'Remove challenge' : existingMode ? 'Use this challenge' : 'Use saved challenge'}</button>}
