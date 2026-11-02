@@ -1,4 +1,5 @@
 node_modules/
+work/creator-integration/
 dist/
 dev-dist/
 .env*.local
