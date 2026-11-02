@@ -53,14 +53,14 @@ function ExistingChallengeAuthoring({ field, value, onChange, draft = { source: 
       {draft.source === 'saved' ? <button type="button" className={control} onClick={() => {
         if (selectedAssignment(draft) === 'custom' && !window.confirm('Replace this custom exercise with the predefined assignment in the next saved version? Your custom content will stay in this session.')) return
         onDraftChange({ ...draft, assignment: 'predefined' })
-      }}>Use predefined assignment</button> : <button type="button" className={control} disabled={!draft.custom} onClick={() => onDraftChange({ ...draft, assignment: 'custom' })}>Use this custom exercise</button>}
+      }}>Apply predefined challenge</button> : <button type="button" className={control} disabled={!draft.custom} onClick={() => onDraftChange({ ...draft, assignment: 'custom' })}>Apply custom challenge</button>}
       <button type="button" className={control} onClick={() => {
         if (window.confirm('Discard this custom draft and all its type variants, and use the predefined assignment in the next saved version?')) onDraftChange({ source: 'saved', assignment: 'predefined' })
       }}>Discard custom draft and use predefined</button>
     </div>}
     {conversionError && <p role="alert">{conversionError}</p>}
     <p className="text-sm text-slate-600">Use Save draft to persist this exercise with its Template. Custom exercises can be reviewed, but live Hunts containing them cannot be published yet.</p>
-    <button type="button" className={`${control} font-bold`} disabled={!active || errors.length > 0} onClick={() => setPreview(true)}>Preview Exercise</button>
+    <button type="button" className={`${control} font-bold`} disabled={!active || errors.length > 0} onClick={() => setPreview(true)}>Try challenge</button>
     {active && errors.length > 0 && draft.source === 'saved' && <p role="note" className="text-sm text-amber-900">This saved payload cannot be simulated safely: {errors.join(' ')} Its stored content is preserved.</p>}
     {!active && <p className="text-sm text-slate-600">Select an existing exercise to preview. Unsupported saved identifiers are preserved.</p>}
     {preview && active && <ExercisePreview exercise={active} onClose={() => setPreview(false)} />}

@@ -89,7 +89,7 @@ test('invalid number-line edits block Play and guided continuation rather than c
   await act(async () => root.render(<Harness initial={authorPrototype(prototypes.find(e => e.type === 'number-line')!)} />))
   await click('Edit Maximum'); await input(container.querySelector('input[type="number"]')!, '')
   expect(Number.isNaN((state.authored!.activity as any).max)).toBe(true)
-  expect(button('Play').disabled).toBe(true)
+  expect(button('Try challenge').disabled).toBe(true)
   await click('Complex / LaTeX'); await click('Next'); expect(button('Next').disabled).toBe(true)
 })
 
@@ -97,7 +97,7 @@ test('minimum number-line position is an explicit keyboard answer and survives m
   const initial = authorPrototype(prototypes.find(e => e.type === 'number-line')!)
   ;(initial.authored!.expected as any).target = (initial.authored!.activity as any).min
   await act(async () => root.render(<Harness initial={initial} />))
-  await click('Play')
+  await click('Try challenge')
   const simulation = container.querySelector('[aria-label="number-line interactive exercise"]')!, slider = simulation.querySelector<HTMLInputElement>('input[type="range"]')!
   await act(async () => slider.dispatchEvent(new KeyboardEvent('keyup', { key: 'Home', bubbles: true })))
   await click('Check answer'); expect(simulation.querySelector('[role="status"]')?.textContent).toBe(state.correctFeedback)

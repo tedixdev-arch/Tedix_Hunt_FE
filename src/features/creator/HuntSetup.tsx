@@ -16,6 +16,6 @@ export function HuntSetup({ local, savedId, snapshot, value, onChange, onSelect,
     {local && (developmentLocationEnabled() ? <DevelopmentLocationSelector savedId={savedId} snapshot={snapshot} value={value} onChange={onChange} onSelect={onSelect} beforeChange={beforeChange} /> : <LocalGeographySelector compact savedId={savedId} snapshot={snapshot} value={value} onChange={onChange} onSelect={onSelect} beforeChange={beforeChange} />)}
     {cityUnavailable && <div className="mt-3 text-sm"><p role="alert">The city location could not be loaded. Your selected city is kept.</p><button type="button" onClick={onRetryCity} className="min-h-11 font-bold underline">Retry city location</button></div>}
     {error && <p role="alert" className="mt-3 text-sm font-bold text-red-800">{error}</p>}
-    <button type="button" onClick={onContinue} className="mt-5 min-h-12 rounded-xl bg-emerald-500 px-6 font-bold">Continue to Hunt builder</button>
+    <button type="button" onClick={onContinue} className="mt-5 min-h-12 rounded-xl bg-emerald-500 px-6 font-bold">Continue to Template builder</button>
   </section>
 }

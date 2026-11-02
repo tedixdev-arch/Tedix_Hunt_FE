@@ -32,14 +32,14 @@ const button = (text: string) => text === '2.' ? container.querySelectorAll('nav
 async function click(text: string) { await act(async () => button(text).click()) }
 async function render() { await act(async () => root.render(<MemoryRouter initialEntries={['/create?template=owned-local']}><CreatorTemplateEditorPage /></MemoryRouter>)) }
 async function ready() {
-  await render(); expect(button('Submit version').disabled).toBe(true)
+  await render(); expect(button('Submit for Approval').disabled).toBe(true)
   await click('Run template validation')
-  expect(button('Submit version').disabled).toBe(false)
+  expect(button('Submit for Approval').disabled).toBe(false)
   expect(api.get).toHaveBeenCalledTimes(1); expect(api.submit).not.toHaveBeenCalled()
 }
 
 test('Local preflight reads current owner state after readiness and submits the exact saved version once', async () => {
-  await ready(); await click('Submit version')
+  await ready(); await click('Submit for Approval')
   expect(api.get).toHaveBeenCalledTimes(2); expect(api.get).toHaveBeenLastCalledWith('owned-local')
   expect(api.submit).toHaveBeenCalledExactlyOnceWith('owned-local', 3)
   expect(container.textContent).toContain('Version 3 submitted for Admin review')
@@ -51,18 +51,18 @@ test.each(['version', 'locality ID', 'locality snapshot', 'status', 'content'])(
   if (changed === 'locality snapshot') record.localitySnapshot = { ...record.localitySnapshot!, latitude: 47 }
   if (changed === 'status') record.status = 'submitted'
   if (changed === 'content') record.content.displayName = 'Another session'
-  await click('Submit version')
+  await click('Submit for Approval')
   expect(api.get).toHaveBeenCalledTimes(2); expect(api.submit).not.toHaveBeenCalled(); expect(api.createVersion).not.toHaveBeenCalled()
   expect(container.querySelector('[role=alert]')?.textContent).toContain('saved version changed')
-  expect(button('Submit version').disabled).toBe(true); expect(button('Reopen saved version')).toBeDefined()
+  expect(button('Submit for Approval').disabled).toBe(true); expect(button('Reopen saved version')).toBeDefined()
   expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Local mystery')
 })
 test.each([401, 403, 404, 409])('Local preflight denial/conflict %s sends no submission', async status => {
   await ready(); api.get.mockRejectedValueOnce(new ApiError('Denied', status, 'http'))
-  await click('Submit version'); expect(api.submit).not.toHaveBeenCalled(); expect(container.querySelector('[role=alert]')).not.toBeNull()
+  await click('Submit for Approval'); expect(api.submit).not.toHaveBeenCalled(); expect(container.querySelector('[role=alert]')).not.toBeNull()
 })
 test('Local readiness and submitted lifecycle remain restrictive', async () => {
-  await render(); await click('Submit version'); expect(api.get).toHaveBeenCalledTimes(1); expect(api.submit).not.toHaveBeenCalled()
+  await render(); await click('Submit for Approval'); expect(api.get).toHaveBeenCalledTimes(1); expect(api.submit).not.toHaveBeenCalled()
   await act(async () => root.unmount()); root = createRoot(container); record.status = 'submitted'; await render()
-  expect(container.textContent).toContain('Version 3 submitted for Admin review'); expect(button('Submit version')).toBeUndefined(); expect(api.submit).not.toHaveBeenCalled()
+  expect(container.textContent).toContain('Version 3 submitted for Admin review'); expect(button('Submit for Approval')).toBeUndefined(); expect(api.submit).not.toHaveBeenCalled()
 })

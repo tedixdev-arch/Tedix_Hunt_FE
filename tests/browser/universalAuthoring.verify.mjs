@@ -17,7 +17,7 @@ for (const width of [1440,768,390,320]) {
   const save = page.getByRole('button', { name: 'Save draft', exact: true })
   await save.click(); await page.getByText('Saving Template…', { exact: true }).first().waitFor({ state: 'hidden' })
   assert.equal(await page.evaluate(() => window.fixtureCalls.filter(call => call.method === 'create').length), 1)
-  const submit = page.getByRole('button', { name: 'Submit version to Admin', exact: true })
+  const submit = page.getByRole('button', { name: 'Submit for Approval', exact: true })
   assert.equal(await submit.isEnabled(), true)
   await title.fill(`Saved revision ${width}`); assert.equal(await submit.isEnabled(), false)
   await save.click(); await page.getByText('Universal Template · Draft · Version 2', { exact: true }).waitFor()

@@ -172,8 +172,8 @@ test('custom copy, inline testing and toggling preserve independent editor state
   const before = structuredClone(prototypes)
   await render(<AuthoringHarness />); await click('Create Your Own')
   await input(container.querySelector('textarea')!, 'Unsaved title')
-  await click('Apply to Hunt'); expect(container.textContent).toContain('Submission blocked')
-  await click('Play'); expect(container.querySelector('[aria-label="Mobile challenge canvas"]')?.textContent).toContain('Unsaved title')
+  await click('Apply challenge'); expect(container.textContent).toContain('Submission blocked')
+  await click('Try challenge'); expect(container.querySelector('[aria-label="Mobile challenge canvas"]')?.textContent).toContain('Unsaved title')
   await click('Edit'); expect(container.querySelector('textarea')?.value).toBe('Unsaved title')
   await click('Predefined'); expect(container.textContent).toContain('Submission blocked')
   await click('Create Your Own'); expect(container.querySelector('textarea')?.value).toBe('Unsaved title')
@@ -214,7 +214,7 @@ test('viewing Predefined retains custom content and only explicit actions change
   await render(<AuthoringHarness />); await click('Create Your Own')
   await input(container.querySelector('textarea')!, 'Retained experiment')
   expect(container.textContent).toContain('Supported submission')
-  await click('Apply to Hunt'); await click('Predefined'); expect(container.textContent).toContain('Submission blocked')
+  await click('Apply challenge'); await click('Predefined'); expect(container.textContent).toContain('Submission blocked')
   await input(container.querySelector('[aria-label="Personal Challenge"]')!, ''); await click('Remove challenge'); expect(container.textContent).toContain('Supported submission')
   await click('Create Your Own'); expect(container.querySelector('textarea')?.value).toBe('Retained experiment')
   await click('Discard changes'); await click('Create Your Own'); expect(container.querySelector('textarea')?.value).not.toBe('Retained experiment')
@@ -239,4 +239,36 @@ test('choosing another exercise type retains authored type variants until explic
   await chooseType('number-line'); await click('Edit Instructions'); expect(container.querySelector('textarea')?.value).toBe('Retained numeric exercise')
   await click('Discard changes'); await click('Create Your Own'); await chooseType('true-false')
   expect(container.querySelector('textarea')?.value).not.toBe('Retained truth statement')
+})
+
+test('compatibility assignment labels distinguish predefined and custom while retaining confirmation and drafts', async () => {
+  let draft: AuthoringDraft
+  const onChange = vi.fn()
+  function CompatibilityHarness() {
+    const [value, setValue] = useState<AuthoringDraft>({ source: 'saved', assignment: 'predefined' })
+    draft = value
+    return <ChallengeAuthoring field="teamKind" context={{ mode: 'legacy', kinds: [] }} value={{ teamKind: 'scrambled-word' }} onChange={onChange} draft={value} onDraftChange={setValue} />
+  }
+  const labels = () => [...container.querySelectorAll('button')].map(node => node.textContent)
+  await render(<CompatibilityHarness />); await click('Create Your Own')
+  const custom = draft!.custom
+  expect(labels()).toContain('Apply custom challenge')
+  expect(labels()).not.toContain('Apply predefined challenge')
+  expect(labels()).not.toContain('Apply challenge')
+  await click('Predefined')
+  expect(labels()).toContain('Apply predefined challenge')
+  expect(labels()).not.toContain('Apply custom challenge')
+  vi.mocked(window.confirm).mockReturnValueOnce(false)
+  await click('Apply predefined challenge')
+  expect(draft!.assignment).toBe('custom'); expect(draft!.custom).toBe(custom)
+  expect(window.confirm).toHaveBeenLastCalledWith('Replace this custom exercise with the predefined assignment in the next saved version? Your custom content will stay in this session.')
+  await click('Apply predefined challenge')
+  expect(draft!.assignment).toBe('predefined'); expect(draft!.custom).toBe(custom)
+  await click('Create Your Own')
+  expect(draft!.assignment).toBe('predefined')
+  const confirmations = vi.mocked(window.confirm).mock.calls.length
+  await click('Apply custom challenge')
+  expect(draft!.assignment).toBe('custom'); expect(draft!.custom).toBe(custom)
+  expect(window.confirm).toHaveBeenCalledTimes(confirmations)
+  expect(onChange).not.toHaveBeenCalled()
 })

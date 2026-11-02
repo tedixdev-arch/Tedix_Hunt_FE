@@ -23,7 +23,7 @@ for (const width of [1440,768,390,320]) {
   await page.getByRole('spinbutton',{name:'Total checkpoint count'}).fill('7')
   assert.equal(await page.locator('[data-checkpoint]').count(),7)
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.querySelector('main').scrollWidth>innerWidth),false)
-  await featureArticle.getByRole('button',{name:'Save & continue',exact:true}).click()
+  await featureArticle.getByRole('button',{name:'Continue',exact:true}).click()
   await page.getByText('Feature 2 of 7',{exact:true}).waitFor()
   assert.equal(await page.locator('#checkpoint-positions').count(),0)
   for (const name of ['Personal Challenge','Team Challenge']) {
@@ -34,7 +34,7 @@ for (const width of [1440,768,390,320]) {
     await terminal.focus(); await page.keyboard.press('Enter')
     if (name === 'Personal Challenge' && await page.getByRole('button',{name:'Edit existing challenges',exact:true}).count()) await page.getByRole('button',{name:'Edit existing challenges',exact:true}).click()
     await page.getByRole('combobox',{name,exact:true}).selectOption(name==='Personal Challenge'?'square':'hypothesis')
-    if (name === 'Personal Challenge') await page.getByRole('button',{name:'Use this challenge',exact:true}).click()
+    if (name === 'Personal Challenge') await page.getByRole('button',{name:'Apply challenge',exact:true}).click()
     await page.getByRole('button',{name:'Create Your Own',exact:true}).click()
     await page.getByRole('region',{name:`${name} authoring`,exact:true}).waitFor()
     await page.getByRole('button',{name:'Predefined',exact:true}).click()

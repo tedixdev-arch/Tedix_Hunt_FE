@@ -66,7 +66,7 @@ function change(selector: string, value: string) {
 async function verify() {
   await click('2.')
   await click('Verify saved route')
-  await click('Save & continue')
+  await click('Continue')
 }
 async function save() {
   await click('9.')
@@ -136,7 +136,7 @@ async function selectGameplay(label: string, value: string) {
     select.value = value
     select.dispatchEvent(new Event('change', { bubbles: true }))
   })
-  if (label === 'Personal Challenge') await click('Use this challenge')
+  if (label === 'Personal Challenge') await click('Apply challenge')
 }
 
 test('FinishPoint uses shared gameplay choices and saves one unnumbered terminal with exact scoring', async () => {
@@ -173,9 +173,9 @@ test('saved terminal gameplay reloads, edits preserve custom data, and exact sav
   expect(next.checkpoints[0]).toEqual({ ...original.content.checkpoints[0] as object, kind: 'square' })
   expect(next.checkpoints[1]).toEqual(original.content.checkpoints[1])
   expect(next.scoring).toEqual(original.content.scoring)
-  await click('Preview full journey'); await click('Exit preview'); await click('Run template validation')
+  await click('Preview journey'); await click('Exit preview'); await click('Run template validation')
   mocks.submit.mockImplementation(async () => ({ ...record, version: 4, content: next, status: 'submitted' }))
-  await click('Submit version to Admin')
+  await click('Submit for Approval')
   expect(mocks.submit).toHaveBeenCalledWith('trail', 4)
   expect(record).toEqual(original)
 })
@@ -186,7 +186,7 @@ test('older geographic drafts can explicitly configure terminal without requirin
   const next = mocks.createVersion.mock.calls[0][1]
   expect(next.checkpoints[1]).toEqual({ role: 'terminal' })
   expect(next.configuration.normalCheckpointCount).toBe(1)
-  await click('Preview full journey'); await click('Exit preview'); await click('Run template validation')
+  await click('Preview journey'); await click('Exit preview'); await click('Run template validation')
   expect(container.textContent).toContain('Validation passed')
 })
 
@@ -310,7 +310,7 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   })
   const validate = [...container.querySelectorAll('button')].find(button => button.textContent === 'Run template validation')!
   expect(validate.disabled).toBe(true)
-  await click('Preview full journey')
+  await click('Preview journey')
   const dialog = container.querySelector('[role="dialog"]')!
   expect(dialog.textContent).toContain('Unsaved Trail')
   expect(container.querySelector('div[hidden]')).not.toBeNull()
@@ -348,12 +348,12 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
 test('incomplete draft preview leaves Creator validation and saving boundaries intact', async () => {
   delete record.content.configuration.finishPoint
   const original = structuredClone(record)
-  await render(); await click('Preview full journey'); await click('Start preview')
+  await render(); await click('Preview journey'); await click('Start preview')
   expect(container.querySelector('[role="dialog"]')).not.toBeNull()
   await click('Exit preview')
   expect(container.textContent).toContain('Place one FinishPoint in Checkpoint Positions')
   expect([...container.querySelectorAll('button')].find(button => button.textContent === 'Run template validation')!.disabled).toBe(true)
-  expect([...container.querySelectorAll('button')].find(button => button.textContent === 'Submit version to Admin')!.disabled).toBe(true)
+  expect([...container.querySelectorAll('button')].find(button => button.textContent === 'Submit for Approval')!.disabled).toBe(true)
   expect(mocks.createVersion).not.toHaveBeenCalled()
   expect(record).toEqual(original)
 })
@@ -426,7 +426,7 @@ test.each(['universal', 'local'] as const)('%s creation uses seven confirmation 
   if (category === 'local') {
     await act(async () => { const select=container.querySelector<HTMLSelectElement>('#local-geography select')!; select.value='FR'; select.dispatchEvent(new Event('change',{bubbles:true})) })
     await act(async () => { const input=container.querySelector<HTMLInputElement>('#local-geography input')!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'Paris'); input.dispatchEvent(new Event('input',{bubbles:true})) })
-    await click('Paris · Île-de-France · France'); await click('Continue to Hunt builder')
+    await click('Paris · Île-de-France · France'); await click('Continue to Template builder')
   }
   expect(container.textContent).toContain('0 of 7 complete')
   await currentStep(3); expect(container.textContent).toContain('0 of 7 complete')
@@ -462,12 +462,12 @@ test.each(['local', undefined] as const)('Feature 1 contains one positioning edi
   expect(article.querySelector('[data-position-count="7"]')).not.toBeNull()
   await click('FinishPoint location details')
   expect(article.querySelector('[aria-label="FinishPoint placement"]')).not.toBeNull()
-  await click(category ? 'Continue' : 'Save & continue')
+  await click(category ? 'Continue' : 'Continue')
   expect(container.textContent).toContain('Feature 2 of 7')
   expect(container.querySelector('#checkpoint-positions')).toBeNull()
   expect(mocks.createVersion).not.toHaveBeenCalled()
   expect(mocks.submit).not.toHaveBeenCalled()
-  expect([...container.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Submit version to Admin')!.disabled).toBe(true)
+  expect([...container.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Submit for Approval')!.disabled).toBe(true)
   await currentStep(0)
   expect(container.querySelector('[data-position-count="7"]')).not.toBeNull()
 })
@@ -527,7 +527,7 @@ async function experimentTitle(value: string) {
     title.dispatchEvent(new Event('input', { bubbles: true }))
   })
 }
-test('Use predefined assignment removes only the selected Personal checkpoint and preserves Team and FinishPoint drafts', async () => {
+test('Apply challenge removes only the selected Personal checkpoint and preserves Team and FinishPoint drafts', async () => {
   sixCheckpointRecord(); await render(); await currentStep(1); await click('Create Your Own'); await experimentTitle('Personal one')
   await checkpointButton(7); await click('Create Your Own'); await experimentTitle('Personal FinishPoint')
   await currentStep(2); await checkpointButton(1); await click('Create Your Own'); await experimentTitle('Team one')
@@ -545,7 +545,7 @@ test.each(['personal', 'team'] as const)('%s custom content saves with backend i
   ;(record.content.checkpoints[0] as any).customExercises = { [classification]: wire }
   await render(); await currentStep(classification === 'personal' ? 1 : 2)
   await experimentTitle('Persisted custom title')
-  const submit = () => [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Submit version to Admin')!
+  const submit = () => [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Submit for Approval')!
   expect(submit().disabled).toBe(true)
   mocks.createVersion.mockImplementationOnce(async (key, content) => {
     const result = structuredClone(content)
@@ -563,12 +563,12 @@ test.each(['personal', 'team'] as const)('%s custom content saves with backend i
   await render(); await currentStep(classification === 'personal' ? 1 : 2)
   expect((await titleField()).value).toBe('Persisted custom title')
   mocks.submit.mockResolvedValue({ ...record, status: 'submitted' })
-  await click('Submit version to Admin'); expect(mocks.submit).toHaveBeenCalledWith('trail', saved.version)
+  await click('Submit for Approval'); expect(mocks.submit).toHaveBeenCalledWith('trail', saved.version)
   expect(record).toEqual(saved)
 })
 test('backend rejection preserves custom content and preview-only variants; explicit discard permits predefined saving', async () => {
   sixCheckpointRecord(); record.category = 'universal'
-  await render(); await currentStep(1); await click('Create Your Own'); await experimentTitle('Retained after rejection'); await click('Apply to Hunt')
+  await render(); await currentStep(1); await click('Create Your Own'); await experimentTitle('Retained after rejection'); await click('Apply challenge')
   mocks.createVersion.mockRejectedValueOnce(new Error('Connection lost'))
   await click('Save draft')
   expect((await titleField()).value).toBe('Retained after rejection')
@@ -602,7 +602,7 @@ test('choosing a predefined assignment retains the custom draft but explicitly r
   sixCheckpointRecord(); record.category = 'universal'
   ;(record.content.checkpoints[0] as any).customExercises = { personal: structuredClone(exerciseFixtures[1]) }
   await render(); await currentStep(1); await experimentTitle('Retained custom draft')
-  await click('Predefined'); await click('View saved challenge'); await click('Use saved challenge')
+  await click('Predefined'); await click('View saved challenge'); await click('Apply challenge')
   await click('Save draft')
   expect(mocks.createVersion.mock.calls[0][1].checkpoints[0].customExercises).toBeUndefined()
   await click('Create Your Own')
@@ -631,9 +631,9 @@ for (const classification of ['personal', 'team'] as const) for (const terminal 
     await click('Predefined')
     await click('View saved challenge')
     vi.mocked(window.confirm).mockReturnValueOnce(false)
-    await click(classification === 'personal' ? 'Use saved challenge' : 'Use saved Team Challenge')
+    await click(classification === 'personal' ? 'Apply challenge' : 'Apply challenge')
     expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toContain('Custom')
-    await click(classification === 'personal' ? 'Use saved challenge' : 'Use saved Team Challenge')
+    await click(classification === 'personal' ? 'Apply challenge' : 'Apply challenge')
     expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toMatch(/Predefined|Current challenge|Saved Team Challenge|No Team Challenge/)
     await click('Create Your Own') // Viewing retained content cannot silently reactivate it.
     expect((await titleField()).value).toBe('Retained authored variant')
@@ -654,15 +654,15 @@ for (const classification of ['personal', 'team'] as const) for (const terminal 
     // Save acknowledged only the active selection, keeping the unrelated session variant.
     expect((await titleField()).value).toBe('Retained authored variant')
     mocks.submit.mockImplementation(async (key, version) => { expect(key).toBe(record.key); expect(version).toBe(record.version); return { ...record, status: 'submitted' } })
-    await click('Submit version to Admin'); expect(mocks.submit).toHaveBeenCalledWith(record.key, 4)
+    await click('Submit for Approval'); expect(mocks.submit).toHaveBeenCalledWith(record.key, 4)
     expect((record.content.checkpoints[index] as any).customExercises[classification]).toBeUndefined()
     await act(async () => root.unmount()); root = createRoot(container)
     await render(); await currentStep(feature); if (terminal) await checkpointButton(7)
     expect(container.querySelector('[aria-label$="content editor"]')).toBeNull() // Reload follows the persisted selection.
     await click('Create Your Own')
     if (classification === 'team') await act(async () => { const select = container.querySelector<HTMLSelectElement>('[aria-label="Team Challenge authoring"] select')!; select.value = 'distributed-information'; select.dispatchEvent(new Event('change', { bubbles: true })) })
-    await experimentTitle('New custom after predefined'); if (classification === 'personal') await click('Apply to Hunt')
-    if (classification === 'team') await click('Apply Team Challenge'); await click('Save draft')
+    await experimentTitle('New custom after predefined'); if (classification === 'personal') await click('Apply challenge')
+    if (classification === 'team') await click('Apply challenge'); await click('Save draft')
     expect((record.content.checkpoints[index] as any).customExercises[classification].title).toBe('New custom after predefined')
     await act(async () => root.unmount()); root = createRoot(container)
     await render(); await currentStep(feature); if (terminal) await checkpointButton(7)
