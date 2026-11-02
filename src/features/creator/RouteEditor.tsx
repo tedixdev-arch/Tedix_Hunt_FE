@@ -36,6 +36,8 @@ const safetyLabels: Record<string, string> = {
 const safetyItems = ['Safe standing area', 'Accessible walking route', 'Road crossings reviewed', 'No restricted areas', 'Day and night suitability checked', 'Emergency access available']
 
 interface Props {
+  // Release WebGL while hidden; the inspector, pending edit and history stay mounted.
+  active?: boolean
   city?: LocalitySnapshot | null
   cameraMemory?: RefObject<MapCamera | null>
   cityCameraRequest?: MapCamera
@@ -54,7 +56,7 @@ interface Props {
   onConfigurationChange: (configuration: CreatorGeographyConfiguration) => void
 }
 
-export function RouteEditor({ city, cameraMemory, cityCameraRequest, templateName, finishDraft, onFinishChange, onArrivalNotesChange, savedConfiguration, proposal, drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
+export function RouteEditor({ active: mapActive = true, city, cameraMemory, cityCameraRequest, templateName, finishDraft, onFinishChange, onArrivalNotesChange, savedConfiguration, proposal, drafts, verified, safety, onDraftsChange, onVerifiedChange, onSafetyChange, onConfigurationChange }: Props) {
   const signalProposal = isSignalClujProposal(templateName ?? '', proposal) ? proposal : undefined
   const references = useMemo(() => signalProposal ? signalLandmarkReferences(signalProposal) : proposal ? researchReferences(proposal) : [], [signalProposal, proposal])
   const [activeNumber, setActiveNumber] = useState<number | undefined>(drafts[0]?.checkpointNumber)
@@ -241,17 +243,17 @@ export function RouteEditor({ city, cameraMemory, cityCameraRequest, templateNam
           </div>
           <p role="status" className="sr-only">{historyMessage}</p>
         </div>
-        <TedixMap
+        {mapActive && <TedixMap
         cityCameraRequest={recenterCity ?? (cityCameraRequest !== openingCityRequest.current ? cityCameraRequest : undefined)} onCameraChange={cameraMemory ? camera => { cameraMemory.current = camera } : undefined}
-        initialLatitude={initialLatitude} initialLongitude={initialLongitude} initialZoom={initialZoom}
+        initialLatitude={cameraMemory?.current?.latitude ?? initialLatitude} initialLongitude={cameraMemory?.current?.longitude ?? initialLongitude} initialZoom={cameraMemory?.current?.zoom ?? initialZoom}
         mapStyle={mapMode === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/streets-v12'}
         hideFitPositionsControl fitPositionsRequest={fitPositionsRequest} focusPosition={focusPosition}
         positionArea={validCity ? { latitude: validCity.latitude, longitude: validCity.longitude, zoom: 12 } : isSignalCluj ? { latitude: CLUJ_NAPOCA_VIEW.center[0], longitude: CLUJ_NAPOCA_VIEW.center[1], zoom: CLUJ_NAPOCA_VIEW.zoom } : undefined}
-        positionPins={pins} initialFitPoints={initialBounds.current.length ? initialBounds.current : rememberedCamera.current ? [] : references}
+        positionPins={pins} initialFitPoints={cameraMemory?.current ? [] : initialBounds.current.length ? initialBounds.current : rememberedCamera.current ? [] : references}
         locationSearch
         onCheckpointSelect={select} onCheckpointMove={(number, latitude, longitude) => place(number, latitude, longitude)}
         onMapClick={placeSelected}
-      /></div>
+      />}</div>
       <nav className="position-checkpoints" aria-label="Checkpoint selection">
         <h4>Checkpoints</h4>
         <ol aria-label="Checkpoint positions">{[...drafts.map(point => ({ ...point, number: point.checkpointNumber })), ...(onFinishChange ? [{ ...finish, number: 0 }] : [])].map(point => {

@@ -56,6 +56,7 @@ vi.mock('mapbox-gl', () => ({ default: {
 
 let container: HTMLDivElement
 let root: Root
+let editorActive = true
 let templateName: string | undefined
 let proposal: RouteProposal | undefined
 let initial: CheckpointDraft[]
@@ -76,7 +77,7 @@ function Editor() {
   latestFinish = finish
   latestVerified = verified
   latest = drafts
-  return <RouteEditor city={city} cameraMemory={cameraMemory} cityCameraRequest={cityCameraRequest} templateName={templateName} savedConfiguration={{ normalCheckpointCount: initial.length, checkpointPositions: initial.filter(point => point.latitude !== undefined) as typeof saved[], finishPoint: undefined }} finishDraft={finish} onFinishChange={finishInitial ? setFinish : undefined} proposal={proposal} drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
+  return <RouteEditor active={editorActive} city={city} cameraMemory={cameraMemory} cityCameraRequest={cityCameraRequest} templateName={templateName} savedConfiguration={{ normalCheckpointCount: initial.length, checkpointPositions: initial.filter(point => point.latitude !== undefined) as typeof saved[], finishPoint: undefined }} finishDraft={finish} onFinishChange={finishInitial ? setFinish : undefined} proposal={proposal} drafts={drafts} verified={verified} safety={safety} onDraftsChange={setDrafts}
     onVerifiedChange={setVerified} onSafetyChange={setSafety} onConfigurationChange={mocks.configuration} />
 }
 
@@ -86,6 +87,7 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
   vi.stubGlobal('confirm', vi.fn(() => true))
+  editorActive = true
   city = undefined; cameraMemory = undefined; cityCameraRequest = undefined
   finishInitial = undefined
   templateName = undefined
@@ -906,4 +908,28 @@ test('invalid city coordinates never create a city target or an unrelated Cluj c
   city = { ...paris, latitude: NaN }; initial = createCheckpointDrafts(2, []); render()
   expect(mocks.maps[0].options).toMatchObject({ center: [0,0], zoom: 2 })
   act(() => button('Recenter map').click()); expect(mocks.maps[0].flyTo).not.toHaveBeenCalled(); expect(latest.every(point => point.latitude === undefined)).toBe(true)
+})
+
+test('inactive navigation releases the map while retaining unconfirmed inspector edits and camera', () => {
+  cameraMemory = { current: null }
+  render()
+  const first = mocks.maps[0]
+  act(() => first.emit('moveend'))
+  act(() => button('Edit').click())
+  const name = container.querySelector<HTMLInputElement>('form input')!
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, 'Unconfirmed route name')
+    name.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  editorActive = false; render()
+  expect(first.remove).toHaveBeenCalledTimes(1)
+  expect(container.querySelector<HTMLInputElement>('form input')?.value).toBe('Unconfirmed route name')
+  expect(latest[0].name).toBe(saved.name)
+  editorActive = true; render()
+  expect(mocks.maps).toHaveLength(2)
+  expect(mocks.maps[1].options.center).toEqual([3, 51])
+  expect(container.querySelector<HTMLInputElement>('form input')?.value).toBe('Unconfirmed route name')
+  editorActive = false; render()
+  expect(mocks.maps[1].remove).toHaveBeenCalledTimes(1)
+  expect(mocks.maps.filter(map => !map.remove.mock.calls.length)).toHaveLength(0)
 })
