@@ -179,7 +179,12 @@ export class ApiClient {
       } catch (error) {
         // Transport/server failures are retryable; only definitive expiry invalidates this login.
         if (sameCredentials(this.session, snapshot) && error instanceof ApiError
-          && (error.status === 400 || error.status === 401 || error.status === 403)) clearSession(this.session);
+          && (error.status === 400 || error.status === 401 || error.status === 403)) {
+          if (!snapshot.refreshToken) {
+            try { localStorage.setItem('tedix-hunt.expired-guest', 'true'); } catch { /* Storage is optional. */ }
+          }
+          clearSession(this.session);
+        }
         throw error;
       }
     })();

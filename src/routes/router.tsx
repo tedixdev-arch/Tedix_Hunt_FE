@@ -24,7 +24,7 @@ import { AdminActivationPage } from '../pages/AdminActivation'
 import { CreatorActivationPage, DirectOrganizerActivationPage } from '../pages/ProfessionalActivation'
 import { LoginWorkspacePage, ProfessionalSignInPage, WorkspaceSelectorPage } from '../pages/ProfessionalAccess'
 import type { ReactNode } from 'react'
-import { canAccessAdmin, canAccessCreator, canAccessOrganizer, canAccessParticipant } from '../features/auth/access'
+import { canAccessAdmin, canAccessCreator, canAccessOrganizer } from '../features/auth/access'
 
 function RequireAuthFlow({ children, entry, canAccess }: { children: ReactNode; entry: string; canAccess: typeof canAccessCreator }) {
   const { user, isBootstrapping } = useAuth()
@@ -110,7 +110,7 @@ export const router = createHashRouter([
   },
   {
     path: '/participant/setup',
-    element: <RequireAuthFlow canAccess={canAccessParticipant} entry="/join"><ParticipantReadinessPage /></RequireAuthFlow>,
+    element: <RequireAuthFlow canAccess={user => user !== null} entry="/join"><ParticipantReadinessPage /></RequireAuthFlow>,
   },
   {
     path: '/play/template-1',
