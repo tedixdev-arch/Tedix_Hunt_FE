@@ -1,3 +1,4 @@
+import { completionAllowsSave, hasRequiredCompletion, requiredSetupIds, requiredFeatureIds, restoredCompletion, type SaveIntent } from '../features/creator/completion'
 import { HuntSetup } from '../features/creator/HuntSetup'
 import type { LocalitySnapshot } from '../services/api/geography'
 import type { MapCamera } from '../components/TedixMap'
@@ -362,7 +363,7 @@ function CreatorTemplateEditor() {
     return () => { window.removeEventListener('beforeunload', warn); document.removeEventListener('click', leave, true) }
   }, [unsaved, sessionOnlyWork])
   const legacy = templateConfiguration.normalCheckpointCount === undefined && templateConfiguration.checkpointPositions === undefined
-  const allInfo = stepDone.size === steps.length, allFeatures = featureDone.size === features.length
+  const allInfo = hasRequiredCompletion(stepDone, requiredSetupIds), allFeatures = hasRequiredCompletion(featureDone, requiredFeatureIds)
   const checks = useMemo(() => [['Template Setup complete', allInfo], ['Seven Hunt Features complete', allFeatures], ['Route reviewed this session', routeSafe], ['Participant journey previewed', previewed], ['Validation passed', tested]] as const, [allInfo, allFeatures, routeSafe, previewed, tested])
   const finishError = finishPointValidation(creatorTemplateContent.configuration, !universal) || gameplayValidation(creatorTemplateContent, true)
   const localErrors = localContentValidation(creatorTemplateContent)
@@ -394,8 +395,9 @@ function CreatorTemplateEditor() {
       setRouteSafety(geography.routeSafety)
       const restoredSelections = (content.scoring.selections && typeof content.scoring.selections === 'object') ? content.scoring.selections as Record<string, number> : {}
       setSelections(restoredSelections)
-      setStepDone(new Set(steps.map((_, index) => index)))
-      setFeatureDone(new Set(features.map(item => item.id)))
+      const completion = restoredCompletion()
+      setStepDone(completion.setup)
+      setFeatureDone(completion.features)
     setConflict(false); setUncertain(false)
   }
   useEffect(() => {
@@ -418,8 +420,8 @@ function CreatorTemplateEditor() {
   }
   const saveStep = () => { setStepDone(current => new Set([...current, step])); if (step < steps.length - 1) setStep(step + 1); setTested(false) }
   // Save the complete intended content; acknowledge only the snapshot that was sent.
-  const persistWorkingTemplate = async (completedFeatures: Set<string>, draftOnly = false) => {
-    if (validating || mutationLock.current || conflict || uncertain || saving || (!classified && !draftOnly && (stepDone.size !== steps.length || completedFeatures.size !== features.length || !routeSafe))) return
+  const persistWorkingTemplate = async (intent: SaveIntent, completedFeatures: ReadonlySet<string> = featureDone) => {
+    if (validating || mutationLock.current || conflict || uncertain || saving || !completionAllowsSave(intent, classified, stepDone, completedFeatures, routeSafe)) return
     const validation = finishPointValidation(creatorTemplateContent.configuration) || gameplayValidation(creatorTemplateContent) || validateCustomExercises(creatorTemplateContent).map(issue => `${issue.path}: ${issue.message}`).join('\n')
     if (validation) { setSaveError(validation); return }
     if (exerciseAssignments.errors.length) { setSaveError(exerciseAssignments.errors.join('\n')); return }
@@ -470,10 +472,13 @@ function CreatorTemplateEditor() {
       }
     } finally { mutationLock.current = false; setSaving(false) }
   }
+  // Saving has no navigation dependency. The current last-feature UI remains an adapter.
+  const completeHuntFeatures = (completed: ReadonlySet<string>) => persistWorkingTemplate('complete', completed)
+  const saveDraft = () => persistWorkingTemplate('draft')
   const saveFeature = () => {
     const completed = new Set([...featureDone, feature.id]); setFeatureDone(completed)
     if (featureIndex < features.length - 1) setFeatureIndex(featureIndex + 1)
-    else void persistWorkingTemplate(completed)
+    else void completeHuntFeatures(completed)
     setTested(false)
   }
   const reviewLocalFeature = (id: string) => {
@@ -560,7 +565,7 @@ function CreatorTemplateEditor() {
     {unsaved && <p role="status" className="mt-4 text-sm font-bold">Unsaved Template changes</p>}
     {exerciseAssignments.errors.length > 0 && <div role="alert" className="mt-4 whitespace-pre-wrap text-sm text-red-900">{exerciseAssignments.errors.join('\n')}</div>}
     {saveNotice && <p role="status" className="mt-4 rounded-xl bg-indigo-50 p-4 text-sm">{saveNotice}</p>}
-    <button type="button" disabled={saving || submitting || validating || uncertain || conflict} onClick={() => void persistWorkingTemplate(featureDone, true)} className="mt-6 min-h-12 rounded-xl border border-emerald-500 px-5 font-bold">{saving ? 'Saving Template…' : 'Save draft'}</button>
+    <button type="button" disabled={saving || submitting || validating || uncertain || conflict} onClick={() => void saveDraft()} className="mt-6 min-h-12 rounded-xl border border-emerald-500 px-5 font-bold">{saving ? 'Saving Template…' : 'Save draft'}</button>
     {conflict && <button type="button" onClick={() => { if (templateKey) setReload(value => value + 1); else if (persisted) { setLoadingTemplate(true); creatorTemplatesApi.get(persisted.key).then(hydrateRecord).catch(reason => setLoadError(creatorTemplateError(reason, 'load'))).finally(() => setLoadingTemplate(false)) } setSaveError('') }} className="ml-3 min-h-12 rounded-xl border px-4 font-bold">Reopen saved version (discard edits)</button>}
     {uncertain && <Link to="/creator" className="ml-3 inline-flex min-h-12 items-center font-bold underline">Check My Templates</Link>}
     <section id="creator-review" className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-bold uppercase text-emerald-700">Block 3</p><h2 className="mt-2 text-2xl font-bold">Review & Submit</h2><p className="mt-1 text-sm text-slate-500">Validate the complete participant journey before asking Admin to approve this version.</p>{!universal && <WalkingRouteInspection configuration={creatorTemplateContent.configuration} />}<div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{(classified ? [['Latest version saved', !!persisted && templateContentEqual(creatorTemplateContent, persisted.content)], ['Gameplay valid', !finishError], ...(local ? [['Local content validated', localValid] as const] : [])] as const : checks).map(([label, done]) => <div key={label} className={`rounded-xl border p-3 text-sm font-bold ${done ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-slate-50 text-slate-500'}`}><span className="mr-2">{done ? '✓' : '○'}</span>{label}</div>)}</div><div className="mt-5 grid gap-3 sm:grid-cols-3"><button ref={previewTrigger} type="button" onClick={() => { setPreviewContent(structuredClone(creatorTemplateContent)); setPreviewed(true); setTested(false) }} className={`min-h-14 rounded-xl border px-4 font-bold ${previewed ? 'border-emerald-400 bg-emerald-50' : 'border-slate-300 bg-white'}`}>{previewed ? '✓ Journey previewed' : 'Preview journey'}</button><button type="button" disabled={validating || saving || submitting || (local ? false : universal ? !!finishError : !allInfo || !allFeatures || !routeSafe || !previewed || !!finishError)} onClick={() => { if (local) void validateLocal(); else setTested(true) }} className={`min-h-14 rounded-xl px-4 font-bold disabled:bg-slate-300 ${(local ? localValid : tested) ? 'border border-emerald-400 bg-emerald-50 text-emerald-900' : 'bg-slate-950 text-white'}`}>{validating ? 'Validating…' : (local ? localValid : tested) ? '✓ Validation passed' : 'Run template validation'}</button><button type="button" disabled={validating || !ready || !persisted || saving || submitting || conflict || localityChange !== undefined || (classified && persisted.status !== 'draft') || !templateContentEqual(creatorTemplateContent, persisted.content)} onClick={submit} className="min-h-14 rounded-xl bg-emerald-500 px-4 font-bold disabled:bg-slate-300">{submitting ? 'Submitting…' : 'Submit for Approval'}</button></div>{!local && finishError && <p role="status" className="mt-4 text-sm font-bold text-amber-800">{finishError}</p>}{local && localValidationAttempted && (!localValid || Object.values(localErrors).some(Boolean)) && <div className="mt-4 text-sm"><p>Review the highlighted sections, save your changes, then run validation again.</p><div className="flex flex-wrap gap-3">{localErrors.count && <button type="button" className="min-h-12 font-bold underline" onClick={() => reviewLocalFeature('count')}>Review checkpoint count</button>}{localErrors.positions && <button type="button" className="min-h-12 font-bold underline" onClick={() => reviewLocalFeature('positions')}>Review checkpoint positions</button>}{localErrors.finish && <button type="button" className="min-h-12 font-bold underline" onClick={() => reviewLocalFeature('final')}>Review FinishPoint</button>}{localErrors.gameplay && <button type="button" className="min-h-12 font-bold underline" onClick={() => reviewLocalFeature('personal')}>Review checkpoint gameplay</button>}{localityError && <a className="inline-flex min-h-12 items-center font-bold underline" href="#local-geography">Review locality</a>}</div></div>}{submitError && <p role="alert" className="mt-4 text-sm font-bold text-red-700">{submitError}</p>}{(!ready || !persisted || (persisted && !templateContentEqual(creatorTemplateContent, persisted.content))) && <p className="mt-4 text-sm font-bold text-slate-500">{classified ? 'Save your changes before submitting the exact saved version. Approval is a separate Admin decision.' : 'Complete and save every readiness item before submitting the latest persisted version.'}</p>}</section>
