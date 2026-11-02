@@ -53,7 +53,7 @@ function ExistingChallengeAuthoring({ field, value, onChange, draft = { source: 
       {draft.source === 'saved' ? <button type="button" className={control} onClick={() => {
         if (selectedAssignment(draft) === 'custom' && !window.confirm('Replace this custom exercise with the predefined assignment in the next saved version? Your custom content will stay in this session.')) return
         onDraftChange({ ...draft, assignment: 'predefined' })
-      }}>Apply challenge</button> : <button type="button" className={control} disabled={!draft.custom} onClick={() => onDraftChange({ ...draft, assignment: 'custom' })}>Apply challenge</button>}
+      }}>Apply predefined challenge</button> : <button type="button" className={control} disabled={!draft.custom} onClick={() => onDraftChange({ ...draft, assignment: 'custom' })}>Apply custom challenge</button>}
       <button type="button" className={control} onClick={() => {
         if (window.confirm('Discard this custom draft and all its type variants, and use the predefined assignment in the next saved version?')) onDraftChange({ source: 'saved', assignment: 'predefined' })
       }}>Discard custom draft and use predefined</button>
