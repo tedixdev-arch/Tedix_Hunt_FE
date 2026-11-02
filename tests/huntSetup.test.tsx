@@ -13,13 +13,14 @@ vi.mock('../src/components/TedixMap', () => ({ TedixMap: (props: any) => { map.p
 const city = { id: '11111111-1111-4111-8111-111111111111', name: 'Paris', countryCode: 'FR', countryDisplayName: 'France', administrativeContext: 'Île-de-France', latitude: 48.8566, longitude: 2.3522, active: true }
 let root: Root, container: HTMLDivElement
 beforeEach(() => {
+  vi.stubEnv('VITE_DEPLOYMENT_ENVIRONMENT', 'development'); vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-dev.anainfo.ai')
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks(); Element.prototype.scrollIntoView = vi.fn()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
   geo.countries.mockResolvedValue({ countries: [{ code: 'FR', displayName: 'France' }, { code: 'DE', displayName: 'Germany' }] }); geo.search.mockResolvedValue({ localities: [city, city] }); geo.get.mockResolvedValue(city)
   api.create.mockImplementation(async (content, category, localityId) => ({ key: content.key, version: 1, status: 'draft', category, content, localityId, localitySnapshot: localityId ? city : null }))
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
-afterEach(() => { act(() => root.unmount()); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => { act(() => root.unmount()); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs() })
 async function render(url = '/create?category=local') { await act(async () => root.render(<MemoryRouter initialEntries={[url]}><CreatorTemplateEditorPage /></MemoryRouter>)) }
 const button = (text: string) => [...container.querySelectorAll('button')].find(b => b.textContent === text)!
 async function click(text: string) { await act(async () => button(text).click()) }
@@ -33,11 +34,11 @@ test('Local starts with Hunt Setup and requires country and city before position
   await change('#local-geography input','Paris'); expect(geo.search).toHaveBeenCalledWith('FR','Paris'); expect(container.querySelectorAll('#local-geography li')).toHaveLength(1)
   await click('Paris · Île-de-France · France'); expect(container.querySelector<HTMLFieldSetElement>('[aria-label="Hunt builder"]')!.disabled).toBe(true); expect(container.querySelector('#checkpoint-positions')).toBeNull(); await click('Continue to Hunt builder'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull(); expect(document.activeElement?.id).toBe('template-setup-heading')
 })
-test('Universal needs no locality and optional unsupported learning controls never block Continue or persist invented metadata', async () => {
+test('Universal needs no locality and optional learning controls default to Mixed without adding metadata to untouched drafts', async () => {
   await render('/create?category=universal'); expect(container.querySelector('#local-geography input')).toBeNull(); expect(geo.countries).not.toHaveBeenCalled()
   await click('Continue to Hunt builder'); expect(container.textContent).not.toContain('Choose a country and city to continue.')
   const controls = container.querySelectorAll<HTMLSelectElement>('#local-geography select'); expect(controls).toHaveLength(2)
-  for (const control of controls) { expect(control.disabled).toBe(true); expect(control.value).toBe(''); expect([...control.options].some(option => option.value === 'mixed')).toBe(true) }
+  for (const control of controls) { expect(control.disabled).toBe(false); expect(control.value).toBe('mixed'); expect([...control.options].some(option => option.value === 'mixed')).toBe(true) }
   await change('#template-setup input','Anywhere adventure'); await click('Save draft')
   const [content, category, localityId] = api.create.mock.calls[0]; expect(category).toBe('universal'); expect(localityId).toBeUndefined(); expect(content.configuration).not.toHaveProperty('curriculum'); expect(content.configuration).not.toHaveProperty('grade')
 })
@@ -118,4 +119,55 @@ test('a different City after Continue keeps the builder unlocked and never rewri
   await click('Lyon · Auvergne-Rhône-Alpes · France'); expect(window.confirm).toHaveBeenCalledTimes(1); expect(builder().disabled).toBe(false); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
   await click('Save draft'); const [content,,localityId] = api.create.mock.calls[0]
   expect(localityId).toBe(lyon.id); expect(content.configuration.checkpointPositions).toEqual([expect.objectContaining({latitude:48.8,longitude:2.3})])
+})
+
+const cluj = { ...city, name: 'Cluj-Napoca', countryCode: 'RO', countryDisplayName: 'Romania', administrativeContext: 'Cluj', latitude: 46.7712, longitude: 23.6236 }
+test('development setup preselects real Cluj UUID, continues to builder and centers map without catalog import', async () => {
+  vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  geo.search.mockResolvedValue({ localities: [cluj] })
+  await render()
+  expect(geo.search).toHaveBeenCalledExactlyOnceWith('RO', 'Cluj'); expect(geo.countries).not.toHaveBeenCalled()
+  const country = container.querySelector<HTMLSelectElement>('[aria-label="Country *"]')!, citySelect = container.querySelector<HTMLSelectElement>('[aria-label="City *"]')!
+  expect([...country.options].map(option => option.text)).toEqual(['Romania']); expect(country.value).toBe('RO')
+  expect([...citySelect.options].map(option => option.text)).toEqual(['Cluj-Napoca']); expect(citySelect.value).toBe('Cluj-Napoca')
+  expect(container.querySelector('#local-geography input')).toBeNull(); expect(container.textContent).not.toContain('City options'); expect(container.textContent).not.toContain('not available yet')
+  const curriculum = container.querySelector<HTMLSelectElement>('[aria-label="Curriculum (optional)"]')!, grade = container.querySelector<HTMLSelectElement>('[aria-label="Grade (optional)"]')!
+  expect([...curriculum.options].map(option => option.text)).toEqual(['Mixed', 'Math']); expect(curriculum.value).toBe('mixed')
+  expect([...grade.options].map(option => option.text)).toEqual(['Mixed', '9', '10', '11', '12']); expect(grade.value).toBe('mixed')
+  await click('Continue to Hunt builder'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
+  expect(map.props.positionArea).toEqual(expect.objectContaining({ latitude: cluj.latitude, longitude: cluj.longitude }))
+  await change('[aria-label="Curriculum (optional)"]', 'math'); await change('[aria-label="Grade (optional)"]', '10')
+  await change('#template-setup input', 'Cluj adventure'); await click('Save draft')
+  expect(api.create.mock.calls[0][2]).toBe(cluj.id); expect(api.create.mock.calls[0][0].configuration).toMatchObject({ curriculum: 'math', grade: '10' })
+})
+test('development preset preserves saved locality snapshots and never rebinds a draft', async () => {
+  vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  api.get.mockResolvedValue({ ...record(), localityId: city.id, localitySnapshot: city })
+  await render('/create?template=owned')
+  expect(geo.search).not.toHaveBeenCalled(); expect(container.querySelector<HTMLSelectElement>('[aria-label="City *"]')!.value).toBe('Paris')
+  await change('#template-setup input', 'Preserved Paris draft'); await click('Save draft'); expect(api.createVersion.mock.calls[0][2]).toBeUndefined()
+})
+test.each([[], [{ ...cluj, active: false }], [cluj, { ...cluj, id: 'another' }]])('development preset refuses missing, inactive or ambiguous records', async localities => {
+  vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj'); geo.search.mockResolvedValue({ localities })
+  await render(); await click('Continue to Hunt builder')
+  expect(container.querySelector('#checkpoint-positions')).toBeNull(); expect(api.create).not.toHaveBeenCalled()
+})
+test('production API ignores development preset even if environment flag is set', async () => {
+  vi.stubEnv('MODE', 'production'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-prod.anainfo.ai')
+  await render(); expect(geo.search).not.toHaveBeenCalled(); expect(geo.countries).toHaveBeenCalledOnce()
+})
+
+test('normal development deployment activates preset in Vite production mode', async () => {
+  vi.stubEnv('MODE', 'production'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  geo.search.mockResolvedValue({ localities: [cluj] }); await render(); await click('Continue to Hunt builder')
+  expect(geo.search).toHaveBeenCalledExactlyOnceWith('RO', 'Cluj'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
+})
+
+test('development deployment reuses the existing canonical city UUID with an existing administrative label', async () => {
+  vi.stubEnv('MODE', 'production'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  const existing = { ...cluj, name: 'Cluj Napoca', administrativeContext: 'Cluj County' }
+  geo.search.mockResolvedValue({ localities: [existing] })
+  await render(); await click('Continue to Hunt builder'); await change('#template-setup input', 'Reuse registered Cluj'); await click('Save draft')
+  expect(api.create.mock.calls[0][2]).toBe(existing.id)
 })

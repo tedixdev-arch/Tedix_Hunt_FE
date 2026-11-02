@@ -54,11 +54,13 @@ const options = { formats: [{ key: 'team', label: 'Team Hunters' }], teamSizes: 
 const directions = { code: 'Ok', waypoints: [{}, {}, {}], routes: [{ geometry: { type: 'LineString', coordinates: [[23, 46], [24, 47], [25, 48]] }, legs: [{}, {}], distance: 1450, duration: 900 }] }
 let container: HTMLDivElement, root: Root
 beforeEach(() => {
+  vi.stubEnv('VITE_DEPLOYMENT_ENVIRONMENT', 'development'); vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-dev.anainfo.ai')
   vi.clearAllMocks(); mocks.maps.length = 0; mocks.markers.length = 0
   mocks.get.mockReset().mockResolvedValue(structuredClone(savedHunt)); mocks.catalog.mockReset().mockResolvedValue(catalog)
   mocks.geography.mockReset().mockImplementation(async (key: string) => ({ key, version: catalog.find(item => item.key === key)!.version, configuration: structuredClone(configuration) }))
   mocks.options.mockResolvedValue(options); mocks.organizations.mockResolvedValue([{ id: 'org', name: 'School' }]); mocks.rewards.mockResolvedValue({ leaderboard: [], specialAwards: [] })
   mocks.publish.mockReset().mockResolvedValue({ ...savedHunt, status: 'published' })
+  vi.stubEnv('VITE_DEPLOYMENT_ENVIRONMENT', 'development'); vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-dev.anainfo.ai')
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-token')
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(directions))))
@@ -349,4 +351,26 @@ test.each(['missing token', 'network failure', 'invalid metrics'])('snapshot %s 
   if (mode === 'missing token') { expect(mocks.maps).toHaveLength(0); expect(fetch).not.toHaveBeenCalled() }
   else expect(mocks.maps[0].sources.has('tedix-walking-route')).toBe(false)
   noMutation()
+})
+
+test('development Organizer preselects Romania and Cluj-Napoca and saves geographic details through existing workflow', async () => {
+  vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  mocks.create.mockResolvedValue({ ...savedHunt, id: 'new-hunt' })
+  mocks.update.mockImplementation(async (_id, input) => ({ ...savedHunt, id: 'new-hunt', ...input }))
+  await editor('/organizer/hunts/new/setup')
+  const select = (label: string) => [...container.querySelectorAll('label')].find(item => item.firstChild?.textContent === label)!.querySelector('select')!
+  expect([...select('Country').options].map(option => option.text)).toEqual(['Romania'])
+  expect([...select('City').options].map(option => option.text)).toEqual(['Cluj-Napoca'])
+  const name = [...container.querySelectorAll('label')].find(item => item.firstChild?.textContent === 'Hunt name')!.querySelector('input')!
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, 'Cluj school adventure'); name.dispatchEvent(new Event('input', { bubbles: true })) })
+  await click('Save & continue')
+  expect(mocks.update).toHaveBeenCalledWith('new-hunt', expect.objectContaining({ country: 'Romania', city: 'Cluj-Napoca' }))
+  expect(container.textContent).toContain('Hunt format'); expect(mocks.publish).not.toHaveBeenCalled(); expect(mocks.access).not.toHaveBeenCalled()
+})
+test('development Organizer retains saved geographic data without replacing it with preset values', async () => {
+  vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  mocks.get.mockResolvedValue({ ...savedHunt, country: 'France', city: 'Paris' })
+  await editor()
+  const citySelect = [...container.querySelectorAll('label')].find(item => item.firstChild?.textContent === 'City')!.querySelector('select')!
+  expect([...citySelect.options].map(option => option.text)).toEqual(['Paris']); expect(citySelect.value).toBe('Paris'); noMutation()
 })
