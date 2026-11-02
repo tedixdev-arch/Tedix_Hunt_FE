@@ -1,0 +1,17 @@
+.formula-field { position: relative; min-width: 0; }
+.formula-trigger { display: inline-flex; align-items: center; gap: .3rem; min-height: 44px; margin-top: .25rem; padding: .35rem .65rem; border: 1px solid #a7c7be; border-radius: .6rem; background: #f0fdf8; color: #065f46; font: 600 .8rem system-ui; }
+.formula-trigger span { font-size: 1.1rem; }
+.formula-dialog { width: min(36rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; margin: auto; padding: 1.25rem; border: 1px solid #cbd5e1; border-radius: 1rem; background: white; color: #0f172a; box-shadow: 0 20px 60px #0003; }
+.formula-dialog::backdrop { background: #0f172a66; }
+.formula-dialog h3 { margin: 0 0 1rem; font-size: 1.1rem; font-weight: 700; overflow-wrap: anywhere; }
+.formula-shortcuts, .formula-existing { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .85rem; }
+.formula-dialog button { min-height: 44px; border: 1px solid #cbd5e1; border-radius: .5rem; padding: .4rem .65rem; background: #f8fafc; font-size: .8rem; }
+.formula-dialog button[aria-pressed=true] { border-color: #047857; background: #d1fae5; }
+.formula-input-label { display: block; margin-bottom: .4rem; font-size: .85rem; font-weight: 700; }
+.formula-input { width: 100%; padding: .65rem; border: 1px solid #94a3b8; border-radius: .5rem; resize: vertical; font: 1rem monospace; }
+.formula-preview { min-height: 6rem; max-width: 100%; margin-top: 1rem; padding: .85rem; border: 1px solid #dbe5e1; border-radius: .65rem; background: #f7fbf9; overflow-wrap: anywhere; }
+.formula-preview p { color: #64748b; font-size: .85rem; }
+.formula-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+.formula-actions button:last-child { background: #047857; border-color: #047857; color: white; font-weight: 700; }
+.formula-dialog button:disabled { opacity: .5; }
+.formula-dialog :focus-visible, .formula-trigger:focus-visible { outline: 3px solid #0284c7; outline-offset: 2px; }

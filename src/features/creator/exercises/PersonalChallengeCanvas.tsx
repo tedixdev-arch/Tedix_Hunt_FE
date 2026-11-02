@@ -1,3 +1,4 @@
+import { useFormulaMode } from './FormulaEditor'
 import { MathHelp } from './MathText'
 import { useState } from 'react'
 import { ChallengeCanvas, PencilField } from './ChallengeCanvas'
@@ -10,6 +11,7 @@ type Props = { exercise: Exercise; onChange: (e: Exercise) => void }
 /** The original renderer owns attempts. It stays mounted across editing-mode switches. */
 export function PersonalChallengeCanvas({ exercise: e, onChange }: Props) {
   const [mode, setMode] = useState('visual'), [step, setStep] = useState(0), [playing, setPlaying] = useState(false)
+  useFormulaMode(mode === 'steps')
   const steps = ['Title and instructions', 'Build your challenge', 'Define the correct answer', 'Hints and feedback', 'Play your challenge']
   const issues = validateExercise(e), errors = friendlyIssues(issues)
   const pencil = (key: 'title' | 'instructions' | 'solution' | 'correctFeedback' | 'incorrectFeedback', label: string, limit = 2000) => <PencilField label={label} value={e[key]} maxLength={limit} onChange={value => onChange({ ...e, [key]: value })} />
