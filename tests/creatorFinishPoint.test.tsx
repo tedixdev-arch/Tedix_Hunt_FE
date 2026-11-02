@@ -682,3 +682,28 @@ test('discarding an unsaved persisted-custom variant requires confirmation and r
   expect((await titleField()).value).toBe(exerciseFixtures[1].title)
   expect(container.querySelector('[aria-label="Selected exercise assignment"]')?.textContent).toContain('Custom')
 })
+
+test('final-feature completion and Save draft share the synchronous save lock', async () => {
+  await render(); await verify(); await click('9.')
+  let resolve!: (value: CreatorTemplate) => void
+  mocks.createVersion.mockReturnValueOnce(new Promise(done => { resolve = done }))
+  const find = (text: string) => [...container.querySelectorAll('button')].find(b => b.textContent === text)!
+  await act(async () => { find('Complete Hunt Features').click(); find('Save draft').click() })
+  expect(mocks.createVersion).toHaveBeenCalledTimes(1)
+  const content = mocks.createVersion.mock.calls[0][1]
+  await act(async () => resolve({ ...record, version: content.version, content }))
+  expect(container.textContent).toContain('Template version saved by the backend')
+})
+
+test('rejected completion keeps working content and permits a definite-error retry through Save draft', async () => {
+  await render(); await verify()
+  const { ApiError } = await import('../src/services/api/client')
+  mocks.createVersion.mockRejectedValueOnce(new ApiError('Rejected', 400, 'http'))
+  await save()
+  expect(mocks.createVersion).toHaveBeenCalledTimes(1)
+  const rejectedContent = structuredClone(mocks.createVersion.mock.calls[0][1])
+  expect(container.querySelector('[role="alert"]')).not.toBeNull()
+  await click('Save draft')
+  expect(mocks.createVersion).toHaveBeenCalledTimes(2)
+  expect(mocks.createVersion.mock.calls[1][1]).toEqual(rejectedContent)
+})
