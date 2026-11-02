@@ -2,6 +2,8 @@
 
 Documentation-only consolidation, 30 October 2026 (Europe/Bucharest). [Authoritative Master Execution Plan](TedixHunt_Master_Execution_Plan.md). One Draft PR; stop for ChatGPT review. No merge, deployment, implementation or architecture change.
 
+**3 November 2026 — superseding bounded development clarification:** Product Owner approval following merged [PR #155](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/155), exact approved decision revision `9fe1616eade9105a29e30e6f1340abc449cdc97d`, is recorded in the [approved bounded decision](decisions/PO_D10_Bounded_Development.md). **Development: authorized within the approved bounded scope. Integrated acceptance: pending actual verification. Public activation: blocked pending applicable production-readiness requirements.** D10-GATE remains incomplete overall; PO-GATE is resolved only for bounded development. This explicitly clarifies architecture §20.2 and the readiness report solely for isolated development/non-public verification; the frozen baseline and original report remain historical evidence. No deployment, independent Admin approval bypass, safety certification, immutable-version change, legacy Signal conversion/snapshot rewrite, BE contract change, hidden feature flag or authorization exception is approved. Preserve both Signal Hunts and the simple, useful, intuitive, ergonomic existing Organizer builder.
+
 ## Provenance and verification boundary
 
 Latest FE main was read through the authenticated GitHub connector at `ab54a3e0c776ed8843a2ae5d103f6313677aab2b`, including merged #123. The complete recursive tree was read (`truncated=false`); it contains no AGENTS.md. The local checkout was older (`2173853`) and shell fetch failed because the configured proxy was unreachable; it was not used as current status evidence. GitHub connector reads and tree-based delivery preserve the latest remote base.
@@ -328,13 +330,17 @@ CLOSE-1 applies to every implementation row; the tests cell adds task-specific e
 
 ### Requirement source: 3. Dependency order and decisions
 
+**3 November 2026:** The [approved bounded decision](decisions/PO_D10_Bounded_Development.md) recorded above supersedes only the blanket development stop. Development authorized within scope; integrated acceptance pending actual verification; public activation blocked. D10-GATE remains incomplete overall.
+
+The following dependency graph and blanket D10 development stop are preserved historical text. The approved clarification supersedes that stop only within its bounded scope; task IDs and slice order are unchanged. D10-FE-01 is **Ready for development**; D10-FE-02–08 retain preceding slice prerequisites. D10-FE-07's PO-LEGACY transition requirement is not waived; compatibility regression is permitted without transition. D10-FE-08's gate means the approved bounded development scope for isolated verification, while full integrated acceptance and public activation retain their applicable gates.
+
 Critical path: **F7-FE-01 → 02/03 → 04 → 05; 06 → 07 and 08 → 09 → 12; 11/13 → G4 representative review/approval/continuity → applicable G4 governance and reviewed catalog/legacy gate → D10-GATE → D10-FE-01 → 02 → 03 → 04 → 05 → 06/07 → 08 → D10-E2E-01 → deployed acceptance**. The list is a dependency graph, not an instruction to execute all work in one PR. F7-FE-06 can follow 02 while Universal save/submit work proceeds; manual proposal/review is a branch for absent stored localities. G4 decision/contract work can proceed alongside isolated Creator development. A catalog entry and a reviewed Local fixture are necessary for real selection tests; an empty initial catalog is not proof the API is missing.
 
 Implementation prerequisites differ from activation gates. Existing stored/manual API paths allow Creator/Admin development without C6b-2 Mapbox permanent storage. Deployment G0–G6, human route review and §20.3 are not automatically a ban on isolated F7 development. However, architecture §20.2 explicitly gates **D10 integration/activation**, and FE #121 found no non-public exception. Every D10 FE row stays blocked until D10-GATE is recorded satisfied or the PO explicitly clarifies/amends the governing scope. This plan creates no hidden-route/feature-flag waiver.
 
 | Decision key | Required decision/evidence | Blocks |
 | --- | --- | --- |
-| PO-GATE | Identify satisfied Creator/Admin, reviewed catalog, safety/readiness and compatibility prerequisites under §20.2. If requesting bounded D10 integration before full governance, explicitly resolve the architecture/report discrepancy in a separately reviewed decision. | D10-GATE; not F7-FE-01. |
+| PO-GATE | **3 November 2026: resolved for bounded development only; see the approved decision above.** Historical/full-readiness requirement: Identify satisfied Creator/Admin, reviewed catalog, safety/readiness and compatibility prerequisites under §20.2. If requesting bounded D10 integration before full governance, explicitly resolve the architecture/report discrepancy in a separately reviewed decision. | D10-GATE; not F7-FE-01. |
 | PO-SAFETY | G4-DEC-01: required route/access evidence and independent review responsibilities; validity, expiry, re-review, operating conditions, publish/start and existing-Hunt consequences. | New G4 governance BE/FE; applicable D10 prerequisites and public activation. |
 | PO-LEGACY | Explicit legacy/Signal transition, reviewed Local catalog and staged activation without silent classification or snapshot rewrite. Historical remediation and reinstatement remain deferred unless separately approved. | D10 compatibility/readiness and public activation; not basic category authoring. |
 | PO-FEEDBACK | Version-bound request-changes narrative, visibility/retention and whether required for full workflow acceptance. Existing decision-state correction can proceed. | G4-BE-03/G4-FE-07; no invented comment API. |
@@ -700,6 +706,8 @@ Snapshot from PR #124 pre-correction head `6d19d87335535d25c9109cdde13c6d3bafa36
 <a id="detail-d10"></a>
 
 ### Preservation detail — D10
+
+**Current aggregate — 3 November 2026:** Incomplete; bounded development authorized, FE not started. D10-FE-01 Ready for development; later slices retain exact prerequisites. Integrated acceptance pending actual verification; public activation blocked. See the approved decision above; original baseline fields remain preserved.
 
 - **Task ID:** D10
 - **Parent / Phase:** D — Organizer setup; Parent workstream; children: [D10-GATE](TedixHunt_Master_Execution_Plan.md#task-d10-gate), [D10-FE-01](TedixHunt_Master_Execution_Plan.md#task-d10-fe-01), [D10-FE-02](TedixHunt_Master_Execution_Plan.md#task-d10-fe-02), [D10-FE-03](TedixHunt_Master_Execution_Plan.md#task-d10-fe-03), [D10-FE-04](TedixHunt_Master_Execution_Plan.md#task-d10-fe-04), [D10-FE-05](TedixHunt_Master_Execution_Plan.md#task-d10-fe-05), [D10-FE-06](TedixHunt_Master_Execution_Plan.md#task-d10-fe-06), [D10-FE-07](TedixHunt_Master_Execution_Plan.md#task-d10-fe-07), [D10-FE-08](TedixHunt_Master_Execution_Plan.md#task-d10-fe-08), [D10-E2E-01](TedixHunt_Master_Execution_Plan.md#task-d10-e2e-01), [D10-E2E-02](TedixHunt_Master_Execution_Plan.md#task-d10-e2e-02)
@@ -2092,6 +2100,10 @@ Snapshot from PR #124 pre-correction head `6d19d87335535d25c9109cdde13c6d3bafa36
 
 ### Preservation detail — D10-GATE
 
+**3 November 2026:** The [approved bounded decision](decisions/PO_D10_Bounded_Development.md) recorded above supersedes only the blanket development stop. Development authorized within scope; integrated acceptance pending actual verification; public activation blocked. D10-GATE remains incomplete overall.
+
+**Current gate effect:** Removes only the blanket development blocker. Full Creator/Admin acceptance, reviewed production catalog/compatibility, PO-LEGACY, PO-SAFETY/G4-DEC-01 and dependent enforcement, applicable provider/feedback decisions, G0–G6, deployed supply-chain E2E and separately authorized deployment/activation remain open. The preserved fields below are the frozen baseline, not a renewed blanket development stop.
+
 - **Task ID:** D10-GATE
 - **Parent / Phase:** D / Organizer; original parent [D10](TedixHunt_Master_Execution_Plan.md#task-d10)
 - **Deliverable:** Recorded satisfaction of architecture §20.2 integration prerequisites
@@ -2104,6 +2116,8 @@ Snapshot from PR #124 pre-correction head `6d19d87335535d25c9109cdde13c6d3bafa36
 <a id="detail-d10-fe-01"></a>
 
 ### Preservation detail — D10-FE-01
+
+**Current development status — 3 November 2026: Ready for development**, under the approved decision and D10-GATE bounded clarification above. Existing country/HuntsApi/C7 contracts and Organizer builder remain the entry dependencies; verify current evidence before starting. Not implemented or Complete. Integrated acceptance pending actual verification; public activation blocked. The original blocked fields below are preserved baseline evidence, superseded only for bounded development.
 
 - **Task ID:** D10-FE-01
 - **Parent / Phase:** D / Organizer; original parent [D10](TedixHunt_Master_Execution_Plan.md#task-d10)
