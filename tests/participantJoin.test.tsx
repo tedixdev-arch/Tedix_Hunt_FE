@@ -17,10 +17,11 @@ let holdEnrollment: boolean, release: () => void
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-  localStorage.clear(); sessionStore.clearSession(); calls = []
+  localStorage.clear(); sessionStorage.clear(); sessionStore.clearSession(); calls = []
   lookupStatus = enrollStatus = 200; enrollError = ''; holdEnrollment = false
   vi.stubGlobal('fetch', vi.fn(async (input, init) => {
-    const path = new URL(String(input)).pathname
+    // CI leaves the API base unset; browser fetch also accepts relative URLs.
+    const path = new URL(String(input), window.location.origin).pathname
     calls.push({ path, body: init?.body ? JSON.parse(init.body) : null, authorization: new Headers(init?.headers).get('authorization') })
     if (path.endsWith('/auth/me')) return json(user)
     if (path.includes('/hunt-access/')) return json(lookupStatus === 200 ? hunt : { error: 'not_found' }, lookupStatus)
@@ -34,7 +35,14 @@ beforeEach(() => {
   }))
   host = document.createElement('div'); document.body.append(host); root = createRoot(host)
 })
-afterEach(() => { act(() => root.unmount()); host.remove(); vi.unstubAllGlobals() })
+afterEach(() => {
+  act(() => root.unmount())
+  host.remove()
+  sessionStore.clearSession()
+  localStorage.clear()
+  sessionStorage.clear()
+  vi.unstubAllGlobals()
+})
 async function mount(path = '/join', authenticated = false) {
   if (authenticated) sessionStore.saveSession({ accessToken: 'existing-token' })
   await act(async () => root.render(<AuthProvider><MemoryRouter initialEntries={[path]}><Routes><Route path="/join" element={<JoinHuntPage />} /><Route path="/join/:code" element={<JoinHuntPage />} /><Route path="/participant/setup" element={<ParticipantReadinessPage />} /></Routes></MemoryRouter></AuthProvider>))
