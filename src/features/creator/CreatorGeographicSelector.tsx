@@ -9,6 +9,7 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
   onChange: (id: string | null | undefined) => void; onSelect: (place: LocalitySnapshot | null) => void
   beforeChange: (id: string | null | undefined) => boolean
 }) {
+  const [loadingCountries, setLoadingCountries] = useState(true)
   const [current, setCurrent] = useState<Locality | null>(null)
   const [countries, setCountries] = useState<Country[]>([]), [country, setCountry] = useState(snapshot?.countryCode ?? '')
   const [regions, setRegions] = useState<Region[]>([]), [region, setRegion] = useState(''), [label, setLabel] = useState('County/State/Region')
@@ -20,7 +21,8 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
   useEffect(() => { edited.current = false }, [savedId, snapshot])
   useEffect(() => {
     let live = true
-    geographyApi.countries().then(r => { if (live) setCountries(r.countries) }).catch(() => { if (live) setError(failure) })
+    setLoadingCountries(true)
+    geographyApi.countries().then(r => { if (live) setCountries(r.countries) }).catch(() => { if (live) setError(failure) }).finally(() => { if (live) setLoadingCountries(false) })
     return () => { live = false }
   }, [retry])
   useEffect(() => {
@@ -118,7 +120,7 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
   useEffect(() => () => { ++intent.current; ++search.current }, [])
   return <section aria-label="Local geography" className="min-w-0">
     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <label className="text-sm font-bold">Country *<select aria-label="Country *" className={control} value={country} onChange={e => reset(() => { setCountry(e.target.value); setRegion('') })}><option value="">Choose country</option>{countries.map(c => <option key={c.code} value={c.code}>{c.displayName}</option>)}</select></label>
+      <label className="text-sm font-bold">Country *<select aria-label="Country *" disabled={loadingCountries} className={control} value={country} onChange={e => reset(() => { setCountry(e.target.value); setRegion('') })}><option value="">{loadingCountries ? 'Loading countries…' : 'Choose country'}</option>{country && !countries.some(c => c.code === country) && <option value={country}>{snapshot?.countryCode === country ? snapshot.countryDisplayName : country}</option>}{countries.map(c => <option key={c.code} value={c.code}>{c.displayName}</option>)}</select></label>
       <label className="text-sm font-bold">{country === 'RO' ? 'County' : label} *<select aria-label="Region *" className={control} value={region} disabled={!country || loadingRegions} onChange={e => reset(() => setRegion(e.target.value))}><option value="">{loadingRegions ? 'Loading…' : 'Choose region'}</option>{regions.map(r => <option key={r.admin1Code} value={r.admin1Code}>{r.displayName}</option>)}</select></label>
       <label className="text-sm font-bold">City *<input aria-label="City *" className={control} disabled={!region || loadingRegions} maxLength={100} value={query} onChange={e => { edited.current = true; ++intent.current; ++search.current; setBusy(false); setQuery(e.target.value) }} /></label>
     </div>
