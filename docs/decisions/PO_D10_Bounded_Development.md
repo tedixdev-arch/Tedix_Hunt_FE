@@ -1,21 +1,26 @@
-# PO-GATE — D10 bounded Organizer development (proposed)
+# PO-GATE — D10 bounded Organizer development (approved bounded scope)
 
 Date: 3 November 2026 (Europe/Bucharest). Target: `tedixdev-arch/Tedix_Hunt_FE`; BE reference is read-only.
-**Status: PROPOSED — awaiting explicit Product Owner approval. Not an authorization to implement, merge, deploy or activate Hunts.**
+**Status: APPROVED — bounded development only.**
 
-## Decision requested and effect
+Approver: **Product Owner**. Approval date: **3 November 2026** (Europe/Bucharest).
+Reference: **Explicit Product Owner approval following merged PR #155**, supplied in the PO instruction “PO-GATE — Record Approved D10 Development Scope.” The PR timeline is merge evidence, not a separate approval comment.
+Exact approved decision revision: [`9fe1616eade9105a29e30e6f1340abc449cdc97d`](https://github.com/tedixdev-arch/Tedix_Hunt_FE/blob/9fe1616eade9105a29e30e6f1340abc449cdc97d/docs/decisions/PO_D10_Bounded_Development.md), Git blob `4b99d1cc9509b2cae263b5add7e316f0bc2c3e02`. PR [#155](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/155) merged as `1ebd627306ccce5a2f6b481bc7eb8c64370cd5bf` (3 November 2026, Europe/Bucharest).
+No production activation, deployment, safety certification or legacy migration approval is granted.
+
+## Approved decision and effect
 
 **Authorize D10 Organizer FE development and isolated testing, but not public activation.**
 
-On explicit PO approval recorded against this document/revision, clarify PO-GATE and architecture §20.2 only for the bounded development scope below: incomplete full Creator/Admin integration, production catalog/compatibility rollout and safety/validity governance cease to be blanket prerequisites to isolated D10 development. They remain prerequisites to applicable integrated acceptance and public activation. This resolves the integration/development discrepancy identified in the D10 readiness report; it does not declare those prerequisites satisfied.
+The recorded explicit PO approval clarifies PO-GATE and architecture §20.2 only for the bounded development scope below: incomplete full Creator/Admin integration, production catalog/compatibility rollout and safety/validity governance cease to be blanket prerequisites to isolated D10 development. They remain prerequisites to applicable integrated acceptance and public activation. This resolves the integration/development discrepancy identified in the D10 readiness report; it does not declare those prerequisites satisfied.
 
-[Master Plan §A.7 and §E](../TedixHunt_Master_Execution_Plan.md#e-dependencies-and-decision-gates) reserve governance changes for the PO and require a specific clarification before any D10 slice. [Reconciliation PO-GATE and D10-GATE](../TedixHunt_Execution_Plan_Reconciliation.md#detail-d10-gate) permit an explicit approved scope clarification, not an inferred non-public exception. Accordingly, both governing plans remain unchanged in this PR; §6 contains reviewable proposed amendments. Drafting or merging documentation alone is not PO approval. Until explicit approval, all current D10 blocking rules remain effective. D10-FE-01 is not implemented here.
+[Master Plan §A.7 and §E](../TedixHunt_Master_Execution_Plan.md#e-dependencies-and-decision-gates) reserve governance changes for the PO and require a specific clarification before any D10 slice. [Reconciliation PO-GATE and D10-GATE](../TedixHunt_Execution_Plan_Reconciliation.md#detail-d10-gate) permit an explicit approved scope clarification, not an inferred non-public exception. The governing plans now apply §6's minimal amendments. Drafting or merging documentation alone was not approval; the explicit PO instruction recorded above supplies that authority. This decision is the narrow architecture §20.2 scope clarification and supersedes the readiness report's blanket development stop only within §2; full integration/activation requirements and the original report remain preserved. D10-FE-01 is not implemented here.
 
 ## 1. Current rules and verified evidence
 
 [Architecture §20.2](../TedixHunt_Prototype_Architecture_Implementation_Plan.md#202-staged-workstreams-before-participant-runtime) requires Creator category/reuse/location flows, representative independent Admin review, reviewed Local catalog, compatibility and applicable readiness before D10 integration/activation, and explicitly preserves stricter prerequisites. [D10 readiness report](../D10_Organizer_Integration_Readiness_Report.md) therefore stopped implementation; hidden routes, flags and no-deploy promises do not waive the rule.
 
-Reviewed FE main `eaa21a7b8b1305fcf11c19e11a7b01538c7402d5` (#154), current governing documents, merged PR metadata and referenced source/reports. GitHub confirms the PRs below are merged. Implementation evidence is separate from integrated acceptance.
+Original proposal evidence review: FE main `eaa21a7b8b1305fcf11c19e11a7b01538c7402d5` (#154), current governing documents, merged PR metadata and referenced source/reports. GitHub confirms the PRs below are merged. Implementation evidence is separate from integrated acceptance. Approval-record verification read current main `1ebd627306ccce5a2f6b481bc7eb8c64370cd5bf`, confirmed #155 merged, and reviewed both governing plans, architecture §20.2 and the D10 readiness report.
 
 | Area | Merged implementation/evidence | Current acceptance boundary |
 | --- | --- | --- |
@@ -26,7 +31,7 @@ Reviewed FE main `eaa21a7b8b1305fcf11c19e11a7b01538c7402d5` (#154), current gove
 
 Later Organizer setup changes ([FE #140](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/140), [#143](https://github.com/tedixdev-arch/Tedix_Hunt_FE/pull/143)) are existing builder foundations, not evidence of completed C7 FE integration. The current Hunts API still exposes legacy template-key selection. Reuse existing `src/pages/OrganizerSetupFlow.tsx` and `src/pages/CustomHuntEditor.tsx`; do not create a second builder. No integrated, deployed or production-ready ecosystem claim follows from these merges.
 
-## 2. Bounded scope after approval
+## 2. Approved bounded scope
 
 - Use the existing authenticated Organizer workflow, API/session client and builder, preserving backend persisted-role and Hunt-specific authority.
 - Integrate existing BE C7 Local Hunt discovery, read-only preview and exact-version selection: GET `/api/organizer/local-templates`, GET `/api/organizer/local-templates/{templateId}/versions/{version}`, PUT `/api/hunts/{id}/local-template` with only `{templateId, version, countryCode, localityId}`.
@@ -55,30 +60,30 @@ No forced Universal/Local classification, automatic conversion, snapshot rewriti
 
 ## 5. Acceptance and production requirements remain separate
 
-| Dimension | What this proposal would permit | What remains required |
+| Dimension | Approved boundary | What remains required |
 | --- | --- | --- |
-| D10 development authorization | After explicit recorded PO approval only: isolated FE implementation/local tests/non-public verification within §2. | Per-slice contracts, backend authority, reviewed disposable fixtures and actual test setup; no blanket task completion. |
-| D10 integrated acceptance | Collect bounded real FE→BE→PostgreSQL evidence in disposable environments. | Actual independent Creator/Admin/Organizer actors, exact FE/BE SHAs and versions, both Local origins/cross-Creator reuse where applicable, selection/persistence/reopen, denied/stale/suspension/geography/concurrency and immutable legacy/snapshot outcomes. Record only exercised cases; mocked suites and harness preparation cannot close F7/G4/D10. Full acceptance remains open until all applicable criteria pass. |
-| D10 public activation | None. D10-GATE is not fully complete. | Complete applicable Creator/Admin/content-chain acceptance, reviewed production Local catalog and compatibility rollout; PO-LEGACY; G4-DEC-01/PO-SAFETY and dependent enforcement; separately authorized deployment, deployed supply-chain E2E and release gates. |
+| D10 development authorization | Authorized within the approved bounded scope: isolated FE implementation/local tests/non-public verification within §2. | Per-slice contracts, backend authority, reviewed disposable fixtures and actual test setup; no blanket task completion. |
+| D10 integrated acceptance | Pending actual verification; collect bounded real FE→BE→PostgreSQL evidence in disposable environments. | Actual independent Creator/Admin/Organizer actors, exact FE/BE SHAs and versions, both Local origins/cross-Creator reuse where applicable, selection/persistence/reopen, denied/stale/suspension/geography/concurrency and immutable legacy/snapshot outcomes. Record only exercised cases; mocked suites and harness preparation cannot close F7/G4/D10. Full acceptance remains open until all applicable criteria pass. |
+| D10 public activation | Blocked pending applicable production-readiness requirements. D10-GATE is not fully complete. | Complete applicable Creator/Admin/content-chain acceptance, reviewed production Local catalog and compatibility rollout; PO-LEGACY; G4-DEC-01/PO-SAFETY and dependent enforcement; separately authorized deployment, deployed supply-chain E2E and release gates. |
 
 **G4-DEC-01 is not resolved by this narrow decision.** It still requires a written PO decision distinguishing Universal content approval, Local geographic approval and physical safety; proportional route/access evidence and qualified independent review responsibilities; validity/expiry/re-review triggers, operating conditions, failure behavior, publish/start enforcement and existing-Hunt consequences. Review safe/blocked/expired and historical/Signal examples before claiming closure; implement and verify applicable G4 governance contracts afterward.
 
-PO-FEEDBACK visibility/retention and full-workflow consequences remain separately governed. PO-PROVIDER/C6b-2 rights remain mandatory for provider persistence; stored/manual-only verification does not satisfy them. Reinstatement/historical remediation remain deferred unless separately approved. G0–G6, architecture §20.3–20.4, live-stage safety/operations, migrations/provider/device evidence and any explicit parallel-pilot approval remain applicable; this proposal creates no pilot exception.
+PO-FEEDBACK visibility/retention and full-workflow consequences remain separately governed. PO-PROVIDER/C6b-2 rights remain mandatory for provider persistence; stored/manual-only verification does not satisfy them. Reinstatement/historical remediation remain deferred unless separately approved. G0–G6, architecture §20.3–20.4, live-stage safety/operations, migrations/provider/device evidence and any explicit parallel-pilot approval remain applicable; this decision creates no pilot exception.
 
-## 6. Proposed minimal plan amendments — review text only
+## 6. Approved minimal plan amendments
 
-Apply only after explicit PO approval referencing this decision/revision. Do not change the frozen reconciliation baseline or historical evidence. No new task IDs, reordered work or wholesale status resets.
+Applied under the explicit PO approval recorded above. Do not change the frozen reconciliation baseline or historical evidence. No new task IDs, reordered work or wholesale status resets.
 
 1. **Master Execution Plan §E, first bullet:** replace its development/integration clarification with:
 
-   > Development versus activation: D10 remains blocked until explicit PO approval of PO_D10_Bounded_Development. Once recorded, that decision clarifies architecture §20.2 and the D10 readiness report solely to permit existing D10 FE slices and isolated/non-public verification within its bounded scope, subject to each slice's prerequisites. Full Creator/Admin integration, production reviewed catalog/compatibility and safety/validity governance remain acceptance/activation requirements. D10-GATE is partially clarified for development only, not fully complete; no deployment, public activation or legacy transition is authorized.
+   > Development versus activation: PO approval recorded on 3 November 2026 in PO_D10_Bounded_Development authorizes bounded development. That decision clarifies architecture §20.2 and the D10 readiness report solely to permit existing D10 FE slices and isolated/non-public verification within its bounded scope, subject to each slice's prerequisites. Full Creator/Admin integration, production reviewed catalog/compatibility and safety/validity governance remain acceptance/activation requirements. D10-GATE is partially clarified for development only, not fully complete; no deployment, public activation or legacy transition is authorized.
 
 2. **Master §C D10-GATE and affected D10 blockers, with derived §B/§G wording only:** record the approval reference/date and “Development scope authorized — bounded; integrated acceptance unverified; public activation blocked.” Remove only the blanket development stop for eligible slices; do not mark slices implemented/merged/integrated. Keep D10 parent and full gate incomplete, all production blockers linked, unrelated statuses/order unchanged. Task selection still verifies exact dependencies.
 3. **Reconciliation, “Dependency order and decisions,” PO-GATE row and D10-GATE detail:** append the same approved bounded clarification and separate development/integrated/public dimensions. Supersede only the blanket statement “Blocks every D10 FE implementation slice” within this scope; retain original frozen/history text with a dated superseding reference. PO-GATE is resolved only for bounded development, not full ecosystem readiness. PO-LEGACY, PO-SAFETY/G4-DEC-01 and every unaffected requirement remain open.
-4. **Architecture/report conflict:** the approved decision must explicitly serve as the narrow §20.2 scope clarification; preserve full integration/activation requirements and the original report as historical evidence. Any later architecture synchronization should reference that approval, not silently reinterpret the report or treat this draft as governing.
+4. **Architecture/report conflict:** the approved decision must explicitly serve as the narrow §20.2 scope clarification; preserve full integration/activation requirements and the original report as historical evidence. Any later architecture synchronization should reference that approval, not silently reinterpret the report or broaden this approved development scope.
 
 ## 7. Review record and delivery boundary
 
-PO disposition: **PENDING**. Approver, approval date, reviewed revision and approval reference: **not recorded**. Requested outcome: approve or reject the bounded scope and proposed amendments; no safety/legacy or production approval is requested.
+PO disposition: **APPROVED — bounded development only**. Approver, date, exact approved revision and approval source are recorded above. D10-GATE remains incomplete overall. D10-FE-01 is **Ready for development**, not Complete; no implementation is included.
 
-This PR adds only this decision document. No governing plan, application code, tests, backend, migrations, runtime configuration, flags or deployment changes. Documentation validation covers links, exact evidence references, whitespace and the one-file PR boundary; no fresh runtime/integration/E2E test results are claimed. Existing reports' test results are attributed evidence only. Git shell fetch failed at the configured proxy; GitHub connector reads supplied current-main and merge verification and documentation delivery. Stop at Draft PR for review; do not merge or deploy.
+This approval-record PR changes only this decision document, the Master Execution Plan and the Reconciliation Plan. Architecture and readiness-report source remain historical evidence, narrowly clarified by this approved decision. No application code, tests, BE contracts, migrations, runtime configuration, flags or deployment changes. Documentation checks cover consistency, task IDs/order, preserved history, references, whitespace and the three-file boundary. No fresh runtime/integration/E2E results are claimed. Stop at one Draft PR; do not merge or deploy.
