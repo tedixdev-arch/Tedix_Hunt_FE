@@ -54,11 +54,13 @@ const options = { formats: [{ key: 'team', label: 'Team Hunters' }], teamSizes: 
 const directions = { code: 'Ok', waypoints: [{}, {}, {}], routes: [{ geometry: { type: 'LineString', coordinates: [[23, 46], [24, 47], [25, 48]] }, legs: [{}, {}], distance: 1450, duration: 900 }] }
 let container: HTMLDivElement, root: Root
 beforeEach(() => {
+  vi.stubEnv('VITE_DEPLOYMENT_ENVIRONMENT', 'development'); vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-dev.anainfo.ai')
   vi.clearAllMocks(); mocks.maps.length = 0; mocks.markers.length = 0
   mocks.get.mockReset().mockResolvedValue(structuredClone(savedHunt)); mocks.catalog.mockReset().mockResolvedValue(catalog)
   mocks.geography.mockReset().mockImplementation(async (key: string) => ({ key, version: catalog.find(item => item.key === key)!.version, configuration: structuredClone(configuration) }))
   mocks.options.mockResolvedValue(options); mocks.organizations.mockResolvedValue([{ id: 'org', name: 'School' }]); mocks.rewards.mockResolvedValue({ leaderboard: [], specialAwards: [] })
   mocks.publish.mockReset().mockResolvedValue({ ...savedHunt, status: 'published' })
+  vi.stubEnv('VITE_DEPLOYMENT_ENVIRONMENT', 'development'); vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-dev.anainfo.ai')
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-token')
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(directions))))

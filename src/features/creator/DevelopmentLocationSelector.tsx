@@ -20,7 +20,7 @@ export function DevelopmentLocationSelector({ savedId, snapshot, value, onChange
     geographyApi.search(preset.countryCode, 'Cluj').then(({ localities }) => {
       if (!live) return
       const matches = [...new Map(localities.filter(place => place.active && place.countryCode === preset.countryCode
-        && place.name.toLowerCase().replace(/[\s-]/g, '') === 'clujnapoca' && place.administrativeContext === preset.administrativeContext
+        && place.name.toLowerCase().replace(/[\s-]/g, '') === 'clujnapoca'
         && Number.isFinite(place.latitude) && Math.abs(place.latitude) <= 90
         && Number.isFinite(place.longitude) && Math.abs(place.longitude) <= 180).map(place => [place.id, place])).values()]
       if (matches.length !== 1) throw new Error('Development locality is missing or ambiguous')

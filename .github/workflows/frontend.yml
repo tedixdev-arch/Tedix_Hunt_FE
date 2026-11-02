@@ -50,6 +50,8 @@ jobs:
           npm run build
         env:
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
+          VITE_DEPLOYMENT_ENVIRONMENT: development
+          VITE_DEVELOPMENT_LOCATION_PRESET: cluj
           VITE_API_BASE_URL: https://tedixhunt-be-dev.anainfo.ai
           VITE_BUILD_SHA: ${{ github.sha }}
       - name: Set up SSH
@@ -174,6 +176,8 @@ jobs:
           npm run build
         env:
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
+          VITE_DEPLOYMENT_ENVIRONMENT: production
+          VITE_DEVELOPMENT_LOCATION_PRESET: ""
           VITE_API_BASE_URL: https://tedixhunt-be-prod.anainfo.ai
       - name: Set up SSH
         run: |

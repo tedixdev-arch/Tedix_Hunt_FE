@@ -13,6 +13,7 @@ vi.mock('../src/components/TedixMap', () => ({ TedixMap: (props: any) => { map.p
 const city = { id: '11111111-1111-4111-8111-111111111111', name: 'Paris', countryCode: 'FR', countryDisplayName: 'France', administrativeContext: 'Île-de-France', latitude: 48.8566, longitude: 2.3522, active: true }
 let root: Root, container: HTMLDivElement
 beforeEach(() => {
+  vi.stubEnv('VITE_DEPLOYMENT_ENVIRONMENT', 'development'); vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-dev.anainfo.ai')
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks(); Element.prototype.scrollIntoView = vi.fn()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
   geo.countries.mockResolvedValue({ countries: [{ code: 'FR', displayName: 'France' }, { code: 'DE', displayName: 'Germany' }] }); geo.search.mockResolvedValue({ localities: [city, city] }); geo.get.mockResolvedValue(city)
@@ -151,7 +152,22 @@ test.each([[], [{ ...cluj, active: false }], [cluj, { ...cluj, id: 'another' }]]
   await render(); await click('Continue to Hunt builder')
   expect(container.querySelector('#checkpoint-positions')).toBeNull(); expect(api.create).not.toHaveBeenCalled()
 })
-test('production ignores development preset even if environment flag is set', async () => {
+test('production API ignores development preset even if environment flag is set', async () => {
   vi.stubEnv('MODE', 'production'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-prod.anainfo.ai')
   await render(); expect(geo.search).not.toHaveBeenCalled(); expect(geo.countries).toHaveBeenCalledOnce()
+})
+
+test('normal development deployment activates preset in Vite production mode', async () => {
+  vi.stubEnv('MODE', 'production'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  geo.search.mockResolvedValue({ localities: [cluj] }); await render(); await click('Continue to Hunt builder')
+  expect(geo.search).toHaveBeenCalledExactlyOnceWith('RO', 'Cluj'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
+})
+
+test('development deployment reuses the existing canonical city UUID with an existing administrative label', async () => {
+  vi.stubEnv('MODE', 'production'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
+  const existing = { ...cluj, name: 'Cluj Napoca', administrativeContext: 'Cluj County' }
+  geo.search.mockResolvedValue({ localities: [existing] })
+  await render(); await click('Continue to Hunt builder'); await change('#template-setup input', 'Reuse registered Cluj'); await click('Save draft')
+  expect(api.create.mock.calls[0][2]).toBe(existing.id)
 })
