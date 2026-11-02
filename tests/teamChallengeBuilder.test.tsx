@@ -42,7 +42,7 @@ for (const example of teamExamples) test(`${example.type}: seven modern choices,
   await input(container.querySelector('textarea')!, 'Guided mission')
   await click('Next'); expect(container.textContent).toContain('Give the team information')
   await click('Edit with Preview'); expect(container.textContent).toContain('Guided mission')
-  await click('Apply Team Challenge')
+  await click('Apply challenge')
   const cp = applyExerciseDrafts([{ checkpoint: 1 }, { role: 'terminal' }], { 'teamKind:0': state }); expect(cp.errors).toEqual([])
   const content: any = { checkpoints: cp.checkpoints }
   expect(toPersistence(hydrateExerciseDrafts(content)['teamKind:0'].custom!)).toEqual(cp.checkpoints[0].customExercises!.team)
@@ -73,7 +73,7 @@ test('Shared Final Key requires both ordering and correct code, supports pencils
   expect(state).toEqual(before)
   await click('Reset simulation'); expect(container.querySelector<HTMLInputElement>('input')!.value).toBe(''); expect(container.querySelector('[aria-label="Combined contributions"]')!.children).toHaveLength(0)
   await click('Edit Shared objective'); await input(container.querySelector('[role="group"] textarea')!, 'Smallest digit first'); expect(state.custom!.authored!.activity).toMatchObject({ orderingInstructions: 'Smallest digit first' })
-  await click('Edit Final shared key'); const fields = container.querySelectorAll('textarea'); await input(fields[fields.length - 1], '000'); expect(validateExercise(state.custom!).length).toBeGreaterThan(0); expect(button('Apply Team Challenge').disabled).toBe(true)
+  await click('Edit Final shared key'); const fields = container.querySelectorAll('textarea'); await input(fields[fields.length - 1], '000'); expect(validateExercise(state.custom!).length).toBeGreaterThan(0); expect(button('Apply challenge').disabled).toBe(true)
 })
 
 for (const example of teamExamples.filter(e => !['distributed-information', 'shared-final-key'].includes(e.type))) test(`${example.type}: mechanic-specific success, failure, reset and direct guided access`, async () => {
@@ -88,7 +88,7 @@ for (const example of teamExamples.filter(e => !['distributed-information', 'sha
 })
 
 test('authoritative Legacy and unresolved contexts retain compatibility without ID inference', async () => {
-  await mount(undefined, { mode: 'legacy', kinds: [] }); expect(button('Preview Exercise')).toBeDefined(); expect(button('Edit with Preview')).toBeUndefined()
+  await mount(undefined, { mode: 'legacy', kinds: [] }); expect(button('Try challenge')).toBeDefined(); expect(button('Edit with Preview')).toBeUndefined()
   await act(async () => root.unmount()); root = createRoot(container)
   await mount(undefined, { mode: 'unresolved', kinds: [] }); expect(container.querySelector('select')).toBeNull(); await click('Use modern challenge editor'); await choose('distributed-information'); expect(container.querySelector('[aria-label="Player perspective"]')).toBeTruthy()
 })
@@ -96,7 +96,7 @@ test('authoritative Legacy and unresolved contexts retain compatibility without 
 test('mode and mechanic switches retain unapplied drafts and selected ownership; terminal round trip', async () => {
   await mount(own(teamExamples[1])); await click('Edit Title'); await input(container.querySelector('textarea')!, 'Keep me'); const old = structuredClone(state.custom!)
   await choose('shared-final-key'); expect(state.appliedCustom!.id).toBe(old.id); await choose('distributed-information'); expect(state.custom!.title).toBe('Keep me')
-  await click('Apply Team Challenge'); const applied = applyExerciseDrafts([{ checkpoint: 1 }, { role: 'terminal', marker: 'keep' }], { 'teamKind:terminal': state }); expect(applied.errors).toEqual([])
+  await click('Apply challenge'); const applied = applyExerciseDrafts([{ checkpoint: 1 }, { role: 'terminal', marker: 'keep' }], { 'teamKind:terminal': state }); expect(applied.errors).toEqual([])
   const reloaded = hydrateExerciseDrafts({ checkpoints: applied.checkpoints } as any); expect(toPersistence(reloaded['teamKind:terminal'].custom!)).toEqual(toPersistence(state.custom!)); expect(applied.checkpoints[1]).toMatchObject({ marker: 'keep' })
 })
 

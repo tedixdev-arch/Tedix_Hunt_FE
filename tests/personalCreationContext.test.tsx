@@ -57,7 +57,7 @@ for (const category of ['local', 'universal'] as const) test(`new ${category}: c
   expect(container.querySelectorAll('[aria-label="Personal Challenge"]')).toHaveLength(1)
   expect(container.textContent).toContain('Checkpoint 1')
   await input(select, 'single-choice'); await click('Create Your Own')
-  await input(container.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!, 'Checkpoint one only'); await click('Apply to Hunt')
+  await input(container.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!, 'Checkpoint one only'); await click('Apply challenge')
   await click('Checkpoint 2'); expect(container.querySelector('[aria-label="Title"]')).toBeNull()
   await click('Checkpoint 1'); expect(container.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!.value).toBe('Checkpoint one only')
   await click('Checkpoint 7, FinishPoint'); expect(container.textContent).toContain('FinishPoint'); expect(container.querySelector('[aria-label="Title"]')).toBeNull()
@@ -215,5 +215,5 @@ async function completeLocalSetup() {
   for (const [selector,value] of [['#local-geography select','FR'],['#local-geography input','Paris']]) {
     await act(async () => { const node = container.querySelector(selector)!; Object.getOwnPropertyDescriptor(node.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype,'value')!.set!.call(node,value); node.dispatchEvent(new Event(node.tagName === 'SELECT' ? 'change':'input',{bubbles:true})) })
   }
-  for (const text of ['Paris · Île-de-France · France','Continue to Hunt builder']) await act(async () => [...container.querySelectorAll('button')].find(button=>button.textContent===text)!.click())
+  for (const text of ['Paris · Île-de-France · France','Continue to Template builder']) await act(async () => [...container.querySelectorAll('button')].find(button=>button.textContent===text)!.click())
 }

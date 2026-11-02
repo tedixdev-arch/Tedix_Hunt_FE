@@ -31,7 +31,7 @@ for (const width of [1440, 768, 390, 320]) {
   await page.evaluate(() => window.approveProposal()); await button('Refresh proposals').click()
   await button('Find approved locality in registry').click(); await button('Save draft').click()
   await page.getByText('Local Template · Draft · Version 4', { exact: true }).waitFor()
-  assert.equal(await button('Submit version to Admin').isDisabled(), true)
+  assert.equal(await button('Submit for Approval').isDisabled(), true)
   await button("Can't find your locality?").click() // Save reuses the inline component and keeps disclosure open.
   await button("Can't find your locality?").click()
   await geo.scrollIntoViewIfNeeded(); await page.screenshot({ path: `work/completion-browser/proposals-${width}.png`, fullPage: true })
@@ -42,8 +42,8 @@ for (const width of [1440, 768, 390, 320]) {
     await page.getByRole('textbox', { name: 'Template name', exact: true }).fill(`Revised ${type} ${width}`)
     await button('Save draft').click(); await page.getByText(`${type === 'local' ? 'Local' : 'Universal'} Template · Draft · Version 4`, { exact: true }).waitFor()
     if (type === 'local') { await button('Run template validation').click(); await button('✓ Validation passed').waitFor(); assert.match(await page.locator('main').textContent(), /Suspended.*Access temporarily closed/) }
-    assert.equal(await button('Submit version to Admin').isDisabled(), false)
-    await button('Submit version to Admin').focus(); await page.keyboard.press('Enter')
+    assert.equal(await button('Submit for Approval').isDisabled(), false)
+    await button('Submit for Approval').focus(); await page.keyboard.press('Enter')
     await page.getByText('Version 4 submitted for Admin review', { exact: true }).waitFor()
     const state = await page.evaluate(() => ({ calls: window.fixtureCalls, record: window.fixtureRecord() }))
     assert.equal(state.calls.filter(c => c.method === 'version').length, 1)

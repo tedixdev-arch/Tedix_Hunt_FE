@@ -20,7 +20,7 @@ for (const width of [1440, 768, 390, 320]) {
     await panel.getByLabel('Title', { exact: true }).fill(title)
     const personal = e.classification === 'personal'
     const priority = personal && ['tap-pair', 'single-choice', 'fill-blank'].includes(e.type)
-    const trigger = panel.getByRole('button', { name: personal ? 'Play' : 'Preview Exercise', exact: true }); if (!personal || priority) await trigger.click()
+    const trigger = panel.getByRole('button', { name: personal ? 'Try challenge' : 'Try challenge', exact: true }); if (!personal || priority) await trigger.click()
     const dialog = personal ? panel.locator(`[aria-label="${e.type} interactive exercise"]`) : page.getByRole('dialog', { name: 'Exercise preview' })
     await dialog.waitFor()
     if (!personal) assert.match(await dialog.textContent(), new RegExp(e.type))

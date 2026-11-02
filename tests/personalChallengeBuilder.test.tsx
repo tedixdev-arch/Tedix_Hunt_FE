@@ -50,7 +50,7 @@ for (const preset of personalExamples) test(`${preset.type}: one modern selector
   expect(selector.querySelector('optgroup')).toBeNull()
   expect(container.querySelector('[aria-label="Mobile challenge canvas"]')).not.toBeNull()
   expect(container.querySelector('textarea')).toBeNull()
-  expect(button('Test Challenge')).toBeUndefined(); expect(button('Apply to Hunt')).toBeUndefined()
+  expect(button('Test Challenge')).toBeUndefined(); expect(button('Apply challenge')).toBeUndefined()
   expect(container.querySelector('[aria-label^="Edit "]')).toBeNull()
   expect(state.assignment).toBe('predefined'); expect(state.custom).toBeUndefined()
   await click('Check answer'); await click('Reset')
@@ -58,7 +58,7 @@ for (const preset of personalExamples) test(`${preset.type}: one modern selector
   expect(applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': state }).checkpoints[0].customExercises).toBeUndefined()
   await click('Create Your Own'); expect(state.custom!.type).toBe(preset.type)
   expect(state.custom!.id).not.toBe(preset.id); expect(state.assignment).toBe('predefined')
-  await click('Apply to Hunt')
+  await click('Apply challenge')
   expect(applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': state }).checkpoints[0].customExercises!.personal!.type).toBe(preset.type)
   expect(personalExamples.find(e => e.type === preset.type)).toEqual(before)
 })
@@ -78,7 +78,7 @@ for (const type of ['tap-pair', 'single-choice', 'fill-blank']) test(`${type}: p
   await act(async () => field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
   expect(document.activeElement).toBe(button(`Edit ${key}`)); expect(container.querySelector('[role="group"]')).toBeNull()
   const edited = structuredClone(state)
-  await click('Play'); await click('Check answer'); await click('Hint'); await click('Solution'); await click('Reset')
+  await click('Try challenge'); await click('Check answer'); await click('Hint'); await click('Solution'); await click('Reset')
   expect(state).toEqual(edited)
   await click('Edit'); expect(container.textContent).toContain(type === 'fill-blank' ? 'Edited ___ question' : 'Edited card')
   await click('Complex / LaTeX'); expect(container.textContent).toContain('Step 1')
@@ -87,7 +87,7 @@ for (const type of ['tap-pair', 'single-choice', 'fill-blank']) test(`${type}: p
   await click('Next'); await click('Back'); await click('Edit with Preview')
   expect(state).toEqual(edited)
   await click(type === 'tap-pair' ? 'Add pair' : type === 'single-choice' ? 'Add option' : 'Add blank')
-  expect(validateExercise(state.custom!)).not.toEqual([]); expect(button('Play').disabled).toBe(true); expect(button('Apply to Hunt').disabled).toBe(true)
+  expect(validateExercise(state.custom!)).not.toEqual([]); expect(button('Try challenge').disabled).toBe(true); expect(button('Apply challenge').disabled).toBe(true)
   const count = type === 'tap-pair' ? authored.activity.left.length + 1 : type === 'single-choice' ? authored.activity.options.length + 1 : authored.activity.blanks.length + 1
   await click(`Edit ${type === 'tap-pair' ? 'Card' : type === 'single-choice' ? 'Option' : 'Question'} ${count}`)
   await click(`${type === 'tap-pair' ? 'Remove pair' : type === 'single-choice' ? 'Remove option' : 'Remove question'} ${count}`)
@@ -102,7 +102,7 @@ test('marking a choice correct uses stable identity and removing it requires ano
   await input(container.querySelector('[role="group"] textarea')!, 'Renamed option')
   expect((state.custom!.authored!.expected as any).optionId).toBe(id)
   await click('Remove option 1'); expect((state.custom!.authored!.expected as any).optionId).toBe('')
-  expect(button('Apply to Hunt').disabled).toBe(true)
+  expect(button('Apply challenge').disabled).toBe(true)
 })
 
 test('blank accepted answer edits and removals retain other identities', async () => {
@@ -121,10 +121,10 @@ test('switching custom mechanics retains selected instance until explicit confir
   await mount(asDraft(original)); await choose('single-choice')
   let applied = applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': state })
   expect((applied.checkpoints[0].customExercises!.personal as any).type).toBe('tap-pair')
-  vi.mocked(window.confirm).mockReturnValueOnce(false); await click('Apply to Hunt')
+  vi.mocked(window.confirm).mockReturnValueOnce(false); await click('Apply challenge')
   applied = applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': state })
   expect(applied.checkpoints[0].customExercises!.personal!.type).toBe('tap-pair')
-  await click('Apply to Hunt'); expect(state.appliedCustom!.type).toBe('single-choice')
+  await click('Apply challenge'); expect(state.appliedCustom!.type).toBe('single-choice')
   await choose('tap-pair'); expect(state.custom).toEqual(original)
 })
 
@@ -148,7 +148,7 @@ test('reload and metadata loss cannot introduce duplicate predefined selections 
   const values = [...container.querySelector('select')!.options].map(o => o.value)
   expect(new Set(values).size).toBe(values.length)
   expect(values.filter(value => value === 'tap-pair')).toHaveLength(1)
-  expect(button('Use this challenge')).toBeUndefined() // no duplicate-assignment path, including after reload
+  expect(button('Apply challenge')).toBeUndefined() // no duplicate-assignment path, including after reload
   expect(checkpointExercises).toEqual(before)
 })
 
@@ -249,7 +249,7 @@ for (const [index, signal] of checkpointExercises.entries()) test(`${signal.kind
     return <ChallengeAuthoring context={{ mode: 'legacy', kinds: [signal.kind] }} field="kind" value={value} onChange={setValue} draft={draft} onDraftChange={setDraft} />
   }
   await act(async () => root.render(<SignalHarness />))
-  await click('Predefined'); await choose(signal.kind); await click('Use this challenge')
+  await click('Predefined'); await choose(signal.kind); await click('Apply challenge')
   expect(state.assignment).toBe('predefined')
   const slot = terminal ? 'kind:terminal' : `kind:${index}`
   const applied = applyExerciseDrafts([checkpoint], { [slot]: state })

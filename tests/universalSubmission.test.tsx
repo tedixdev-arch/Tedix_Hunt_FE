@@ -23,25 +23,25 @@ async function name(value: string) { const input = container.querySelector('inpu
 test('05 submits exact saved latest route-free Universal once, then locks independently of publication', async () => {
   await render(); expect(container.textContent).not.toContain('Route reviewed this session'); expect(container.textContent).not.toContain('Place one FinishPoint')
   let resolve!: (v: any) => void; api.submit.mockReturnValue(new Promise(done => resolve = done))
-  await act(async () => { button('Submit version').click(); button('Submit version').click() })
+  await act(async () => { button('Submit for Approval').click(); button('Submit for Approval').click() })
   expect(api.submit).toHaveBeenCalledExactlyOnceWith('owned', 3)
   await act(async () => resolve({ ...record, status: 'submitted', submittedVersion: 3 }))
   expect(container.querySelector('input')).toBeNull(); expect(container.textContent).toContain('submitted for Admin review'); expect(container.textContent).not.toContain('Published version 3')
 })
 test('05 unsaved story edit cannot be submitted and does not implicitly save', async () => {
-  await render(); await name('Not saved'); expect(button('Submit version').disabled).toBe(true); await click('Submit version'); expect(api.submit).not.toHaveBeenCalled(); expect(api.createVersion).not.toHaveBeenCalled(); expect(container.textContent).toContain('Save your changes')
+  await render(); await name('Not saved'); expect(button('Submit for Approval').disabled).toBe(true); await click('Submit for Approval'); expect(api.submit).not.toHaveBeenCalled(); expect(api.createVersion).not.toHaveBeenCalled(); expect(container.textContent).toContain('Save your changes')
 })
 test('05 stale preflight sends no submission and requires latest saved reopen', async () => {
-  await render(); record = { ...record, version: 4, content: { ...record.content, version: 4 } }; await click('Submit version'); expect(api.submit).not.toHaveBeenCalled(); expect(container.textContent).toContain('saved version changed'); expect(button('Submit version').disabled).toBe(true)
+  await render(); record = { ...record, version: 4, content: { ...record.content, version: 4 } }; await click('Submit for Approval'); expect(api.submit).not.toHaveBeenCalled(); expect(container.textContent).toContain('saved version changed'); expect(button('Submit for Approval').disabled).toBe(true)
 })
 test.each([400,403,409,500])('05 server response %s preserves snapshot and reports correct boundary', async status => {
-  await render(); api.submit.mockRejectedValue(new ApiError('Failed', status, 'http')); await click('Submit version'); expect(container.querySelector('input')).not.toBeNull(); expect(container.querySelector('[role=alert]')).not.toBeNull(); expect(api.submit).toHaveBeenCalledExactlyOnceWith('owned', 3)
+  await render(); api.submit.mockRejectedValue(new ApiError('Failed', status, 'http')); await click('Submit for Approval'); expect(container.querySelector('input')).not.toBeNull(); expect(container.querySelector('[role=alert]')).not.toBeNull(); expect(api.submit).toHaveBeenCalledExactlyOnceWith('owned', 3)
   if (status === 400) { expect(container.textContent).toContain('saved Universal content was rejected'); expect(container.textContent).not.toContain('FinishPoint geography') }
-  if ([409,500].includes(status)) expect(button('Submit version').disabled).toBe(true)
+  if ([409,500].includes(status)) expect(button('Submit for Approval').disabled).toBe(true)
 })
 test.each(['terminal','numbering','unsupported'])('05 invalid %s gameplay blocks submission locally', async kind => {
   if (kind === 'terminal') record.content.checkpoints.pop()
   if (kind === 'numbering') (record.content.checkpoints[0] as any).checkpoint = 2
   if (kind === 'unsupported') (record.content.checkpoints[0] as any).kind = 'invented-game'
-  await render(); const submit = [...container.querySelectorAll('button')].find(b => b.textContent?.startsWith('Submit version')); expect(!submit || submit.disabled).toBe(true); expect(api.submit).not.toHaveBeenCalled()
+  await render(); const submit = [...container.querySelectorAll('button')].find(b => b.textContent?.startsWith('Submit for Approval')); expect(!submit || submit.disabled).toBe(true); expect(api.submit).not.toHaveBeenCalled()
 })

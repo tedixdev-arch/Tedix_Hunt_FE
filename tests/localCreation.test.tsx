@@ -40,5 +40,5 @@ async function completeLocalSetup() {
   for (const [selector,value] of [['#local-geography select','FR'],['#local-geography input','Paris']]) {
     await act(async () => { const node = container.querySelector(selector)!; Object.getOwnPropertyDescriptor(node.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype,'value')!.set!.call(node,value); node.dispatchEvent(new Event(node.tagName === 'SELECT' ? 'change':'input',{bubbles:true})) })
   }
-  for (const text of ['Paris · Île-de-France · France','Continue to Hunt builder']) await act(async () => [...container.querySelectorAll('button')].find(button=>button.textContent===text)!.click())
+  for (const text of ['Paris · Île-de-France · France','Continue to Template builder']) await act(async () => [...container.querySelectorAll('button')].find(button=>button.textContent===text)!.click())
 }

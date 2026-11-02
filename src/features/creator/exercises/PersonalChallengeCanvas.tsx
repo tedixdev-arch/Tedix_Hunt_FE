@@ -12,7 +12,7 @@ type Props = { exercise: Exercise; onChange: (e: Exercise) => void }
 export function PersonalChallengeCanvas({ exercise: e, onChange }: Props) {
   const [mode, setMode] = useState('visual'), [step, setStep] = useState(0), [playing, setPlaying] = useState(false)
   useFormulaMode(mode === 'steps')
-  const steps = ['Title and instructions', 'Build your challenge', 'Define the correct answer', 'Hints and feedback', 'Play your challenge']
+  const steps = ['Title and instructions', 'Build your challenge', 'Define the correct answer', 'Hints and feedback', 'Try challenge']
   const issues = validateExercise(e), errors = friendlyIssues(issues)
   const pencil = (key: 'title' | 'instructions' | 'solution' | 'correctFeedback' | 'incorrectFeedback', label: string, limit = 2000) => <PencilField label={label} value={e[key]} maxLength={limit} onChange={value => onChange({ ...e, [key]: value })} />
   const intro = <><div className="text-2xl font-bold">{pencil('title', 'Title', 200)}</div>{pencil('instructions', e.type === 'true-false' ? 'Statement' : 'Instructions', 4000)}</>
@@ -22,7 +22,7 @@ export function PersonalChallengeCanvas({ exercise: e, onChange }: Props) {
   return <div className="min-w-0 space-y-4">
     <div className="challenge-mode" aria-label="Editing mode">{[['visual', 'Edit with Preview'], ['steps', 'Complex / LaTeX']].map(([id, label]) => <button type="button" key={id} aria-pressed={mode === id} onClick={() => setMode(id)}>{label}</button>)}</div>
     {mode === 'steps' && <MathHelp />}
-    {mode === 'visual' ? <div className="flex justify-center gap-2" aria-label="Canvas interaction">{['Edit', 'Play'].map(label => <button type="button" key={label} className={control} aria-pressed={playing === (label === 'Play')} disabled={label === 'Play' && !!errors.length} onClick={() => setPlaying(label === 'Play')}>{label}</button>)}</div> : <section aria-label="Guided challenge editor" className="space-y-3 rounded-xl bg-slate-50 p-3"><p>Step {step + 1} of {steps.length}</p><h4 aria-live="polite" className="font-bold">{steps[step]}</h4><div className="flex justify-between gap-2"><button type="button" className={control} disabled={!step} onClick={() => setStep(step - 1)}>Back</button><button type="button" className={control} disabled={step === 4 || stepIssues.length > 0} onClick={() => setStep(step + 1)}>Next</button></div></section>}
+    {mode === 'visual' ? <div className="flex justify-center gap-2" aria-label="Canvas interaction">{['Edit', 'Try challenge'].map(label => <button type="button" key={label} className={control} aria-pressed={playing === (label === 'Try challenge')} disabled={label === 'Try challenge' && !!errors.length} onClick={() => setPlaying(label === 'Try challenge')}>{label}</button>)}</div> : <section aria-label="Guided challenge editor" className="space-y-3 rounded-xl bg-slate-50 p-3"><p>Step {step + 1} of {steps.length}</p><h4 aria-live="polite" className="font-bold">{steps[step]}</h4><div className="flex justify-between gap-2"><button type="button" className={control} disabled={!step} onClick={() => setStep(step - 1)}>Back</button><button type="button" className={control} disabled={step === 4 || stepIssues.length > 0} onClick={() => setStep(step + 1)}>Next</button></div></section>}
     <div hidden={showPlay}>
       <ChallengeCanvas exercise={e} playing={false}><section className="space-y-5" aria-label="Personal visual authoring canvas">
         {(mode === 'visual' || step === 0) && intro}

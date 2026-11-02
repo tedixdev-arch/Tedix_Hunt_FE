@@ -66,24 +66,24 @@ try {
   for (const width of [1440, 768, 390, 320]) for (const type of ['true-false','memory-card','number-line','multiple-choice','match-columns','drag-drop','sequence','find-mistake','build-problem','number-pattern','shape-pattern','rule-discovery']) {
     console.log(width, type)
     await page.setViewportSize({ width, height: 1000 }); await page.goto(`${process.env.TEDIX_BROWSER_URL || 'http://127.0.0.1:5173'}/tests/browser/personalVisualEditors.html`)
-    await page.getByRole('button', { name: 'Continue to Hunt builder', exact: true }).click()
+    await page.getByRole('button', { name: 'Continue to Template builder', exact: true }).click()
     await page.getByRole('textbox', { name: 'Template name', exact: true }).fill('Visual mechanics'); await save(); const initial = await page.evaluate(() => window.fixtureRecord())
     await feature(); const selector = panel().getByRole('combobox', { name: 'Personal Challenge', exact: true }); assert.equal(await selector.locator('option').count(), 16); await selector.selectOption(type)
     assert.equal(await btn('Edit Title').count(), 0)
     const example = await page.evaluate(type => window.examples.find(e => e.type === type), type)
     await btn('Create Your Own').click(); assert.equal(await btn('Edit with Preview').getAttribute('aria-pressed'), 'true')
-    await btn('Apply to Hunt').click(); await save()
+    await btn('Apply challenge').click(); await save()
     const baseline = await page.evaluate(() => window.fixtureRecord().content.checkpoints[0].customExercises.personal)
     await edit(type, baseline); await shot(`${type}-edit-${width}`)
     await btn('Step by Step').click()
     for (let i = 0; i < 4; i++) await btn('Next').click()
     assert.equal(await play().count(), 1)
     await btn('Edit with Preview').click(); assert.match(await panel().textContent(), new RegExp(`Visual ${type}`))
-    await btn('Apply to Hunt').click(); await save()
+    await btn('Apply challenge').click(); await save()
     const saved = await page.evaluate(() => window.fixtureRecord()), e = saved.content.checkpoints[0].customExercises.personal
     assert.notDeepEqual(e.answer, baseline.answer); assert.equal(e.title, `Visual ${type}`)
     assert.deepEqual(saved.content.checkpoints.slice(1), initial.content.checkpoints.slice(1))
-    await btn('Play').click(); await solve(e); await shot(`${type}-play-${width}`); assert.deepEqual(await page.evaluate(() => window.fixtureRecord()), saved)
+    await btn('Try challenge').click(); await solve(e); await shot(`${type}-play-${width}`); assert.deepEqual(await page.evaluate(() => window.fixtureRecord()), saved)
     // A local attempt survives switching modes; no attempt data enters persistence.
     await btn('Step by Step').click(); await btn('Edit with Preview').click()
     const checkpoints = page.getByLabel('Checkpoint selector', { exact: true }); await checkpoints.getByRole('button', { name: 'Checkpoint 2', exact: true }).click(); await checkpoints.getByRole('button', { name: 'Checkpoint 1', exact: true }).click()
@@ -92,7 +92,7 @@ try {
     if (type === 'true-false') {
       await page.evaluate(() => { window.fixtureApprove(); window.fixtureReopen() }); await feature(); await pencil('Title', 'Revised approved challenge'); await save()
       const revised = await page.evaluate(() => window.fixtureRecord()); assert.equal(revised.content.version, saved.content.version + 1); assert.equal(revised.status, 'draft'); assert.deepEqual(revised.content.checkpoints[0].customExercises.personal.answer, e.answer)
-      await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: /FinishPoint/ }).click(); await panel().getByRole('combobox', { name: 'Personal Challenge', exact: true }).selectOption(type); await btn('Create Your Own').click(); await btn('Apply to Hunt').click(); await save(); assert.equal(await page.evaluate(() => window.fixtureRecord().content.checkpoints.at(-1).customExercises.personal.type), type)
+      await page.getByLabel('Checkpoint selector', { exact: true }).getByRole('button', { name: /FinishPoint/ }).click(); await panel().getByRole('combobox', { name: 'Personal Challenge', exact: true }).selectOption(type); await btn('Create Your Own').click(); await btn('Apply challenge').click(); await save(); assert.equal(await page.evaluate(() => window.fixtureRecord().content.checkpoints.at(-1).customExercises.personal.type), type)
     }
     await layout(); results.push({ width, type, visualContentAndAnswer: true, guided: true, incorrectAndCorrect: true, reset: true, pencilKeyboardFocus: true, checkpoint: true, saveReload: true, overflow: false })
   }

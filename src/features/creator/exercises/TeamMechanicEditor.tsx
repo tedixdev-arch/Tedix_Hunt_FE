@@ -14,7 +14,7 @@ export function TeamMechanicEditor({ exercise, onChange }: { exercise: Exercise;
     if (/facts|contributions|packets|clues|signals/i.test(error)) return ['Complete the team information. Use 2–16 items with text in each one.']
     return friendlyIssues([error])
   }))]
-  const steps = ['Set the mission', 'Give the team information', 'Define the shared answer', 'Hints and feedback', 'Try the challenge']
+  const steps = ['Set the mission', 'Give the team information', 'Define the shared answer', 'Hints and feedback', 'Try challenge']
   const text = (key: 'title' | 'instructions' | 'solution' | 'correctFeedback' | 'incorrectFeedback', label: string) => <label className="block text-sm font-bold">{label}<textarea className={`${control} mt-2 w-full bg-white`} maxLength={key === 'title' ? 200 : key === 'instructions' || key === 'solution' ? 4000 : 2000} value={exercise[key]} onChange={event => onChange({ ...exercise, [key]: event.target.value })} /></label>
   return <div className="min-w-0 space-y-5">
     <div className="challenge-mode" aria-label="Editing mode">{[['visual', 'Edit with Preview'], ['steps', 'Step by Step']].map(([id, label]) => <button type="button" key={id} aria-pressed={mode === id} onClick={() => setMode(id)}>{label}</button>)}</div>

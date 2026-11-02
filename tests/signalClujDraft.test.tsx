@@ -344,7 +344,7 @@ test.each([false, true])('Creator saves and reopens six authored positions and s
   expect(map.props.positionPins[5].name).toBe('Real place 6')
   await feature('Final Checkpoint')
   expect(map.props.finishPoint.name).toBe('Real finish')
-  await click('Preview full journey'); await click('Start preview')
+  await click('Preview journey'); await click('Start preview')
   expect(container.textContent).toContain('Real place 1')
   expect(map.props.cameraTarget.latitude).toBe(46.701)
   expect(map.props.landmarkReference).toBeUndefined()
