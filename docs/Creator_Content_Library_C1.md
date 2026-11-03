@@ -29,3 +29,13 @@ A later explicit selection operation should resolve an approved exact revision, 
 Run `npm run typecheck`, `npm test`, `npm run build`. Focused coverage extends `creatorStudioNavigation.test.tsx` for Content navigation/deep-link authorization, category switching, shared previews, curriculum empty results, search, reset and unchanged creation links/no mutations. Existing Creator route, authoring, LaTeX and persistence tests provide regression coverage.
 
 Browser evidence: `node tests/browser/contentLibrary.verify.mjs` uses the existing isolated Creator Studio fixture (no real account/backend), checks all 22 previews at 1440/390/320px, filters, missing hint records, original Template creation links, horizontal overflow, runtime errors and mutation requests. Screenshots and machine-readable results are in `docs/evidence/content-library-c1/`. No production gameplay, backend persistence or live account verification is claimed.
+
+### Recorded implementation results
+
+- `npm run typecheck`: passed.
+- `npm test -- --maxWorkers=2`: passed, 271 Node tests and 925 Vitest tests across 45 files. Bounded workers were used after default worker startup stalled in this environment. Existing jsdom `scrollTo` notices were non-failing.
+- `npm run build`: passed (existing large-chunk advisory remains).
+- Browser run: passed, 22 previews per viewport at 1440/390/320px, no horizontal overflow, runtime errors or mutation requests. Desktop/mobile screenshots were visually inspected. This uses fixtures rather than production accounts.
+- `git diff --check`: passed.
+
+Review remains a Draft PR checkpoint. No merge or deployment was performed.

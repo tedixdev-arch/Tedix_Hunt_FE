@@ -18,6 +18,8 @@ for (const width of [1440, 390, 320]) {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
   measurements.push({ width, overflow: false })
   await page.screenshot({ path: `${output}/content-${width}.png`, fullPage: true })
+  await content.getByRole('button', { name: /^Preview / }).first().scrollIntoViewIfNeeded()
+  await page.screenshot({ path: `${output}/cards-${width}.png` })
   // Every Starter uses the real shared renderer, opens without configuration errors and closes by Escape.
   for (let i = 0; i < 15; i++) {
     await content.getByRole('button', { name: /^Preview / }).nth(i).click()
