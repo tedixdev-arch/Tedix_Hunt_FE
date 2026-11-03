@@ -263,6 +263,7 @@ function CreatorTemplateEditor() {
   const [localValidationAttempted, setLocalValidationAttempted] = useState(false), [validating, setValidating] = useState(false)
   const [validatedLocal, setValidatedLocal] = useState(''), [localityError, setLocalityError] = useState('')
   const [selectedCity, setSelectedCity] = useState<LocalitySnapshot | null>(null)
+  const [citySearchPending, setCitySearchPending] = useState(false)
   const [setupError, setSetupError] = useState('')
   // Navigation progress only; locality authority remains the existing UUID/snapshot.
   const [setupContinuation, setSetupContinuation] = useState(0)
@@ -289,8 +290,8 @@ function CreatorTemplateEditor() {
   const effectiveLocality = localityChange === undefined ? persisted?.localityId : localityChange
   const city = selectedCity ?? (localityChange === undefined ? persisted?.localitySnapshot : null)
   const localitySelectionRef = useRef(effectiveLocality); localitySelectionRef.current = effectiveLocality
-  useEffect(() => { mapCamera.current = null; setCityCameraRequest(undefined); setSelectedCity(null); setSetupError('') }, [templateKey])
-  const setupReady = !local || !!effectiveLocality && !!city?.countryCode && city.id === effectiveLocality
+  useEffect(() => { mapCamera.current = null; setCityCameraRequest(undefined); setSelectedCity(null); setCitySearchPending(false); setSetupError('') }, [templateKey])
+  const setupReady = !local || !citySearchPending && !!effectiveLocality && !!city?.countryCode && city.id === effectiveLocality
   // Reopened drafts retain non-geographic editing/recovery even with an unavailable registry.
   const builderAccessible = !local || !!templateKey && !!persisted || setupContinuation > 0
   useEffect(() => {
@@ -383,7 +384,7 @@ function CreatorTemplateEditor() {
   const finishError = finishPointValidation(creatorTemplateContent.configuration, !universal) || gameplayValidation(creatorTemplateContent, true)
   const localErrors = localContentValidation(creatorTemplateContent)
   const localIdentity = JSON.stringify([creatorTemplateContent, localityChange, persisted?.localityId, persisted?.localitySnapshot])
-  const localValid = localIdentity === validatedLocal && !Object.values(localErrors).some(Boolean) && localityChange === undefined
+  const localValid = !citySearchPending && localIdentity === validatedLocal && !Object.values(localErrors).some(Boolean) && localityChange === undefined
   const ready = !challengeSubmissionBlocked && (local ? localValid : universal ? !finishError : !finishError && checks.every(([, value]) => value) && (legacy || creatorTemplateContent.configuration.normalCheckpointCount === checkpointCount))
   useEffect(() => setRouteSafe(legacy || isGeographyComplete(checkpointDrafts, verifiedPositions, routeSafety.size, 6)), [checkpointDrafts, verifiedPositions, routeSafety, legacy])
   const hydrateRecord = (record: CreatorTemplate) => {
@@ -392,7 +393,7 @@ function CreatorTemplateEditor() {
       const invalidGameplay = gameplayValidation(content)
       if (invalidGameplay) { setLoadError(invalidGameplay); return }
       setGameplayEdited(false); setValidatedLocal(''); setLocalityError(''); setLocalValidationAttempted(false)
-      setPersisted(record); setLocalityChange(undefined); setSelectedCity(null); setStableKey(record.key)
+      setPersisted(record); setCitySearchPending(false); setLocalityChange(undefined); setSelectedCity(null); setStableKey(record.key)
       setMission(content.mission)
       setDetails(current => ({ ...current, name: content.displayName, theme: content.theme,
         summary: String(configuration.summary ?? ''), category: String(configuration.category ?? ''), age: String(configuration.ageRange ?? ''), duration: String(configuration.durationMinutes ?? ''), language: String(configuration.language ?? ''), participants: String(configuration.participants ?? ''), teamSize: String(configuration.teamSize ?? ''), format: String(configuration.format ?? ''), environment: String(configuration.environment ?? ''), equipment: String(configuration.equipment ?? ''), difficulty: String(configuration.difficulty ?? ''), briefing: String(configuration.briefing ?? '') }))
@@ -437,6 +438,7 @@ function CreatorTemplateEditor() {
   // Save the complete intended content; acknowledge only the snapshot that was sent.
   const persistWorkingTemplate = async (intent: SaveIntent, completedFeatures: ReadonlySet<string> = featureDone) => {
     if (validating || mutationLock.current || conflict || uncertain || saving || !completionAllowsSave(intent, classified, stepDone, completedFeatures, routeSafe)) return
+    if (local && citySearchPending) { setSetupError('Choose a city from the search results before continuing or saving.'); return }
     const validation = finishPointValidation(creatorTemplateContent.configuration) || gameplayValidation(creatorTemplateContent) || validateCustomExercises(creatorTemplateContent).map(issue => `${issue.path}: ${issue.message}`).join('\n')
     if (validation) { setSaveError(validation); return }
     if (exerciseAssignments.errors.length) { setSaveError(exerciseAssignments.errors.join('\n')); return }
@@ -511,6 +513,7 @@ function CreatorTemplateEditor() {
   }
   const validateLocal = async () => {
     if (mutationLock.current || validating) return
+    if (citySearchPending) { setLocalityError('Choose a city from the search results before validating.'); return }
     mutationLock.current = true; setValidating(true); setLocalValidationAttempted(true); setValidatedLocal(''); setLocalityError('')
     const sequence = readSequence.current
     try {
@@ -561,7 +564,7 @@ function CreatorTemplateEditor() {
   return <><div hidden={!!previewContent}><Shell><Link className="text-sm font-bold text-slate-500" to="/creator">← Creator Studio</Link><div className="mt-6"><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{universal ? 'Universal Template' : local ? 'Local Template' : 'Template Builder'} · {persisted?.status === 'approved' ? 'Approved · New edits need review' : persisted?.status === 'changes_requested' ? 'Changes requested' : 'Draft'} · Version {persisted?.version ?? 1}</p><h1 className="mt-2 text-4xl font-bold">Build a reusable Hunt</h1><p className="mt-3 max-w-3xl text-slate-600">{universal ? 'Create reusable stories and challenges without a fixed country, locality or route.' : local ? 'Configure your Local draft, then save. Review its real locations and route before independent Admin approval.' : 'Create the complete participant experience and review its fixed route. Organizers receive these defaults in Set the Hunt.'}</p></div>
     <div role="navigation" aria-label="Creator sections" className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">{([['setup', 'Template Setup'], ['checkpoints', 'Checkpoints & Challenges'], ['advanced', 'Advanced'], ['review', 'Review & Submit']] as const).map(([id, label]) => <button key={id} type="button" aria-controls={id === 'setup' ? 'creator-setup template-setup' : id === 'advanced' ? 'creator-checkpoints creator-advanced' : `creator-${id}`}  aria-current={section === id ? 'page' : undefined} aria-expanded={id === 'advanced' ? section === 'advanced' : undefined} disabled={id !== 'setup' && !builderAccessible} onClick={() => openSection(id === 'advanced' && section === id ? 'setup' : id)} className={`min-h-12 min-w-0 rounded-xl border px-3 py-2 text-left font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:opacity-40 ${section === id ? 'border-emerald-600 bg-emerald-50' : 'border-slate-300 bg-white'}`}>{label}</button>)}</div>
     <div id="creator-setup" hidden={section !== 'setup'}>
-    {classified && <fieldset disabled={saving || submitting || validating} className="min-w-0 border-0 p-0"><HuntSetup local={local} savedId={persisted?.localityId} snapshot={persisted?.localitySnapshot} value={localityChange} onChange={value => { setLocalityChange(value); setLocalityError('') }} onSelect={changeCity} beforeChange={confirmCityChange} error={setupError || localityError} cityUnavailable={!!city && (!Number.isFinite(city.latitude) || Math.abs(city.latitude) > 90 || !Number.isFinite(city.longitude) || Math.abs(city.longitude) > 180)} onRetryCity={async () => {
+    {classified && <fieldset disabled={saving || submitting || validating} className="min-w-0 border-0 p-0"><HuntSetup local={local} savedId={persisted?.localityId} snapshot={persisted?.localitySnapshot} value={localityChange} onChange={value => { setLocalityChange(value); setLocalityError('') }} onSelect={changeCity} onSearchPendingChange={setCitySearchPending} beforeChange={confirmCityChange} error={setupError || localityError} cityUnavailable={!!city && (!Number.isFinite(city.latitude) || Math.abs(city.latitude) > 90 || !Number.isFinite(city.longitude) || Math.abs(city.longitude) > 180)} onRetryCity={async () => {
       if (!effectiveLocality) return
       try { const place = await geographyApi.get(effectiveLocality); if (place.id !== effectiveLocality) throw new Error('Wrong city'); if (localitySelectionRef.current === effectiveLocality) changeCity(place) }
       catch { setSetupError('The city location could not be loaded. Your selection is kept. Please retry.') }

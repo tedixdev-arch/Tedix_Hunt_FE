@@ -4,9 +4,10 @@ import { LocalityProposals } from './LocalityProposals'
 
 const control = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal disabled:opacity-50'
 const failure = 'Geography could not be loaded. Retry to check current records. Your saved locality is unchanged.'
-export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, onSelect, beforeChange }: {
+export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, onSelect, beforeChange, onSearchPendingChange }: {
   savedId?: string | null; snapshot?: LocalitySnapshot | null; value: string | null | undefined
   onChange: (id: string | null | undefined) => void; onSelect: (place: LocalitySnapshot | null) => void
+  onSearchPendingChange?: (pending: boolean) => void
   beforeChange: (id: string | null | undefined) => boolean
 }) {
   const [loadingCountries, setLoadingCountries] = useState(true)
@@ -17,6 +18,7 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
   const [selected, setSelected] = useState<GeographicCity | null>(null), [error, setError] = useState(''), [notice, setNotice] = useState('')
   const [loadingRegions, setLoadingRegions] = useState(false), [loadingCities, setLoadingCities] = useState(false), [busy, setBusy] = useState(false)
   const [incomplete, setIncomplete] = useState(false), [searched, setSearched] = useState(false), [retry, setRetry] = useState(0)
+  const searchPending = useRef(false)
   const intent = useRef(0), search = useRef(0), edited = useRef(false)
   useEffect(() => { edited.current = false }, [savedId, snapshot])
   useEffect(() => {
@@ -29,6 +31,7 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
     if (edited.current) return
     let live = true
     const version = ++intent.current
+    searchPending.current = false; onSearchPendingChange?.(false)
     setCurrent(null); setCountry(snapshot?.countryCode ?? ''); setRegion(''); setQuery(''); setSelected(null)
     setNotice(savedId ? 'Saved locality region unresolved. The saved locality and snapshot are kept.' : '')
     if (savedId) void (async () => {
@@ -94,7 +97,19 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
   function reset(apply: () => void) {
     if (!beforeChange(null)) return
     edited.current = true; ++intent.current; ++search.current; setBusy(false); setError(''); setNotice(''); setSelected(null); setQuery(''); setCities([]); setNext(null)
+    searchPending.current = false; onSearchPendingChange?.(false)
     apply(); onChange(null); onSelect(null)
+  }
+  function editSearch(text: string) {
+    // Search intent is transient: never turn typing into a persisted clear or reuse a prior binding.
+    const hasBinding = selected || value || (value === undefined && savedId)
+    if (!searchPending.current && hasBinding && !beforeChange(null)) {
+      setQuery(selected?.name ?? query)
+      return
+    }
+    edited.current = true; ++intent.current; ++search.current
+    searchPending.current = true; onSearchPendingChange?.(true)
+    setSelected(null); setNotice(''); setBusy(false); setCities([]); setNext(null); setQuery(text)
   }
   async function choose(city: GeographicCity) {
     edited.current = true
@@ -106,14 +121,14 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
       if (resolved.geographicId !== city.geographicId) throw new Error('Wrong city')
       if (!resolved.localityId || !resolved.registeredActive || resolved.nextAction !== 'bind_locality') {
         if (!beforeChange(null)) return
-        setSelected(city); onChange(null); onSelect(null)
+        setSelected(city); setQuery(city.name); searchPending.current = false; onSearchPendingChange?.(false); onChange(null); onSelect(null)
         setNotice('This city requires Admin registration or reconciliation before it can be used. No locality has been registered.'); return
       }
       const locality = await geographyApi.get(resolved.localityId)
       if (version !== intent.current) return
       if (locality.id !== resolved.localityId || locality.countryCode !== country || !locality.active) throw new Error('Unavailable locality')
       if (!beforeChange(locality.id)) return
-      setSelected(city); setNotice(''); onChange(locality.id); onSelect(locality)
+      setSelected(city); setQuery(city.name); searchPending.current = false; onSearchPendingChange?.(false); setNotice(''); onChange(locality.id); onSelect(locality)
     } catch { if (version === intent.current) setError(failure) }
     finally { if (version === intent.current) setBusy(false) }
   }
@@ -122,7 +137,7 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
       <label className="text-sm font-bold">Country *<select aria-label="Country *" disabled={loadingCountries} className={control} value={country} onChange={e => reset(() => { setCountry(e.target.value); setRegion('') })}><option value="">{loadingCountries ? 'Loading countries…' : 'Choose country'}</option>{country && !countries.some(c => c.code === country) && <option value={country}>{snapshot?.countryCode === country ? snapshot.countryDisplayName : country}</option>}{countries.map(c => <option key={c.code} value={c.code}>{c.displayName}</option>)}</select></label>
       <label className="text-sm font-bold">{country === 'RO' ? 'County' : label} *<select aria-label="Region *" className={control} value={region} disabled={!country || loadingRegions} onChange={e => reset(() => setRegion(e.target.value))}><option value="">{loadingRegions ? 'Loading…' : 'Choose region'}</option>{regions.map(r => <option key={r.admin1Code} value={r.admin1Code}>{r.displayName}</option>)}</select></label>
-      <label className="text-sm font-bold">City *<input aria-label="City *" className={control} disabled={!region || loadingRegions} maxLength={100} value={query} onChange={e => { edited.current = true; ++intent.current; ++search.current; setBusy(false); setQuery(e.target.value) }} /></label>
+      <label className="text-sm font-bold">City *<input aria-label="City *" className={control} disabled={!region || loadingRegions} maxLength={100} value={query} onChange={e => editSearch(e.target.value)} /></label>
     </div>
     {country && !loadingRegions && !regions.length && <p role="status" className="mt-3 text-sm">No regions available for this country.</p>}
     {incomplete && <p role="status" className="mt-3 text-sm">Region metadata is incomplete. Some cities are unavailable; contact Admin.</p>}
@@ -135,14 +150,14 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
     <p role="status" className="mt-3 text-sm">{notice || (selected ? `Selected city: ${selected.name}` : 'Choose a country and region, then search for your city.')}</p>
     <div className="mt-3 flex flex-wrap gap-3 text-sm">
       <button type="button" className="min-h-12 rounded-xl border px-3 font-bold" onClick={() => reset(() => {})}>Clear locality</button>
-      {savedId && <button type="button" className="min-h-12 rounded-xl border px-3 font-bold" onClick={() => { if (!beforeChange(undefined)) return; edited.current = false; onChange(undefined); onSelect(snapshot ?? null); setRetry(v => v + 1) }}>Keep saved locality</button>}
-      {current?.active && <button type="button" className="min-h-12 rounded-xl border px-3 font-bold" onClick={() => { if (!beforeChange(current.id)) return; edited.current = true; ++intent.current; ++search.current; onChange(current.id); onSelect(current) }}>Use current registry details on next save</button>}
+      {savedId && <button type="button" className="min-h-12 rounded-xl border px-3 font-bold" onClick={() => { if (!beforeChange(undefined)) return; searchPending.current = false; onSearchPendingChange?.(false); edited.current = false; onChange(undefined); onSelect(snapshot ?? null); setRetry(v => v + 1) }}>Keep saved locality</button>}
+      {current?.active && <button type="button" className="min-h-12 rounded-xl border px-3 font-bold" onClick={() => { if (!beforeChange(current.id)) return; searchPending.current = false; onSearchPendingChange?.(false); setQuery(selected?.name ?? current.name); edited.current = true; ++intent.current; ++search.current; onChange(current.id); onSelect(current) }}>Use current registry details on next save</button>}
     </div>
     {!snapshot && <p className="mt-3 text-sm">No locality saved.</p>}
     {value === null && <p role="status" className="mt-3 text-sm">No locality selected. The next save will clear any saved locality.</p>}
     {snapshot && <p className="mt-3 text-sm">Saved locality: {snapshot.name} · {snapshot.administrativeContext}. {value === undefined ? 'The saved locality and snapshot are kept.' : ''}</p>}
     {error && <div className="mt-3 text-sm"><p role="alert">{error}</p><button type="button" className="min-h-12 font-bold underline" onClick={() => { setError(''); setRetry(v => v + 1) }}>Retry geography</button></div>}
     <p className="mt-3 text-xs text-slate-500">Data: <a href="https://www.geonames.org/" className="underline">GeoNames</a> (<a href="https://creativecommons.org/licenses/by/4.0/" className="underline">CC BY 4.0</a>), normalized and filtered.</p>
-    <LocalityProposals country={country} countries={countries} onRegistryPlace={place => { if (!beforeChange(place.id)) return; edited.current = true; ++intent.current; ++search.current; setCountry(place.countryCode); setRegion(''); setQuery(''); setSelected(null); setNotice('Approved locality selected; its catalog region is unresolved.'); onChange(place.id); onSelect(place) }} />
+    <LocalityProposals country={country} countries={countries} onRegistryPlace={place => { if (!beforeChange(place.id)) return; searchPending.current = false; onSearchPendingChange?.(false); edited.current = true; ++intent.current; ++search.current; setCountry(place.countryCode); setRegion(''); setQuery(''); setSelected(null); setNotice('Approved locality selected; its catalog region is unresolved.'); onChange(place.id); onSelect(place) }} />
   </section>
 }

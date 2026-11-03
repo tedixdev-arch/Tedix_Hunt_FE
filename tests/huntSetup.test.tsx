@@ -71,10 +71,10 @@ test('city change confirmation cancels all selection mutations or preserves orig
   vi.mocked(window.confirm).mockReturnValue(true); await change('#local-geography select','DE'); await click('Save draft')
   expect(api.createVersion.mock.calls[0][1].configuration.checkpointPositions).toEqual(saved.content.configuration.checkpointPositions); expect(api.createVersion.mock.calls[0][2]).toBeNull()
 })
-test('search failure preserves selection and can retry without fake coordinates or repeated requests on rerender', async () => {
+test('search failure leaves edited city unselected and can retry without fake coordinates or repeated requests on rerender', async () => {
   await render(); await selectCity(); const count = geo.cities.mock.calls.length
   await change('#template-setup input','A title'); expect(geo.cities).toHaveBeenCalledTimes(count)
-  geo.cities.mockRejectedValueOnce(new Error('offline')); await change('#local-geography input','Par'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); expect(container.querySelector('[role=alert]')).not.toBeNull(); expect(container.textContent).toContain('Selected city: Paris')
+  geo.cities.mockRejectedValueOnce(new Error('offline')); await change('#local-geography input','Par'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); expect(container.querySelector('[role=alert]')).not.toBeNull(); expect(container.textContent).not.toContain('Selected city: Paris')
   await click('Retry geography'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); expect(container.textContent).toContain('Paris · Île-de-France · France')
 })
 test('invalid city camera remains selected and recovers through exact registry lookup', async () => {
@@ -260,4 +260,22 @@ test.each(['Personal Challenge', 'Team Challenge'])('%s Apply challenge updates 
   expect(container.querySelector('[aria-label="Selected exercise assignment"]')!.textContent).toBe(name === 'Team Challenge' ? 'Custom Team Challenge assigned' : 'Custom challenge assigned · Save draft to keep your changes')
   expect(button('Save draft')).toBeDefined()
   expect(api.create).not.toHaveBeenCalled(); expect(api.createVersion).not.toHaveBeenCalled(); expect(api.submit).not.toHaveBeenCalled()
+})
+
+
+test('select Cluj-Napoca then edit City search: Continue cannot reuse Cluj and save cannot clear or bind it', async () => {
+  const cluj = { ...city, countryCode: 'RO', countryDisplayName: 'Romania', name: 'Cluj-Napoca', administrativeContext: 'Cluj' }
+  geo.countries.mockResolvedValue({ countries: [{ code: 'RO', displayName: 'Romania' }] })
+  geo.regions.mockResolvedValue({ regions: [{ countryCode: 'RO', admin1Code: '13', displayName: 'Cluj' }], regionLabel: 'County', metadataStatus: 'ready', nextAfter: null })
+  geo.cities.mockResolvedValue({ cities: [{ ...cluj, geographicId: '681290', admin1Code: '13', regionDisplayName: 'Cluj', regionStatus: 'resolved' }], nextAfter: null })
+  geo.resolveCity.mockResolvedValue({ geographicId: '681290', localityId: cluj.id, registeredActive: true, nextAction: 'bind_locality' }); geo.get.mockResolvedValue(cluj)
+  await render(); await change('#local-geography select', 'RO'); await change('[aria-label="Region *"]', '13'); await change('#local-geography input', 'Cluj'); await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); await click('Cluj-Napoca · Cluj · Romania')
+  await change('#local-geography input', 'Turda'); await click('Continue to Template builder'); expect(builder().hidden).toBe(true); expect(container.textContent).toContain('Choose a country and city to continue.'); expect(api.create).not.toHaveBeenCalled()
+})
+test('saved draft accepted search edit blocks save without clearing persisted locality; cancellation restores selection', async () => {
+  const saved = { ...record('local', true), localityId: city.id, localitySnapshot: city }; api.get.mockResolvedValue(saved)
+  await render('/create?template=owned'); vi.mocked(window.confirm).mockReturnValue(false); await change('#local-geography input', 'Lyon')
+  expect(container.querySelector<HTMLInputElement>('#local-geography input')!.value).toBe('Paris'); expect(container.textContent).toContain('Selected city: Paris'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
+  vi.mocked(window.confirm).mockReturnValue(true); await change('#local-geography input', 'Lyon'); await change('#template-setup input', 'Edited title'); await click('Save draft')
+  expect(api.createVersion).not.toHaveBeenCalled(); expect(saved.localityId).toBe(city.id); expect(saved.localitySnapshot).toBe(city); expect(container.textContent).toContain('Choose a city from the search results before continuing or saving.')
 })
