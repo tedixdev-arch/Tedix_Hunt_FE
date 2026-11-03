@@ -239,46 +239,7 @@ function RewardsEditor({huntId,huntStatus,teamSize,onLoaded}:{huntId:string;hunt
     {specialAwards.length===0?<div className="mt-5 rounded-xl bg-slate-50 p-5 text-center text-sm text-slate-500">No special awards selected.</div>:<div className="mt-5 space-y-3">{specialAwards.map((award,index)=>{const definition=options.specialAwardDefinitions.find(item=>item.key===award.definitionKey);if(!definition)return null;return award.saved?<article className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4" key={award.id}><div><span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{definition.scope} Special Award</span><h4 className="mt-1 font-bold">{definition.name}</h4><p className="mt-1 max-w-xl text-xs text-slate-500">{definition.rule}</p><p className="mt-1 text-xs text-slate-500">Quantity {award.quantity}</p></div>{editable&&<div className="flex gap-3"><button className="text-sm font-bold text-emerald-800" disabled={specialEditorOpen||busy(award.id)} onClick={()=>updateSpecial(award.id,{...award,saved:false})} type="button">Edit</button><button className="text-sm font-bold text-rose-700" disabled={busy(award.id)} onClick={()=>removeSpecial(award)} type="button">{busy(award.id)?'Removing…':'Remove'}</button></div>}</article>:<article className="rounded-xl border-2 border-emerald-300 bg-slate-50 p-4" key={award.id}><div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{definition.scope} award {index+1}</span><button className="text-xs font-semibold text-slate-500" disabled={busy(award.id)} onClick={()=>award.persisted?void load():removeSpecial(award)} type="button">Cancel</button></div><label className="mt-4 block text-sm font-bold">Predefined award<select className={controlClass} value={award.definitionKey} onChange={e=>updateSpecial(award.id,{...award,definitionKey:e.target.value})}>{options.specialAwardDefinitions.map(item=><option disabled={specialAwards.some(existing=>existing.id!==award.id&&existing.definitionKey===item.key)} key={item.key} value={item.key}>{item.scope} · {item.name}</option>)}</select></label><div className="mt-4 rounded-xl border bg-white p-4"><p className="text-xs font-semibold uppercase text-slate-400">Winning rule · read only</p><p className="mt-2 font-bold">{definition.rule}</p><p className="mt-2 text-sm text-slate-600">{definition.description}</p><p className="mt-3 text-xs font-semibold text-slate-500">Eligibility: {definition.eligibility}</p></div><RewardFields options={options} reward={award} onChange={next=>updateSpecial(award.id,next as SpecialAwardDraft)}/>{!validReward(award)&&<p className="mt-3 text-xs font-semibold text-rose-700">Add a valid quantity and all required reward details.</p>}<button className="mt-4 min-h-11 rounded-xl border border-emerald-500 bg-white px-4 text-sm font-bold text-emerald-800 disabled:opacity-40" disabled={!validReward(award)||busy(award.id)} onClick={()=>saveSpecial(award)} type="button">{busy(award.id)?'Saving…':'Save special award'}</button></article>})}</div>}</section>
   </div>
 }
-// Keep old bookmarks and saved drafts on their existing builder path.
-// Local setup is entered explicitly from the Organizer setup choice.
 export function CustomHuntEditorPage() {
-  const [params] = useSearchParams()
-  const { huntId } = useParams()
-  if (!huntId && params.get('setup') === 'local') return <LocalSetupFoundation />
-  return <LegacyCustomHuntEditorPage />
-}
-
-function LocalSetupFoundation() {
-  return (
-    <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950">
-      <OrganizerHeader showProfile />
-      <div className="mx-auto max-w-6xl px-5 py-7 sm:px-8 sm:py-10">
-        <Link className="text-sm font-bold text-slate-500 hover:text-slate-900" to="/organizer">← My Hunts</Link>
-        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Organizer workspace</p>
-        <h1 className="mt-2 text-4xl font-bold tracking-tight">Set up a Local Hunt</h1>
-        <p className="mt-3 max-w-3xl text-slate-600">Choose a location and an approved Hunt, then set the details for your event.</p>
-        <ol aria-label="Hunt setup progress" className="mt-8 grid gap-3 sm:grid-cols-4">
-          {['Location', 'Choose Hunt', 'Configure Event', 'Review'].map((step, index) => (
-            <li key={step} aria-current={index === 0 ? 'step' : undefined} className={`rounded-xl border px-4 py-3 text-sm font-bold ${index === 0 ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-500'}`}>
-              <span className="mr-2">{index + 1}.</span>{step}
-            </li>
-          ))}
-        </ol>
-        <section aria-labelledby="local-location-title" className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 id="local-location-title" className="text-2xl font-bold">Where will your Hunt take place?</h2>
-          <p id="local-location-unavailable" role="status" className="mt-4 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">Location selection is not available yet. We can’t show which locations have approved Hunts available to organize. Please come back later. You can continue your saved Hunts from My Hunts.</p>
-          <fieldset disabled aria-describedby="local-location-unavailable" className="mt-5 grid gap-4 md:grid-cols-3">
-            <legend className="sr-only">Hunt location</legend>
-            {['Country', 'County / State', 'City'].map(label => <label key={label} className="text-sm font-bold">{label}<select className={`${controlClass} disabled:bg-slate-50 disabled:text-slate-500`} defaultValue=""><option value="">Unavailable</option></select></label>)}
-          </fieldset>
-          <div className="mt-6 flex justify-end border-t border-slate-100 pt-5"><button disabled aria-describedby="local-location-unavailable" className="min-h-12 rounded-xl bg-slate-200 px-6 font-bold text-slate-500" type="button">Continue</button></div>
-        </section>
-      </div>
-    </main>
-  )
-}
-
-function LegacyCustomHuntEditorPage() {
   const [searchParams] = useSearchParams()
   const { huntId } = useParams()
   const navigate = useNavigate()

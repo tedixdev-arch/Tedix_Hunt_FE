@@ -4,17 +4,17 @@ FE #157 is merged (3e80e4238e7906c36a1282a90bca40a6666761e9).
 This change is deliberately blocked at Location, per the task's safety fallback.
 It does not implement working Local Hunt selection or event creation.
 
-The existing setup choice enters the existing CustomHuntEditorPage with
-`setup=local`. It shows Location → Choose Hunt → Configure Event → Review and
-Country → County/State → City using the Creator's card, typography, spacing,
-three-column desktop and stacked mobile patterns. No Creator editor mounts on
-this path. Controls and Continue are disabled with an explicit availability
-message; no geography, catalog, organization or write requests run.
+The public Set the Hunt CTA keeps its existing working setup URL and copy,
+including independent mode. CustomHuntEditorPage and saved draft routing are
+unchanged. Even the former `setup=local` query renders the existing builder.
 
-Existing draft IDs take precedence over `setup=local` and retain their builder,
-snapshot, rewards and lifecycle behavior. Old direct setup bookmarks retain the
-legacy builder. This is a compatibility route, not an alternate Local workflow.
-No activation, deployment, draft migration or source-version mutation occurs.
+The four-step foundation is isolated in
+`src/features/organizer/LocalSetupFoundation.tsx`. It has no application route,
+public link, query switch or runtime import. Tests render it directly. It retains
+Location → Choose Hunt → Configure Event → Review and the responsive location
+card for future integration. Its disabled fields are never a public CTA target.
+
+No draft migration, source-version mutation, activation or deployment occurs.
 
 ## Exact backend dependency
 
@@ -41,7 +41,7 @@ does not make a paginated catalog an eligible geographic hierarchy. Do not fetch
 these as a substitute, filter incomplete pages, enumerate all cities, resolve or
 register cities, or infer identity from names.
 
-After that contract exists, integrate it in this builder, clear downstream
+After that contract exists, integrate the isolated foundation in the existing builder, clear downstream
 location/Hunt/preview state on upstream changes, ignore stale responses, page
 server-authoritative choices, reuse exact-version C7 preview and selection,
 and expose only persisted Organizer event settings/rewards. Revalidate selection
