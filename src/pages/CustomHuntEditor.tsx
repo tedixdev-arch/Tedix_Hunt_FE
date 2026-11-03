@@ -211,7 +211,7 @@ function RewardFields({reward,onChange,options,disabled=false}:{reward:RewardDra
   </div>
 }
 
-function RewardsEditor({huntId,huntStatus,teamSize,onLoaded}:{huntId:string;huntStatus:Hunt['status'];teamSize:number;onLoaded:(rewards:HuntRewards)=>void}) {
+export function RewardsEditor({huntId,huntStatus,teamSize,onLoaded}:{huntId:string;huntStatus:Hunt['status'];teamSize:number;onLoaded:(rewards:HuntRewards)=>void}) {
   const [options,setOptions]=useState<RewardOptions|null>(null),[rewards,setRewards]=useState<RewardDraft[]>([]),[specialAwards,setSpecialAwards]=useState<SpecialAwardDraft[]>([])
   const [loading,setLoading]=useState(true),[loadError,setLoadError]=useState(''),[actionError,setActionError]=useState(''),[pending,setPending]=useState<Set<string>>(new Set())
   const pendingRef=useRef(new Set<string>())
