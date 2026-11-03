@@ -1,0 +1,12 @@
+{
+  "typecheck": "passed",
+  "testCommand": "npm test -- --maxWorkers=2",
+  "nodeTestsPassed": 271,
+  "vitestFilesPassed": 45,
+  "vitestTestsPassed": 925,
+  "build": "passed",
+  "browserCommand": "node tests/browser/contentLibrary.verify.mjs",
+  "browserResults": "results.json",
+  "environment": "local fixture, no production accounts or backend mutations",
+  "reviewCheckpoint": "Draft PR; stop for ChatGPT PR review"
+}

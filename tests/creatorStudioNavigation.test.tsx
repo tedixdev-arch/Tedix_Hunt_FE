@@ -140,3 +140,38 @@ test('Library opens inline on demand and history removes it without authoring mu
   await act(async () => router.navigate(-1)); expect(container.querySelector('section[aria-label="Universal Library"]')).toBeNull()
   noMutations()
 })
+
+test('Content navigation, categories, curriculum gaps, search and playable preview preserve Template routes', async () => {
+  await render(); await click('Content')
+  expect(router.state.location.search).toBe('?studio=content')
+  expect(container.querySelectorAll('button[aria-label^="Preview "]')).toHaveLength(15)
+  await click('Playable preview')
+  expect(container.querySelector('dialog')?.textContent).toContain('Exercise preview')
+  expect(container.querySelector('dialog')?.textContent).toContain('Equivalent expressions')
+  await click('Close')
+  await click('Team Challenges')
+  expect(container.querySelectorAll('button[aria-label^="Preview "]')).toHaveLength(7)
+  await click('Playable preview'); expect(container.querySelector('dialog')?.textContent).toContain('Word Reconstruction')
+  await click('Close'); await click('Navigation Hints')
+  expect(container.textContent).toContain('No standalone Starter records')
+  await click('Personal Challenges')
+  const select = container.querySelector('section[aria-label="Content Library"] select') as HTMLSelectElement
+  await act(async () => { select.value = 'Math'; select.dispatchEvent(new Event('change', { bubbles: true })) })
+  expect(container.textContent).toContain('No Starter examples match')
+  await click('Reset filters')
+  const search = container.querySelector('input[type="search"]') as HTMLInputElement
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, 'prime'); search.dispatchEvent(new Event('input', { bubbles: true })) })
+  expect(container.querySelectorAll('button[aria-label^="Preview "]')).toHaveLength(2)
+  await click('Content')
+  expect(container.querySelector('section[aria-label="Content Library"]')).toBeNull()
+  await click('+ Create Template')
+  expect(container.querySelector('a[href="/create?category=universal"]')).not.toBeNull()
+  noMutations(); expect(library.list).not.toHaveBeenCalled()
+})
+
+test('Content deep links retain the existing Creator access guard', async () => {
+  mocks.auth.user = null
+  await render('/creator?studio=content')
+  expect(router.state.location.pathname).toBe('/creator/sign-in')
+  expect(container.querySelector('section[aria-label="Content Library"]')).toBeNull()
+})
