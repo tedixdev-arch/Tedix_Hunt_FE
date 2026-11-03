@@ -427,12 +427,7 @@ test('navigation displays a disabled numbered FinishPoint and permits checkpoint
 })
 test.each(['universal', 'local'] as const)('%s creation uses seven confirmation steps; opening alone never completes a feature', async category => {
   await act(async () => root.render(<MemoryRouter initialEntries={[`/create?category=${category}`]}><CreatorTemplateEditorPage /></MemoryRouter>))
-  if (category === 'local') {
-    await act(async () => { const select=container.querySelector<HTMLSelectElement>('#local-geography select')!; select.value='FR'; select.dispatchEvent(new Event('change',{bubbles:true})) })
-    await act(async () => { const select=container.querySelector<HTMLSelectElement>('[aria-label="Region *"]')!; select.value='11'; select.dispatchEvent(new Event('change',{bubbles:true})) })
-    await act(async () => { const input=container.querySelector<HTMLInputElement>('#local-geography input')!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'Paris'); input.dispatchEvent(new Event('input',{bubbles:true})) })
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) }); await click('Paris · Île-de-France · France'); await click('Continue to Template builder')
-  }
+  if (category === 'local') await click('Continue to Template builder')
   expect(container.textContent).toContain('0 of 7 acknowledged')
   await currentStep(3); expect(container.textContent).toContain('0 of 7 acknowledged')
   await click('Continue'); expect(container.textContent).toContain('1 of 7 acknowledged')

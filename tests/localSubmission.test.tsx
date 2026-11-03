@@ -10,6 +10,11 @@ vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: ap
 vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }), get: api.place } }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: () => <div /> }))
+// Exercise canonical binding persistence independently of the temporary location UI.
+vi.mock('../src/features/creator/HuntSetup', async () => {
+  const { LocalGeographySelector } = await import('../src/features/creator/LocalGeographySelector')
+  return { HuntSetup: (props: any) => <section id="local-geography"><LocalGeographySelector {...props} />{props.error && <p role="alert">{props.error}</p>}</section> }
+})
 let root: Root, container: HTMLDivElement, record: CreatorTemplate
 const place = { id: 'place', countryCode: 'RO', countryDisplayName: 'Romania', name: 'Town', administrativeContext: 'North', latitude: 46, longitude: 23, active: true }
 beforeEach(() => {

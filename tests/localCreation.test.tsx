@@ -37,9 +37,5 @@ test('08 uncertain creation prevents blind retry and links to owned recovery', a
 })
 
 async function completeLocalSetup() {
-  for (const [selector,value] of [['#local-geography select','FR'],['#local-geography select[aria-label="Region *"]','11'],['#local-geography input','Paris']]) {
-    await act(async () => { const node = container.querySelector(selector)!; Object.getOwnPropertyDescriptor(node.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype,'value')!.set!.call(node,value); node.dispatchEvent(new Event(node.tagName === 'SELECT' ? 'change':'input',{bubbles:true})) })
-  }
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) })
-  for (const text of ['Paris · Île-de-France · France','Continue to Template builder']) await act(async () => [...container.querySelectorAll('button')].find(button=>button.textContent===text)!.click())
+  await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Continue to Template builder')!.click())
 }
