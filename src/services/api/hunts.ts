@@ -1,4 +1,5 @@
 import { apiClient, type ApiClient } from './client.ts';
+import type { LocalitySnapshot } from './geography.ts';
 
 export type HuntStatus =
   | 'draft'
@@ -44,6 +45,9 @@ export interface Hunt {
   accessMode: 'invitation_only' | null;
   difficulty: 'easy' | null;
   checkpointOrder: 'recommended' | null;
+  templateId?: string | null;
+  templateLocalityId?: string | null;
+  templateLocalitySnapshot?: LocalitySnapshot | null;
   templateKey: string | null;
   templateVersion: number | null;
   templateSnapshot: HuntTemplateSnapshot | null;

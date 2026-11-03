@@ -1,52 +1,61 @@
-# Simple Organizer setup: safe frontend foundation
+# Organizer Local event setup
 
-FE #157 is merged (3e80e4238e7906c36a1282a90bca40a6666761e9).
-This change is deliberately blocked at Location, per the task's safety fallback.
-It does not implement working Local Hunt selection or event creation.
+Prerequisites verified merged on 2026-11-03:
+- FE #158: `4508ffe60d883f7929d6387368570eee74cfcda4`.
+- BE #115: `0dd703571fcf54cedd63e4b913a12cff126dec9f`.
 
-The public Set the Hunt CTA keeps its existing working setup URL and copy,
-including independent mode. CustomHuntEditorPage and saved draft routing are
-unchanged. Even the former `setup=local` query renders the existing builder.
+The registered Organizer setup entry uses Location → Choose Hunt → Configure
+Event → Review & Create. Independent setup and legacy drafts keep the existing
+editor. Saved C7 Local drafts resume event configuration with their persisted
+source identity; no latest-version substitution or snapshot migration occurs.
 
-The four-step foundation is isolated in
-`src/features/organizer/LocalSetupFoundation.tsx`. It has no application route,
-public link, query switch or runtime import. Tests render it directly. It retains
-Location → Choose Hunt → Configure Event → Review and the responsive location
-card for future integration. Its disabled fields are never a public CTA target.
+Location uses BE #115 eligible-only geography with opaque cursor pagination.
+Only explicit City selection advances. Parent changes clear downstream choices;
+request lifetimes prevent late results from replacing current choices. Discovery,
+preview and selection use the canonical locality UUID, never names or GeoNames IDs.
 
-No draft migration, source-version mutation, activation or deployment occurs.
+Hunt cards use the C7 display name and theme (the available short description).
+Preview uses the exact approved version and the existing read-only map component.
+Use this Hunt creates a backend draft and captures the exact C7 source. The saved
+draft URL is retained if selection fails. Repeated actions reuse the same draft.
 
-## Exact backend dependency
+Configure exposes supported event fields. Team/four, invitation-only, Easy and
+recommended route are verified against the existing options contract. Unsupported
+Solo or variable-size gameplay is not offered. Required contact and duration are
+retained because backend publishing requires them. Optional duration/timezone
+settings are under More options. Rewards reuse the existing persisted allocations
+editor; only saved allocations enter review.
 
-Inspected BE main 1525d9fdeafdecd8316b8fb00a3e5b37ac29514b:
-`src/routes/organizerLocalTemplates.ts`, `src/routes/geography.ts`,
-`docs/Geographic_Catalog.md` and C7 contract/report.
+Review refreshes the saved Hunt and rewards. Create Hunt revalidates C7 eligibility
+through the existing locked selection endpoint before publishing. Stale eligibility
+returns to selection and requires an explicit choice. Backend publish errors retain
+the draft and review. Success requires a matching published Hunt response. The
+participant URL uses only the existing access endpoint's returned code; access
+failure offers an independent retry without republishing. No generated code,
+simulated success, new backend endpoint, Creator/Admin changes or deployment.
 
-Existing C7 APIs require a country and canonical locality UUID before discovery:
-- GET /api/organizer/local-templates?countryCode=RO&localityId=<UUID>&limit=20[&cursor=...]
-- GET /api/organizer/local-templates/<templateId>/versions/<version>?countryCode=RO&localityId=<UUID>
-- PUT /api/hunts/<id>/local-template with templateId, version, countryCode, localityId.
+## Validation boundaries
 
-Missing: an authenticated Organizer eligible-only geographic discovery contract
-for countries, regions within a country, and canonical cities within a region.
-All three levels must restrict results server-side to locations with at least one
-currently C7-eligible approved Local artifact, BEFORE pagination. Define stable
-country/region identity, region label, canonical locality UUID, pagination,
-empty/error behavior and treatment of unassigned regions. No endpoint names are
-invented by this frontend. Preserve Organizer authorization and private no-store.
+Component integration tests mock the existing API objects and exercise full setup,
+errors, eligibility expiry, saved drafts, back navigation and compatibility.
+They establish FE orchestration, not a live backend creation claim. The development
+geography endpoint responds 401 to unauthenticated requests. This environment has
+no authenticated Organizer session or configured login credentials, so live
+Romania inventory and persisted creation/sharing require an authorized test session.
 
-General /api/geography/countries, /regions and /cities are catalog discovery,
-not eligible-only inventory. A city's hasApprovedLocalTemplate advisory flag
-does not make a paginated catalog an eligible geographic hierarchy. Do not fetch
-these as a substitute, filter incomplete pages, enumerate all cities, resolve or
-register cities, or infer identity from names.
+Local Chromium browser checks also exercise the mocked API flow at 390×844 and
+1440×1000, including final access response and no horizontal overflow in event
+configuration. These do not replace authenticated deployment verification.
 
-After that contract exists, integrate the isolated foundation in the existing builder, clear downstream
-location/Hunt/preview state on upstream changes, ignore stale responses, page
-server-authoritative choices, reuse exact-version C7 preview and selection,
-and expose only persisted Organizer event settings/rewards. Revalidate selection
-on writes and keep immutable versions and existing draft snapshots intact.
+Final validation:
+- Node test runner: 43 test files passed.
+- Full UI suite: 44 files / 940 tests passed with
+  `npx vitest run --maxWorkers=1 --testTimeout=30000`.
+- Focused Organizer suite: 17 tests passed.
+- `npm run typecheck`, `npm run build`, `git diff --check`: passed.
+- Chromium mocked flow: mobile 390×844 and desktop 1440×1000 passed.
 
-This foundation has no async location state to clear and makes no deployed
-integration or Mapbox verification claim. The remaining three steps require the
-backend contract and subsequent FE integration; they cannot be reached here.
+An earlier concurrent full UI run had 14 Creator test failures (timeouts and
+following assertion failures). The serial full rerun above passed all tests;
+no Creator code or test changes were made. Build retains bundle-size/plugin-time
+warnings. No live authenticated end-to-end pass is claimed.

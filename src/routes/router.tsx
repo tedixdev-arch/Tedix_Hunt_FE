@@ -11,7 +11,7 @@ import { ParticipantReadinessPage } from '../pages/ParticipantReadinessPage'
 import { IndependentOrganizerPage, OrganizerHuntsPage, OrganizerSignInPage, RegisteredOrganizerSignInPage } from '../pages/OrganizerFlow'
 import { RegisteredOrganizerApplicationPage } from '../pages/RegisteredOrganizerApplicationPage'
 import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
-import { CustomHuntEditorPage } from '../pages/CustomHuntEditor'
+import { OrganizerSetup } from '../features/organizer/OrganizerSetup'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage } from '../pages/AdminConsole'
 import { AdminTemplateReviewDetailPage, AdminTemplateReviewsPage } from '../pages/AdminTemplateReviews'
@@ -146,11 +146,11 @@ export const router = createHashRouter([
   },
   {
     path: '/organizer/hunts/new/setup',
-    element: <RequireOrganizer allowIndependent><CustomHuntEditorPage /></RequireOrganizer>,
+    element: <RequireOrganizer allowIndependent><OrganizerSetup /></RequireOrganizer>,
   },
   {
     path: '/organizer/hunts/:huntId/setup',
-    element: <RequireOrganizer><CustomHuntEditorPage /></RequireOrganizer>,
+    element: <RequireOrganizer><OrganizerSetup /></RequireOrganizer>,
   },
   {
     path: '/organizer/hunts/new/quick',

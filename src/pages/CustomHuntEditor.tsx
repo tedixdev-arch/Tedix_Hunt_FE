@@ -211,11 +211,13 @@ function RewardFields({reward,onChange,options,disabled=false}:{reward:RewardDra
   </div>
 }
 
-function RewardsEditor({huntId,huntStatus,teamSize,onLoaded}:{huntId:string;huntStatus:Hunt['status'];teamSize:number;onLoaded:(rewards:HuntRewards)=>void}) {
+export function RewardsEditor({huntId,huntStatus,teamSize,onLoaded,onEditingChange}:{huntId:string;huntStatus:Hunt['status'];teamSize:number;onLoaded:(rewards:HuntRewards)=>void;onEditingChange?:(editing:boolean)=>void}) {
   const [options,setOptions]=useState<RewardOptions|null>(null),[rewards,setRewards]=useState<RewardDraft[]>([]),[specialAwards,setSpecialAwards]=useState<SpecialAwardDraft[]>([])
   const [loading,setLoading]=useState(true),[loadError,setLoadError]=useState(''),[actionError,setActionError]=useState(''),[pending,setPending]=useState<Set<string>>(new Set())
   const pendingRef=useRef(new Set<string>())
   const editable=huntStatus==='draft'
+  const editing = pending.size > 0 || rewards.some(item=>!item.saved) || specialAwards.some(item=>!item.saved)
+  useEffect(()=>{onEditingChange?.(editing)},[editing,onEditingChange])
   const load=useCallback(async()=>{setLoading(true);setLoadError('');try{const [metadata,data]=await Promise.all([rewardOptionsApi.getOptions(),huntRewardsApi.list(huntId)]);setOptions(metadata);setRewards(data.leaderboard.map(fromLeaderboard));setSpecialAwards(data.specialAwards.map(fromSpecial));onLoaded(data)}catch{setLoadError("We couldn't load rewards. Please try again.")}finally{setLoading(false)}},[huntId,onLoaded])
   useEffect(()=>{void load()},[load])
   const updateReward=(id:string,next:RewardDraft)=>setRewards(current=>current.map(item=>item.id===id?next:item)), updateSpecial=(id:string,next:SpecialAwardDraft)=>setSpecialAwards(current=>current.map(item=>item.id===id?next:item))
