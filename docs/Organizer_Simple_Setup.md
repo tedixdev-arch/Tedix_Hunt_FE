@@ -46,3 +46,16 @@ Romania inventory and persisted creation/sharing require an authorized test sess
 Local Chromium browser checks also exercise the mocked API flow at 390×844 and
 1440×1000, including final access response and no horizontal overflow in event
 configuration. These do not replace authenticated deployment verification.
+
+Final validation:
+- Node test runner: 43 test files passed.
+- Full UI suite: 44 files / 940 tests passed with
+  `npx vitest run --maxWorkers=1 --testTimeout=30000`.
+- Focused Organizer suite: 17 tests passed.
+- `npm run typecheck`, `npm run build`, `git diff --check`: passed.
+- Chromium mocked flow: mobile 390×844 and desktop 1440×1000 passed.
+
+An earlier concurrent full UI run had 14 Creator test failures (timeouts and
+following assertion failures). The serial full rerun above passed all tests;
+no Creator code or test changes were made. Build retains bundle-size/plugin-time
+warnings. No live authenticated end-to-end pass is claimed.

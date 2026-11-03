@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { OrganizerSetup } from '../src/features/organizer/OrganizerSetup'
 import { OrganizerSetupChoicePage } from '../src/pages/OrganizerSetupFlow'
 import { organizerLocalApi } from '../src/services/api/organizerLocal'
-import { ApiError, huntsApi, huntOptionsApi, huntRewardsApi, organizationsApi, type Hunt } from '../src/services/api'
+import { ApiError, huntsApi, huntOptionsApi, huntRewardsApi, organizationsApi, rewardOptionsApi, type Hunt } from '../src/services/api'
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <header>Organizer</header> }))
 vi.mock('../src/components/HuntMapPreview', () => ({ HuntMapInspection: ({ configuration }: { configuration: unknown }) => <p>Read-only route {configuration ? 'available' : 'unavailable'}</p> }))
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -19,6 +19,7 @@ beforeEach(() => {
   saved = { id: 'hunt-1', organizationId: 'org-1', name: local.displayName, status: 'draft', accessCode: null, templateKey: null, templateVersion: null, templateSnapshot: null } as Hunt
   vi.spyOn(organizationsApi, 'listAccessible').mockResolvedValue([{ id: 'org-1', name: 'Org' }])
   vi.spyOn(huntOptionsApi, 'listHuntOptions').mockResolvedValue(options)
+  vi.spyOn(rewardOptionsApi, 'getOptions').mockResolvedValue({ providers: [{ key: 'tedix_inventory', label: 'Tedix inventory' }], kinds: [{ key: 'physical', label: 'Physical' }], virtualCategories: [], specialAwardDefinitions: [] })
   vi.spyOn(huntRewardsApi, 'list').mockResolvedValue({ leaderboard: [], specialAwards: [] })
   vi.spyOn(organizerLocalApi, 'page').mockImplementation(async kind => ({ items: (kind === 'countries' ? [{ countryCode: 'RO', displayName: 'Romania' }] : kind === 'regions' ? [{ regionId: 'RO:admin1:13', countryCode: 'RO', label: 'Cluj' }] : kind === 'cities' ? [{ localityId: local.localityId, countryCode: 'RO', name: 'Cluj-Napoca', regionId: 'RO:admin1:13', countryDisplayName: 'Romania', regionDisplayName: 'Cluj' }] : [local]) as never[], nextCursor: null }))
   vi.spyOn(organizerLocalApi, 'preview').mockResolvedValue({ ...local, configuration: { checkpointPositions: [] } })
@@ -120,4 +121,16 @@ test('late responses for a previous country cannot populate the current region c
   let resolve!: (value: { items: never[]; nextCursor: null }) => void
   vi.mocked(organizerLocalApi.page).mockImplementation((kind, filters, cursor) => kind === 'regions' ? new Promise(done => { resolve = done }) : original(kind, filters, cursor))
   await mount(); await select(0, 'RO'); await select(0, ''); await act(async () => resolve({ items: [{ regionId: 'late', label: 'Stale region' }] as never[], nextCursor: null })); expect(container.textContent).not.toContain('Stale region')
+})
+
+test('rewards persist through existing APIs and unsaved edits cannot be abandoned by review', async () => {
+  await mount(); await choose(); await click('Use this Hunt')
+  await act(async () => { const details = [...container.querySelectorAll('details')].find(item => item.querySelector('summary')?.textContent === 'Rewards (optional)')!; details.open = true })
+  await click('+ Add reward'); expect(button('Review event').disabled).toBe(true); expect(button('Back').disabled).toBe(true)
+  const reward = { id: 'reward-1', huntId: saved.id, place: 1, provider: 'tedix_inventory' as const, kind: 'physical' as const, category: null, name: null, description: null, quantity: 4 }
+  vi.spyOn(huntRewardsApi, 'createLeaderboard').mockResolvedValue(reward)
+  await click('Save allocation'); expect(huntRewardsApi.createLeaderboard).toHaveBeenCalledWith(saved.id, expect.objectContaining({ place: 1, quantity: 4 })); expect(button('Review event').disabled).toBe(false)
+  vi.mocked(huntRewardsApi.list).mockResolvedValue({ leaderboard: [reward], specialAwards: [] })
+  await act(async () => container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  expect(container.textContent).toContain('1 leaderboard rewards')
 })

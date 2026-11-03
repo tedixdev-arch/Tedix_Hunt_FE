@@ -78,6 +78,7 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
   const actionLock = useRef(false)
   const [error, setError] = useState('')
   const [rewards, setRewards] = useState<HuntRewards>()
+  const [rewardsEditing, setRewardsEditing] = useState(false)
   const onRewards = useCallback((value: HuntRewards) => setRewards(value), [])
   const [accessCode, setAccessCode] = useState(initialHunt?.accessCode ?? '')
   const [linkMessage, setLinkMessage] = useState('')
@@ -135,7 +136,7 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
     })
   }
   async function review() {
-    if (!hunt || !supported) return
+    if (!hunt || !supported || rewardsEditing) return
     await run(async () => {
       const updated = await huntsApi.updateDraft(hunt.id, { ...event, name: event.name.trim(), country: country?.displayName ?? hunt.country, region: region?.label ?? hunt.region, city: city?.name ?? hunt.city, format: 'team', teamSize: 4, accessMode: 'invitation_only', difficulty: 'easy', checkpointOrder: 'recommended' })
       updateHunt(updated)
@@ -194,8 +195,8 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
         <Field label="Participants"><input className={controlClass} required type="number" min={1} max={2147483647} value={event.capacity} onChange={e => setEvent({ ...event, capacity: Number(e.target.value) })} /></Field>
         <div className="rounded-xl bg-slate-50 p-4"><strong>Teams of 4</strong><p className="mt-2 text-sm">Invitation only. Share a private link after creating your Hunt.</p></div>
         <details className="sm:col-span-2"><summary className="cursor-pointer py-3 font-bold">More options</summary><div className="grid gap-5 sm:grid-cols-2"><Field label="Duration (minutes)"><input className={controlClass} required type="number" min={1} max={2147483647} value={event.durationMinutes} onChange={e => setEvent({ ...event, durationMinutes: Number(e.target.value) })} /></Field><Field label="Time zone"><input className={controlClass} required value={event.timezone} onChange={e => setEvent({ ...event, timezone: e.target.value })} /></Field></div></details>
-      </form><details className="mt-5"><summary className="cursor-pointer py-3 font-bold">Rewards (optional)</summary><p className="text-sm text-slate-600">Save each allocation to include it in your event.</p><RewardsEditor huntId={hunt.id} huntStatus={hunt.status} teamSize={4} onLoaded={onRewards} /></details>
-      <div className="mt-6 flex justify-between gap-3"><button className={secondary} type="button" onClick={changeLocation}>Back</button><button className={primary} form="event-settings" type="submit" disabled={!supported}>{busy ? 'Saving…' : 'Review event'}</button></div></>}
+      </form><details className="mt-5"><summary className="cursor-pointer py-3 font-bold">Rewards (optional)</summary><p className="text-sm text-slate-600">Save each allocation to include it in your event.</p><RewardsEditor huntId={hunt.id} huntStatus={hunt.status} teamSize={4} onLoaded={onRewards} onEditingChange={setRewardsEditing} /></details>
+      <div className="mt-6 flex justify-between gap-3"><button className={secondary} disabled={rewardsEditing} type="button" onClick={changeLocation}>Back</button><button className={primary} form="event-settings" type="submit" disabled={!supported || rewardsEditing}>{busy ? 'Saving…' : 'Review event'}</button></div>{rewardsEditing && <p role="status" className="mt-3 text-sm text-slate-600">Save or cancel your reward changes before continuing.</p>}</>}
       {step === 3 && hunt && <><h2 className="text-2xl font-bold">Ready for an adventure?</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2">{Object.entries({ Event: hunt.name, Location: [hunt.city, hunt.region, hunt.country].filter(Boolean).join(', '), Hunt: hunt.templateSnapshot?.displayName, Schedule: `${hunt.startDate} · ${hunt.startTime?.slice(0, 5)} (${hunt.timezone})`, Participants: `${hunt.capacity} · Teams of ${hunt.teamSize}`, Access: 'Invitation only', Rewards: rewards ? `${rewards.leaderboard.length} leaderboard rewards · ${rewards.specialAwards.length} special awards` : 'No rewards' }).map(([label, value]) => <div key={label}><dt className="text-sm text-slate-500">{label}</dt><dd className="mt-1 font-bold">{value}</dd></div>)}</dl><div className="mt-6 flex justify-between gap-3"><button className={secondary} type="button" onClick={() => setStep(2)}>Back</button><button className={primary} type="button" disabled={!selection} onClick={() => void create()}>{busy ? 'Creating…' : 'Create Hunt'}</button></div></>}
       </fieldset>{busy && <p role="status" className="mt-4">Saving your adventure…</p>}
     </>}
