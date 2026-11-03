@@ -1,3 +1,4 @@
+import { ContentLibrary } from './content/ContentLibrary'
 import { UniversalLibrary } from './UniversalLibrary'
 import { useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -57,10 +58,12 @@ export function CreatorStudioNavigation() {
   return <>
     <div className="mt-5 flex flex-wrap items-center gap-3">
       <button type="button" aria-haspopup="dialog" onClick={() => open('create')} className={`min-h-12 rounded-xl bg-emerald-500 px-5 font-bold ${focus}`}>+ Create Template</button>
+      <button type="button" aria-expanded={view === 'content'} onClick={() => view === 'content' ? close() : open('content')} className={`min-h-12 rounded-xl border border-emerald-700 px-5 font-bold text-emerald-900 ${focus}`}>Content</button>
       <button type="button" aria-expanded={view === 'library'} onClick={() => view === 'library' ? close() : open('library')} className={`min-h-12 rounded-xl px-4 font-bold text-slate-700 underline ${focus}`}>{view === 'library' ? 'Close Universal Library' : 'Browse Universal Library'}</button>
     </div>
     {(view === 'create' || view === 'local') && <TemplateTypeDialog local={view === 'local'} onLocal={() => open('local')} onBack={() => open('create')} onLibrary={() => open('library')} onClose={close} />}
     {view === 'library' && <UniversalLibrary />}
+    {view === 'content' && <ContentLibrary />}
     {view === 'mechanics' && <MechanicsLibraryDialog onClose={close} />}
   </>
 }

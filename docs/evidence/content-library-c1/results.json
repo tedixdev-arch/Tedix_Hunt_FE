@@ -1,0 +1,19 @@
+{
+  "measurements": [
+    {
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "mutations": [],
+  "previewsPerViewport": 22
+}
