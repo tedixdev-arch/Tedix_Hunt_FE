@@ -1,0 +1,56 @@
+[
+  {
+    "role": "creator",
+    "width": 1440,
+    "preselected": true,
+    "transition": "passed",
+    "geographyCalls": 0,
+    "mutations": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "role": "organizer",
+    "width": 1440,
+    "preselected": true,
+    "transition": "passed",
+    "geographyCalls": 0,
+    "mutations": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "role": "creator",
+    "width": 390,
+    "preselected": true,
+    "transition": "passed",
+    "geographyCalls": 0,
+    "mutations": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "role": "organizer",
+    "width": 390,
+    "preselected": true,
+    "transition": "passed",
+    "geographyCalls": 0,
+    "mutations": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "role": "creator",
+    "width": 320,
+    "preselected": true,
+    "transition": "passed",
+    "geographyCalls": 0,
+    "mutations": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "role": "organizer",
+    "width": 320,
+    "preselected": true,
+    "transition": "passed",
+    "geographyCalls": 0,
+    "mutations": 0,
+    "horizontalOverflow": false
+  }
+]

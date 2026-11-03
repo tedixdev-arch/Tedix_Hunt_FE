@@ -569,7 +569,8 @@ function CreatorTemplateEditor() {
       try { const place = await geographyApi.get(effectiveLocality); if (place.id !== effectiveLocality) throw new Error('Wrong city'); if (localitySelectionRef.current === effectiveLocality) changeCity(place) }
       catch { setSetupError('The city location could not be loaded. Your selection is kept. Please retry.') }
     }} onContinue={() => {
-      if (!setupReady) { setSetupError('Choose a country and city to continue.'); return }
+      // TEMPORARY prototype: navigation does not require canonical geography.
+      // Save/submission and geographic positioning retain their existing validation.
       setSetupError(''); setSetupContinuation(value => value + 1)
     }} /></fieldset>}
     </div>

@@ -11,6 +11,11 @@ const api = vi.hoisted(() => ({ create: vi.fn(), createVersion: vi.fn(), get: vi
 vi.mock('../src/services/api/creatorTemplates', async original => ({ ...await original<typeof import('../src/services/api/creatorTemplates')>(), creatorTemplatesApi: api }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <div /> }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: () => <div /> }))
+// Exercise canonical binding persistence independently of the temporary location UI.
+vi.mock('../src/features/creator/HuntSetup', async () => {
+  const { LocalGeographySelector } = await import('../src/features/creator/LocalGeographySelector')
+  return { HuntSetup: (props: any) => <section id="local-geography"><LocalGeographySelector {...props} />{props.error && <p role="alert">{props.error}</p>}</section> }
+})
 let root: Root, container: HTMLDivElement, record: CreatorTemplate
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks(); Element.prototype.scrollIntoView = vi.fn(); container = document.createElement('div'); document.body.append(container); root = createRoot(container)

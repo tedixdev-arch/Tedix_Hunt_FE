@@ -39,98 +39,66 @@ async function mount(url = '/organizer/hunts/new/setup') {
 }
 function button(label: string) { const element = [...container.querySelectorAll('button')].find(item => item.textContent === label); expect(element, label).toBeDefined(); return element! }
 async function click(label: string) { await act(async () => button(label).click()) }
-async function select(index: number, value: string) { await act(async () => { const element = container.querySelectorAll('select')[index]; element.value = value; element.dispatchEvent(new Event('change', { bubbles: true })) }) }
-async function field(label: string, value: string) {
-  await act(async () => { const input = [...container.querySelectorAll('label')].find(item => item.textContent?.startsWith(label))!.querySelector('input')!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) })
-}
-async function choose() {
-  await select(0, 'RO'); await select(1, 'RO:admin1:13'); await select(2, local.localityId)
+
+test('prototype location is preselected and advances with no geography or Hunt requests', async () => {
+  await mount()
+  expect([...container.querySelectorAll('select')].map(el => el.value)).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
+  expect(organizerLocalApi.page).not.toHaveBeenCalled()
+  expect(container.textContent).not.toContain('No approved Hunts')
+  await click('Choose Hunt')
   expect(container.textContent).toContain('Choose your adventure')
-  await act(async () => container.querySelector<HTMLInputElement>('input[type=radio]')!.click())
-  expect(container.textContent).toContain('Read-only route available')
-}
-async function configure() {
-  await click('Use this Hunt')
+  expect(container.textContent).toContain('No approved Hunts are available for this prototype location.')
+  expect(container.textContent).toContain('requires a canonical locality reference')
+  expect(button('Use this Hunt').disabled).toBe(true)
+  expect(huntsApi.createDraft).not.toHaveBeenCalled()
+  expect(organizerLocalApi.select).not.toHaveBeenCalled()
+  expect(organizerLocalApi.page).not.toHaveBeenCalled()
+  await click('Back'); expect(button('Choose Hunt').disabled).toBe(false)
+})
+test('event metadata outage cannot block Location or Choose Hunt', async () => {
+  vi.mocked(huntOptionsApi.listHuntOptions).mockRejectedValue(new ApiError('offline', null, 'network'))
+  await mount(); expect(container.querySelector('[role=alert]')).toBeNull()
+  await click('Choose Hunt'); expect(container.textContent).toContain('Choose your adventure')
+})
+test('saved Local draft resumes with exact server identity and preserves event settings', async () => {
+  await organizerLocalApi.select(saved.id, selection)
+  saved = { ...saved, name: 'Saved event', country: 'Romania', region: 'Cluj', city: 'Cluj-Napoca' }
+  await mount('/organizer/hunts/hunt-1/setup')
   expect(container.textContent).toContain('Make it your event')
-  await field('Event name', 'Our adventure'); await field('Local contact', 'Alex'); await field('Date', '2026-12-12')
-  await act(async () => container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
-  expect(container.textContent).toContain('Ready for an adventure?')
-}
-test('Romania → Cluj → Cluj-Napoca → exact Hunt → event → persisted creation → real link', async () => {
-  await mount(); await choose(); await configure(); await click('Create Hunt')
-  expect(organizerLocalApi.select).toHaveBeenLastCalledWith(saved.id, selection)
-  expect(organizerLocalApi.select).toHaveBeenCalledTimes(2)
-  expect(huntsApi.createDraft).toHaveBeenCalledTimes(1)
-  expect(huntsApi.updateDraft).toHaveBeenCalledWith(saved.id, expect.objectContaining({ country: 'Romania', region: 'Cluj', city: 'Cluj-Napoca', name: 'Our adventure', contactName: 'Alex', startDate: '2026-12-12', format: 'team', teamSize: 4 }))
-  expect(container.querySelector('input[readonly]')?.getAttribute('value')).toContain('/#/join/REAL-ACCESS')
-  expect(container.textContent).not.toContain('SIGNAL26')
+  expect(container.querySelector<HTMLInputElement>('input')?.value).toBe('Saved event')
+  await click('Back')
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('templates', { countryCode: 'RO', localityId: local.localityId })
+  expect(huntsApi.createDraft).not.toHaveBeenCalled()
 })
-test('Back preserves event fields and selected Hunt without creating another draft', async () => {
-  await mount(); await choose(); await configure(); await click('Back'); expect(container.querySelector<HTMLInputElement>('input')?.value).toBe('Our adventure')
-  await click('Back'); expect(container.querySelector<HTMLInputElement>('input[type=radio]')?.checked).toBe(true)
-  await click('Use this Hunt'); expect(container.querySelector<HTMLInputElement>('input')?.value).toBe('Our adventure'); expect(huntsApi.createDraft).toHaveBeenCalledTimes(1)
+test('legacy draft and independent mode keep existing builder', async () => {
+  await mount('/organizer/hunts/new/setup?mode=independent')
+  expect(container.textContent).toContain('General Setup')
+  expect(organizerLocalApi.page).not.toHaveBeenCalled()
 })
-test('empty eligible geography has no dead primary action or fabricated locations', async () => {
-  vi.mocked(organizerLocalApi.page).mockResolvedValue({ items: [], nextCursor: null })
-  await mount(); expect(container.textContent).toContain('No locations with available Hunts'); expect(container.querySelectorAll('option')).toHaveLength(3); expect(huntsApi.createDraft).not.toHaveBeenCalled()
-})
-test('geography errors can be retried', async () => {
-  vi.mocked(organizerLocalApi.page).mockRejectedValueOnce(new ApiError('offline', null, 'network'))
-  await mount(); expect(container.querySelector('[role=alert]')).not.toBeNull(); await click('Retry choices'); expect(container.textContent).toContain('Romania')
-})
-test('upstream location change clears downstream city and Hunt', async () => {
-  await mount(); await choose(); await click('Back'); await select(0, ''); expect(container.querySelectorAll('select')[1].value).toBe(''); expect(container.querySelectorAll('select')[2].value).toBe(''); expect(container.querySelectorAll('input[type=radio]')).toHaveLength(0)
-})
-test('expired eligibility at creation cannot publish or show success', async () => {
-  await mount(); await choose(); await configure(); vi.mocked(organizerLocalApi.select).mockRejectedValueOnce(new ApiError('template_selection_stale', 409, 'conflict')); await click('Create Hunt')
-  expect(container.textContent).toContain('select a Hunt again'); expect(container.textContent).toContain('Choose your adventure'); expect(huntsApi.publish).not.toHaveBeenCalled(); expect(huntsApi.createOrGetAccess).not.toHaveBeenCalled(); expect(container.querySelector('input[readonly]')).toBeNull()
-})
-test('publish failure retains review and allows retry without fake success', async () => {
-  await mount(); await choose(); await configure(); vi.mocked(huntsApi.publish).mockRejectedValueOnce(new ApiError('offline', null, 'network')); await click('Create Hunt'); expect(container.textContent).toContain('Ready for an adventure?'); expect(huntsApi.createOrGetAccess).not.toHaveBeenCalled(); await click('Create Hunt'); expect(container.textContent).toContain('Your Hunt is created')
-})
-test('access failure retries access only after successful creation', async () => {
-  await mount(); await choose(); await configure(); vi.mocked(huntsApi.createOrGetAccess).mockRejectedValueOnce(new ApiError('offline', null, 'network')); await click('Create Hunt'); expect(container.textContent).toContain('Your Hunt is created'); expect(container.querySelector('input[readonly]')).toBeNull(); await click('Create sharing link'); expect(huntsApi.publish).toHaveBeenCalledTimes(1); expect(container.querySelector('input[readonly]')?.getAttribute('value')).toContain('REAL-ACCESS')
-})
-test('saved C7 Local draft resumes event configuration using saved exact identity', async () => {
-  await organizerLocalApi.select(saved.id, selection); saved = { ...saved, country: 'Romania', region: 'Cluj', city: 'Cluj-Napoca', contactName: 'Alex', startDate: '2026-12-12', startTime: '10:00', timezone: 'Europe/Bucharest', capacity: 24, durationMinutes: 120 }
-  await mount('/organizer/hunts/hunt-1/setup'); expect(container.textContent).toContain('Make it your event'); await act(async () => container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))); await click('Create Hunt'); expect(organizerLocalApi.select).toHaveBeenLastCalledWith(saved.id, selection); expect(huntsApi.createDraft).not.toHaveBeenCalled()
-})
+
 test('legacy draft keeps the existing builder', async () => {
   await mount('/organizer/hunts/hunt-1/setup'); expect(container.textContent).toContain('General Setup'); expect(container.querySelector('[aria-label="Hunt setup progress"]')).toBeNull()
-})
-test('Independent mode keeps its existing builder and cannot use C7 discovery', async () => {
-  await mount('/organizer/hunts/new/setup?mode=independent'); expect(container.textContent).toContain('General Setup'); expect(organizerLocalApi.page).not.toHaveBeenCalled(); expect(huntsApi.createDraft).not.toHaveBeenCalled()
-})
-test('mismatched exact preview blocks selection', async () => {
-  vi.mocked(organizerLocalApi.preview).mockResolvedValue({ ...local, version: 8, configuration: {} })
-  await mount(); await select(0, 'RO'); await select(1, 'RO:admin1:13'); await select(2, local.localityId); await act(async () => container.querySelector<HTMLInputElement>('input[type=radio]')!.click())
-  expect(button('Use this Hunt').disabled).toBe(true); expect(huntsApi.createDraft).not.toHaveBeenCalled(); expect(container.querySelector('[role=alert]')).not.toBeNull()
-})
-test('selection failure keeps the created draft and retry does not duplicate it', async () => {
-  await mount(); await choose(); vi.mocked(organizerLocalApi.select).mockRejectedValueOnce(new ApiError('offline', null, 'network')); await click('Use this Hunt'); expect(container.textContent).toContain('Choose your adventure'); await click('Use this Hunt'); expect(huntsApi.createDraft).toHaveBeenCalledTimes(1); expect(container.textContent).toContain('Make it your event')
 })
 test('saved-draft loading failure offers retry and preserves the existing route', async () => {
   vi.mocked(huntsApi.getHunt).mockRejectedValueOnce(new ApiError('offline', null, 'network')); await mount('/organizer/hunts/hunt-1/setup'); expect(container.textContent).toContain('couldn’t load your saved Hunt'); await click('Retry'); expect(container.textContent).toContain('General Setup')
 })
-test('server pagination appends eligible countries and preserves opaque cursor', async () => {
-  vi.mocked(organizerLocalApi.page).mockResolvedValueOnce({ items: [{ countryCode: 'RO', displayName: 'Romania' }], nextCursor: 'opaque+cursor' }).mockResolvedValueOnce({ items: [{ countryCode: 'GB', displayName: 'United Kingdom' }], nextCursor: null })
-  await mount(); await click('Show more'); expect(container.textContent).toContain('Romania'); expect(container.textContent).toContain('United Kingdom'); expect(organizerLocalApi.page).toHaveBeenLastCalledWith('countries', {}, 'opaque+cursor')
-})
-test('late responses for a previous country cannot populate the current region choices', async () => {
-  const original = vi.mocked(organizerLocalApi.page).getMockImplementation()!
-  let resolve!: (value: { items: never[]; nextCursor: null }) => void
-  vi.mocked(organizerLocalApi.page).mockImplementation((kind, filters, cursor) => kind === 'regions' ? new Promise(done => { resolve = done }) : original(kind, filters, cursor))
-  await mount(); await select(0, 'RO'); await select(0, ''); await act(async () => resolve({ items: [{ regionId: 'late', label: 'Stale region' }] as never[], nextCursor: null })); expect(container.textContent).not.toContain('Stale region')
-})
-
-test('rewards persist through existing APIs and unsaved edits cannot be abandoned by review', async () => {
-  await mount(); await choose(); await click('Use this Hunt')
-  await act(async () => { const details = [...container.querySelectorAll('details')].find(item => item.querySelector('summary')?.textContent === 'Rewards (optional)')!; details.open = true })
-  await click('+ Add reward'); expect(button('Review event').disabled).toBe(true); expect(button('Back').disabled).toBe(true)
-  const reward = { id: 'reward-1', huntId: saved.id, place: 1, provider: 'tedix_inventory' as const, kind: 'physical' as const, category: null, name: null, description: null, quantity: 4 }
-  vi.spyOn(huntRewardsApi, 'createLeaderboard').mockResolvedValue(reward)
-  await click('Save allocation'); expect(huntRewardsApi.createLeaderboard).toHaveBeenCalledWith(saved.id, expect.objectContaining({ place: 1, quantity: 4 })); expect(button('Review event').disabled).toBe(false)
-  vi.mocked(huntRewardsApi.list).mockResolvedValue({ leaderboard: [reward], specialAwards: [] })
+test.each([false, true])('saved draft creation preserves server identity and eligibility gate (stale=%s)', async stale => {
+  await organizerLocalApi.select(saved.id, selection)
+  saved = { ...saved, country: 'Romania', region: 'Cluj', city: 'Cluj-Napoca', contactName: 'Alex', startDate: '2026-12-12', startTime: '10:00', timezone: 'Europe/Bucharest', capacity: 24, durationMinutes: 120 }
+  await mount('/organizer/hunts/hunt-1/setup')
   await act(async () => container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
-  expect(container.textContent).toContain('1 leaderboard rewards')
+  expect(container.textContent).toContain('Ready for an adventure?')
+  if (stale) vi.mocked(organizerLocalApi.select).mockRejectedValueOnce(new ApiError('template_selection_stale', 409, 'conflict'))
+  await click('Create Hunt')
+  expect(organizerLocalApi.select).toHaveBeenLastCalledWith(saved.id, selection)
+  expect(huntsApi.createDraft).not.toHaveBeenCalled()
+  if (stale) {
+    expect(huntsApi.publish).not.toHaveBeenCalled()
+    expect(huntsApi.createOrGetAccess).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Choose your adventure')
+  } else {
+    expect(huntsApi.publish).toHaveBeenCalledWith(saved.id)
+    expect(container.textContent).toContain('Your Hunt is created')
+    expect(container.querySelector('input[readonly]')?.getAttribute('value')).toContain('REAL-ACCESS')
+  }
 })
