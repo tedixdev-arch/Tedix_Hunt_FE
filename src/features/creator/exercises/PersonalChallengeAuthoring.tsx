@@ -1,6 +1,4 @@
-import { useState } from 'react'
-import { ContentSelection } from '../content/ContentSelection'
-import { filterContent, initialFilters, starterContent } from '../content/catalog'
+import { ContentPicker } from '../content/ContentPicker'
 import { FormulaField, FormulaScope } from './FormulaEditor'
 import { MathFieldPreview } from './MathText'
 import { PredefinedChallengeContent } from './PredefinedChallengeContent'
@@ -21,14 +19,13 @@ export function PersonalChallengeAuthoring(props: Props) {
   return <FormulaScope><PersonalChallengeAuthoringContent {...props} /></FormulaScope>
 }
 function PersonalChallengeAuthoringContent({ standalone = false, value, context = modernContext, onChange, draft = { source: 'saved', assignment: 'predefined' }, onDraftChange }: Props) {
-  const [contentFilters, setContentFilters] = useState(initialFilters)
   const customMode = draft.source === 'custom', exampleMode = draft.source === 'example', existingMode = context.mode === 'legacy' || context.mode === 'unresolved' && draft.contextChoice === 'compatibility'
   const saved = savedExercise({ ...value, customExercises: undefined }, 'kind')
   const active = draft.emptySelection ? undefined : customMode ? draft.custom : exampleMode ? draft.exercise : savedExercise({ ...value, kind: existingMode ? draft.legacyKind ?? value.kind : value.kind, customExercises: undefined }, 'kind')
   const errors = active ? validateExercise(active) : []
   const changeView = (patch: Partial<AuthoringDraft>) => onDraftChange({ ...draft, ...patch })
   const create = (type: string) => {
-    const example = prototypes.find(e => e.type === type) ?? prototypes[0]
+    const example = exampleMode && active?.type === type ? active : prototypes.find(e => e.type === type) ?? prototypes[0]
     const customByType = { ...draft.customByType, ...(draft.custom ? { [draft.custom.type]: draft.custom } : {}) }
     const custom = customByType[example.type] ?? authorPrototype(independentExercise(example))
     changeView({ source: 'custom', emptySelection: false, appliedCustom: draft.assignment === 'custom' ? draft.appliedCustom ?? draft.custom : draft.appliedCustom, custom, customByType: { ...customByType, [custom.type]: custom } })
@@ -63,9 +60,9 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
 
     {existingMode && !customMode && <CheckpointStoryPreview friendly value={value} />}
     <section aria-label="Checkpoint gameplay"><label className="block text-sm font-bold">Personal Challenge<select aria-label="Personal Challenge" className={`${control} mt-2 w-full bg-white`} value={draft.emptySelection ? '' : existingMode ? draft.legacyKind ?? value.kind ?? '' : customMode ? draft.custom?.type ?? '' : exampleMode ? draft.exercise?.type ?? '' : ''} onChange={e => select(e.target.value)}>
-      <option value="">No challenge (optional)</option>{existingMode ? legacyKinds.map(kind => <option key={kind} value={kind}>{gameplayPresentation('kind', kind).name}</option>) : personalTypes.filter(([type]) => customMode || existingMode || filterContent(starterContent, 'Personal Challenges', contentFilters).some(item => item.mechanic === type)).map(([type, label]) => <option key={type} value={type}>{label}</option>)}
+      <option value="">No challenge (optional)</option>{existingMode ? legacyKinds.map(kind => <option key={kind} value={kind}>{gameplayPresentation('kind', kind).name}</option>) : personalTypes.map(([type, label]) => <option key={type} value={type}>{label}</option>)}
     </select></label></section>
-    {!standalone && !existingMode && !customMode && <><ContentSelection filters={contentFilters} onChange={setContentFilters} /><p className="text-sm text-slate-600">Starter previews only. Approved library selection is not available for published Hunts.</p></>}
+    {!standalone && !existingMode && !customMode && <><ContentPicker section="Personal Challenges" selectedId={draft.exercise ? `starter:${draft.exercise.id}` : undefined} onSelect={item => changeView({ source: 'example', emptySelection: false, exercise: structuredClone(item.exercise) })} /><p className="text-sm text-slate-600">Starter previews only. Approved library selection is not available for published Hunts.</p></>}
     {!standalone && (!existingMode || customMode) && <p role="note" className="text-sm text-slate-600">{!customMode && !exampleMode && saved ? 'Choose a mechanic to create a replacement. Your current challenge stays assigned until you apply a change.' : <>{customMode ? 'Save your own challenge for review. ' : 'Try an example, then choose Create Your Own to adapt it. '}These challenges are not available in published Hunts yet.</>}</p>}
     {!existingMode && !customMode && exampleMode && saved && <button type="button" className={control} onClick={() => changeView({ source: 'saved', emptySelection: false })}>View saved challenge</button>}
     {customMode && active ? <section aria-label={`${active.type} content editor`} className="space-y-4">
