@@ -10,6 +10,8 @@ export interface AuthoringDraft {
   emptySelection?: boolean
   legacyKind?: string
   exercise?: Exercise
+  /** Explicit example selection must be copied, rather than resuming a mechanic draft. */
+  copySelectedExample?: boolean
   /** Retains the selected custom instance while a replacement is being edited. */
   appliedCustom?: Exercise
   custom?: Exercise

@@ -32,3 +32,9 @@ No backend/schema, scoring, gameplay validation, permissions, legacy Hunt, Mapbo
 - Focused `contentPicker.test.tsx` coverage: individual records with the same mechanic, instruction search, playable preview, Template record selection/publication guard, independent drafts, mode preservation, cancel/confirm section switching, same-section draft replacement, actual-data hierarchy/reset and absent-catalog behavior. Existing canonical mechanics, source immutability, geography and Template Personal/Team suites also pass.
 
 Stop for ChatGPT review. Do not merge or deploy.
+
+## Selected-exercise copying follow-up
+
+An explicit picker selection (or mechanic example selection) records session-only copy intent. Create Your Own copies that exact exercise with a new identity instead of reusing an older draft by mechanic. Replacing a same-mechanic custom draft requires confirmation; Cancel retains all state, and Resume previous draft returns to the older work without replacing it. Merely switching tabs after copying resumes the current draft. The selected applied checkpoint exercise remains separate until Apply challenge is explicitly used.
+
+Regression coverage uses two distinct library records with the same canonical mechanic, an edited and assigned first draft, canceled replacement, explicit resume, confirmed independent copying, unchanged applied persistence, source immutability and subsequent tab switching.

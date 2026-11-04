@@ -9,6 +9,12 @@ import { initialFilters, starterContent, type ContentRecord } from '../src/featu
 import { PersonalChallengeAuthoring } from '../src/features/creator/exercises/PersonalChallengeAuthoring'
 import type { AuthoringDraft } from '../src/features/creator/exercises/experimentDrafts'
 import { applyExerciseDrafts } from '../src/features/creator/exercises/templateExercises'
+vi.mock('../src/features/creator/content/catalog', async original => {
+  const catalog = await original<typeof import('../src/features/creator/content/catalog')>()
+  const source = catalog.starterContent[0]
+  const second = { ...source, id: 'fixture-second-record', exercise: { ...structuredClone(source.exercise), id: 'fixture-second-exercise', title: 'Another pair exercise', instructions: 'Different source question' } }
+  return { ...catalog, starterContent: [...catalog.starterContent, second] }
+})
 vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }) } }))
 let container: HTMLDivElement, root: Root, router: ReturnType<typeof createMemoryRouter>
 beforeEach(() => {
@@ -109,4 +115,53 @@ test('absent curriculum leaves the Mathematics hierarchy visible without invente
     expect(select.disabled).toBe(true); expect(select.options).toHaveLength(1)
   }
   expect(container.textContent).toContain('unavailable levels await the curriculum catalog')
+})
+
+test('Create Your Own copies the selected record over a same-mechanic draft only after confirmation', async () => {
+  let current: AuthoringDraft
+  const mutate = vi.fn(), sourcesBefore = structuredClone(starterContent)
+  const first = starterContent[0], second = starterContent.find(item => item.id === 'fixture-second-record')!
+  expect(first.mechanic).toBe(second.mechanic)
+  function Harness() {
+    const [draft, setDraft] = useState<AuthoringDraft>({ source: 'saved', assignment: 'predefined' })
+    current = draft
+    return <PersonalChallengeAuthoring value={{ checkpoint: 1 }} draft={draft} onDraftChange={setDraft} onChange={mutate} />
+  }
+  await mount(<Harness />)
+  await click(`Try example: ${first.exercise.title}`); await click('Create Your Own')
+  await change('Title', 'My unsaved first exercise')
+  await click('Apply challenge')
+  const assigned = structuredClone(current!.appliedCustom!)
+  const oldDraft = structuredClone(current!.custom!)
+  await click('Predefined'); await click(`Try example: ${second.exercise.title}`)
+  const beforeCancel = structuredClone(current!)
+  const assignedBeforeCopy = applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': current! })
+  await click('Create Your Own') // Cancel replacement.
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('independent copy of the selected exercise'))
+  expect(current!).toEqual(beforeCancel)
+  await click('Resume previous draft')
+  expect(current!.custom).toEqual(oldDraft)
+  await click('Predefined')
+  expect(current!.exercise!.id).toBe(second.exercise.id)
+  vi.mocked(window.confirm).mockReturnValue(true)
+  await click('Create Your Own')
+  expect(current!.source).toBe('custom')
+  expect(current!.custom!.title).toBe(second.exercise.title)
+  expect(current!.custom!.instructions).toBe(second.exercise.instructions)
+  expect(current!.custom!.authored).toEqual(second.exercise.authored)
+  expect(current!.custom!.id).not.toBe(oldDraft.id)
+  expect(current!.custom!.id).not.toBe(second.exercise.id)
+  expect(current!.custom!.authored).not.toBe(second.exercise.authored)
+  expect(current!.custom!.authored!.activity).not.toBe(second.exercise.authored!.activity)
+  expect(current!.assignment).toBe('custom')
+  expect(current!.appliedCustom).toEqual(assigned)
+  expect(applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': current! })).toEqual(assignedBeforeCopy)
+  await change('Title', 'Independent second edit')
+  expect(current!.appliedCustom).toEqual(assigned)
+  expect(starterContent).toEqual(sourcesBefore)
+  expect(mutate).not.toHaveBeenCalled()
+  const copiedId = current!.custom!.id
+  await click('Predefined'); await click('Create Your Own') // Mode switching resumes the new draft.
+  expect(current!.custom!.id).toBe(copiedId)
+  expect(current!.custom!.title).toBe('Independent second edit')
 })

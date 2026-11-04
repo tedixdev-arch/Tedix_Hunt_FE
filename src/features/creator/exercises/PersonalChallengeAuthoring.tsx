@@ -27,8 +27,10 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
   const create = (type: string) => {
     const example = exampleMode && active?.type === type ? active : prototypes.find(e => e.type === type) ?? prototypes[0]
     const customByType = { ...draft.customByType, ...(draft.custom ? { [draft.custom.type]: draft.custom } : {}) }
-    const custom = customByType[example.type] ?? authorPrototype(independentExercise(example))
-    changeView({ source: 'custom', emptySelection: false, appliedCustom: draft.assignment === 'custom' ? draft.appliedCustom ?? draft.custom : draft.appliedCustom, custom, customByType: { ...customByType, [custom.type]: custom } })
+    const copyingSelection = exampleMode && draft.copySelectedExample && active?.type === type
+    if (copyingSelection && customByType[example.type] && !window.confirm('Replace your previous custom draft of this mechanic with an independent copy of the selected exercise? Cancel keeps your draft and selection.')) return
+    const custom = (!copyingSelection && customByType[example.type]) || authorPrototype(independentExercise(example))
+    changeView({ source: 'custom', emptySelection: false, copySelectedExample: false, appliedCustom: draft.assignment === 'custom' ? draft.appliedCustom ?? draft.custom : draft.appliedCustom, custom, customByType: { ...customByType, [custom.type]: custom } })
   }
   const apply = () => {
     // Catalog examples have no publication-safe predefined wire representation. Fail closed.
@@ -47,8 +49,18 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
     if (!type) { changeView({ emptySelection: true }); return }
     if (existingMode) { changeView({ source: 'saved', emptySelection: false, legacyKind: type }); return }
     if (customMode) create(type)
-    else changeView({ source: 'example', emptySelection: false, exercise: structuredClone(exampleFor(type)) })
+    else changeView({ source: 'example', emptySelection: false, copySelectedExample: true, exercise: structuredClone(exampleFor(type)) })
   }
+  const openCustom = () => {
+    if (exampleMode && draft.copySelectedExample && active) { create(active.type); return }
+    if (draft.custom) changeView({ source: 'custom', emptySelection: false })
+    else create(active?.type ?? 'tap-pair')
+  }
+  const openPredefined = () => changeView({
+    source: !existingMode && (draft.custom || draft.exercise) ? 'example' : 'saved',
+    ...(!existingMode && (draft.custom || draft.exercise) ? { exercise: draft.exercise ?? structuredClone(exampleFor(draft.custom!.type)) } : {}),
+    emptySelection: false,
+  })
   if (context.mode === 'unresolved' && !draft.contextChoice) return <section className="mt-4 min-w-0 space-y-4" aria-label="Personal Challenge authoring">
     <p role="note">Template type information is unavailable. Your saved challenges are preserved. Choose an editor for this session.</p>
     <div className="flex flex-wrap gap-2"><button type="button" className={control} onClick={() => changeView({ contextChoice: 'compatibility' })}>Edit existing challenges</button><button type="button" className={control} onClick={() => changeView({ contextChoice: 'modern' })}>Use modern challenge editor</button></div>
@@ -56,14 +68,15 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
   </section>
   return <section className="mt-4 min-w-0 space-y-5" aria-label="Personal Challenge authoring">
     {context.mode === 'unresolved' && <button type="button" className={control} onClick={() => changeView({ contextChoice: undefined })}>Choose editor</button>}
-    {!standalone && <div className="flex rounded-xl bg-slate-100 p-1">{['Predefined', 'Create Your Own'].map((name, index) => <button type="button" key={name} className={`${control} min-w-0 flex-1 ${customMode === !!index ? 'bg-white font-bold shadow' : 'border-transparent bg-transparent'}`} aria-pressed={customMode === !!index} onClick={() => index ? draft.custom ? changeView({ source: 'custom', emptySelection: false }) : create(active?.type ?? 'tap-pair') : changeView({ source: !existingMode && (draft.custom || draft.exercise) ? 'example' : 'saved', ...(!existingMode && (draft.custom || draft.exercise) ? { exercise: structuredClone(exampleFor((draft.custom ?? draft.exercise)!.type)) } : {}), emptySelection: false })}>{name}</button>)}</div>}
+    {!standalone && <div className="flex rounded-xl bg-slate-100 p-1">{['Predefined', 'Create Your Own'].map((name, index) => <button type="button" key={name} className={`${control} min-w-0 flex-1 ${customMode === !!index ? 'bg-white font-bold shadow' : 'border-transparent bg-transparent'}`} aria-pressed={customMode === !!index} onClick={() => index ? openCustom() : openPredefined()}>{name}</button>)}</div>}
 
     {existingMode && !customMode && <CheckpointStoryPreview friendly value={value} />}
     <section aria-label="Checkpoint gameplay"><label className="block text-sm font-bold">Personal Challenge<select aria-label="Personal Challenge" className={`${control} mt-2 w-full bg-white`} value={draft.emptySelection ? '' : existingMode ? draft.legacyKind ?? value.kind ?? '' : customMode ? draft.custom?.type ?? '' : exampleMode ? draft.exercise?.type ?? '' : ''} onChange={e => select(e.target.value)}>
       <option value="">No challenge (optional)</option>{existingMode ? legacyKinds.map(kind => <option key={kind} value={kind}>{gameplayPresentation('kind', kind).name}</option>) : personalTypes.map(([type, label]) => <option key={type} value={type}>{label}</option>)}
     </select></label></section>
-    {!standalone && !existingMode && !customMode && <><ContentPicker section="Personal Challenges" selectedId={draft.exercise ? `starter:${draft.exercise.id}` : undefined} onSelect={item => changeView({ source: 'example', emptySelection: false, exercise: structuredClone(item.exercise) })} /><p className="text-sm text-slate-600">Starter previews only. Approved library selection is not available for published Hunts.</p></>}
+    {!standalone && !existingMode && !customMode && <><ContentPicker section="Personal Challenges" selectedId={draft.exercise ? `starter:${draft.exercise.id}` : undefined} onSelect={item => changeView({ source: 'example', emptySelection: false, copySelectedExample: true, exercise: structuredClone(item.exercise) })} /><p className="text-sm text-slate-600">Starter previews only. Approved library selection is not available for published Hunts.</p></>}
     {!standalone && (!existingMode || customMode) && <p role="note" className="text-sm text-slate-600">{!customMode && !exampleMode && saved ? 'Choose a mechanic to create a replacement. Your current challenge stays assigned until you apply a change.' : <>{customMode ? 'Save your own challenge for review. ' : 'Try an example, then choose Create Your Own to adapt it. '}These challenges are not available in published Hunts yet.</>}</p>}
+    {exampleMode && draft.copySelectedExample && draft.custom && <button type="button" className={control} onClick={() => changeView({ source: 'custom', emptySelection: false })}>Resume previous draft</button>}
     {!existingMode && !customMode && exampleMode && saved && <button type="button" className={control} onClick={() => changeView({ source: 'saved', emptySelection: false })}>View saved challenge</button>}
     {customMode && active ? <section aria-label={`${active.type} content editor`} className="space-y-4">
       <div className="space-y-3">{(originalVisualMechanics.includes(active.type) ? ['title', 'instructions'] as const : []).map(key => <FormulaField key={key} label={key === 'title' ? 'Title' : 'Instructions / Question'} value={active[key]} maxLength={key === 'title' ? 200 : 4000} onChange={value => update({ ...active, [key]: value })}><label className="block text-sm font-bold">{key === 'title' ? 'Title' : 'Instructions / Question'}<textarea aria-label={key === 'title' ? 'Title' : 'Instructions / Question'} required aria-invalid={!active[key].trim()} maxLength={key === 'title' ? 200 : 4000} className={`${control} mt-2 w-full`} value={active[key]} onChange={e => update({ ...active, [key]: e.target.value })} /><MathFieldPreview value={active[key]} /></label></FormulaField>)}</div>
