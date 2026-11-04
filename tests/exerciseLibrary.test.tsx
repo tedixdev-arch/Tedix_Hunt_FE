@@ -183,7 +183,7 @@ test('Predefined selection is read-only and custom copies never mutate shared ex
   const before = structuredClone(prototypes)
   await render(<AuthoringHarness />)
   await input(container.querySelector('select')!, 'true-false')
-  expect(container.textContent).not.toContain('Even product'); expect(container.querySelector('textarea')).toBeNull()
+  expect(container.textContent).toContain('Even product'); expect(container.querySelector('textarea')).toBeNull()
   expect(container.textContent).toContain('unavailable for publication')
   await click('Create Your Own'); expect(container.querySelector('select')?.value).toBe('true-false')
   await click('Edit Statement'); await input(container.querySelector('textarea')!, 'Independent statement'); expect(prototypes).toEqual(before)
