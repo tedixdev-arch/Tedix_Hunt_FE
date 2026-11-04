@@ -32,11 +32,11 @@ async function solve(e) {
 try {
   for (const width of [1440, 768, 390, 320]) for (const type of ['tap-pair', 'single-choice', 'fill-blank']) {
     await page.setViewportSize({ width, height: 1000 }); await page.goto(`${process.env.TEDIX_BROWSER_URL || 'http://127.0.0.1:5173'}/tests/browser/personalChallengeUX.html`)
-    await page.getByRole('combobox', { name: 'Country *', exact: true }).selectOption('FR')
-    await page.getByRole('textbox', { name: 'City *', exact: true }).fill('Paris')
-    await page.getByRole('button', { name: 'Paris · Île-de-France · France', exact: true }).click()
+    await page.getByText('Checking location…', { exact: true }).waitFor({ state: 'hidden' })
     await page.getByRole('button', { name: 'Continue to Template builder', exact: true }).click()
     await page.getByRole('textbox', { name: 'Template name', exact: true }).fill('My city adventure')
+    assert.equal(await page.getByRole('combobox', { name: 'Hunt Category', exact: true }).count(), 1)
+    if (type === 'tap-pair') await page.screenshot({ path: `${output}/hunt-category-${width}.png` })
     await save(); const initial = await page.evaluate(() => window.fixtureRecord())
     assert.deepEqual(initial.content.checkpoints, [...Array.from({ length: 6 }, (_, i) => ({ checkpoint: i + 1 })), { role: 'terminal' }])
     assert.equal(JSON.stringify(initial).includes('Signal'), false); assert.deepEqual(initial.content.configuration.checkpointPositions, [])
@@ -52,7 +52,7 @@ try {
     assert.equal(await panel().getByRole('button', { name: 'Test Challenge', exact: true }).count(), 0)
     assert.equal(await panel().getByRole('button', { name: /^Edit / }).count(), 0)
     const example = await page.evaluate(type => window.examples.find(e => e.type === type), type)
-    assert.equal(await panel().getByLabel('Mobile challenge canvas', { exact: true }).count(), 0)
+    assert.equal(await panel().getByRole('region', { name: 'Playable exercise preview', exact: true }).getByLabel('Mobile challenge canvas', { exact: true }).count(), 1)
     assert.deepEqual(await page.evaluate(() => window.fixtureRecord()), initial)
     await shot(`${type}-predefined-${width}`)
     await panel().getByRole('button', { name: 'Create Your Own', exact: true }).click()

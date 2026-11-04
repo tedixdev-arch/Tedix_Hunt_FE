@@ -48,7 +48,7 @@ for (const preset of personalExamples) test(`${preset.type}: one modern selector
   const selector = container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!
   expect([...selector.options].map(o => o.value)).toEqual(['', ...personalTypes.map(row => row[0])])
   expect(selector.querySelector('optgroup')).toBeNull()
-  expect(container.querySelector('[aria-label="Mobile challenge canvas"]')).toBeNull()
+  expect(container.querySelector('[aria-label="Mobile challenge canvas"]')).not.toBeNull()
   expect(container.querySelector('textarea')).toBeNull()
   expect(button('Test Challenge')).toBeUndefined(); expect(button('Apply challenge')).toBeUndefined()
   expect(container.querySelector('[aria-label^="Edit "]')).toBeNull()
