@@ -30,3 +30,40 @@ test('standalone editor reuses preview and LaTeX without assignment or source mu
     expect(window.confirm).toHaveBeenCalled()
   } finally { act(() => root.unmount()); router.dispose(); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals() }
 })
+
+test('classification is optional, unavailable curriculum stays visible, preparation never saves and edits invalidate feedback', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <ContentStudio active /> }, { path: '/away', element: <p>Away</p> }])
+  const click = async (text: string) => { await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === text)!.click()) }
+  const change = async (label: string, value: string) => {
+    const field = host.querySelector(`[aria-label="${label}"]`) as HTMLSelectElement | HTMLTextAreaElement
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(field instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLTextAreaElement.prototype, 'value')!.set!.call(field, value)
+      field.dispatchEvent(new Event(field instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }))
+    })
+  }
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.querySelector('details')?.open).toBe(false)
+    await click('Add Exercise')
+    expect(host.textContent).toContain('Exercise prepared for this session. Not saved to Library.')
+    await change('Exercise category', 'Mathematics')
+    expect(host.textContent).not.toContain('Exercise prepared for this session.')
+    for (const label of ['Grade', 'Main', 'Unit', 'Lesson']) expect(host.querySelector<HTMLSelectElement>(`[aria-label="${label}"]`)?.disabled).toBe(true)
+    await act(async () => { void router.navigate('/away') })
+    expect(confirm).toHaveBeenCalled()
+    expect(router.state.location.pathname).toBe('/')
+    await change('Title', '')
+    await click('Add Exercise')
+    expect(host.querySelector('[role="alert"]')).not.toBeNull()
+    expect(host.textContent).not.toContain('Exercise prepared for this session.')
+    await change('Content type', 'Team Challenges')
+    await click('Add Exercise')
+    expect(host.textContent).toContain('Exercise prepared for this session. Not saved to Library.')
+    await change('Content type', 'Navigation Hints')
+    expect([...host.querySelectorAll('button')].some(b => b.textContent === 'Add Exercise')).toBe(false)
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals() }
+})

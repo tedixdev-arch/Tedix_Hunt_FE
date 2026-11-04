@@ -35,7 +35,7 @@ export function TeamChallengeAuthoring({ standalone = false, value, onChange, co
   }
   return <section className="mt-4 min-w-0 space-y-4" aria-label="Team Challenge authoring">
     {context.mode === 'unresolved' && <button type="button" className={control} onClick={() => change({ contextChoice: undefined })}>Choose editor</button>}
-    <label className="block text-sm font-bold">Team Challenge<select aria-label="Team Challenge" className={`${control} mt-2 w-full bg-white`} value={active && (customMode || draft.source === 'example') ? active.type : ''} onChange={event => {
+    <label className="block text-sm font-bold">{standalone ? 'Exercise type' : 'Team Challenge'}<select aria-label="Team Challenge" className={`${control} mt-2 w-full bg-white`} value={active && (customMode || draft.source === 'example') ? active.type : ''} onChange={event => {
       const type = event.target.value
       if (!type) change({ emptySelection: true })
       else if (customMode) create(type)

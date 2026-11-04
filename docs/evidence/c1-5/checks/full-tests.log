@@ -1,0 +1,68 @@
+
+> tedix_hunt_fe@1.0.0 test
+> node --test --experimental-strip-types tests/**/*.test.ts && vitest run --maxWorkers=2
+
+✔ tests/adminAccess.test.ts (85.518609ms)
+✔ tests/adminAccountSecurity.test.ts (84.875214ms)
+✔ tests/adminGovernanceApi.test.ts (103.761405ms)
+✔ tests/adminLogin.test.ts (71.648376ms)
+✔ tests/adminProvisioning.test.ts (125.543865ms)
+✔ tests/adminSidebar.test.ts (79.244817ms)
+✔ tests/adminTemplateReviews.test.ts (106.257315ms)
+✔ tests/api.test.ts (120.620704ms)
+✔ tests/authConcurrency.test.ts (135.450338ms)
+✔ tests/checkpointGameplay.test.ts (116.159672ms)
+✔ tests/creatorApplications.test.ts (101.998644ms)
+✔ tests/creatorCheckpointStructure.test.ts (76.291448ms)
+✔ tests/creatorGeography.test.ts (75.044932ms)
+✔ tests/creatorTemplates.test.ts (139.255539ms)
+✔ tests/deploymentReliability.test.ts (71.81135ms)
+✔ tests/developmentDeployment.test.ts (397.146184ms)
+✔ tests/finishPoint.test.ts (116.586965ms)
+✔ tests/homePage.test.ts (74.042632ms)
+✔ tests/huntAccess.test.ts (101.407496ms)
+✔ tests/huntMapGeography.test.ts (77.054623ms)
+✔ tests/huntOptions.test.ts (100.241124ms)
+✔ tests/huntReview.test.ts (91.106218ms)
+✔ tests/huntTemplates.test.ts (105.740647ms)
+✔ tests/hunts.test.ts (117.302051ms)
+✔ tests/localTemplates.test.ts (101.855806ms)
+✔ tests/localValidation.test.ts (79.635749ms)
+✔ tests/localityProposals.test.ts (100.417802ms)
+✔ tests/localityRegistry.test.ts (111.928587ms)
+✔ tests/organizerApplications.test.ts (111.594926ms)
+✔ tests/organizerCredentialLifecycle.test.ts (77.650396ms)
+✔ tests/organizerSnapshotContract.test.ts (103.960035ms)
+✔ tests/participantPreview.test.ts (96.430339ms)
+✔ tests/passwordPolicy.test.ts (86.666809ms)
+✔ tests/rewards.test.ts (113.407676ms)
+✔ tests/routeResearch.test.ts (72.974327ms)
+✔ tests/signalClujDraft.test.ts (131.30192ms)
+✔ tests/signalLandmarks.test.ts (103.996509ms)
+✔ tests/signalOverload.test.ts (123.42239ms)
+✔ tests/starterCatalog.test.ts (106.479053ms)
+✔ tests/typography.test.ts (75.80643ms)
+✔ tests/universalLibrary.test.ts (105.555818ms)
+✔ tests/walkingRoute.test.ts (104.557386ms)
+✔ tests/workspaceSelector.test.ts (113.045019ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 43
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4614.893562
+
+ RUN  v5.0.3 /workspace/Tedix_Hunt_FE
+
+
+ Test Files  51 passed (51)
+      Tests  959 passed (959)
+   Start at  15:20:12
+   Duration  63.15s (tests 62%, environment 30%, import 5%, transform 3%)
+
+Environment  jsdom was created 51 times · 35.60s total, 30% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
