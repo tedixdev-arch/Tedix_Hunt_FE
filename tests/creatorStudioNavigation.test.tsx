@@ -35,7 +35,14 @@ async function render(path = '/creator') {
   await act(async () => root.render(<RouterProvider router={router} />))
 }
 const button = (label: string) => [...container.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent?.startsWith(label))!
-async function click(label: string) { const target = button(label); target.focus(); await act(async () => target.click()); return target }
+async function click(label: string) {
+  if (['Personal Challenges', 'Team Challenges', 'Navigation Hints'].includes(label)) {
+    const field = container.querySelector<HTMLSelectElement>('[aria-label="Content type"]')!
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(field, label); field.dispatchEvent(new Event('change', { bubbles: true })) })
+    return field
+  }
+  const target = button(label); target.focus(); await act(async () => target.click()); return target
+}
 const titleField = () => [...container.querySelectorAll('label')].find(label => label.textContent?.startsWith('Title'))!.querySelector('textarea')!
 async function editTitle(value: string) {
   await act(async () => {
