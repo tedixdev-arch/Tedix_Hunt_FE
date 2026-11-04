@@ -318,7 +318,7 @@ function CreatorTemplateEditor() {
     if (accepted) cityChangeConfirmed.current = true
     return accepted
   }
-  const challengeContext = useMemo(() => personalCreationContext(persisted), [persisted])
+  const challengeContext = useMemo(() => ({ ...personalCreationContext(persisted), poolDefaults: { category: details.category, location: city } }), [persisted, details.category, city])
   const features = organizerFeatures.filter(item => !['positions', 'final'].includes(item.id))
   const feature = features[Math.min(featureIndex, features.length - 1)]
   const advancedIds = new Set(['map', 'results', 'rewards'])

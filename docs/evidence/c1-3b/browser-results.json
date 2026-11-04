@@ -1,0 +1,29 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "mechanics": 15,
+      "overflow": false,
+      "assignmentsPreserved": true,
+      "specificFixture": true,
+      "honestEmptyState": true
+    },
+    {
+      "width": 390,
+      "mechanics": 15,
+      "overflow": false,
+      "assignmentsPreserved": true,
+      "specificFixture": true,
+      "honestEmptyState": true
+    },
+    {
+      "width": 320,
+      "mechanics": 15,
+      "overflow": false,
+      "assignmentsPreserved": true,
+      "specificFixture": true,
+      "honestEmptyState": true
+    }
+  ],
+  "errors": []
+}
