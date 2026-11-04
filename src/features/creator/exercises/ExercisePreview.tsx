@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { type Exercise, typeName, validateExercise } from './catalog'
 import { control, ExerciseRenderer } from './ExerciseRenderer'
 
-export function ExercisePreview({ exercise, onClose }: { exercise: Exercise; onClose: () => void }) {
+export function ExercisePreview({ exercise, onClose, readOnly = false }: { exercise: Exercise; onClose: () => void; readOnly?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     const trigger = document.activeElement as HTMLElement | null
@@ -19,7 +19,7 @@ export function ExercisePreview({ exercise, onClose }: { exercise: Exercise; onC
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
   }} className="m-auto max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-[410px] overflow-y-auto overflow-x-hidden rounded-[2rem] border-4 border-slate-800 bg-white p-4 text-slate-950 shadow-xl backdrop:bg-slate-950/60 sm:p-5">
-    <header className="mb-5 flex items-center justify-between gap-2 border-b border-slate-200 pb-3"><div><h2 id="exercise-preview-title" className="font-bold">Exercise preview</h2><p className="text-xs text-slate-500">{typeName(exercise.type)} · Simulator</p></div><button type="button" className={control} aria-label="Close exercise preview" onClick={onClose}>Close</button></header>
+    <header className="mb-5 flex items-center justify-between gap-2 border-b border-slate-200 pb-3"><div><h2 id="exercise-preview-title" className="font-bold">Exercise preview</h2><p className="text-xs text-slate-500">{typeName(exercise.type)} · {readOnly ? 'Read-only preview' : 'Simulator'}</p></div><button type="button" className={control} aria-label="Close exercise preview" onClick={onClose}>Close</button></header>
     <div className="min-h-[480px] min-w-0">{errors.length ? <div role="alert"><p>Fix the configuration before previewing:</p><ul className="list-disc pl-5">{errors.map(error => <li key={error}>{error}</li>)}</ul></div> : <ExerciseRenderer exercise={exercise} />}</div>
   </dialog>
 }

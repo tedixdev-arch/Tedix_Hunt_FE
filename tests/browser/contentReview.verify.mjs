@@ -6,7 +6,7 @@ const output = process.env.C2C_EVIDENCE || 'docs/evidence/c2c-02'
 await fs.mkdir(output,{recursive:true})
 const endpoint = 'http://127.0.0.1:3002', origin = 'http://127.0.0.1:5173/tests/browser/contentReview.html'
 const browser = await chromium.launch({executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium',args:['--no-sandbox']})
-const results = [], errors = [], screenshots = [], requests = []
+const results = [], errors = [], screenshots = [], requests = [], runId = Date.now()
 async function pageFor(actor,admin=false){
  const context=await browser.newContext({serviceWorkers:'block'}),page=await context.newPage();page.setDefaultTimeout(15000)
  page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept())
@@ -21,7 +21,7 @@ const api = async (page,path,method='GET',body,actor=actors[0],status=200) => {
 const click=(page,name)=>page.getByRole('button',{name,exact:true}).click()
 const shot=async(page,name)=>{await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow ${name}`);await page.screenshot({path:`${output}/${name}.png`,fullPage:true});screenshots.push(name)}
 const editTitle=async(page,title)=>{await click(page,'Edit Title');await page.getByLabel('Title',{exact:true}).fill(title);await page.keyboard.press('Escape')}
-const library=async(page)=>{await click(page,'My Content');await page.getByText('Loading content…',{exact:true}).waitFor({state:'hidden'})}
+const library=async(page)=>{await click(page,'Library');await page.getByText('Loading content…',{exact:true}).waitFor({state:'hidden'})}
 const open=async(page,title,status='Edit')=>{await library(page);while(!await page.getByRole('button',{name:`${status} ${title}`,exact:true}).count()){await click(page,'Load more content');await page.getByText('Loading content…',{exact:true}).waitFor({state:'hidden'})}await click(page,`${status} ${title}`)}
 const current=async(page,title)=>(await api(page,'/api/creator/content?view=all&limit=100')).items.find(r=>r.exercise.title===title)
 let creator,admin
@@ -30,7 +30,7 @@ try {
  for(const width of [1440,390,320]){
   await creator.setViewportSize({width,height:960});await admin.setViewportSize({width,height:960})
   if(width!==1440){await creator.reload();await click(creator,'Content')}
-  const title=`Science pairs ${width}`
+  const title=`Science pairs ${width} ${runId}`
   await editTitle(creator,title);await creator.getByLabel('Exercise category',{exact:true}).selectOption('Science');await shot(creator,`creator-draft-${width}`)
   await click(creator,'Add Exercise');await creator.getByText('Saved to Library.',{exact:true}).waitFor();await shot(creator,`submit-for-approval-${width}`)
   const draft=await current(creator,title);assert.equal(draft.status,'draft')
@@ -61,8 +61,8 @@ try {
   results.push({width,saveSubmitExact:true,unsavedBlocked:true,readOnly:true,approveExact:true,feedbackRevise:true,historyImmutable:true})
  }
  // Team uses the same editor/preview and canonical persisted exercise.
- await creator.reload();await click(creator,'Content');await creator.getByLabel('Content type',{exact:true}).selectOption('Team Challenges');await editTitle(creator,'Team signal');await creator.getByLabel('Exercise category',{exact:true}).selectOption('Science');await click(creator,'Add Exercise');await creator.getByText('Saved to Library.',{exact:true}).waitFor();await click(creator,'Submit for Approval');await creator.getByText('Submitted for Review',{exact:true}).waitFor();const team=await current(creator,'Team signal')
- await click(admin,'Refresh');await click(admin,'Review Team signal');await admin.getByLabel('scrambled-word interactive exercise',{exact:true}).waitFor();await click(admin,'Solution');await admin.getByLabel('Exercise solution',{exact:true}).waitFor();await shot(admin,'admin-team-review-320')
+ await creator.reload();await click(creator,'Content');await creator.getByLabel('Content type',{exact:true}).selectOption('Team Challenges');await editTitle(creator,`Team signal ${runId}`);await creator.getByLabel('Exercise category',{exact:true}).selectOption('Science');await click(creator,'Add Exercise');await creator.getByText('Saved to Library.',{exact:true}).waitFor();await click(creator,'Submit for Approval');await creator.getByText('Submitted for Review',{exact:true}).waitFor();const team=await current(creator,`Team signal ${runId}`)
+ await click(admin,'Refresh');await click(admin,`Review Team signal ${runId}`);await admin.getByLabel('scrambled-word interactive exercise',{exact:true}).waitFor();await click(admin,'Solution');await admin.getByLabel('Exercise solution',{exact:true}).waitFor();await shot(admin,'admin-team-review-320')
  // Real backend self-review and competing decisions, never mocked.
  const target=`/api/admin/content/review/${team.contentId}/revisions/${team.revisionId}`
  await api(creator,target+'/approve','POST',{},actors[0],403)

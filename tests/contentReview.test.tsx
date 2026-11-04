@@ -43,7 +43,7 @@ test('unsaved title and classification prevent submission until exact new revisi
  creator();const submit=vi.spyOn(creatorContentApi,'submit').mockResolvedValue({...saved,status:'submitted'})
  const update=vi.spyOn(creatorContentApi,'update').mockResolvedValue({...saved,revisionId:'new-revision'})
  await harness(<ContentStudio active/>,async({host,click,change})=>{
-  await click('My Content');await click(`Edit ${saved.exercise.title}`);await click('Edit Title');await change('Title','Changed title')
+  await click('Library');await click(`Edit ${saved.exercise.title}`);await click('Edit Title');await change('Title','Changed title')
   await click('Submit for Approval');expect(submit).not.toHaveBeenCalled();expect(host.textContent).toContain('Save Changes before submitting')
   await click('Save Changes');expect(update).toHaveBeenCalledWith(saved.contentId,saved.revisionId,expect.anything())
   await click('Submit for Approval');expect(submit).toHaveBeenCalledWith(saved.contentId,'new-revision')
@@ -51,21 +51,21 @@ test('unsaved title and classification prevent submission until exact new revisi
 })
 test('missing saved category gives actionable validation without calling submit',async()=>{
  creator({...saved,category:null});const submit=vi.spyOn(creatorContentApi,'submit')
- await harness(<ContentStudio active/>,async({host,click})=>{await click('My Content');await click(`Edit ${saved.exercise.title}`);await click('Submit for Approval');expect(submit).not.toHaveBeenCalled();expect(host.textContent).toContain('Choose a category and Save Changes')})
+ await harness(<ContentStudio active/>,async({host,click})=>{await click('Library');await click(`Edit ${saved.exercise.title}`);await click('Submit for Approval');expect(submit).not.toHaveBeenCalled();expect(host.textContent).toContain('Choose a category and Save Changes')})
 })
 for(const status of ['submitted','approved','archived'] as const)test(`${status} opens playable read-only saved content`,async()=>{
  creator({...saved,status});const update=vi.spyOn(creatorContentApi,'update')
- await harness(<ContentStudio active/>,async({host,click})=>{await click('My Content');await click(`View ${saved.exercise.title}`);expect(host.querySelector('[aria-label="Edit Title"]')).toBeNull();expect(host.querySelector('[aria-label="Mobile challenge canvas"]')).not.toBeNull();expect(update).not.toHaveBeenCalled()})
+ await harness(<ContentStudio active/>,async({host,click})=>{await click('Library');await click(`View ${saved.exercise.title}`);expect(host.querySelector('[aria-label="Edit Title"]')).toBeNull();expect(host.querySelector('[aria-label="Mobile challenge canvas"]')).not.toBeNull();expect(update).not.toHaveBeenCalled()})
 })
 test('changes requested feedback is plain text and Revise clones exact revision into shared editor',async()=>{
  const reviewed={...saved,status:'changes_requested' as const,reviewEvents:[{eventId:'event',contentId:saved.contentId,revisionId:saved.revisionId,actorUserId:'admin',decision:'changes_requested' as const,comment:'Explain the second hint <script>unsafe</script>',decidedAt:'2026-01-02'}]}
  const before=structuredClone(reviewed);creator(reviewed)
  const clone=vi.spyOn(creatorContentApi,'clone').mockResolvedValue({...saved,revisionId:'new-draft',version:2})
- await harness(<ContentStudio active/>,async({host,click})=>{await click('My Content');expect(host.textContent).toContain(reviewed.reviewEvents[0].comment);expect(host.querySelector('script')).toBeNull();await click(`Revise ${saved.exercise.title}`);expect(clone).toHaveBeenCalledWith(saved.contentId,saved.revisionId);expect(host.querySelector('[aria-label="Edit Title"]')).not.toBeNull();expect(host.textContent).toContain(reviewed.reviewEvents[0].comment);expect(reviewed).toEqual(before)})
+ await harness(<ContentStudio active/>,async({host,click})=>{await click('Library');expect(host.textContent).toContain(reviewed.reviewEvents[0].comment);expect(host.querySelector('script')).toBeNull();await click(`Revise ${saved.exercise.title}`);expect(clone).toHaveBeenCalledWith(saved.contentId,saved.revisionId);expect(host.querySelector('[aria-label="Edit Title"]')).not.toBeNull();expect(host.textContent).toContain(reviewed.reviewEvents[0].comment);expect(reviewed).toEqual(before)})
 })
 test('My Content includes every current lifecycle status',async()=>{
  vi.spyOn(creatorContentApi,'list').mockResolvedValue({items:(['draft','submitted','approved','changes_requested','archived'] as const).map(status=>({...saved,contentId:status,status})),nextAfter:null})
- await harness(<ContentStudio active/>,async({host,click})=>{await click('My Content');for(const status of ['Draft','Submitted','Approved','Changes Requested','Archived'])expect(host.querySelector('[aria-label="My Content"]')!.textContent).toContain(status)})
+ await harness(<ContentStudio active/>,async({host,click})=>{await click('Library');for(const status of ['Draft','Submitted','Approved','Changes Requested','Archived'])expect(host.querySelector('[aria-label="My Content"]')!.textContent).toContain(status)})
 })
 for(const team of [false,true])test(`Admin plays exact ${team?'Team':'Personal'} revision and approves once after response`,async()=>{
  const record={...saved,status:'submitted' as const,exercise:team?toPersistence(authorPrototype(teamExample('scrambled-word'))):saved.exercise};admin(record)
@@ -99,7 +99,7 @@ test('Admin queue follows revision pagination and deduplicates rows',async()=>{
 })
 for(const status of [400,401,403,404,409,null] as const)test(`Creator submission ${status} retains saved exercise and has no success`,async()=>{
  creator();vi.spyOn(creatorContentApi,'submit').mockRejectedValue(new ApiError('private',status,'http'))
- await harness(<ContentStudio active/>,async({host,click})=>{await click('My Content');await click(`Edit ${saved.exercise.title}`);await click('Submit for Approval');expect(host.textContent).not.toContain('Submitted for Review');expect(host.querySelector('[role="alert"]')).not.toBeNull();expect(host.querySelector('[aria-label="Edit Title"]')).not.toBeNull()})
+ await harness(<ContentStudio active/>,async({host,click})=>{await click('Library');await click(`Edit ${saved.exercise.title}`);await click('Submit for Approval');expect(host.textContent).not.toContain('Submitted for Review');expect(host.querySelector('[role="alert"]')).not.toBeNull();expect(host.querySelector('[aria-label="Edit Title"]')).not.toBeNull()})
 })
 test('Admin contract paths, authentication and trimmed meaningful comment',async()=>{
  const calls:{url:string;init?:RequestInit}[]=[];const session=new LocalSessionStore();session.saveSession({accessToken:'test'})

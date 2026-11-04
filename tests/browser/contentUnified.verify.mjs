@@ -18,7 +18,7 @@ for (const width of [1440, 390, 320]) {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `personal overflow ${width}`)
   page.once('dialog', dialog => dialog.dismiss()); await page.getByRole('link', { name: 'Leave Content' }).click()
   assert.equal(await page.getByRole('heading', { name: 'Content', exact: true }).count(), 1)
-  await page.getByRole('button', { name: 'My Content', exact: true }).click(); await page.getByText('Filters', { exact: true }).click()
+  await page.getByRole('button', { name: 'Library', exact: true }).click(); await page.getByText('Filters', { exact: true }).click()
   for (const label of ['Content country', 'Content region', 'Content city']) assert.equal(await page.getByLabel(label).inputValue(), '')
   const starter = page.locator('details').filter({ has: page.locator('summary', { hasText: /^Starter/ }) })
   assert.equal(await starter.getAttribute('open'), null)
