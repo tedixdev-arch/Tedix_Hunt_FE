@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
-import { huntsApi, type HuntLifecycleAction, type HuntListItem, type HuntStatus } from '../services/api'
+import { authApi, huntsApi, type HuntLifecycleAction, type HuntListItem, type HuntStatus } from '../services/api'
 import { ApiError } from '../services/api/client'
 import { canAccessOrganizer } from '../features/auth/access'
 import { canContinueSetup, huntSummary, lifecycleActions, mergeLifecycleResult, statusLabels } from './organizerHunts'
@@ -106,10 +106,51 @@ export function RegisteredOrganizerSignInPage() {
 
 export function IndependentOrganizerPage() {
   const navigate = useNavigate()
-  const [email,setEmail]=useState('student@example.com')
-  const [confirmed,setConfirmed]=useState(false)
-  const [accepted,setAccepted]=useState(false)
-  return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader/><div className="mx-auto max-w-md px-5 py-10"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Independent Hunt</p><h1 className="mt-3 text-4xl font-bold tracking-tight">Confirm your email</h1><p className="mt-3 leading-6 text-slate-600">Create a private Hunt for friends using a Creator-verified route.</p><section className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><label className="text-sm font-bold">Email address<input className="mt-2 min-h-14 w-full rounded-xl border border-slate-300 px-4" onChange={e=>{setEmail(e.target.value);setConfirmed(false)}} type="email" value={email}/></label><button className="mt-4 min-h-12 w-full rounded-xl border border-emerald-500 font-bold text-emerald-800" disabled={!email.includes('@')} onClick={()=>setConfirmed(true)} type="button">{confirmed?'✓ Email confirmed':'Send confirmation code'}</button><div className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950"><strong>Independent activity</strong><p className="mt-1">Independent Hunts are private, unofficial activities. The Organizer and participants are responsible for following local rules, staying safe and using the verified route as intended.</p></div><label className="mt-4 flex items-start gap-3 text-sm leading-6"><input checked={accepted} className="mt-1 h-5 w-5 accent-emerald-500" onChange={e=>setAccepted(e.target.checked)} type="checkbox"/><span>I understand that this is an independent activity and I am responsible for organizing it safely.</span></label><button className="mt-5 min-h-14 w-full rounded-xl bg-emerald-500 font-bold disabled:bg-slate-300" disabled={!confirmed||!accepted} onClick={()=>navigate('/organizer/hunts/new?mode=independent')} type="button">Set the Hunt</button></section></div></main>
+  const { verifyIndependentOrganizer } = useAuth()
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [code, setCode] = useState('')
+  const [sentTo, setSentTo] = useState('')
+  const [devCode, setDevCode] = useState('')
+  const [accepted, setAccepted] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const field = 'mt-2 min-h-14 w-full rounded-xl border border-slate-300 px-4'
+  async function sendCode() {
+    setBusy(true); setError(''); setDevCode('')
+    try {
+      const result = await authApi.requestIndependentOrganizerCode(email.trim())
+      setSentTo(email.trim()); setCode(''); setDevCode(result.devCode ?? '')
+    } catch (caught) {
+      setError(caught instanceof ApiError && caught.status === 429 ? 'Too many codes requested. Please wait a few minutes.' : caught instanceof ApiError && caught.status === 503 ? 'Email confirmation is not available yet. Please try again later.' : caught instanceof ApiError && caught.status === 400 ? 'Enter a valid email address.' : "We couldn't send a code. Please try again.")
+    } finally { setBusy(false) }
+  }
+  async function confirm(event: FormEvent) {
+    event.preventDefault()
+    setBusy(true); setError('')
+    try {
+      await verifyIndependentOrganizer({ email: sentTo, code: code.trim(), ...(name.trim() ? { name: name.trim() } : {}) })
+      navigate('/organizer/hunts/new', { replace: true })
+    } catch (caught) {
+      setError(caught instanceof ApiError && caught.status === 409 ? 'This email already has a TedixHunt account with a password. Sign in as a Registered Organizer instead.'
+        : caught instanceof ApiError && caught.status === 403 ? 'This email belongs to an account that cannot be used here. Contact support.' : caught instanceof ApiError && caught.status === 429 ? 'Too many attempts. Please wait a few minutes.' : 'That code is not valid or has expired. Check it or request a new one.')
+    } finally { setBusy(false) }
+  }
+  return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950"><OrganizerHeader/><div className="mx-auto max-w-md px-5 py-10"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Independent Hunt</p><h1 className="mt-3 text-4xl font-bold tracking-tight">Confirm your email</h1><p className="mt-3 leading-6 text-slate-600">Create a private Hunt for friends using a Creator-verified route.</p>
+    <section className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <label className="text-sm font-bold">Email address<input autoComplete="email" className={field} onChange={e => { setEmail(e.target.value); setSentTo('') }} type="email" value={email}/></label>
+      <button className="mt-4 min-h-12 w-full rounded-xl border border-emerald-500 font-bold text-emerald-800 disabled:opacity-50" disabled={busy || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())} onClick={() => void sendCode()} type="button">{sentTo ? 'Send a new code' : 'Send confirmation code'}</button>
+      {sentTo && <form className="mt-5" onSubmit={event => void confirm(event)}>
+        <p className="text-sm text-slate-600" role="status">We sent a 6-digit code to <strong>{sentTo}</strong>. It expires in 15 minutes.</p>
+        {devCode && <p className="mt-2 rounded-lg bg-sky-50 p-3 text-sm text-sky-900">Local development: no email is sent. Your code is <strong className="font-mono">{devCode}</strong>.</p>}
+        <label className="mt-4 block text-sm font-bold">Confirmation code<input autoComplete="one-time-code" className={`${field} font-mono tracking-[0.4em]`} inputMode="numeric" maxLength={6} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} required value={code}/></label>
+        <label className="mt-4 block text-sm font-bold">Your name (optional)<input autoComplete="name" className={field} maxLength={80} onChange={e => setName(e.target.value)} value={name}/></label>
+        <div className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950"><strong>Independent activity</strong><p className="mt-1">Independent Hunts are private, unofficial activities. The Organizer and participants are responsible for following local rules, staying safe and using the verified route as intended. Rewards are not available.</p></div>
+        <label className="mt-4 flex items-start gap-3 text-sm leading-6"><input checked={accepted} className="mt-1 h-5 w-5 accent-emerald-500" onChange={e => setAccepted(e.target.checked)} type="checkbox"/><span>I understand that this is an independent activity and I am responsible for organizing it safely.</span></label>
+        <button className="mt-5 min-h-14 w-full rounded-xl bg-emerald-500 font-bold disabled:bg-slate-300" disabled={busy || code.length !== 6 || !accepted} type="submit">{busy ? 'Confirming…' : 'Confirm and set the Hunt'}</button>
+      </form>}
+      {error && <p className="mt-4 text-sm font-semibold text-rose-700" role="alert">{error}</p>}
+    </section></div></main>
 }
 
 export function OrganizerHuntsPage() {

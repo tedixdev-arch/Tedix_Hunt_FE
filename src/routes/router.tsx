@@ -8,12 +8,15 @@ import { CompetitionMiniHunt } from '../pages/CompetitionMiniHunt'
 import { JoinHuntPage } from '../pages/ParticipantJoinFlow'
 import { PublicHuntAccessPage } from '../pages/PublicHuntAccessPage'
 import { ParticipantReadinessPage } from '../pages/ParticipantReadinessPage'
+import { LiveHuntPlayPage } from '../pages/LiveHuntPlay'
 import { IndependentOrganizerPage, OrganizerHuntsPage, OrganizerSignInPage, RegisteredOrganizerSignInPage } from '../pages/OrganizerFlow'
 import { RegisteredOrganizerApplicationPage } from '../pages/RegisteredOrganizerApplicationPage'
 import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
 import { OrganizerSetup } from '../features/organizer/OrganizerSetup'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
-import { AdminDashboardPage, AdminRewardInventoryPage, AdminSectionPage } from '../pages/AdminConsole'
+import { AdminRewardInventoryPage } from '../pages/AdminConsole'
+import { AdminAlertsPage, AdminCustomRequestsPage, AdminDashboardPage, AdminHuntsPage } from '../pages/AdminOperations'
+import { AdminAuditLogPage, AdminSettingsPage } from '../pages/AdminSettingsAudit'
 import { AdminTemplateReviewDetailPage, AdminTemplateReviewsPage } from '../pages/AdminTemplateReviews'
 import { AdminAccountSecurityPage } from '../pages/AdminAccountSecurity'
 import { AdminUsersPage } from '../pages/AdminUsers'
@@ -53,13 +56,13 @@ function RequireAdmin({ children }: { children: ReactNode }) {
   return children
 }
 
-function RequireOrganizer({ children, allowIndependent = false }: { children: ReactNode; allowIndependent?: boolean }) {
+function RequireOrganizer({ children, allowIndependent = false, allowAdmin = false }: { children: ReactNode; allowIndependent?: boolean; allowAdmin?: boolean }) {
   const { user, isBootstrapping } = useAuth()
   const location = useLocation()
   if (allowIndependent && new URLSearchParams(location.search).get('mode') === 'independent') return children
   if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
   if (!user) return <Navigate replace state={{ from: location.pathname }} to="/organizer/registered" />
-  if (!canAccessOrganizer(user)) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-bold">Organizer access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Organizer access.</p></div></main>
+  if (!canAccessOrganizer(user) && !(allowAdmin && canAccessAdmin(user))) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-bold">Organizer access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Organizer access.</p></div></main>
   return children
 }
 
@@ -111,6 +114,10 @@ export const router = createHashRouter([
   {
     path: '/participant/setup',
     element: <RequireAuthFlow canAccess={user => user !== null} entry="/join"><ParticipantReadinessPage /></RequireAuthFlow>,
+  },
+  {
+    path: '/hunts/:huntId/play',
+    element: <RequireAuthFlow canAccess={user => user !== null} entry="/join"><LiveHuntPlayPage /></RequireAuthFlow>,
   },
   {
     path: '/play/template-1',
@@ -166,7 +173,7 @@ export const router = createHashRouter([
   },
   {
     path: '/organizer/hunts/:huntId',
-    element: <RequireOrganizer><OrganizerMonitorPage /></RequireOrganizer>,
+    element: <RequireOrganizer allowAdmin><OrganizerMonitorPage /></RequireOrganizer>,
   },
   {
     path: '/creator/sign-in',
@@ -218,7 +225,7 @@ export const router = createHashRouter([
   },
   {
     path: '/admin/hunts',
-    element: <RequireAdmin><AdminSectionPage section="hunts" /></RequireAdmin>,
+    element: <RequireAdmin><AdminHuntsPage /></RequireAdmin>,
   },
   {
     path: '/admin/rewards',
@@ -226,7 +233,11 @@ export const router = createHashRouter([
   },
   {
     path: '/admin/alerts',
-    element: <RequireAdmin><AdminSectionPage section="alerts" /></RequireAdmin>,
+    element: <RequireAdmin><AdminAlertsPage /></RequireAdmin>,
+  },
+  {
+    path: '/admin/custom-requests',
+    element: <RequireAdmin><AdminCustomRequestsPage /></RequireAdmin>,
   },
   {
     path: '/admin/organizer-applications',
@@ -242,10 +253,10 @@ export const router = createHashRouter([
   },
   {
     path: '/admin/settings',
-    element: <RequireAdmin><AdminSectionPage section="settings" /></RequireAdmin>,
+    element: <RequireAdmin><AdminSettingsPage /></RequireAdmin>,
   },
   {
     path: '/admin/audit',
-    element: <RequireAdmin><AdminSectionPage section="audit" /></RequireAdmin>,
+    element: <RequireAdmin><AdminAuditLogPage /></RequireAdmin>,
   },
 ])

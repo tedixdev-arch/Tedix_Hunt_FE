@@ -1,95 +1,120 @@
-import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { OrganizerHeader } from './OrganizerFlow'
 import { OrganizerHuntGeographyInspection } from '../components/OrganizerHuntGeography'
+import { ApiError, huntsApi, type HuntLifecycleAction } from '../services/api'
+import { huntOperationsApi, type HuntMonitor, type MonitorParticipant } from '../services/api/operations'
+import { copyParticipantLink, participantLink } from './participantAccess'
 
-type LiveStatus = 'Live' | 'Paused' | 'Completed'
-type TeamState = 'On track' | 'Needs attention' | 'Demo help alert' | 'Finished'
-
-type LiveTeam = {
-  name: string
-  members: number
-  checkpoint: number
-  progress: number
-  score: number
-  lastActivity: string
-  state: TeamState
+const statusLabel: Record<string, string> = { draft: 'Draft', published: 'Published · not started', active: 'Live', paused: 'Paused', cancelled: 'Cancelled', finished: 'Finished' }
+const statusStyle: Record<string, string> = { active: 'bg-emerald-500 text-white', paused: 'bg-violet-100 text-violet-800', published: 'bg-sky-100 text-sky-800', finished: 'bg-slate-200 text-slate-700', cancelled: 'bg-rose-100 text-rose-800', draft: 'bg-slate-100 text-slate-600' }
+const actionsFor = (status: string): HuntLifecycleAction[] => status === 'published' ? ['start', 'cancel'] : status === 'active' ? ['pause', 'finish'] : status === 'paused' ? ['resume', 'finish', 'cancel'] : []
+const actionLabel: Record<HuntLifecycleAction, string> = { publish: 'Publish', start: 'Start Hunt', pause: 'Pause Hunt', resume: 'Resume Hunt', finish: 'End Hunt', cancel: 'Cancel Hunt' }
+const confirmText: Partial<Record<HuntLifecycleAction, string>> = {
+  finish: 'End the Hunt for everyone? Participants keep their scores but can no longer play.',
+  cancel: 'Cancel this Hunt? Participants will no longer be able to play.',
 }
+const card = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'
 
-const initialTeams: LiveTeam[] = [
-  { name: 'Night Shift', members: 4, checkpoint: 4, progress: 58, score: 1_460, lastActivity: 'Now', state: 'On track' },
-  { name: 'Signal Seekers', members: 4, checkpoint: 3, progress: 43, score: 1_230, lastActivity: '2 min ago', state: 'Demo help alert' },
-  { name: 'City Sparks', members: 4, checkpoint: 3, progress: 43, score: 1_180, lastActivity: '11 min ago', state: 'Needs attention' },
-  { name: 'Code Breakers', members: 4, checkpoint: 5, progress: 72, score: 1_610, lastActivity: '1 min ago', state: 'On track' },
-  { name: 'North Star', members: 4, checkpoint: 2, progress: 29, score: 940, lastActivity: '4 min ago', state: 'On track' },
-  { name: 'Relay Crew', members: 4, checkpoint: 7, progress: 100, score: 1_920, lastActivity: 'Finished', state: 'Finished' },
-]
-
-const checkpointNames = ['Matthias Rex Statue', 'Stone Gate', 'Mirror Passage', 'Clock Tower', 'Signal Alley', 'City Wall', 'FinishPoint']
-
-const stateStyle: Record<TeamState, string> = {
-  'On track': 'bg-emerald-100 text-emerald-800',
-  'Needs attention': 'bg-amber-100 text-amber-900',
-  'Demo help alert': 'bg-red-100 text-red-800',
-  Finished: 'bg-sky-100 text-sky-800',
+function ago(value: string | null) {
+  if (!value) return '—'
+  const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000)
+  return minutes < 1 ? 'Now' : minutes < 60 ? `${minutes} min ago` : new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+function where(p: MonitorParticipant) {
+  if (p.finishedAt) return 'Finished'
+  if (!p.current) return '—'
+  const label = p.current.kind === 'finish' ? 'FinishPoint' : `Checkpoint ${p.current.ordinal}`
+  return `${label} · ${p.current.accessState === 'proximity_verified' ? 'solving' : 'on the way'}`
 }
 
 export function OrganizerMonitorPage() {
-  const { huntId } = useParams()
-  const [searchParams] = useSearchParams()
-  const independent = searchParams.get('mode') === 'independent'
-  const [status, setStatus] = useState<LiveStatus>('Live')
-  const [alertResolved, setAlertResolved] = useState(false)
-  const [selectedTeam, setSelectedTeam] = useState(initialTeams[1])
-  const [messageSent, setMessageSent] = useState(false)
-  const completed = initialTeams.filter(team => team.state === 'Finished').length
-  const attention = initialTeams.filter(team => team.state === 'Needs attention' || team.state === 'Demo help alert').length
+  const { huntId = '' } = useParams()
+  const [data, setData] = useState<HuntMonitor | null>(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState('')
+  const [notice, setNotice] = useState('')
+  const [accessCode, setAccessCode] = useState<string | null>(null)
+  const load = useCallback(async () => {
+    try { setData(await huntOperationsApi.monitor(huntId)); setError('') }
+    catch (e) { setError(e instanceof ApiError && e.status === 403 ? 'You do not have access to monitor this Hunt.' : "We couldn't load live data. Retrying automatically.") }
+  }, [huntId])
+  useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 10000); return () => window.clearInterval(timer) }, [load])
+  useEffect(() => { huntsApi.getHunt(huntId).then(h => setAccessCode(h.accessCode)).catch(() => {}) }, [huntId])
 
-  return (
-    <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950">
-      <OrganizerHeader showProfile />
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-9">
-        <Link className="text-sm font-bold text-slate-500 hover:text-slate-900" to="/organizer">← My Hunts</Link>
+  async function run(key: string, task: () => Promise<unknown>, success: string) {
+    setBusy(key); setNotice('')
+    try { await task(); setNotice(success); await load() }
+    catch (e) { setNotice(e instanceof ApiError && e.status === 409 ? 'That action is no longer possible. The view has been refreshed.' : "That didn't work. Please try again."); await load() }
+    finally { setBusy('') }
+  }
+  function lifecycle(action: HuntLifecycleAction) {
+    if (confirmText[action] && !window.confirm(confirmText[action])) return
+    void run(action, () => huntsApi[action as Exclude<HuntLifecycleAction, 'publish'>](huntId), `${actionLabel[action]}: done.`)
+  }
+  async function createLink() {
+    await run('access', async () => { const access = await huntsApi.createOrGetAccess(huntId); setAccessCode(access.code) }, 'Participant link ready.')
+  }
 
-        <header className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+  const hunt = data?.hunt
+  const link = accessCode ? participantLink(window.location.origin, accessCode) : ''
+  const openHelp = data?.helpRequests.filter(r => r.status === 'open') ?? []
+  return <main className="h-dvh overflow-y-auto bg-slate-100 text-slate-950">
+    <OrganizerHeader showProfile />
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-9">
+      <Link className="text-sm font-bold text-slate-500 hover:text-slate-900" to="/organizer">← My Hunts</Link>
+      {!data && !error && <p className="mt-6" role="status">Loading live Hunt…</p>}
+      {error && <p className="mt-6 rounded-xl bg-rose-50 p-4 font-semibold text-rose-800" role="alert">{error}</p>}
+      {hunt && <>
+        <header className={`${card} mt-5`}>
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">{independent ? 'Independent Organizer' : 'Registered Organizer'}</p><span className={`rounded-full px-3 py-1 text-xs font-semibold ${status === 'Live' ? 'bg-emerald-500 text-white' : status === 'Paused' ? 'bg-violet-100 text-violet-800' : 'bg-slate-200 text-slate-700'}`}>{status}</span></div><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Monitor Hunt</h1><p className="mt-2 text-slate-600">Signal: Cluj Napoca · Today, 10:00 · 42 minutes elapsed</p><p className="mt-1 text-xs text-slate-400">Hunt ID: {huntId}</p></div>
-            <div className="flex flex-col gap-2 sm:flex-row"><button className="min-h-12 rounded-xl border border-slate-300 bg-white px-5 font-bold" onClick={()=>setMessageSent(true)} type="button">Message everyone</button><button className={`min-h-12 rounded-xl px-6 font-bold ${status === 'Paused' ? 'bg-emerald-500' : 'bg-slate-950 text-white'}`} onClick={()=>setStatus(current=>current==='Live'?'Paused':'Live')} type="button">{status === 'Paused' ? 'Resume Hunt' : 'Pause Hunt'}</button></div>
+            <div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Monitor Hunt</p><span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle[hunt.status] ?? ''}`}>{statusLabel[hunt.status] ?? hunt.status}</span></div>
+              <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">{hunt.name}</h1>
+              <p className="mt-2 text-slate-600">{[hunt.startDate, hunt.startTime?.slice(0, 5), hunt.timezone].filter(Boolean).join(' · ')}{hunt.durationMinutes ? ` · ${hunt.durationMinutes} min` : ''}</p></div>
+            <div className="flex flex-wrap gap-2">{actionsFor(hunt.status).map(action => <button key={action} type="button" disabled={!!busy} onClick={() => lifecycle(action)}
+              className={`min-h-12 rounded-xl px-5 font-bold disabled:opacity-50 ${action === 'start' || action === 'resume' ? 'bg-emerald-500' : action === 'cancel' || action === 'finish' ? 'border border-rose-300 bg-white text-rose-700' : 'bg-slate-950 text-white'}`}>{busy === action ? 'Updating…' : actionLabel[action]}</button>)}</div>
           </div>
-          {messageSent && <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-800" role="status">Demo message only — no Participants were notified.</p>}
+          {['published', 'active', 'paused'].includes(hunt.status) && <div className="mt-5 flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center">
+            {link ? <><span className="text-sm text-slate-500">Hunt code <strong className="font-mono text-slate-900">{accessCode}</strong></span><input readOnly aria-label="Participant link" className="min-h-11 flex-1 rounded-lg border border-slate-300 px-3 text-sm" value={link} /><button className="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-bold" type="button" onClick={async () => setNotice(await copyParticipantLink(link, navigator.clipboard))}>Copy link</button></>
+              : <button className="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-bold" disabled={!!busy} type="button" onClick={() => void createLink()}>Create participant link</button>}
+          </div>}
+          {notice && <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-800" role="status">{notice}</p>}
         </header>
-        <p className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><strong>Monitoring prototype — simulated data.</strong> Team activity and HELP/PANIC alerts below are local demo data, not real Participant requests. Dismissing a demo alert does not acknowledge or resolve a real incident. Contact Participants directly through your own contact channels.</p>
-        {!independent && huntId && <OrganizerHuntGeographyInspection key={huntId} huntId={huntId} />}
 
-        {!alertResolved && <section className="mt-5 rounded-2xl border-2 border-red-300 bg-red-50 p-5 shadow-sm" aria-labelledby="urgent-alert-title"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-700">Demo · Simulated help alert</p><h2 className="mt-2 text-xl font-bold" id="urgent-alert-title">Signal Seekers · Checkpoint 3</h2><p className="mt-2 text-sm text-red-950">Mirror Passage · simulated request time and location</p></div><div className="flex flex-col gap-2 sm:flex-row"><button className="min-h-11 rounded-xl border border-red-300 bg-white px-4 text-sm font-bold text-red-800" type="button">Contact team</button><button className="min-h-11 rounded-xl bg-red-700 px-4 text-sm font-bold text-white" onClick={()=>setAlertResolved(true)} type="button">Dismiss demo alert</button></div></div></section>}
-        {alertResolved && <section className="mt-5 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><strong className="text-emerald-900">Demo alert dismissed locally — real safety status unknown</strong><button className="font-bold text-emerald-800" onClick={()=>setAlertResolved(false)} type="button">Restore demo alert</button></section>}
+        {openHelp.length > 0 && <section className="mt-5 rounded-2xl border-2 border-red-300 bg-red-50 p-5" aria-labelledby="help-title">
+          <h2 id="help-title" className="text-xl font-bold text-red-900">Participants need help ({openHelp.length})</h2>
+          <ul className="mt-3 grid gap-2">{openHelp.map(r => <li key={r.id} className="flex flex-col gap-2 rounded-xl bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="font-bold">{r.kind === 'emergency' ? '🚨 Emergency' : 'Help request'} · {r.displayName} <span className="text-sm font-normal text-slate-500">{ago(r.createdAt)}</span></p>{r.message && <p className="text-sm text-slate-700">{r.message}</p>}</div>
+            <button className="min-h-11 rounded-lg bg-slate-950 px-4 text-sm font-bold text-white disabled:opacity-50" disabled={!!busy} type="button" onClick={() => void run(`help:${r.id}`, () => huntOperationsApi.resolveHelp(huntId, r.id), 'Marked as resolved.')}>Mark resolved</button></li>)}</ul>
+        </section>}
 
         <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Live Hunt summary">
-          {[['Active teams','5'],['Finished',`${completed} / ${initialTeams.length}`],['Needs attention',String(attention)],['Estimated finish','11:28']].map(([label,value],index)=><article className={`rounded-xl border p-4 ${index===2?'border-amber-200 bg-amber-50':'border-slate-200 bg-white'}`} key={label}><p className={`text-sm font-bold ${index===2?'text-amber-800':'text-slate-500'}`}>{label}</p><strong className="mt-1 block text-2xl">{value}</strong></article>)}
+          {[['Joined', `${data.totals.participants}${hunt.capacity ? ` / ${hunt.capacity}` : ''}`], ['Playing', String(data.totals.started - data.totals.finished)], ['Finished', String(data.totals.finished)], ['Open help requests', String(data.totals.openHelpRequests)]].map(([label, value]) =>
+            <article className="rounded-xl border border-slate-200 bg-white p-4" key={label}><p className="text-sm font-bold text-slate-500">{label}</p><p className="mt-1 text-3xl font-bold">{value}</p></article>)}
         </section>
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="route-title">
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Simulated route</p><h2 className="mt-1 text-xl font-bold" id="route-title">Teams across 7 checkpoints</h2></div><span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">30 m detection radius</span></div>
-            <div className="relative mt-5 min-h-[360px] overflow-hidden rounded-xl border border-slate-300 bg-[#e7eee8] sm:min-h-[430px]" aria-label="Simulated live route map"><div className="absolute inset-0 opacity-70" style={{backgroundImage:'linear-gradient(25deg, transparent 47%, #b7c7bc 48%, #b7c7bc 51%, transparent 52%), linear-gradient(105deg, transparent 47%, #c7d2ca 48%, #c7d2ca 51%, transparent 52%)',backgroundSize:'120px 85px, 160px 110px'}}/><div className="absolute left-[10%] right-[10%] top-1/2 border-t-4 border-dashed border-emerald-700/40"/>{checkpointNames.map((name,index)=>{const left=10+(index*13.3);const teamCount=initialTeams.filter(team=>team.checkpoint===index+1).length;return <button className="absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 text-center" key={name} onClick={()=>{const team=initialTeams.find(item=>item.checkpoint===index+1);if(team)setSelectedTeam(team)}} style={{left:`${left}%`}} type="button"><span className={`mx-auto grid h-10 w-10 place-items-center rounded-full border-2 border-white text-sm font-bold text-white shadow ${teamCount?'bg-emerald-600':'bg-slate-500'}`}>{index+1}</span><small className="mt-2 hidden max-w-24 rounded bg-white/90 px-2 py-1 font-bold shadow sm:block">{name}</small>{teamCount>0&&<b className="mt-1 block rounded-full bg-slate-950 px-2 py-1 text-[10px] text-white">{teamCount} team{teamCount>1?'s':''}</b>}</button>})}</div>
-            <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold text-slate-500"><span><i className="mr-1 inline-block h-3 w-3 rounded-full bg-emerald-600"/>Team present</span><span><i className="mr-1 inline-block h-3 w-3 rounded-full bg-slate-500"/>No team</span><span>Creator-verified checkpoints cannot be moved live</span></div>
+        <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_360px]">
+          <section className={card} aria-labelledby="participants-title">
+            <div className="flex items-center justify-between"><h2 id="participants-title" className="text-xl font-bold">Participants</h2><span className="text-sm text-slate-500">Updates every 10 s</span></div>
+            {data.participants.length === 0 ? <p className="mt-4 text-slate-600">No one has joined yet. Share the participant link to invite players.</p> :
+              <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[640px] text-left text-sm"><thead className="text-xs uppercase text-slate-500"><tr><th className="py-2">#</th><th>Name</th><th>Progress</th><th>Now</th><th>Score</th><th>Last activity</th><th /></tr></thead>
+                <tbody>{data.participants.map(p => <tr key={p.participantId} className="border-t border-slate-100">
+                  <td className="py-3 font-bold">{p.rank}</td><td className="font-bold">{p.displayName}</td>
+                  <td>{p.checkpointsCompleted} / {p.checkpointsTotal}</td><td>{where(p)}</td><td className="font-bold">{p.score}</td><td>{ago(p.lastActivityAt ?? p.joinedAt)}</td>
+                  <td className="text-right">{hunt.status === 'active' && data.settings?.organizerCheckInEnabled !== false && p.current?.accessState === 'eligible_for_proximity' && !p.finishedAt &&
+                    <button className="min-h-10 rounded-lg border border-emerald-500 px-3 text-xs font-bold text-emerald-800 disabled:opacity-50" disabled={!!busy} type="button" title="Use when GPS is unavailable and you can see the participant at the checkpoint"
+                      onClick={() => { if (window.confirm(`Confirm ${p.displayName} is at ${p.current!.kind === 'finish' ? 'the FinishPoint' : `checkpoint ${p.current!.ordinal}`}?`)) void run(`checkin:${p.participantId}`, () => huntOperationsApi.checkIn(huntId, p.participantId, p.current!.checkpointId), `Arrival confirmed for ${p.displayName}.`) }}>Confirm arrival</button>}</td>
+                </tr>)}</tbody></table></div>}
           </section>
-
           <aside className="space-y-5">
-            <section className="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Needs attention</p><h2 className="mt-2 text-xl font-bold">Act on exceptions</h2><div className="mt-4 space-y-2">{initialTeams.filter(team=>team.state==='Needs attention'||team.state==='Demo help alert').map(team=><button className="w-full rounded-xl border border-slate-200 p-3 text-left hover:border-amber-400" key={team.name} onClick={()=>setSelectedTeam(team)} type="button"><div className="flex items-center justify-between gap-2"><strong>{team.name}</strong><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${stateStyle[team.state]}`}>{team.state}</span></div><p className="mt-1 text-xs text-slate-500">Checkpoint {team.checkpoint} · {team.lastActivity}</p></button>)}</div></section>
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="selected-team-title"><p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Selected team</p><h2 className="mt-2 text-xl font-bold" id="selected-team-title">{selectedTeam.name}</h2><div className="mt-4 grid grid-cols-2 gap-3 text-sm"><div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-500">Progress</span><strong className="mt-1 block">{selectedTeam.progress}%</strong></div><div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-500">Score</span><strong className="mt-1 block">{selectedTeam.score.toLocaleString()}</strong></div><div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-500">Checkpoint</span><strong className="mt-1 block">{selectedTeam.checkpoint} of 7</strong></div><div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-500">Members</span><strong className="mt-1 block">{selectedTeam.members} online</strong></div></div><p className="mt-4 text-xs text-slate-500">Private answers remain hidden during the Hunt.</p><button className="mt-4 min-h-11 w-full rounded-xl border border-slate-300 text-sm font-bold" type="button">Contact team</button></section>
+            <section className={card}><h2 className="text-xl font-bold">Leaderboard</h2>{data.participants.length === 0 ? <p className="mt-3 text-sm text-slate-500">Scores appear once participants play.</p> : <ol className="mt-3 space-y-2">{data.participants.slice(0, 10).map(p => <li key={p.participantId} className="flex items-center gap-3 rounded-lg bg-slate-50 p-2"><span className="w-6 text-center font-bold">{p.rank}</span><span className="flex-1 truncate">{p.displayName}</span><strong>{p.score}</strong></li>)}</ol>}</section>
+            <section className={card}><h2 className="text-xl font-bold">Recent activity</h2>{data.activity.length === 0 ? <p className="mt-3 text-sm text-slate-500">No answers submitted yet.</p> : <ol className="mt-3 space-y-2 text-sm">{data.activity.map((a, i) => <li key={i}><span className="text-slate-500">{new Date(a.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> · {a.displayName} {a.correct ? 'solved' : 'tried'} the {a.stage} challenge at checkpoint {a.ordinal}</li>)}</ol>}
+              {data.helpRequests.some(r => r.status === 'resolved') && <p className="mt-3 text-xs text-slate-500">{data.helpRequests.filter(r => r.status === 'resolved').length} help request(s) resolved.</p>}</section>
           </aside>
         </div>
-
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="teams-title"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Live progress</p><h2 className="mt-1 text-xl font-bold" id="teams-title">All teams</h2></div><span className="text-sm text-slate-500">{initialTeams.length} teams</span></div><div className="mt-4 space-y-2">{initialTeams.map(team=><button className="grid w-full gap-3 rounded-xl border border-slate-200 p-4 text-left hover:border-emerald-400 sm:grid-cols-[1.2fr_1fr_100px_120px] sm:items-center" key={team.name} onClick={()=>setSelectedTeam(team)} type="button"><div><strong>{team.name}</strong><p className="mt-1 text-xs text-slate-500">{team.members} members · last activity {team.lastActivity}</p></div><div><div className="flex justify-between text-xs font-semibold"><span>Checkpoint {team.checkpoint}</span><span>{team.progress}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"><i className="block h-full bg-emerald-500" style={{width:`${team.progress}%`}}/></div></div><strong>{team.score.toLocaleString()} pts</strong><span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${stateStyle[team.state]}`}>{team.state}</span></button>)}</div></section>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <details className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><summary className="cursor-pointer font-bold">Live leaderboard</summary><p className="mt-2 text-sm text-slate-500">Current standings follow the Hunt’s Results Display setting.</p><ol className="mt-4 space-y-2">{[...initialTeams].sort((a,b)=>b.score-a.score).map((team,index)=><li className="flex items-center justify-between rounded-lg bg-slate-50 p-3 text-sm" key={team.name}><span><b className="mr-3">{index+1}</b>{team.name}</span><strong>{team.score.toLocaleString()}</strong></li>)}</ol>{independent&&<p className="mt-4 rounded-lg bg-slate-100 p-3 text-xs font-semibold text-slate-500">Rewards are unavailable for Independent Hunts.</p>}</details>
-          <details className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><summary className="cursor-pointer font-bold">Activity history</summary><ol className="mt-4 space-y-3 text-sm">{['10:42 · Demo: Signal Seekers simulated help alert','10:40 · Code Breakers unlocked Checkpoint 5','10:37 · City Sparks became inactive','10:31 · Relay Crew completed FinishPoint','10:00 · Hunt started'].map(event=><li className="border-l-2 border-emerald-300 pl-3" key={event}>{event}</li>)}</ol></details>
-        </div>
-
-        <section className="mt-5 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold">Hunt controls</h2><p className="mt-1 text-sm text-slate-500">Use ending controls only when the activity is finished or cannot continue safely.</p></div><button className="min-h-11 rounded-xl border border-red-300 bg-white px-5 text-sm font-bold text-red-700" onClick={()=>setStatus('Completed')} type="button">End Hunt</button></section>
-      </div>
-    </main>
-  )
+        <div className="mt-5"><OrganizerHuntGeographyInspection key={huntId} huntId={huntId} /></div>
+      </>}
+    </div>
+  </main>
 }
+

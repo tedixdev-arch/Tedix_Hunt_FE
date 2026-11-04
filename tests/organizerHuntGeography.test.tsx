@@ -5,7 +5,6 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { ApprovedTemplateGeographyInspection, HuntSnapshotGeographyInspection, OrganizerHuntGeographyInspection } from '../src/components/OrganizerHuntGeography'
 import { ApiError } from '../src/services/api/client'
 import { CustomHuntEditorPage } from '../src/pages/CustomHuntEditor'
-import { OrganizerMonitorPage } from '../src/pages/OrganizerMonitor'
 import type { Hunt } from '../src/services/api/hunts'
 
 const mocks = vi.hoisted(() => ({ maps: [] as any[], markers: [] as any[], geography: vi.fn(), get: vi.fn(), catalog: vi.fn(), options: vi.fn(), organizations: vi.fn(), rewards: vi.fn(), create: vi.fn(), update: vi.fn(), publish: vi.fn(), access: vi.fn() }))
@@ -286,25 +285,6 @@ test.each([{}, { ...configuration, finishPoint: undefined }, { ...configuration,
   await render(<HuntSnapshotGeographyInspection hunt={{ ...savedHunt, templateSnapshot: { ...savedHunt.templateSnapshot!, configuration: value } }} />)
   await click('Inspect Hunt geography'); expect(container.textContent).toContain('Persisted Hunt snapshot geography is missing or invalid')
   expect(mocks.maps).toHaveLength(0); expect(fetch).not.toHaveBeenCalled(); noMutation()
-})
-
-test('details screen loads exact Hunt data independently of simulated monitor locations and preserves actions', async () => {
-  await render(<MemoryRouter initialEntries={['/organizer/hunts/old-hunt']}><Routes><Route path="/organizer/hunts/:huntId" element={<OrganizerMonitorPage />} /></Routes></MemoryRouter>)
-  expect(mocks.get).toHaveBeenCalledExactlyOnceWith('old-hunt'); expect(mocks.catalog).not.toHaveBeenCalled()
-  await click('Inspect Hunt geography')
-  const preview = container.querySelector('[aria-label="Hunt geography preview"]')!
-  expect(preview.textContent).toContain('Snapshot museum'); expect(preview.textContent).not.toContain('Matthias Rex Statue')
-  await click('Pause Hunt'); expect(container.textContent).toContain('Resume Hunt'); noMutation()
-})
-
-test('detail geography loading, failure and retry never block existing actions', async () => {
-  let reject!: (error: Error) => void
-  mocks.get.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail }))
-  await render(<MemoryRouter initialEntries={['/organizer/hunts/old-hunt']}><Routes><Route path="/organizer/hunts/:huntId" element={<OrganizerMonitorPage />} /></Routes></MemoryRouter>)
-  expect(container.textContent).toContain('Loading saved Hunt geography'); await click('Pause Hunt')
-  await act(async () => reject(new Error('Unavailable')))
-  expect(container.textContent).toContain('couldn’t load the saved Hunt geography'); expect(container.textContent).toContain('Resume Hunt')
-  await click('Retry geography'); await click('Inspect Hunt geography'); expect(container.textContent).toContain('Snapshot finish'); noMutation()
 })
 
 test('obsolete Hunt detail responses cannot populate another Hunt or an unmounted inspection', async () => {

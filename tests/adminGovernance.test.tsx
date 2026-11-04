@@ -18,7 +18,7 @@ const button = (name: string) => [...container.querySelectorAll('button')].find(
 async function click(name: string) { await act(async () => button(name).click()) }
 test('01 mixed queue filters locally and exact selected GET owns inspection', async () => {
   await render(); expect(container.querySelector('[aria-label="Review queue"]')?.textContent).toContain('universal'); expect(api.list).toHaveBeenCalledWith()
-  await act(async () => ([...container.querySelectorAll('a')].find(a => a.textContent === 'Local')!).click())
+  await act(async () => ([...container.querySelectorAll('a')].find(a => /^Local\d*$/.test(a.textContent ?? ''))!).click())
   expect(container.querySelector('[aria-label="Review queue"]')?.textContent).toContain('local'); expect(container.querySelector('[aria-label="Review queue"]')?.textContent).not.toContain('universal')
   api.get.mockResolvedValue({ ...fixture('local'), content: { ...fixture('local').content, mission: 'Pinned v3, candidate v8 is private' } })
   await act(async () => container.querySelector<HTMLAnchorElement>('a[href*="/admin/reviews/local"]')!.click())
@@ -26,7 +26,7 @@ test('01 mixed queue filters locally and exact selected GET owns inspection', as
 })
 test('01 Universal omits geography, Legacy remains selectable', async () => {
   await render('/admin/reviews/universal'); expect(container.textContent).not.toContain('Saved geography'); expect(container.textContent).not.toContain('Saved pin')
-  await act(async () => ([...container.querySelectorAll('a')].find(a => a.textContent === 'Legacy')!).click()); expect(container.querySelector('[aria-label="Review queue"]')?.textContent).toContain('Legacy')
+  await act(async () => ([...container.querySelectorAll('a')].find(a => /^Legacy\d*$/.test(a.textContent ?? ''))!).click()); expect(container.querySelector('[aria-label="Review queue"]')?.textContent).toContain('Legacy')
 })
 test('01 empty and ambiguous missing inspection have readable recovery', async () => {
   const { ApiError } = await import('../src/services/api/client'); api.list.mockResolvedValue([]); api.get.mockRejectedValue(new ApiError('not_found', 404, 'http'))
@@ -109,4 +109,17 @@ test('readable inspection uses the exact GET artifact, not queue content or anot
   expect(summary.textContent).toContain('Exact submitted story v4'); expect(summary.textContent).not.toContain('Exact story v3')
   expect(container.querySelector('[aria-label="Submitted checkpoints"]')!.textContent).toContain('Exact answer v4')
   expect(container.querySelector('[aria-label="Submitted FinishPoint"]')!.textContent).toContain('Exact terminal v4'); expect(fetch).not.toHaveBeenCalled()
+})
+test('01 a submitted Local Template is never hidden behind an empty default tab', async () => {
+  api.list.mockResolvedValue([fixture('local')])
+  await render()
+  const queue = container.querySelector('[aria-label="Review queue"]')!
+  expect(queue.textContent).toContain('local')
+  expect(container.querySelector('[aria-label="1 awaiting review"]')).not.toBeNull()
+})
+test('01 an explicitly chosen empty tab points to categories with waiting Templates', async () => {
+  api.list.mockResolvedValue([fixture('local')])
+  await render('/admin/templates?category=Universal')
+  expect(container.textContent).toContain('No items awaiting review in this category.')
+  expect([...container.querySelectorAll('a')].some(a => a.textContent === '1 waiting in Local.')).toBe(true)
 })

@@ -28,20 +28,34 @@ async function click(text: string) { await act(async () => button(text).click())
 async function change(selector: string, value: string) { await act(async () => { const el = container.querySelector(selector)!; Object.getOwnPropertyDescriptor(el.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype, 'value')!.set!.call(el,value); el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })) }) }
 function record(category: 'local' | 'universal' | undefined = 'local', positioned = false): any { return { key: 'owned', version: 1, status: 'draft', category, content: { key: 'owned', version: 1, displayName: 'Adventure', theme: 'Mixed', mission: { name: 'Our story' }, configuration: { normalCheckpointCount: 1, checkpointPositions: positioned ? [{ checkpointNumber: 1, name: 'Museum', latitude: 48.8, longitude: 2.3, radiusMeters: 15 }] : [] }, scoring: { model: 'platform' }, checkpoints: [{ checkpoint: 1 }, { role: 'terminal' }] } } }
 
-test('prototype opens builder immediately without any geography call or persistence', async () => {
+const cluj = { id: '22222222-2222-4222-8222-222222222222', name: 'Cluj-Napoca', countryCode: 'RO', countryDisplayName: 'Romania', administrativeContext: 'Cluj', latitude: 46.7712, longitude: 23.6236, active: true }
+function catalogHasCluj() {
+  geo.cities.mockResolvedValue({ cities: [{ ...cluj, geographicId: '681290', admin1Code: '13', regionDisplayName: 'Cluj', regionStatus: 'resolved', localityId: cluj.id, registeredActive: true, registrationState: 'registered', nextAction: 'bind_locality' }], nextAfter: null })
+  geo.get.mockResolvedValue(cluj)
+}
+test('Cluj default resolves its canonical locality from the catalog without persisting', async () => {
+  catalogHasCluj()
   await render()
   expect([...container.querySelectorAll('#local-geography select')].map(el => (el as HTMLSelectElement).value)).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
+  expect(geo.cities).toHaveBeenCalledWith('RO', 'Cluj-Napoca', undefined, undefined)
+  expect(geo.get).toHaveBeenCalledWith(cluj.id)
   await click('Continue to Template builder')
   expect(container.querySelector<HTMLFieldSetElement>('[aria-label="Template builder"]')!.disabled).toBe(false)
   expect(document.activeElement?.id).toBe('template-setup-heading')
-  for (const call of Object.values(geo)) expect(call).not.toHaveBeenCalled()
   expect(api.create).not.toHaveBeenCalled()
-  expect(container.querySelector('#checkpoint-positions')).toBeNull()
+  // A bound canonical locality enables geographic checkpoint positioning.
+  expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
 })
-test('prototype labels never supply locality authority on save', async () => {
+test('new Local draft saves the catalog-resolved Cluj locality, never labels', async () => {
+  catalogHasCluj()
   await render(); await click('Continue to Template builder'); await change('#template-setup input', 'Cluj adventure'); await click('Save draft')
-  expect(api.create).toHaveBeenCalledWith(expect.anything(), 'local')
+  expect(api.create).toHaveBeenCalledWith(expect.anything(), 'local', cluj.id)
   expect(JSON.stringify(api.create.mock.calls)).not.toContain('localitySnapshot')
+})
+test('missing Cluj catalog entry is reported with a retry and binds nothing', async () => {
+  await render()
+  expect(container.textContent).toContain('Cluj-Napoca could not be loaded from the location catalog')
+  expect(button('Retry location')).toBeTruthy()
 })
 test('saved draft content and canonical locality survive prototype continuation', async () => {
   const saved = { ...record('local', true), localityId: city.id, localitySnapshot: city }

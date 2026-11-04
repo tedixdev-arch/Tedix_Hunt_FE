@@ -40,20 +40,26 @@ async function mount(url = '/organizer/hunts/new/setup') {
 function button(label: string) { const element = [...container.querySelectorAll('button')].find(item => item.textContent === label); expect(element, label).toBeDefined(); return element! }
 async function click(label: string) { await act(async () => button(label).click()) }
 
-test('prototype location is preselected and advances with no geography or Hunt requests', async () => {
+test('Cluj default resolves its canonical locality through the catalog and lists its approved Hunts', async () => {
   await mount()
   expect([...container.querySelectorAll('select')].map(el => el.value)).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
-  expect(organizerLocalApi.page).not.toHaveBeenCalled()
-  expect(container.textContent).not.toContain('No approved Hunts')
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('countries', {}, undefined)
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('regions', { countryCode: 'RO' }, undefined)
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('cities', { countryCode: 'RO', regionId: 'RO:admin1:13' }, undefined)
   await click('Choose Hunt')
   expect(container.textContent).toContain('Choose your adventure')
-  expect(container.textContent).toContain('No approved Hunts are available for this prototype location.')
-  expect(container.textContent).toContain('requires a canonical locality reference')
-  expect(button('Use this Hunt').disabled).toBe(true)
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('templates', { countryCode: 'RO', localityId: local.localityId })
+  expect(container.textContent).toContain('Cluj Adventure')
   expect(huntsApi.createDraft).not.toHaveBeenCalled()
   expect(organizerLocalApi.select).not.toHaveBeenCalled()
-  expect(organizerLocalApi.page).not.toHaveBeenCalled()
   await click('Back'); expect(button('Choose Hunt').disabled).toBe(false)
+})
+test('a missing Cluj catalog entry blocks Choose Hunt with a retry', async () => {
+  vi.mocked(organizerLocalApi.page).mockImplementation(async () => ({ items: [], nextCursor: null }))
+  await mount()
+  expect(container.textContent).toContain('not available in the location catalog')
+  expect(button('Choose Hunt').disabled).toBe(true)
+  expect(button('Retry location')).toBeTruthy()
 })
 test('event metadata outage cannot block Location or Choose Hunt', async () => {
   vi.mocked(huntOptionsApi.listHuntOptions).mockRejectedValue(new ApiError('offline', null, 'network'))

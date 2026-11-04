@@ -1,6 +1,9 @@
 import { FormEvent, ReactNode, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { OrganizerHeader } from './OrganizerFlow'
+import { useAuth } from '../app/providers/AuthProvider'
+import { ApiError } from '../services/api/client'
+import { customHuntRequestsApi } from '../services/api/operations'
 
 const inputClass = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500'
 const labelClass = 'block text-sm font-bold text-slate-800'
@@ -74,17 +77,41 @@ export function GuidedSetupPage() {
 }
 
 export function CustomRequestPage() {
+  const { user } = useAuth()
   const [complete, setComplete] = useState(false)
-  if (complete) return <SetupShell eyebrow="Custom Request" title="Request received" description="The request is now ready for Admin review and Creator assignment."><SuccessState title="We will keep you updated" detail="Status: Received. You can follow the request from My Hunts." /></SetupShell>
+  const [error, setError] = useState('')
+  const [sending, setSending] = useState(false)
+  const [form, setForm] = useState({ contactName: user?.name ?? '', contactEmail: user?.email ?? '', organizationName: '', city: '', preferredDate: '', participantCount: '', details: '' })
+  const field = (key: keyof typeof form) => ({ value: form[key], onChange: (event: { target: { value: string } }) => setForm(current => ({ ...current, [key]: event.target.value })) })
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setSending(true); setError('')
+    try {
+      await customHuntRequestsApi.submit({
+        contactName: form.contactName.trim(), contactEmail: form.contactEmail.trim(), details: form.details.trim(),
+        ...(form.organizationName.trim() ? { organizationName: form.organizationName.trim() } : {}),
+        ...(form.city.trim() ? { city: form.city.trim() } : {}),
+        ...(form.preferredDate ? { preferredDate: form.preferredDate } : {}),
+        ...(form.participantCount ? { participantCount: Number(form.participantCount) } : {}),
+      })
+      setComplete(true)
+    } catch (caught) {
+      setError(caught instanceof ApiError && caught.status === 400 ? 'Check the highlighted details and try again.' : caught instanceof ApiError && caught.status === 429 ? 'Too many requests. Please try again later.' : "We couldn't send your request. Please try again.")
+    } finally { setSending(false) }
+  }
+  if (complete) return <SetupShell eyebrow="Custom Request" title="Request received" description="The Tedix team will review your request and reply by email."><SuccessState title="We will be in touch" detail={`We'll reply to ${form.contactEmail.trim()}.`} /></SetupShell>
   return (
     <SetupShell eyebrow="Custom Request" title="Ask for a new hunt" description="Use this only when an approved template cannot meet your needs. Tell us what is different.">
-      <form className="mt-8 grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2" onSubmit={(event: FormEvent) => { event.preventDefault(); setComplete(true) }}>
-        <label className={labelClass}>Preferred date<input className={inputClass} required type="date" /></label>
-        <label className={labelClass}>Location<input className={inputClass} placeholder="City or venue" required /></label>
-        <label className={labelClass}>Participants<input className={inputClass} min="4" placeholder="Expected number" required type="number" /></label>
-        <label className={labelClass}>Local contact<input className={inputClass} placeholder="Name and phone or email" required /></label>
-        <label className={`${labelClass} sm:col-span-2`}>What do you need?<textarea className={`${inputClass} min-h-32 py-3`} placeholder="Purpose, audience, special location, or content that makes this hunt different" required /></label>
-        <button className="min-h-14 rounded-xl bg-emerald-500 px-5 font-bold hover:bg-emerald-400 sm:col-span-2" type="submit">Send request</button>
+      <form className="mt-8 grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2" onSubmit={event => void submit(event)}>
+        <label className={labelClass}>Your name<input className={inputClass} maxLength={120} required {...field('contactName')} /></label>
+        <label className={labelClass}>Email<input className={inputClass} maxLength={254} required type="email" {...field('contactEmail')} /></label>
+        <label className={labelClass}>School or organization (optional)<input className={inputClass} maxLength={160} {...field('organizationName')} /></label>
+        <label className={labelClass}>Location<input className={inputClass} maxLength={120} placeholder="City or venue" required {...field('city')} /></label>
+        <label className={labelClass}>Preferred date<input className={inputClass} required type="date" {...field('preferredDate')} /></label>
+        <label className={labelClass}>Participants<input className={inputClass} min="1" max="100000" placeholder="Expected number" required type="number" {...field('participantCount')} /></label>
+        <label className={`${labelClass} sm:col-span-2`}>What do you need?<textarea className={`${inputClass} min-h-32 py-3`} maxLength={4000} placeholder="Purpose, audience, special location, or content that makes this hunt different" required {...field('details')} /></label>
+        {error && <p className="text-sm font-semibold text-rose-700 sm:col-span-2" role="alert">{error}</p>}
+        <button className="min-h-14 rounded-xl bg-emerald-500 px-5 font-bold hover:bg-emerald-400 disabled:opacity-60 sm:col-span-2" disabled={sending} type="submit">{sending ? 'Sending…' : 'Send request'}</button>
       </form>
     </SetupShell>
   )

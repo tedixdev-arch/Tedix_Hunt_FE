@@ -5,7 +5,7 @@ import { StepContainer } from '../../components/StepContainer'
 import { TedixMap } from '../../components/TedixMap'
 import type { CreatorTemplateContent } from '../../services/api/creatorTemplates'
 import { gameplayPresentation } from './CheckpointGameplayEditor'
-import { initialPreviewProgress, previewActivities, projectPreview, transitionPreview, type PreviewActivity } from './participantPreview'
+import { initialPreviewProgress, previewActivities, projectPreview, transitionPreview, type PreviewActivity } from './participantPreview.ts'
 
 const secondary = 'min-h-12 rounded-xl border border-slate-300 px-4 text-sm font-bold'
 const title = (field: PreviewActivity | 'navigationMode', value: unknown) => typeof value === 'string' ? gameplayPresentation(field, value).name : 'Unsupported saved value'

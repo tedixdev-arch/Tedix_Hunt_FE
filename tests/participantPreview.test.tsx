@@ -1,7 +1,7 @@
 import { act, useEffect } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { beforeEach, afterEach, test, expect, vi } from 'vitest'
-import { ParticipantPreview } from '../src/features/creator/ParticipantPreview'
+import { ParticipantPreview } from '../src/features/creator/ParticipantPreview.tsx'
 import type { CreatorTemplateContent } from '../src/services/api/creatorTemplates'
 
 const map = vi.hoisted(() => ({ props: {} as any, mounts: 0, unmounts: 0 }))

@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { OrganizerHeader } from './OrganizerFlow'
 import { leaderboardPhysicalInventory, specialPhysicalInventory } from '../data/rewardInventory'
-import { creatorApplicationsApi, creatorApplicationsPendingChangedEvent, organizerApplicationsApi, organizerApplicationsPendingChangedEvent } from '../services/api'
+import { adminTemplateReviewsApi, creatorApplicationsApi, creatorApplicationsPendingChangedEvent, organizerApplicationsApi, organizerApplicationsPendingChangedEvent } from '../services/api'
 
 const sidebarPreferenceKey = 'tedixhunt_admin_sidebar_collapsed'
 
@@ -11,6 +11,7 @@ const navigationGroups = [
   {label:'Operations',items:[
     {id:'hunts',label:'Hunts',path:'/admin/hunts',icon:'map'},
     {id:'alerts',label:'Safety Alerts',path:'/admin/alerts',icon:'alert'},
+    {id:'custom-requests',label:'Custom Hunt Requests',path:'/admin/custom-requests',icon:'document'},
   ]},
   {label:'Content',items:[
     {id:'templates',label:'Template Reviews',path:'/admin/templates',icon:'document'},
@@ -46,6 +47,13 @@ function NavigationIcon({name}:{name:string}) {
 export function AdminShell({active,children}:{active:string;children:ReactNode}) {
   const [hasPendingOrganizerApplications, setHasPendingOrganizerApplications] = useState(false)
   const [hasPendingCreatorApplications, setHasPendingCreatorApplications] = useState(false)
+  const [hasSubmittedTemplates, setHasSubmittedTemplates] = useState(false)
+  useEffect(() => {
+    let active = true
+    // Submitted Templates of every category (Universal, Local, Legacy) mark Template Reviews as needing action.
+    adminTemplateReviewsApi.list().then(items => { if (active) setHasSubmittedTemplates(items.length > 0) }).catch(() => { if (active) setHasSubmittedTemplates(false) })
+    return () => { active = false }
+  }, [])
   const [collapsed,setCollapsed] = useState(() => {
     const saved = window.localStorage.getItem(sidebarPreferenceKey)
     return window.matchMedia('(max-width: 767px)').matches || saved === 'true'
@@ -101,6 +109,7 @@ export function AdminShell({active,children}:{active:string;children:ReactNode})
             <div className="space-y-1">{group.items.map(item=>{
               const isActive=active===item.id
               const actionRequired = (item.id === 'organizer-applications' && hasPendingOrganizerApplications)
+                || (item.id === 'templates' && hasSubmittedTemplates)
                 || (item.id === 'creator-applications' && hasPendingCreatorApplications)
               return <Link aria-current={isActive?'page':undefined} aria-label={collapsed?`${item.label}${actionRequired ? ' — action required' : ''}`:undefined} title={collapsed?item.label:undefined} className={`relative flex min-h-11 items-center rounded-lg text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${collapsed?'justify-center px-2':'gap-3 px-3'} ${isActive?'bg-slate-950 text-white before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-emerald-400':'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`} key={item.id} to={item.path}><NavigationIcon name={item.icon}/>{!collapsed&&<span>{item.label}</span>}{actionRequired && <span aria-hidden={collapsed} aria-label={collapsed?undefined:`${item.label} — action required`} className={`${collapsed?'absolute right-2 top-2':'ml-auto'} h-2 w-2 shrink-0 rounded-full bg-red-600`}/>}</Link>
             })}</div>
@@ -113,9 +122,6 @@ export function AdminShell({active,children}:{active:string;children:ReactNode})
   </main>
 }
 
-export function AdminDashboardPage() {
-  return <AdminShell active="dashboard"><section className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Next action</p><h2 className="mt-2 text-2xl font-bold">Review submitted Templates</h2><p className="mt-2 text-sm text-amber-950">Open the backend-backed review queue.</p></div><Link className="flex min-h-12 items-center rounded-xl bg-slate-950 px-5 font-bold text-white" to="/admin/templates">Open Template Reviews</Link></div></section><section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[['Template reviews','—','Open queue'],['Creator decisions','—','Backend managed'],['Demo safety alerts','1','Simulated data'],['Locked Hunts','0','No action']].map(([label,count,note],index)=><article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={label}><p className="text-sm font-bold text-slate-500">{label}</p><p className={`mt-2 text-3xl font-bold ${index===2?'text-red-700':''}`}>{count}</p><p className="mt-1 text-xs font-semibold text-slate-400">{note}</p></article>)}</section><section className="mt-5 grid gap-4 lg:grid-cols-2"><article className="rounded-2xl border border-red-200 bg-white p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-wide text-red-700">Demo safety alert</p><h2 className="mt-2 text-xl font-bold">Team 4 · Checkpoint 3</h2><p className="mt-2 text-sm text-slate-600">Signal: Cluj Napoca · Panic Button simulation · no real request or response</p><Link className="mt-4 inline-flex text-sm font-bold text-red-700 underline" to="/admin/alerts">View alert</Link></article><article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent important action</p><h2 className="mt-2 text-xl font-bold">Global detection radius updated</h2><p className="mt-2 text-sm text-slate-600">30 metres · Admin Maria · Today, 09:24</p><Link className="mt-4 inline-flex text-sm font-bold text-slate-700 underline" to="/admin/audit">Open audit log</Link></article></section></AdminShell>
-}
 
 type InventoryAllocation = { pool:string; prize:string; units:number }
 const prizeLots=['Mystery Tech Kit · Lot A','Explorer Pack · Lot B','City Challenge Set · Lot C','Partner Gift Pack · Lot D']
@@ -130,12 +136,3 @@ export function AdminRewardInventoryPage() {
   return <AdminShell active="rewards"><div className="mt-6 flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-3xl font-bold">Physical Reward Inventory</h2><p className="mt-2 max-w-2xl text-slate-600">Assign hidden prize lots and unit quantities to leaderboard places and Special Award pools.</p></div><span className="rounded-full bg-violet-100 px-3 py-2 text-xs font-semibold text-violet-800">Admin only · prize identities hidden elsewhere</span></div><div className="mt-6 grid gap-5 lg:grid-cols-[1fr_320px]"><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Leaderboard allocation</h3><p className="mt-1 text-sm text-slate-500">The Organizer sees only required units, available units and availability status.</p><div className="mt-5 space-y-3">{allocations.slice(0,5).map(item=><article className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[120px_1fr_130px] sm:items-end" key={item.pool}><div><span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Leaderboard</span><h4 className="mt-1 text-lg font-bold">{item.pool}</h4></div><label className="text-xs font-semibold">Hidden prize lot<select className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3" value={item.prize} onChange={e=>update(item.pool,{prize:e.target.value})}>{prizeLots.map(lot=><option key={lot}>{lot}</option>)}</select></label><label className="text-xs font-semibold">Available units<input className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3" min="0" type="number" value={item.units} onChange={e=>update(item.pool,{units:Number(e.target.value)})}/></label></article>)}</div></section><aside className="h-fit rounded-2xl border border-violet-200 bg-violet-50 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-violet-800">Secrecy rule</p><h3 className="mt-2 text-xl font-bold text-violet-950">Prize details stay here</h3><p className="mt-3 text-sm leading-6 text-violet-900">Organizers and participants never see the product, image, brand or value before final results. They see only anonymous availability.</p></aside></div><section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="text-xl font-bold">Special Award pools</h3><p className="mt-1 text-sm text-slate-500">These units are separate from inventory reserved for leaderboard places.</p><div className="mt-5 grid gap-3 md:grid-cols-2">{allocations.slice(5).map(item=><article className="rounded-xl border border-slate-200 bg-slate-50 p-4" key={item.pool}><h4 className="font-bold">{item.pool}</h4><label className="mt-4 block text-xs font-semibold">Hidden prize lot<input className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3" value={item.prize} onChange={e=>update(item.pool,{prize:e.target.value})}/></label><label className="mt-3 block text-xs font-semibold">Available units<input className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3" min="0" type="number" value={item.units} onChange={e=>update(item.pool,{units:Number(e.target.value)})}/></label></article>)}</div></section><div className="mt-5 flex justify-end"><button className="min-h-12 rounded-xl bg-emerald-500 px-6 font-bold" type="button">Save inventory allocation</button></div></AdminShell>
 }
 
-const content:Record<string,{title:string;description:string;items:string[]}>= {
-  hunts:{title:'Hunts',description:'Organizer Hunts are approved by default. Intervene only when needed.',items:['Signal: Cluj Napoca · In progress','School Quest · Countdown','River Route · Paused']},
-  alerts:{title:'Safety Alerts',description:'Prototype only: local demo alerts, not real Participant requests or confirmed responses.',items:['Demo: Team 4 · Checkpoint 3 · simulated alert','Demo: Signal lost · locally dismissed']},
-  users:{title:'Users & Roles',description:'Manage professional roles and exceptional student support cases.',items:['Organizers · 18 active','Creators · 6 active','Partners · 12 active']},
-  settings:{title:'Platform Settings',description:'Global rules only—not settings for individual Hunts.',items:['Scoring rules','Default detection radius · 30 m','Safety requirements','Notifications']},
-  audit:{title:'Audit Log',description:'Every important administrative action is recorded.',items:['Template submitted · 10:32','Detection radius changed · 09:24','Demo safety alert locally dismissed · Yesterday']},
-}
-
-export function AdminSectionPage({section}:{section:keyof typeof content}) { const data=content[section]; return <AdminShell active={section}><section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">{data.title}</h2><p className="mt-2 text-slate-600">{data.description}</p><div className="mt-5 divide-y divide-slate-100">{data.items.map(item=><div className="flex min-h-16 items-center justify-between gap-4 py-3" key={item}><span className="font-bold">{item}</span><button className="text-sm font-bold text-slate-500" type="button">View</button></div>)}</div></section></AdminShell> }

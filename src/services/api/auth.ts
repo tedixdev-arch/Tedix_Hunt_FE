@@ -136,6 +136,15 @@ export class AuthApi {
     return response;
   }
 
+  /** Development delivery returns devCode until an email provider is configured. */
+  requestIndependentOrganizerCode(email: string): Promise<{ sent: true; expiresInSeconds: number; devCode?: string }> {
+    return this.client.post('/api/auth/independent-organizer/request-code', { email }, { authenticated: false, retryOnUnauthorized: false });
+  }
+
+  verifyIndependentOrganizer(input: { email: string; code: string; name?: string }): Promise<AuthResponse> {
+    return this.authenticate('/api/auth/independent-organizer/verify', input);
+  }
+
   registerParticipant(input: RegisterInput): Promise<AuthResponse> {
     return this.authenticate('/api/auth/participant/register', input);
   }

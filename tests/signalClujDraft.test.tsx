@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { CreatorStudioPage, CreatorTemplateEditorPage } from '../src/pages/CreatorStudio'
-import { ParticipantPreview } from '../src/features/creator/ParticipantPreview'
+import { ParticipantPreview } from '../src/features/creator/ParticipantPreview.tsx'
 import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 import { ApiError } from '../src/services/api/client'
 

@@ -4,7 +4,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, afterEach, test, expect, vi } from 'vitest'
 import { TemplateOneExperience } from '../src/pages/template-one/TemplateOneExperience'
 import { ParticipantReadinessPrototype as ParticipantReadinessPage } from '../src/pages/ParticipantReadinessPrototype'
-import { OrganizerMonitorPage } from '../src/pages/OrganizerMonitor'
 
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <header>Organizer</header> }))
 let root: Root, container: HTMLDivElement
@@ -67,16 +66,4 @@ test('readiness gives truthful guidance and still starts the chosen difficulty',
   expect(button('Begin the Hunt').disabled).toBe(true)
   click('Hard×2'); act(() => container.querySelector('input')!.click()); click('Begin the Hunt')
   click('Get help'); guidance(); expect(fetch).not.toHaveBeenCalled()
-})
-test('monitor labels sample requests and local dismissal; unrelated controls remain usable', () => {
-  act(() => root.render(<MemoryRouter initialEntries={['/monitor?mode=independent']}><OrganizerMonitorPage /></MemoryRouter>))
-  expect(container.textContent).toContain('Monitoring prototype — simulated data')
-  expect(container.textContent).toContain('not real Participant requests')
-  expect(container.textContent).toContain('Demo · Simulated help alert')
-  click('Dismiss demo alert')
-  expect(container.textContent).toContain('real safety status unknown')
-  expect(container.textContent).not.toContain('No active safety alerts')
-  click('Restore demo alert'); click('Pause Hunt'); click('Resume Hunt'); click('Message everyone')
-  expect(container.textContent).toContain('no Participants were notified')
-  click('End Hunt'); expect(container.textContent).toContain('Completed'); expect(fetch).not.toHaveBeenCalled()
 })

@@ -19,8 +19,11 @@ function ReviewWorkspace() {
   const { key = '' } = useParams()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const category: ReviewCategory = reviewCategories.find(value => value === params.get('category')) ?? 'Universal'
   const [reviews, setReviews] = useState<AdminTemplateReview[] | null>(null)
+  // Without an explicit tab, open the first category that has submissions so none is hidden behind an empty default.
+  const waiting = (value: ReviewCategory) => reviews?.filter(item => reviewCategory(item) === value).length ?? 0
+  const requested = reviewCategories.find(value => value === params.get('category'))
+  const category: ReviewCategory = requested ?? reviewCategories.find(value => value !== 'Locality proposals' && waiting(value) > 0) ?? 'Universal'
   const [error, setError] = useState('')
   const [denied, setDenied] = useState(false)
   const onDenied = useCallback(() => { setDenied(true); setReviews(null) }, [])
@@ -35,13 +38,13 @@ function ReviewWorkspace() {
   if (denied) return <AdminShell active="templates"><p className={panel + ' mt-5'} role="alert">Admin access is required or your session has expired. Sign in again to review.</p><button className={button} onClick={() => void load()}>Retry access</button></AdminShell>
   return <AdminShell active="templates"><h2 className="mt-6 text-2xl font-bold">Template Reviews</h2>
     <p className="mt-2 text-slate-600">Choose a category, select an item, inspect it and decide.</p>
-    <nav aria-label="Review categories" className="my-5 flex flex-wrap gap-2">{reviewCategories.map(value => <Link className={button + (category === value ? ' bg-slate-950 text-white' : ' bg-white')} aria-current={category === value ? 'page' : undefined} key={value} to={`/admin/templates?category=${encodeURIComponent(value)}`}>{value}</Link>)}</nav>
+    <nav aria-label="Review categories" className="my-5 flex flex-wrap gap-2">{reviewCategories.map(value => <Link className={button + (category === value ? ' bg-slate-950 text-white' : ' bg-white')} aria-current={category === value ? 'page' : undefined} key={value} to={`/admin/templates?category=${encodeURIComponent(value)}`}>{value}{value !== 'Locality proposals' && waiting(value) > 0 && <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${category === value ? 'bg-white text-slate-950' : 'bg-amber-100 text-amber-900'}`} aria-label={`${waiting(value)} awaiting review`}>{waiting(value)}</span>}</Link>)}</nav>
     {category === 'Locality proposals' ? <LocalityProposalReview /> : <div className="grid min-w-0 gap-5 lg:grid-cols-[280px_minmax(0,1fr)]"><section aria-label="Review queue" className={panel}>
       <h3 className="text-lg font-bold">{category}</h3>
       <button type="button" className={button + ' mt-3'} onClick={() => void load()}>Refresh queue</button>
       {reviews === null && !error && <p className="mt-4" role="status">Loading submitted Templates…</p>}
       {error && <p className="mt-4" role="alert">{error}</p>}
-      {reviews && !reviews.some(item => reviewCategory(item) === category) && <p className="mt-4">No items awaiting review in this category.</p>}
+      {reviews && !reviews.some(item => reviewCategory(item) === category) && <p className="mt-4">No items awaiting review in this category.{reviewCategories.filter(value => value !== category && waiting(value) > 0).map(value => <Link key={value} className="ml-1 font-bold underline" to={`/admin/templates?category=${encodeURIComponent(value)}`}>{waiting(value)} waiting in {value}.</Link>)}</p>}
       <ul className="mt-3 space-y-2">{reviews?.filter(item => reviewCategory(item) === category).map(item => <li key={item.key}><Link className="block min-h-12 break-words rounded-xl border p-3 focus-visible:outline" aria-current={key === item.key ? 'true' : undefined} to={`/admin/reviews/${encodeURIComponent(item.key)}?category=${encodeURIComponent(category)}`}><strong>{item.content.displayName}</strong><span className="block text-sm">{item.creator.name ?? 'Creator'} · Submitted version {item.version}</span></Link></li>)}</ul>
       {category === 'Local' && <form className="mt-5" onSubmit={event => { event.preventDefault(); const value = new FormData(event.currentTarget).get('key'); if (typeof value === 'string' && value.trim()) navigate(`/admin/reviews/${encodeURIComponent(value.trim())}?category=Local&view=approved`) }}><label className="block text-sm font-bold" htmlFor="retained-key">Find retained Local approval</label><input id="retained-key" name="key" required className="mt-2 min-h-12 w-full rounded-lg border p-2" placeholder="Template key" /><button className={button + ' mt-2'}>Inspect approval</button></form>}
     </section><div className="min-w-0">{key ? <TemplateInspection key={`${key}:${params.get('view')}`} templateKey={key} onDecision={load} onDenied={onDenied} /> : <section className={panel}>Select an item to inspect its exact submitted version.</section>}</div></div>}

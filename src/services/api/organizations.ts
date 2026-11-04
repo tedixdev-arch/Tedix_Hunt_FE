@@ -3,6 +3,8 @@ import { apiClient, type ApiClient } from './client.ts';
 export interface Organization {
   id: string;
   name: string;
+  /** Personal Independent Organizer workspace: rewards are unavailable. */
+  independent?: true;
 }
 
 export class OrganizationsApi {

@@ -16,6 +16,7 @@ type AuthContextValue = {
   activateAdmin: (input: ActivateAdminInput) => Promise<PublicUser>
   activateDirectOrganizer: (input: ActivateAdminInput) => Promise<PublicUser>
   activateCreator: (input: ActivateAdminInput) => Promise<PublicUser>
+  verifyIndependentOrganizer: (input: { email: string; code: string; name?: string }) => Promise<PublicUser>
   changePassword: (input: ChangePasswordInput) => Promise<void>
   logout: () => Promise<void>
 }
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const activateAdmin = useCallback((input: ActivateAdminInput) => authenticate(() => authApi.activateAdmin(input)), [authenticate])
   const activateDirectOrganizer = useCallback((input: ActivateAdminInput) => authenticate(() => authApi.activateDirectOrganizer(input)), [authenticate])
   const activateCreator = useCallback((input: ActivateAdminInput) => authenticate(() => authApi.activateCreator(input)), [authenticate])
+  const verifyIndependentOrganizer = useCallback((input: { email: string; code: string; name?: string }) => authenticate(() => authApi.verifyIndependentOrganizer(input)), [authenticate])
   const changePassword = useCallback(async (input: ChangePasswordInput) => {
     const version = operation.current
     const origin = sessionSnapshot(sessionStore)
@@ -74,7 +76,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await authApi.logout()
   }, [])
 
-  const value = useMemo(() => ({ user, isAuthenticated: user !== null, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateDirectOrganizer, activateCreator, loginAdmin, changePassword, logout }), [user, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateDirectOrganizer, activateCreator, loginAdmin, changePassword, logout])
+  const value = useMemo(() => ({ user, isAuthenticated: user !== null, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateDirectOrganizer, activateCreator, verifyIndependentOrganizer, loginAdmin, changePassword, logout }), [user, isBootstrapping, loginParticipant, registerParticipant, createGuestSession, loginCreator, loginOrganizer, activateAdmin, activateDirectOrganizer, activateCreator, verifyIndependentOrganizer, loginAdmin, changePassword, logout])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

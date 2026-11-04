@@ -5,6 +5,7 @@ import { RewardsEditor } from '../../pages/CustomHuntEditor'
 import { HuntMapInspection } from '../../components/HuntMapPreview'
 import { ApiError, huntOptionsApi, huntRewardsApi, huntsApi, organizationsApi, type Hunt, type HuntOptions, type HuntRewards, type Organization } from '../../services/api'
 import { PrototypeLocationSelector, prototypeLocation } from '../prototype/PrototypeLocationSelector'
+import { resolveOrganizerClujLocality } from '../prototype/clujLocality'
 import { organizerLocalApi, type LocalHunt, type LocalPreview, type Selection } from '../../services/api/organizerLocal'
 import { participantLink, copyParticipantLink, shareParticipantLink } from '../../pages/participantAccess'
 import { parseHuntNotReady } from '../../pages/huntReview'
@@ -66,10 +67,23 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
   const country = { countryCode: prototypeLocation.countryCode, displayName: prototypeLocation.country }
   const region = { label: prototypeLocation.county }
   const city = { name: prototypeLocation.city }
-  const canonicalLocalityId = initialHunt?.templateLocalitySnapshot?.countryCode === 'RO'
+  const savedLocalityId = initialHunt?.templateLocalitySnapshot?.countryCode === 'RO'
     && initialHunt.templateLocalitySnapshot.name === prototypeLocation.city
     && initialHunt.templateLocalitySnapshot.administrativeContext === prototypeLocation.county
-    ? initialHunt.templateLocalityId : undefined
+    ? initialHunt.templateLocalityId ?? undefined : undefined
+  // The Cluj default is display-only; its canonical locality UUID always comes from the backend catalog.
+  const [resolvedLocalityId, setResolvedLocalityId] = useState<string>()
+  const [locationError, setLocationError] = useState('')
+  const [locationAttempt, setLocationAttempt] = useState(0)
+  const canonicalLocalityId = savedLocalityId ?? resolvedLocalityId
+  useEffect(() => {
+    if (savedLocalityId) return
+    let active = true
+    setLocationError('')
+    resolveOrganizerClujLocality().then(city => { if (active) setResolvedLocalityId(city.localityId) })
+      .catch(cause => { if (active) setLocationError(cause instanceof ApiError ? message(cause) : `${prototypeLocation.city} is not available in the location catalog yet. Ask an Admin to register it.`) })
+    return () => { active = false }
+  }, [savedLocalityId, locationAttempt])
   const [selected, setSelected] = useState<LocalHunt>()
   const [preview, setPreview] = useState<LocalPreview>()
   const [previewError, setPreviewError] = useState('')
@@ -86,6 +100,7 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
   const [rewards, setRewards] = useState<HuntRewards>()
   const [rewardsEditing, setRewardsEditing] = useState(false)
   const onRewards = useCallback((value: HuntRewards) => setRewards(value), [])
+  const independentWorkspace = organizations.find(item => item.id === (hunt?.organizationId ?? organizationId))?.independent === true
   const [accessCode, setAccessCode] = useState(initialHunt?.accessCode ?? '')
   const [linkMessage, setLinkMessage] = useState('')
   const [event, setEvent] = useState({ name: initialHunt?.name ?? '', startDate: initialHunt?.startDate ?? '', startTime: initialHunt?.startTime?.slice(0, 5) ?? '10:00', timezone: initialHunt?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone, capacity: initialHunt?.capacity ?? 24, durationMinutes: initialHunt?.durationMinutes ?? 120, contactName: initialHunt?.contactName ?? '' })
@@ -179,9 +194,9 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
     <section aria-busy={busy} className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
       {published ? <><p role="status">{hunt.name} has been created.</p>{link ? <><Field label="Participant link"><input className={controlClass} readOnly value={link} /></Field><p className="mt-3">Hunt code: <strong>{accessCode}</strong></p><div className="mt-5 flex gap-3"><button className={secondary} type="button" onClick={async () => setLinkMessage(await copyParticipantLink(link, navigator.clipboard))}>Copy link</button><button className={primary} type="button" onClick={async () => setLinkMessage(await shareParticipantLink(link, hunt.name, navigator.share?.bind(navigator), navigator.clipboard))}>Share</button></div>{linkMessage && <p role="status">{linkMessage}</p>}</> : <button className={`${primary} mt-5`} disabled={busy} type="button" onClick={() => void run(async () => { const access = await huntsApi.createOrGetAccess(hunt.id); if (access.huntId !== hunt.id || !access.code) throw new Error('Invalid access'); setAccessCode(access.code) })}>{busy ? 'Creating link…' : 'Create sharing link'}</button>}</> : <>
       <fieldset disabled={busy} className="min-w-0">
-      {step === 0 && <><h2 className="text-2xl font-bold">Where will your Hunt take place?</h2><PrototypeLocationSelector /><button className={`${primary} mt-6`} type="button" onClick={() => setStep(1)}>Choose Hunt</button></>}
+      {step === 0 && <><h2 className="text-2xl font-bold">Where will your Hunt take place?</h2><PrototypeLocationSelector />{locationError ? <div className="mt-4"><p role="alert" className="text-rose-700">{locationError}</p><button className={secondary} type="button" onClick={() => setLocationAttempt(value => value + 1)}>Retry location</button></div> : !canonicalLocalityId && <p role="status" className="mt-4 text-sm text-slate-600">Checking location…</p>}<button className={`${primary} mt-6`} disabled={!canonicalLocalityId} type="button" onClick={() => setStep(1)}>Choose Hunt</button></>}
       {step === 1 && <><h2 className="text-2xl font-bold">Choose your adventure</h2><p className="mt-2 text-slate-600">{city?.name} · Approved routes, ready to explore.</p><div className="mt-5 grid gap-4 sm:grid-cols-2">{templates.items.map(item => <label key={`${item.templateId}:${item.version}`} className={`cursor-pointer rounded-xl border p-5 ${selected?.templateId === item.templateId && selected.version === item.version ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'}`}><input type="radio" name="local-hunt" checked={selected?.templateId === item.templateId && selected.version === item.version} onChange={() => { setSelected(item); setError('') }} /><strong className="ml-3">{item.displayName}</strong><p className="mt-2 text-sm text-slate-600">{item.theme}</p></label>)}</div><ChoiceState choices={templates} empty="No approved Hunts are available for this prototype location." />
-        {!canonicalLocalityId && <p role="status" className="mt-3 text-sm text-slate-600">Hunt discovery requires a canonical locality reference from the backend. The prototype location does not supply one.</p>}
+        {!canonicalLocalityId && <p role="status" className="mt-3 text-sm text-slate-600">Checking location…</p>}
         {selected && <div className="mt-5">{previewError ? <><p role="alert">{previewError}</p><button className={secondary} type="button" onClick={() => { setSelected(undefined); templates.retry() }}>Refresh Hunts</button></> : !preview ? <p role="status">Loading Hunt preview…</p> : <HuntMapInspection configuration={preview.configuration} sourceLabel="Approved Hunt" />}</div>}
         {!hunt && organizations.length > 1 && <Field label="Organizing for"><select className={controlClass} value={organizationId} onChange={e => setOrganizationId(e.target.value)}>{organizations.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>}
         {!setupError && (!options ? <p role="status">Loading event options…</p> : !supported ? <p role="alert">The supported event options are unavailable. Please retry later.</p> : !organizationId && <p role="alert">No accessible organization is available for this Hunt.</p>)}
@@ -195,9 +210,9 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
         <Field label="Participants"><input className={controlClass} required type="number" min={1} max={2147483647} value={event.capacity} onChange={e => setEvent({ ...event, capacity: Number(e.target.value) })} /></Field>
         <div className="rounded-xl bg-slate-50 p-4"><strong>Teams of 4</strong><p className="mt-2 text-sm">Invitation only. Share a private link after creating your Hunt.</p></div>
         <details className="sm:col-span-2"><summary className="cursor-pointer py-3 font-bold">More options</summary><div className="grid gap-5 sm:grid-cols-2"><Field label="Duration (minutes)"><input className={controlClass} required type="number" min={1} max={2147483647} value={event.durationMinutes} onChange={e => setEvent({ ...event, durationMinutes: Number(e.target.value) })} /></Field><Field label="Time zone"><input className={controlClass} required value={event.timezone} onChange={e => setEvent({ ...event, timezone: e.target.value })} /></Field></div></details>
-      </form><details className="mt-5"><summary className="cursor-pointer py-3 font-bold">Rewards (optional)</summary><p className="text-sm text-slate-600">Save each allocation to include it in your event.</p><RewardsEditor huntId={hunt.id} huntStatus={hunt.status} teamSize={4} onLoaded={onRewards} onEditingChange={setRewardsEditing} /></details>
+      </form>{independentWorkspace ? <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">Rewards are available to Registered Organizers only.</p> : <details className="mt-5"><summary className="cursor-pointer py-3 font-bold">Rewards (optional)</summary><p className="text-sm text-slate-600">Save each allocation to include it in your event.</p><RewardsEditor huntId={hunt.id} huntStatus={hunt.status} teamSize={4} onLoaded={onRewards} onEditingChange={setRewardsEditing} /></details>}
       <div className="mt-6 flex justify-between gap-3"><button className={secondary} disabled={rewardsEditing} type="button" onClick={changeLocation}>Back</button><button className={primary} form="event-settings" type="submit" disabled={!supported || rewardsEditing}>{busy ? 'Saving…' : 'Review event'}</button></div>{rewardsEditing && <p role="status" className="mt-3 text-sm text-slate-600">Save or cancel your reward changes before continuing.</p>}</>}
-      {step === 3 && hunt && <><h2 className="text-2xl font-bold">Ready for an adventure?</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2">{Object.entries({ Event: hunt.name, Location: [hunt.city, hunt.region, hunt.country].filter(Boolean).join(', '), Hunt: hunt.templateSnapshot?.displayName, Schedule: `${hunt.startDate} · ${hunt.startTime?.slice(0, 5)} (${hunt.timezone})`, Participants: `${hunt.capacity} · Teams of ${hunt.teamSize}`, Access: 'Invitation only', Rewards: rewards ? `${rewards.leaderboard.length} leaderboard rewards · ${rewards.specialAwards.length} special awards` : 'No rewards' }).map(([label, value]) => <div key={label}><dt className="text-sm text-slate-500">{label}</dt><dd className="mt-1 font-bold">{value}</dd></div>)}</dl><div className="mt-6 flex justify-between gap-3"><button className={secondary} type="button" onClick={() => setStep(2)}>Back</button><button className={primary} type="button" disabled={!selection} onClick={() => void create()}>{busy ? 'Creating…' : 'Create Hunt'}</button></div></>}
+      {step === 3 && hunt && <><h2 className="text-2xl font-bold">Ready for an adventure?</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2">{Object.entries({ Event: hunt.name, Location: [hunt.city, hunt.region, hunt.country].filter(Boolean).join(', '), Hunt: hunt.templateSnapshot?.displayName, Schedule: `${hunt.startDate} · ${hunt.startTime?.slice(0, 5)} (${hunt.timezone})`, Participants: `${hunt.capacity} · Teams of ${hunt.teamSize}`, Access: 'Invitation only', Rewards: independentWorkspace ? 'Not available for Independent Hunts' : rewards ? `${rewards.leaderboard.length} leaderboard rewards · ${rewards.specialAwards.length} special awards` : 'No rewards' }).map(([label, value]) => <div key={label}><dt className="text-sm text-slate-500">{label}</dt><dd className="mt-1 font-bold">{value}</dd></div>)}</dl><div className="mt-6 flex justify-between gap-3"><button className={secondary} type="button" onClick={() => setStep(2)}>Back</button><button className={primary} type="button" disabled={!selection} onClick={() => void create()}>{busy ? 'Creating…' : 'Create Hunt'}</button></div></>}
       </fieldset>{busy && <p role="status" className="mt-4">Saving your adventure…</p>}
     </>}
     </section>

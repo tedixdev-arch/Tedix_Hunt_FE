@@ -30,7 +30,7 @@ import { createNormalGameplay, hydrateGameplay, serializeGameplay, gameplayValid
 import { FinishPointEditor } from '../features/creator/FinishPointEditor'
 import { finishPointConfiguration, finishPointValidation, type FinishPoint, type FinishPointDraft } from '../features/creator/finishPoint'
 import { RouteEditor } from '../features/creator/RouteEditor'
-import { ParticipantPreview } from '../features/creator/ParticipantPreview'
+import { ParticipantPreview } from '../features/creator/ParticipantPreview.tsx'
 import { WalkingRouteInspection } from '../features/creator/WalkingRouteValidation'
 import { buildGeographyConfiguration, createCheckpointDrafts, isGeographyComplete, resizeCheckpointDrafts } from '../features/creator/checkpointGeography'
 import { creatorTemplatesApi, type CreatorTemplate, type CreatorTemplateContent, type StarterTemplate } from '../services/api/creatorTemplates'
