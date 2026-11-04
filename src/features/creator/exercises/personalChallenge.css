@@ -16,3 +16,12 @@
 @media(max-width:639px) { .challenge-canvas { padding:16px 0; border:0; border-radius:0; box-shadow:none; background:transparent; } .challenge-pencil { width:44px; min-height:44px; } }
 
 .navigation-preview { max-width:340px; }
+
+/* Authoring only: Predefined, Team and Navigation retain their existing shells. */
+.personal-authoring .challenge-canvas { max-width:340px; }
+.personal-authoring .challenge-pencil { width:44px; min-height:44px; }
+.personal-authoring .challenge-canvas select { max-width:100%; min-width:0; }
+.personal-authoring .challenge-inline-editor { padding:10px; }
+
+.personal-authoring .pattern-items { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.personal-authoring .pattern-items > :has([aria-expanded=true]) { grid-column:1 / -1; }

@@ -1,0 +1,4 @@
+
+> tedix_hunt_fe@1.0.0 typecheck
+> tsc --noEmit
+

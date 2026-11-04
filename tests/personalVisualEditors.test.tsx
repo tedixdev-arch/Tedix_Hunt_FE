@@ -49,15 +49,19 @@ const collections = [
   ['multiple-choice','Add option','Remove option','options',2], ['sequence','Add sequence item','Remove sequence item','elements',2],
   ['drag-drop','Add item','Remove item','items',2], ['drag-drop','Add target','Remove target','targets',2],
   ['find-mistake','Add step','Remove step','steps',2], ['find-mistake','Add correction','Remove correction','explanations',2],
-  ['build-problem','Add piece','Remove piece','pieces',2], ['build-problem','Add position','Remove position','slots',1],
+  ['build-problem','Add piece','Remove piece','pieces',2], ['build-problem','Add space','Remove space','slots',1],
   ['shape-pattern','Add shape','Remove shape','shapes',2], ['rule-discovery','Add rule','Remove rule','rules',2],
 ] as const
 for (const [type, add, remove, key, minimum] of collections) test(`${type}/${key}: removal retains valid references and add respects maximum`, async () => {
   await act(async () => root.render(<Harness initial={authorPrototype(prototypes.find(e => e.type === type)!)} />))
   while ((state.authored!.activity as any)[key].length > minimum) {
     // Removing a construction position/piece can require explicit answer repair; never silently invent the answer.
-    await click(`${remove} ${(state.authored!.activity as any)[key].length}`)
+    const count = (state.authored!.activity as any)[key].length
+    if (key === 'slots' && !button('Add space')) await click('Edit Spaces')
+    await click(`Edit ${remove.replace('Remove ', '').replace(/^./, c => c.toUpperCase())} ${count}`)
+    await click(`${remove} ${count}`)
   }
+  await click(`Edit ${remove.replace('Remove ', '').replace(/^./, c => c.toUpperCase())} 1`)
   expect(button(`${remove} 1`).disabled).toBe(true)
   while ((state.authored!.activity as any)[key].length < 40) await click(add)
   expect(button(add).disabled).toBe(true)
@@ -68,17 +72,19 @@ for (const [type, add, remove, key, minimum] of collections) test(`${type}/${key
 test('number patterns preserve exactly one missing position when it moves', async () => {
   await act(async () => root.render(<Harness initial={authorPrototype(prototypes.find(e => e.type === 'number-pattern')!)} />))
   const before: any = structuredClone(state.authored)
-  await click('Make position 1 missing')
+  await click('Edit Pattern item 1'); await click('Make this the blank')
   const d: any = state.authored!.activity, a: any = state.authored!.expected
   expect(d.missingId).toBe(before.activity.terms[0].id); expect(a.value).toBe(before.activity.terms[0].value)
   expect(d.terms.find((x: any) => x.id === before.activity.missingId).value).toBe(before.expected.value)
   expect(d.terms.filter((x: any) => !Object.hasOwn(x, 'value'))).toHaveLength(1)
-  expect(button('Remove term 1').disabled).toBe(true); expect(validateExercise(state)).toEqual([])
+  expect(button('Remove item').disabled).toBe(true); expect(validateExercise(state)).toEqual([])
 })
 
 test('matching relationships swap atomically without duplicate right-side identities', async () => {
   await act(async () => root.render(<Harness initial={authorPrototype(prototypes.find(e => e.type === 'match-columns')!)} />))
-  const before: any = structuredClone(state.authored), select = container.querySelector<HTMLSelectElement>('select')!
+  const before: any = structuredClone(state.authored)
+  await click(`Edit Match for ${before.activity.left[0].text}`)
+  const select = container.querySelector<HTMLSelectElement>('select')!
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(select, before.expected.pairs[1].rightId); select.dispatchEvent(new Event('change', { bubbles: true })) })
   const after: any = state.authored
   expect(after.expected.pairs[0].rightId).toBe(before.expected.pairs[1].rightId); expect(after.expected.pairs[1].rightId).toBe(before.expected.pairs[0].rightId)
@@ -110,20 +116,25 @@ test('minimum number-line position is an explicit keyboard answer and survives m
 
 for (const [type, add, remove, key, minimum] of [
   ['match-columns', 'Add pair', 'Remove pair', 'left', 2],
-  ['number-pattern', 'Add term', 'Remove term', 'terms', 3],
-  ['shape-pattern', 'Add term', 'Remove term', 'terms', 3],
+  ['number-pattern', 'Add pattern item', 'Remove term', 'terms', 3],
+  ['shape-pattern', 'Add pattern item', 'Remove term', 'terms', 3],
   ['rule-discovery', 'Add example', 'Remove example', 'examples', 2],
 ] as const) test(`${type}/${key}: bounded additions/removals retain canonical answer relationships`, async () => {
   await act(async () => root.render(<Harness initial={authorPrototype(prototypes.find(e => e.type === type)!)} />))
   while ((state.authored!.activity as any)[key].length < 40) await click(add)
   expect(button(add).disabled).toBe(true); expect(validateExercise(state)).toEqual([])
+  const contexts = () => buttons().filter(b => b.getAttribute('aria-label')?.startsWith(`Edit ${key === 'terms' ? 'Pattern item' : key === 'examples' ? 'Example' : 'Left card'} `))
   while ((state.authored!.activity as any)[key].length > minimum) {
-    const candidates = buttons().filter(b => b.textContent?.startsWith(`${remove} `) && !b.disabled)
-    await act(async () => candidates.at(-1)!.click())
+    const data: any = state.authored!.activity
+    const index = key === 'terms' ? data.terms.findLastIndex((x: any) => x.id !== data.missingId) : data[key].length - 1
+    const target = contexts()[index]
+    if (target.getAttribute('aria-expanded') !== 'true') await act(async () => target.click())
+    await click(key === 'terms' ? 'Remove item' : `${remove} ${index + 1}`)
   }
   expect(validateExercise(state)).toEqual([])
-  expect(buttons().filter(b => b.textContent?.startsWith(`${remove} `)).every(b => b.disabled)).toBe(true)
   expect(document.activeElement?.getAttribute('aria-label')).toMatch(/^Edit /)
+  for (const target of contexts()) if (target.getAttribute('aria-expanded') !== 'true') await act(async () => target.click())
+  expect(buttons().filter(b => b.textContent === 'Remove item' || b.textContent?.startsWith(`${remove} `)).every(b => b.disabled)).toBe(true)
 }, 20000)
 
 
@@ -141,7 +152,7 @@ for (const type of ['shape-pattern', 'number-pattern'] as const) test(`${type}: 
   const identities = terms.map(term => term.id)
   for (const [revision, position] of [0, 1, 2, 3, 0].entries()) {
     const before: any = structuredClone(state.authored)
-    await click(`Make position ${position + 1} missing`)
+    await click(`Edit Pattern item ${position + 1}`); await click(`Make this the blank`)
     const authored: any = state.authored
     expect(authored.expected).toEqual({ [field]: values[position] })
     expect(authored.activity.terms.find((term: any) => term.id === before.activity.missingId)).toEqual({ id: before.activity.missingId, [field]: before.expected[field] })

@@ -1,3 +1,4 @@
+import { PersonalSupportFields } from './PersonalSupportFields'
 import { useFormulaMode } from './FormulaEditor'
 import { MathHelp } from './MathText'
 import { useState } from 'react'
@@ -27,7 +28,7 @@ export function PersonalChallengeCanvas({ exercise: e, onChange }: Props) {
       <ChallengeCanvas exercise={e} playing={false}><section className="space-y-5" aria-label="Personal visual authoring canvas">
         {(mode === 'visual' || step === 0) && intro}
         {(mode === 'visual' || step === 1 || step === 2) && <PersonalExtendedSurface exercise={e} onChange={onChange} part={mode === 'visual' ? 'all' : step === 1 ? 'content' : 'answer'} />}
-        {mode === 'visual' ? <details><summary className="min-h-11 cursor-pointer py-3 font-bold">✎ Hints, feedback and solution</summary>{feedback}</details> : step === 3 && feedback}
+        {mode === 'visual' ? <PersonalSupportFields exercise={e} onChange={onChange} /> : step === 3 && feedback}
       </section></ChallengeCanvas>
     </div>
     <div hidden={!showPlay}><ChallengeCanvas key={JSON.stringify(e.authored)} exercise={e} /></div>

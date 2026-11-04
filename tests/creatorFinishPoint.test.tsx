@@ -307,13 +307,17 @@ test('Review preview preserves unsaved setup, geography, gameplay and prototype 
   await selectGameplay('Personal Challenge', 'hidden-rule')
   await click('3.'); await click('Create Your Own')
   const authoring = container.querySelector('article:not([hidden]) [aria-label$="content editor"]')!
-  const input = authoring.querySelector('textarea')!
+  await click('Edit Title')
+  const input = authoring.querySelector('textarea[aria-label="Title"]')!
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input, 'Temporary idea')
     input.dispatchEvent(new Event('input', { bubbles: true }))
   })
   const validate = [...container.querySelectorAll('button')].find(button => button.textContent === 'Run template validation')!
   expect(validate.disabled).toBe(true)
+  await click('Review & Submit')
+  // Match a real button activation so the preview restores focus to its opener.
+  ;[...container.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Preview journey')!.focus()
   await click('Preview journey')
   const dialog = container.querySelector('[role="dialog"]')!
   expect(dialog.textContent).toContain('Unsaved Trail')
@@ -495,7 +499,7 @@ for (const [featureNumber, label, field] of [['3.', 'Personal Challenge', 'kind'
     expect(container.querySelector('article:not([hidden]) [aria-label="Checkpoint selector"]')?.querySelectorAll('button').length).toBe(7)
     for (let i = 0; i < 7; i++) {
       await choose(i); await click('Create Your Own')
-      const title = container.querySelector('article:not([hidden]) [aria-label$="content editor"] textarea') as HTMLTextAreaElement
+      const title = await titleField()
       await act(async () => {
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(title, `Draft ${i + 1}`)
         title.dispatchEvent(new Event('input', { bubbles: true }))
@@ -515,7 +519,7 @@ for (const [featureNumber, label, field] of [['3.', 'Personal Challenge', 'kind'
 
 
 async function titleField(): Promise<HTMLTextAreaElement> {
-  const existing = container.querySelector<HTMLTextAreaElement>('article:not([hidden]) [aria-label$="content editor"] textarea, article:not([hidden]) [role="group"][aria-label="Edit Title"] textarea')
+  const existing = container.querySelector<HTMLTextAreaElement>('article:not([hidden]) textarea[aria-label="Title"], article:not([hidden]) [role="group"][aria-label="Edit Title"] textarea')
   if (existing) return existing
   await click('Edit Title')
   return container.querySelector<HTMLTextAreaElement>('article:not([hidden]) [role="group"][aria-label="Edit Title"] textarea')!

@@ -2,13 +2,18 @@ import { chromium } from 'playwright'
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 const before = process.argv.includes('--before')
-const output = `docs/evidence/c1-5a/${before ? 'before' : 'after'}`
+const output = process.env.TEDIX_EVIDENCE_DIR || `docs/evidence/c1-5a/${before ? 'before' : 'after'}`
 await mkdir(output, { recursive: true })
 const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] })
 const page = await browser.newPage()
 const errors = []; page.on('pageerror', e => errors.push(e.message))
 const url = 'http://127.0.0.1:5173/tests/browser/contentVisual.html'
 const results = []
+async function titleField() {
+  const field = page.getByRole('textbox', { name: 'Title', exact: true })
+  if (!await field.isVisible()) await page.getByRole('button', { name: 'Edit Title', exact: true }).click()
+  return field
+}
 for (const width of [1440, 768, 390, 320]) {
   await page.setViewportSize({ width, height: 960 }); await page.goto(url)
   await page.getByRole('button', { name: 'Edit with Preview', exact: true }).waitFor()
@@ -48,23 +53,23 @@ for (const width of [1440, 768, 390, 320]) {
   assert.equal(await page.getByLabel('Content country').inputValue(), '')
   await shot('mathematics')
   await page.getByText('Classification & Location', { exact: true }).click()
-  await page.getByLabel('Title', { exact: true }).fill('My reusable exercise')
+  await (await titleField()).fill('My reusable exercise')
   await shot('preview')
   await page.getByRole('button', { name: 'Complex / LaTeX', exact: true }).click(); await shot('latex')
   await page.getByRole('button', { name: 'Edit with Preview', exact: true }).click()
-  assert.equal(await page.getByLabel('Title', { exact: true }).inputValue(), 'My reusable exercise')
+  assert.equal(await (await titleField()).inputValue(), 'My reusable exercise')
   await page.getByRole('button', { name: 'Add Exercise', exact: true }).click()
   await page.getByText('Exercise prepared for this session. Not saved to Library.', { exact: true }).waitFor(); await shot('prepared')
-  await page.getByLabel('Title', { exact: true }).fill('')
+  await (await titleField()).fill('')
   assert.equal(await page.getByText('Exercise prepared for this session. Not saved to Library.', { exact: true }).count(), 0)
   await page.getByRole('button', { name: 'Add Exercise', exact: true }).click(); await page.getByRole('alert').last().waitFor(); await shot('validation')
-  await page.getByLabel('Title', { exact: true }).fill('Retained exercise')
+  await (await titleField()).fill('Retained exercise')
   page.once('dialog', d => d.dismiss()); await page.getByRole('link', { name: 'Leave Content' }).click()
   await page.getByLabel('Content type').selectOption('Team Challenges'); await shot('team')
   await page.getByLabel('Content type').selectOption('Navigation Hints')
   assert.equal(await page.getByRole('button', { name: 'Add Exercise', exact: true }).count(), 0)
   await page.getByLabel('Content type').selectOption('Personal Challenges')
-  assert.equal(await page.getByLabel('Title', { exact: true }).inputValue(), 'Retained exercise')
+  assert.equal(await (await titleField()).inputValue(), 'Retained exercise')
   await page.getByRole('button', { name: 'Library', exact: true }).click()
   const starter = page.locator('details').filter({ has: page.locator('summary', { hasText: /^Starter/ }) })
   assert.equal(await starter.getAttribute('open'), null); await shot('library')
@@ -80,12 +85,12 @@ for (const width of [1440, 768, 390, 320]) {
         padding: getComputedStyle(mode).paddingTop, height: getComputedStyle(button).minHeight,
         weight: getComputedStyle(button).fontWeight, shadow: getComputedStyle(canvas).boxShadow }
     })
-    assert.equal(template.maxWidth, '390px')
+    assert.equal(template.maxWidth, '340px')
     assert.ok(Math.abs(template.modeWidth - template.parentWidth) < 2, 'Template retains full-width mode selector')
     assert.equal(template.padding, '5px')
     assert.equal(template.height, '48px')
     assert.equal(template.weight, '700')
-    if (width >= 640) { assert.equal(template.canvasWidth, 390); assert.notEqual(template.shadow, 'none') }
+    if (width >= 640) { assert.equal(template.canvasWidth, 340); assert.notEqual(template.shadow, 'none') }
   }
   await shot('template-preview')
   await page.getByRole('button', { name: 'Complex / LaTeX', exact: true }).click(); await shot('template-latex')

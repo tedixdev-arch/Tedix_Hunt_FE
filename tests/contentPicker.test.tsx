@@ -29,6 +29,10 @@ async function mount(element: React.ReactNode) { router = createMemoryRouter([{ 
 const button = (label: string) => [...container.querySelectorAll('button')].find(b => b.textContent === label || b.getAttribute('aria-label') === label)!
 async function click(label: string) { expect(button(label), label).toBeDefined(); await act(async () => button(label).click()) }
 async function change(label: string, value: string) {
+  if (!container.querySelector(`[aria-label="${label}"]`)) {
+    const pencil = [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.getAttribute('aria-label') === `Edit ${label}`)
+    if (pencil) await act(async () => pencil.click())
+  }
   const node = container.querySelector(`[aria-label="${label}"]`) as HTMLSelectElement | HTMLTextAreaElement
   await act(async () => { Object.getOwnPropertyDescriptor(node instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLTextAreaElement.prototype, 'value')!.set!.call(node, value); node.dispatchEvent(new Event(node instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true })) })
 }
@@ -79,12 +83,12 @@ test('section switches retain drafts and never display a mismatched editor', asy
   await change('Content type', 'Navigation Hints')
   expect(container.querySelector('[aria-label="Library exercise draft"]')).toBeNull()
   await change('Content type', 'Personal Challenges')
-  expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).toBe('Unsaved personal title')
+  if (!container.querySelector('textarea[aria-label="Title"]')) await click('Edit Title'); expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).toBe('Unsaved personal title')
   expect(container.textContent).toContain('Preserved pair card')
   await click('Discard session draft')
-  expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).toBe('Unsaved personal title')
+  if (!container.querySelector('textarea[aria-label="Title"]')) await click('Edit Title'); expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).toBe('Unsaved personal title')
   vi.mocked(window.confirm).mockReturnValue(true); await click('Discard session draft')
-  expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).not.toBe('Unsaved personal title')
+  if (!container.querySelector('textarea[aria-label="Title"]')) await click('Edit Title'); expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).not.toBe('Unsaved personal title')
 })
 test('Mathematics hierarchy is conditional, uses supplied associations and resets descendants', async () => {
   const items: ContentRecord[] = [{ ...starterContent[0], curriculum: [

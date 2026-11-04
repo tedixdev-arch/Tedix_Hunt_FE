@@ -34,7 +34,7 @@ async function render(path = '/creator') {
   ], { initialEntries: [path] })
   await act(async () => root.render(<RouterProvider router={router} />))
 }
-const button = (label: string) => [...container.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent?.startsWith(label))!
+const button = (label: string) => [...container.querySelectorAll<HTMLButtonElement>('button')].find(node => node.getAttribute('aria-label') === label || node.textContent?.startsWith(label))!
 async function click(label: string) {
   if (['Personal Challenges', 'Team Challenges', 'Navigation Hints'].includes(label)) {
     const field = container.querySelector<HTMLSelectElement>('[aria-label="Content type"]')!
@@ -43,10 +43,13 @@ async function click(label: string) {
   }
   const target = button(label); target.focus(); await act(async () => target.click()); return target
 }
-const titleField = () => [...container.querySelectorAll('label')].find(label => label.textContent?.startsWith('Title'))!.querySelector('textarea')!
+const titleField = async () => {
+  if (![...container.querySelectorAll('label')].some(label => label.textContent?.startsWith('Title'))) await click('Edit Title')
+  return [...container.querySelectorAll('label')].find(label => label.textContent?.startsWith('Title'))!.querySelector('textarea')!
+}
 async function editTitle(value: string) {
+  const field = await titleField()
   await act(async () => {
-    const field = titleField()
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(field, value)
     field.dispatchEvent(new Event('input', { bubbles: true }))
   })
@@ -203,7 +206,7 @@ test.each(['Personal Challenges', 'Team Challenges'])('%s edits warn until rever
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
   await render(); await click('Content'); await click(category)
   if (category === 'Team Challenges') await click('Step by Step')
-  const initialTitle = titleField().value
+  const initialTitle = (await titleField()).value
   await editTitle('Modified session content')
   expect(reloadWarns()).toBe(true)
   await act(async () => router.navigate('/creator/sign-in'))
@@ -213,10 +216,10 @@ test.each(['Personal Challenges', 'Team Challenges'])('%s edits warn until rever
   expect(reloadWarns()).toBe(false)
   await editTitle('Modified again')
   await click('Discard session draft') // Cancel preserves both content and dirty state.
-  expect(titleField().value).toBe('Modified again'); expect(reloadWarns()).toBe(true)
+  expect((await titleField()).value).toBe('Modified again'); expect(reloadWarns()).toBe(true)
   confirm.mockReturnValue(true); await click('Discard session draft')
   if (category === 'Team Challenges' && !container.querySelector('[aria-label="Guided Team Challenge editor"]')) await click('Step by Step')
-  expect(titleField().value).toBe(initialTitle)
+  expect((await titleField()).value).toBe(initialTitle)
   expect(reloadWarns()).toBe(false)
   // An ordinary editor callback with unchanged content must remain clean after reset.
   await editTitle(initialTitle)
@@ -233,13 +236,13 @@ test('edited Personal and Team drafts survive all section switches; discarding o
   await click('Team Challenges'); await click('Step by Step'); await editTitle('Team work')
   await click('Library'); await click('Navigation Hints'); await click('Create Content')
   await click('Templates'); await click('Content'); await click('Personal Challenges')
-  expect(titleField().value).toBe('Personal work'); expect(reloadWarns()).toBe(true)
+  expect((await titleField()).value).toBe('Personal work'); expect(reloadWarns()).toBe(true)
   expect(confirm).not.toHaveBeenCalled()
   confirm.mockReturnValue(true); await click('Discard session draft')
-  expect(titleField().value).not.toBe('Personal work')
+  expect((await titleField()).value).not.toBe('Personal work')
   expect(reloadWarns()).toBe(true) // Team edits still exist while Personal is clean.
   await click('Team Challenges'); await click('Step by Step')
-  expect(titleField().value).toBe('Team work')
+  expect((await titleField()).value).toBe('Team work')
   confirm.mockReturnValue(false)
   await act(async () => router.navigate('/creator/sign-in'))
   expect(router.state.location.pathname).toBe('/creator')

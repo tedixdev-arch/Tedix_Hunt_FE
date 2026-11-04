@@ -1,3 +1,4 @@
+import { PersonalSupportFields } from './PersonalSupportFields'
 import { FormulaField, FormulaScope, useFormulaMode } from './FormulaEditor'
 import { MathFieldPreview, MathHelp } from './MathText'
 import { useRef, useState } from 'react'
@@ -59,7 +60,7 @@ export function PersonalMechanicSurface({ exercise, onChange, onlyIndex }: Props
 }
 
 export function PersonalMechanicEditor(props: Props) {
-  return <FormulaScope>{originalVisualMechanics.includes(props.exercise.type) ? <OriginalPersonalMechanicEditor {...props} /> : <PersonalChallengeCanvas {...props} />}</FormulaScope>
+  return <FormulaScope><div className="personal-authoring">{originalVisualMechanics.includes(props.exercise.type) ? <OriginalPersonalMechanicEditor {...props} /> : <PersonalChallengeCanvas {...props} />}</div></FormulaScope>
 }
 function OriginalPersonalMechanicEditor({ exercise, onChange }: Props) {
   const [mode, setMode] = useState('visual'), [step, setStep] = useState(0), [playing, setPlaying] = useState(false)
@@ -71,7 +72,7 @@ function OriginalPersonalMechanicEditor({ exercise, onChange }: Props) {
   const itemName = exercise.type === 'tap-pair' ? 'matching pair' : exercise.type === 'single-choice' ? 'answer option' : 'blank question'
   const tasks = [...Array.from({ length: count }, (_, i) => `Create ${itemName} ${i + 1}`), 'Hints', 'Feedback', 'Solution', 'Try challenge']
   const current = Math.min(step, tasks.length - 1)
-  const input = (key: 'solution' | 'correctFeedback' | 'incorrectFeedback', label: string) => <FormulaField label={label} value={exercise[key]} onChange={value => onChange({ ...exercise, [key]: value })} maxLength={key === 'solution' ? 4000 : 2000}><label className="block text-sm font-bold">{label}<textarea className={`${control} mt-2 w-full`} required maxLength={key === 'solution' ? 4000 : 2000} aria-invalid={!exercise[key].trim()} value={exercise[key]} onChange={e => onChange({ ...exercise, [key]: e.target.value })} /><MathFieldPreview value={exercise[key]} /></label></FormulaField>
+  const input = (key: 'solution' | 'correctFeedback' | 'incorrectFeedback', label: string) => <FormulaField label={label} value={exercise[key]} onChange={value => onChange({ ...exercise, [key]: value })} maxLength={key === 'solution' ? 4000 : 2000}><label className="block text-sm font-bold">{label}<textarea aria-label={label} className={`${control} mt-2 w-full`} required maxLength={key === 'solution' ? 4000 : 2000} aria-invalid={!exercise[key].trim()} value={exercise[key]} onChange={e => onChange({ ...exercise, [key]: e.target.value })} /><MathFieldPreview value={exercise[key]} /></label></FormulaField>
   const hints = <div className="space-y-3">{exercise.authored!.hints.map((hint, index) => <div key={index}><FormulaField label={`Hint ${index + 1}`} value={hint} onChange={value => onChange({ ...exercise, authored: { ...exercise.authored!, hints: exercise.authored!.hints.map((h, i) => i === index ? value : h) } })}><label className="block text-sm font-bold">Hint {index + 1}<textarea className={`${control} mt-2 w-full`} maxLength={2000} required aria-invalid={!hint.trim()} value={hint} onChange={e => onChange({ ...exercise, authored: { ...exercise.authored!, hints: exercise.authored!.hints.map((h, i) => i === index ? e.target.value : h) } })} /><MathFieldPreview value={hint} /></label></FormulaField><button type="button" className={control} onClick={() => onChange({ ...exercise, authored: { ...exercise.authored!, hints: exercise.authored!.hints.filter((_, i) => i !== index) } })}>Remove hint {index + 1}</button></div>)}<button type="button" className={control} disabled={exercise.authored!.hints.length >= 10} onClick={() => onChange({ ...exercise, authored: { ...exercise.authored!, hints: [...exercise.authored!.hints, ''] } })}>Add hint</button></div>
   const expected: any = exercise.authored!.expected
   const complete = (value: unknown, max = 2000) => typeof value === 'string' && !!value.trim() && value.length <= max
@@ -80,13 +81,12 @@ function OriginalPersonalMechanicEditor({ exercise, onChange }: Props) {
   const stepIssues = current < count ? itemComplete ? [] : ['Complete the text and answer for this item.'] : current === count ? errors.filter(error => /hint/i.test(error)) : current === count + 1 ? errors.filter(error => /feedback/i.test(error)) : current === count + 2 ? errors.filter(error => /solution/i.test(error)) : errors
   return <div className="space-y-5">
     <div className="challenge-mode" aria-label="Editing mode">{[['visual', 'Edit with Preview'], ['steps', 'Complex / LaTeX']].map(([id, label]) => <button key={id} type="button" aria-pressed={mode === id} onClick={() => { setMode(id); setPlaying(false) }}>{label}</button>)}</div>
-    {mode === 'steps' && <MathHelp />}
+    {mode === 'steps' && <><MathHelp />{(['title', 'instructions'] as const).map(key => <FormulaField key={key} label={key === 'title' ? 'Title' : 'Instructions / Question'} value={exercise[key]} onChange={value => onChange({ ...exercise, [key]: value })} maxLength={key === 'title' ? 200 : 4000}><label className="block text-sm font-bold">{key === 'title' ? 'Title' : 'Instructions / Question'}<textarea aria-label={key === 'title' ? 'Title' : 'Instructions / Question'} className={`${control} mt-2 w-full`} required maxLength={key === 'title' ? 200 : 4000} aria-invalid={!exercise[key].trim()} value={exercise[key]} onChange={event => onChange({ ...exercise, [key]: event.target.value })} /></label></FormulaField>)}</>}
     {mode === 'visual' ? <>
       {priority ? <div className="flex justify-center gap-2" aria-label="Canvas interaction">{['Edit', 'Try challenge'].map(label => <button type="button" key={label} className={`${control} min-w-20 font-bold ${playing === (label === 'Try challenge') ? 'border-emerald-600 bg-emerald-100' : ''}`} aria-pressed={playing === (label === 'Try challenge')} disabled={label === 'Try challenge' && errors.length > 0} onClick={() => setPlaying(label === 'Try challenge')}>{label}</button>)}</div> : <p className="text-sm text-slate-600">Play below. To change this challenge, choose Complex / LaTeX.</p>}
       <ChallengeCanvas exercise={exercise} playing={!priority || playing}>
         <section className="space-y-5"><div className="text-2xl font-bold"><PencilField label="Title" value={exercise.title} maxLength={200} onChange={title => onChange({ ...exercise, title })} /></div><PencilField label="Instructions" value={exercise.instructions} maxLength={4000} onChange={instructions => onChange({ ...exercise, instructions })} /><PersonalVisualSurface exercise={exercise} onChange={onChange} />
-          <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-bold">Hints ✎</summary>{hints}</details>
-          <div className="space-y-3 text-sm"><PencilField label="Correct feedback" value={exercise.correctFeedback} onChange={correctFeedback => onChange({ ...exercise, correctFeedback })} /><PencilField label="Try again feedback" value={exercise.incorrectFeedback} onChange={incorrectFeedback => onChange({ ...exercise, incorrectFeedback })} /><PencilField label="Solution" value={exercise.solution} maxLength={4000} onChange={solution => onChange({ ...exercise, solution })} /></div>
+          <PersonalSupportFields exercise={exercise} onChange={onChange} />
         </section>
       </ChallengeCanvas>
     </> : priority ? <section aria-label="Guided challenge editor" className="space-y-4 rounded-2xl bg-slate-50 p-4">

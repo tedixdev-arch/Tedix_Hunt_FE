@@ -1,0 +1,27 @@
+{
+  "base": "61681cd035d5306b5af4045c268120565b9491e9",
+  "typecheck": "passed",
+  "build": "passed; existing large chunk warning",
+  "nodeTests": 43,
+  "vitestTests": 995,
+  "vitestFiles": 53,
+  "contextualBrowserScenarios": 90,
+  "personalBrowserScenarios": 12,
+  "extendedBrowserScenarios": 48,
+  "teamBrowserScenarios": 28,
+  "contentBrowserWidths": [
+    1440,
+    768,
+    390,
+    320
+  ],
+  "navigationBrowserWidths": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "screenshots": 286,
+  "deployment": "none",
+  "backend": "mocked FE fixtures; no live writes"
+}
