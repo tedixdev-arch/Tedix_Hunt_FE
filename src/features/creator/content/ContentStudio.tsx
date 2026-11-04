@@ -2,16 +2,18 @@ import { useBlocker } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { ContentLibrary } from './ContentLibrary'
 import { categories, type ContentCategory } from './catalog'
-import { ChallengeAuthoring } from '../exercises/ChallengeAuthoring'
+import { LibraryAuthoring } from './LibraryAuthoring'
+import { independentExercise, prototypes } from '../exercises/catalog'
+import { authorPrototype } from '../exercises/persistenceAdapter'
+import { teamExample } from '../exercises/teamExamples'
 import type { AuthoringDraft } from '../exercises/experimentDrafts'
-import type { CheckpointGameplay } from '../checkpointGameplay'
 import { control } from '../exercises/ExerciseRenderer'
 
 export function ContentStudio({ active }: { active: boolean }) {
   const [view, setView] = useState<'create' | 'library'>('create')
   const [category, setCategory] = useState<ContentCategory>('Personal Challenges')
-  const [drafts, setDrafts] = useState<Record<string, AuthoringDraft>>({})
-  const [values, setValues] = useState<Record<string, CheckpointGameplay>>({})
+  const fresh = (team: boolean): AuthoringDraft => ({ source: 'custom', assignment: 'predefined', custom: authorPrototype(independentExercise(team ? teamExample('scrambled-word') : prototypes[0])) })
+  const [drafts, setDrafts] = useState<Record<string, AuthoringDraft>>(() => ({ 'Personal Challenges': fresh(false), 'Team Challenges': fresh(true) }))
   const dirty = Object.values(drafts).some(d => !!d.custom)
   const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname)
   useEffect(() => {
@@ -31,7 +33,7 @@ export function ContentStudio({ active }: { active: boolean }) {
     <div aria-label="Content categories" className="mt-4 flex flex-wrap gap-2">{categories.map(name => <button key={name} type="button" aria-pressed={category === name} className={`${control} ${category === name ? 'bg-emerald-100 font-bold' : 'bg-white'}`} onClick={() => setCategory(name)}>{name}</button>)}</div>
     {view === 'library' ? <ContentLibrary category={category} /> : <div className="mt-5 min-w-0 rounded-2xl border bg-white p-4 sm:p-6">
       <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm font-bold">Unsaved session drafts only. Content is not saved to a library. Switching sections keeps drafts in this session; leaving or reloading loses them.</p>
-      {category === 'Navigation Hints' ? <p className="mt-4">Navigation Hints are configured in Templates. Standalone hint authoring is unavailable.</p> : <ChallengeAuthoring key={category} field={category === 'Personal Challenges' ? 'kind' : 'teamKind'} value={values[category] ?? {}} draft={drafts[category]} onChange={v => setValues(old => ({ ...old, [category]: v }))} onDraftChange={d => setDrafts(old => ({ ...old, [category]: d }))} sessionOnly />}
+      {category === 'Navigation Hints' ? <p className="mt-4">Navigation Hints are configured in Templates. Standalone hint authoring is unavailable.</p> : <LibraryAuthoring key={category} team={category === 'Team Challenges'} draft={drafts[category]} onDraftChange={d => setDrafts(old => ({ ...old, [category]: d }))} onDiscard={() => setDrafts(old => ({ ...old, [category]: fresh(category === 'Team Challenges') }))} />}
     </div>}
     {!active && dirty && <span className="sr-only">Session drafts retained</span>}
   </section>

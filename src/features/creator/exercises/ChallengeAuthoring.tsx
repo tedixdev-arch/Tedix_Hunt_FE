@@ -69,6 +69,6 @@ function ExistingChallengeAuthoring({ field, value, onChange, draft = { source: 
 // Naming is a Creator UI layer; the seven stored team identifiers remain unchanged.
 export const teamCatalog = checkpointExercises.map(row => ({ id: row.teamKind as TeamType, title: row.title }))
 
-export function ChallengeAuthoring(props: Parameters<typeof ExistingChallengeAuthoring>[0] & { context?: PersonalCreationContext; sessionOnly?: boolean }) {
+export function ChallengeAuthoring(props: Parameters<typeof ExistingChallengeAuthoring>[0] & { context?: PersonalCreationContext }) {
   return props.field === 'kind' ? <PersonalChallengeAuthoring {...props} /> : <TeamChallengeAuthoring {...props} legacy={<ExistingChallengeAuthoring {...props} />} />
 }

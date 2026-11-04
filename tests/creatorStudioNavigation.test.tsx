@@ -166,14 +166,14 @@ test('Content separates creation and Library with collapsed Starters and green n
 })
 
 test('session drafts survive workflow, category and primary navigation and block route loss', async () => {
-  await render(); await click('Content'); await click('Create Your Own')
+  await render(); await click('Content')
   expect(container.textContent).toContain('Unsaved session draft')
-  await click('Team Challenges'); await click('Create Your Own')
+  await click('Team Challenges')
   expect(container.querySelector('[aria-label="Team Challenge authoring"]')).not.toBeNull()
   await click('Library'); await click('Create Content'); await click('Personal Challenges')
-  expect(button('Create Your Own').getAttribute('aria-pressed')).toBe('true')
+  expect(container.querySelector('[aria-label="Personal Challenge authoring"]')).not.toBeNull()
   await click('Templates'); await click('Content')
-  expect(button('Create Your Own').getAttribute('aria-pressed')).toBe('true')
+  expect(container.querySelector('[aria-label="Personal Challenge authoring"]')).not.toBeNull()
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
   await act(async () => router.navigate('/creator/sign-in'))
   expect(confirm).toHaveBeenCalled(); expect(router.state.location.pathname).toBe('/creator')
