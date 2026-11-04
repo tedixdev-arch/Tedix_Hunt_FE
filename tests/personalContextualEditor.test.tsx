@@ -5,10 +5,10 @@ import { beforeEach, afterEach, expect, test, vi } from 'vitest'
 import { PersonalChallengeAuthoring } from '../src/features/creator/exercises/PersonalChallengeAuthoring'
 import { personalTypes, prototypes, validateExercise, type Exercise } from '../src/features/creator/exercises/catalog'
 import type { AuthoringDraft } from '../src/features/creator/exercises/experimentDrafts'
-let host: HTMLDivElement, root: Root, draft: AuthoringDraft
+let host: HTMLDivElement, root: Root, draft: AuthoringDraft, replaceAnswer: (answer: any) => void
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);host=document.createElement('div');document.body.append(host);root=createRoot(host) })
 afterEach(() => { act(()=>root.unmount());host.remove();vi.unstubAllGlobals() })
-function Harness({ standalone }: { standalone: boolean }) { const [value,set]=useState<AuthoringDraft>(standalone ? {source:'custom',assignment:'predefined',custom:authorPrototype(prototypes[0])} : {source:'saved',assignment:'predefined'});draft=value;return <PersonalChallengeAuthoring standalone={standalone} value={{}} draft={value} onDraftChange={set} onChange={()=>{}} /> }
+function Harness({ standalone }: { standalone: boolean }) { const [value,set]=useState<AuthoringDraft>(standalone ? {source:'custom',assignment:'predefined',custom:authorPrototype(prototypes[0])} : {source:'saved',assignment:'predefined'});draft=value;replaceAnswer=answer=>set(current=>({...current,custom:{...current.custom!,authored:{...current.custom!.authored!,expected:answer}} as Exercise}));return <PersonalChallengeAuthoring standalone={standalone} value={{}} draft={value} onDraftChange={set} onChange={()=>{}} /> }
 const button=(label:string)=>[...host.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.getAttribute('aria-label')===label||b.textContent===label)!
 async function click(label:string){await act(async()=>button(label).click())}
 async function write(field: HTMLTextAreaElement,value:string){await act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value')!.set!.call(field,value);field.dispatchEvent(new Event('input',{bubbles:true}))})}
@@ -38,4 +38,34 @@ test('Escape closes a pattern editor after its action disables the focused butto
  await click('Edit Pattern item 1');const action=button('Make this the blank');action.focus();await click('Make this the blank');expect(action.disabled).toBe(true)
  await act(async()=>document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})))
  expect(button('Edit Pattern item 1').getAttribute('aria-expanded')).toBe('false');expect(document.activeElement).toBe(button('Edit Pattern item 1'));expect(validateExercise(draft.custom!)).toEqual([])
+})
+
+for (const standalone of [false, true]) for (const [type] of personalTypes) test(`${standalone ? 'Content' : 'Template'} ${type}: answer changes cannot leak into the closed student preview`, async () => {
+ await act(async () => root.render(<Harness standalone={standalone} />)); if (!standalone) await click('Create Your Own')
+ const select = host.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!
+ await act(async () => { select.value = type; select.dispatchEvent(new Event('change', { bubbles: true })) })
+ const canvas = host.querySelector('.challenge-canvas')!, before = canvas.textContent
+ const d: any = draft.custom!.authored!.activity, a: any = structuredClone(draft.custom!.authored!.expected)
+ switch (type) {
+ case 'tap-pair': case 'match-columns': [a.pairs[0].rightId, a.pairs[1].rightId] = [a.pairs[1].rightId, a.pairs[0].rightId]; break
+ case 'single-choice': a.optionId = d.options.find((x: any) => x.id !== a.optionId).id; break
+ case 'multiple-choice': a.optionIds = [d.options.find((x: any) => !a.optionIds.includes(x.id)).id]; break
+ case 'true-false': a.value = !a.value; break
+ case 'memory-card': a.value = 'Private recall answer'; a.caseSensitive = !a.caseSensitive; break
+ case 'number-line': a.target = a.target === d.min ? d.max : d.min; break
+ case 'drag-drop': a.assignments[0].targetId = d.targets.find((x: any) => x.id !== a.assignments[0].targetId).id; break
+ case 'fill-blank': a.values[0].value = 'Private blank answer'; a.caseSensitive = !a.caseSensitive; break
+ case 'sequence': a.order.reverse(); break
+ case 'find-mistake': a.stepId = d.steps.find((x: any) => x.id !== a.stepId).id; a.explanationId = d.explanations.find((x: any) => x.id !== a.explanationId).id; break
+ case 'build-problem': a.construction.reverse(); break
+ case 'number-pattern': a.value = 876543; break
+ case 'shape-pattern': a.shapeId = d.shapes.find((x: any) => x.id !== a.shapeId).id; break
+ case 'rule-discovery': a.ruleId = d.rules.find((x: any) => x.id !== a.ruleId).id; a.predictedOutput = 876543; break
+ }
+ await act(async () => replaceAnswer(a)); expect(canvas.textContent).toBe(before)
+ expect(canvas.querySelector('[role="group"][aria-label="Edit correct answer"]')).toBeNull()
+ expect(canvas.textContent).not.toMatch(/Correct sequence|Correct construction|Accepted distance|Accepted answer|Accepted recall answer|Missing shape|Missing number|Correct explanation|Correct truth value|Predicted output|✓ Correct answer/)
+ await click('Edit correct answer'); expect(canvas.querySelector('[role="group"][aria-label="Edit correct answer"]')).not.toBeNull()
+ const snapshot = structuredClone(draft.custom); await click('Complex / LaTeX'); await click('Edit with Preview'); expect(draft.custom).toEqual(snapshot)
+ expect(host.querySelector('.challenge-canvas [role="group"][aria-label="Edit correct answer"]')).toBeNull()
 })

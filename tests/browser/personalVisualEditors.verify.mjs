@@ -13,6 +13,11 @@ const feature = () => openFeature(page, /Personal Challenge/)
 const play = () => panel().locator('[aria-label$="interactive exercise"]:visible')
 async function save() { await saveChallengeDraft(page); await page.getByRole('status').filter({ hasText: 'Template version saved by the backend' }).waitFor() }
 async function pencil(label, value, numeric = false) {
+  if (!await btn(`Edit ${label}`).isVisible()) {
+    if (['Minimum', 'Maximum', 'Tick spacing'].includes(label)) { if (await btn('Edit Number line').getAttribute('aria-expanded') !== 'true') await btn('Edit Number line').click() }
+    else if (label === 'Reveal delay (milliseconds)') { if (await btn('Edit Recall card').getAttribute('aria-expanded') !== 'true') await btn('Edit Recall card').click() }
+    else if (await btn('Edit correct answer').getAttribute('aria-expanded') !== 'true') await btn('Edit correct answer').click()
+  }
   const trigger = btn(`Edit ${label}`); await trigger.focus(); await page.keyboard.press('Enter')
   const field = panel().getByRole('group', { name: `Edit ${label}`, exact: true }).getByRole(numeric ? 'spinbutton' : 'textbox')
   assert.equal(await field.evaluate(n => n === document.activeElement), true)
@@ -46,18 +51,18 @@ async function solve(e) {
 }
 async function edit(type, e) {
   const d = e.interaction, a = e.answer
-  const choose = async (label, value) => { await btn(`Edit ${label}`).click(); await panel().getByRole('combobox', { name: label, exact: true }).selectOption(value); await page.keyboard.press('Escape') }
+  const choose = async (label, value) => { if (!await btn(`Edit ${label}`).isVisible()) await btn('Edit correct answer').click(); await btn(`Edit ${label}`).click(); await panel().getByRole('combobox', { name: label, exact: true }).selectOption(value); await page.keyboard.press('Escape') }
   await pencil('Title', `Visual ${type}`)
   switch (type) {
-    case 'true-false': await pencil('Statement', 'A square has four sides.'); await btn(a.value ? 'False' : 'True').click(); break
+    case 'true-false': await pencil('Statement', 'A square has four sides.'); await btn('Edit correct answer').click(); await panel().getByRole('group', { name: 'Edit correct answer', exact: true }).getByRole('button', { name: a.value ? 'False' : 'True', exact: true }).click(); break
     case 'memory-card': await pencil('Recall card', 'Recall this blue triangle'); await pencil('Accepted recall answer', 'blue triangle'); await pencil('Reveal delay (milliseconds)', 1000, true); break
     case 'number-line': await pencil('Instructions', 'Place the marker on the correct tick.'); await pencil('Maximum', d.max + d.step, true); await pencil('Correct value', a.target === d.min ? d.min + d.step : d.min, true); break
     case 'multiple-choice': await pencil('Option 1', 'Edited choice'); await btn('Edit Option 1').click(); await panel().getByRole('group', { name: 'Edit Option 1', exact: true }).getByRole('checkbox', { name: 'Correct answer', exact: true }).setChecked(!a.optionIds.includes(d.options[0].id)); if (a.optionIds.length === 1 && a.optionIds[0] === d.options[0].id) { await page.keyboard.press('Escape'); await btn('Edit Option 2').click(); await panel().getByRole('group', { name: 'Edit Option 2', exact: true }).getByRole('checkbox', { name: 'Correct answer', exact: true }).check() }; await page.keyboard.press('Escape'); break
     case 'match-columns': await pencil('Left card 1', 'Edited matching card'); await choose('Match for Edited matching card', d.right.find(x => x.id !== a.pairs[0].rightId).id); break
     case 'drag-drop': await pencil('Item 1', 'Edited movable item'); await choose('Place Edited movable item', d.targets.find(x => x.id !== a.assignments[0].targetId).id); break
-    case 'sequence': await pencil('Sequence item 1', 'Edited sequence card'); await btn('Edit Answer item 1').click(); await btn('Move answer position 1 down').click(); await page.keyboard.press('Escape'); break
+    case 'sequence': await pencil('Sequence item 1', 'Edited sequence card'); await btn('Edit correct answer').click(); await btn('Edit Answer item 1').click(); await btn('Move answer position 1 down').click(); await page.keyboard.press('Escape'); break
     case 'find-mistake': await pencil('Step 1', 'Edited worked step'); await choose('Incorrect step', d.steps.find(x => x.id !== a.stepId).id); await choose('Correct explanation', d.explanations.find(x => x.id !== a.explanationId).id); break
-    case 'build-problem': await pencil('Piece 1', 'Edited construction piece'); await btn('Edit Answer item 1').click(); await btn('Move answer position 1 down').click(); await page.keyboard.press('Escape'); break
+    case 'build-problem': await pencil('Piece 1', 'Edited construction piece'); await btn('Edit correct answer').click(); await btn('Edit Answer item 1').click(); await btn('Move answer position 1 down').click(); await page.keyboard.press('Escape'); break
     case 'number-pattern': await btn('Edit Pattern item 1').click(); await panel().getByRole('spinbutton', { name: 'Number', exact: true }).fill(String(d.terms[0].value + 1)); await page.keyboard.press('Escape'); await pencil('Missing number', a.value + 1, true); break
     case 'shape-pattern': await pencil('Shape 1', 'Edited shape'); await choose('Missing shape', d.shapes.find(x => x.id !== a.shapeId).id); break
     case 'rule-discovery': await btn('Edit Example 1').click(); await panel().getByRole('spinbutton', { name: 'Output', exact: true }).fill(String(d.examples[0].output + 1)); await page.keyboard.press('Escape'); await choose('Correct rule', d.rules.find(x => x.id !== a.ruleId).id); await pencil('Predicted output', a.predictedOutput + 1, true); break

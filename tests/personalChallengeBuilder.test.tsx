@@ -107,7 +107,7 @@ test('marking a choice correct uses stable identity and removing it requires ano
 test('blank accepted answer edits and removals retain other identities', async () => {
   await mount(asDraft(custom('fill-blank')))
   const expected: any = structuredClone(state.custom!.authored!.expected)
-  await click('Edit Accepted answer 1'); await input(container.querySelector('[role="group"] textarea')!, 'New answer'); await click('Done')
+  await click('Edit correct answer'); await click('Edit Accepted answer 1'); await input(container.querySelector('[role="group"] textarea')!, 'New answer'); await click('Done')
   expect((state.custom!.authored!.expected as any).values[0]).toEqual({ ...expected.values[0], value: 'New answer' })
   await act(async () => (container.querySelector('input[type="checkbox"]') as HTMLInputElement).click())
   expect((state.custom!.authored!.expected as any).caseSensitive).toBe(true)

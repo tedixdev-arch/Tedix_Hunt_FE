@@ -1,3 +1,4 @@
+import { PersonalAnswerControl } from './PersonalAnswerControl'
 import { PersonalSupportFields } from './PersonalSupportFields'
 import { FormulaField, FormulaScope, useFormulaMode } from './FormulaEditor'
 import { MathFieldPreview, MathHelp } from './MathText'
@@ -85,7 +86,7 @@ function OriginalPersonalMechanicEditor({ exercise, onChange }: Props) {
     {mode === 'visual' ? <>
       {priority ? <div className="flex justify-center gap-2" aria-label="Canvas interaction">{['Edit', 'Try challenge'].map(label => <button type="button" key={label} className={`${control} min-w-20 font-bold ${playing === (label === 'Try challenge') ? 'border-emerald-600 bg-emerald-100' : ''}`} aria-pressed={playing === (label === 'Try challenge')} disabled={label === 'Try challenge' && errors.length > 0} onClick={() => setPlaying(label === 'Try challenge')}>{label}</button>)}</div> : <p className="text-sm text-slate-600">Play below. To change this challenge, choose Complex / LaTeX.</p>}
       <ChallengeCanvas exercise={exercise} playing={!priority || playing}>
-        <section className="space-y-5"><div className="text-2xl font-bold"><PencilField label="Title" value={exercise.title} maxLength={200} onChange={title => onChange({ ...exercise, title })} /></div><PencilField label="Instructions" value={exercise.instructions} maxLength={4000} onChange={instructions => onChange({ ...exercise, instructions })} /><PersonalVisualSurface exercise={exercise} onChange={onChange} />
+        <section className="space-y-5"><div className="text-2xl font-bold"><PencilField label="Title" value={exercise.title} maxLength={200} onChange={title => onChange({ ...exercise, title })} /></div><PencilField label="Instructions" value={exercise.instructions} maxLength={4000} onChange={instructions => onChange({ ...exercise, instructions })} /><PersonalVisualSurface exercise={exercise} onChange={onChange} /><PersonalAnswerControl><PersonalVisualSurface exercise={exercise} onChange={onChange} answerOnly /></PersonalAnswerControl>
           <PersonalSupportFields exercise={exercise} onChange={onChange} />
         </section>
       </ChallengeCanvas>

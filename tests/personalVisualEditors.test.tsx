@@ -83,7 +83,7 @@ test('number patterns preserve exactly one missing position when it moves', asyn
 test('matching relationships swap atomically without duplicate right-side identities', async () => {
   await act(async () => root.render(<Harness initial={authorPrototype(prototypes.find(e => e.type === 'match-columns')!)} />))
   const before: any = structuredClone(state.authored)
-  await click(`Edit Match for ${before.activity.left[0].text}`)
+  await click('Edit correct answer'); await click(`Edit Match for ${before.activity.left[0].text}`)
   const select = container.querySelector<HTMLSelectElement>('select')!
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(select, before.expected.pairs[1].rightId); select.dispatchEvent(new Event('change', { bubbles: true })) })
   const after: any = state.authored
@@ -93,7 +93,7 @@ test('matching relationships swap atomically without duplicate right-side identi
 
 test('invalid number-line edits block Play and guided continuation rather than coercing empty input', async () => {
   await act(async () => root.render(<Harness initial={authorPrototype(prototypes.find(e => e.type === 'number-line')!)} />))
-  await click('Edit Maximum'); await input(container.querySelector('input[type="number"]')!, '')
+  await click('Edit Number line'); await click('Edit Maximum'); await input(container.querySelector('input[type="number"]')!, '')
   expect(Number.isNaN((state.authored!.activity as any).max)).toBe(true)
   expect(button('Try challenge').disabled).toBe(true)
   await click('Complex / LaTeX'); await click('Next'); expect(button('Next').disabled).toBe(true)

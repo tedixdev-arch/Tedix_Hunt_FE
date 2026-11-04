@@ -1,5 +1,7 @@
 # C1.4 — Contextual Personal Challenge editing
 
+**Latest review correction:** [Closed answer configuration across all 15 mechanics](answer-review/README.md), including the current closed/open screenshot matrix. The earlier `after/` captures below record the initial implementation and are retained for before/after comparison.
+
 The shared Personal editor now keeps ordinary content editing in the mobile preview. Both Content → Create Content and Template → Personal Challenge → Create Your Own use `PersonalChallengeAuthoring` → `PersonalMechanicEditor`; no independent editor was added.
 
 Audited the existing controls before making changes. Reused their activity/answer updates and stable references. The original three mechanics already had contextual option/card/blank structure controls, so those were retained. Predefined previews, schemas, gameplay, validation semantics, scoring, ownership and persistence were not changed.
