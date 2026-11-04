@@ -70,6 +70,23 @@ for (const width of [1440, 768, 390, 320]) {
   assert.equal(await starter.getAttribute('open'), null); await shot('library')
   await page.goto(url + '?template=1'); await page.getByRole('button', { name: 'Create Your Own', exact: true }).click()
   assert.equal(await page.getByRole('button', { name: 'Edit with Preview', exact: true }).getAttribute('aria-pressed'), 'true')
+  if (!before) {
+    const template = await page.evaluate(() => {
+      const canvas = document.querySelector('.challenge-canvas')
+      const mode = document.querySelector('.challenge-mode')
+      const button = mode.querySelector('button')
+      return { maxWidth: getComputedStyle(canvas).maxWidth, canvasWidth: canvas.getBoundingClientRect().width,
+        modeWidth: mode.getBoundingClientRect().width, parentWidth: mode.parentElement.getBoundingClientRect().width,
+        padding: getComputedStyle(mode).paddingTop, height: getComputedStyle(button).minHeight,
+        weight: getComputedStyle(button).fontWeight, shadow: getComputedStyle(canvas).boxShadow }
+    })
+    assert.equal(template.maxWidth, '390px')
+    assert.ok(Math.abs(template.modeWidth - template.parentWidth) < 2, 'Template retains full-width mode selector')
+    assert.equal(template.padding, '5px')
+    assert.equal(template.height, '48px')
+    assert.equal(template.weight, '700')
+    if (width >= 640) { assert.equal(template.canvasWidth, 390); assert.notEqual(template.shadow, 'none') }
+  }
   await shot('template-preview')
   await page.getByRole('button', { name: 'Complex / LaTeX', exact: true }).click(); await shot('template-latex')
   results.push({ width, overflow: false, sharedEditor: true, draftProtection: true, honestPreparation: true })
