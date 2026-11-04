@@ -3,7 +3,7 @@ import { MathText } from './MathText'
 import { useId, useRef, useState, type ReactNode } from 'react'
 import type { Exercise } from './catalog'
 import { control, ExerciseRenderer } from './ExerciseRenderer'
-import './personalChallenge.css'
+import { ParticipantPreviewShell } from '../ParticipantPreviewShell'
 
 /** Inline, live editing: Escape closes and returns focus without rolling back authored text. */
 export function PencilField({ label, value, onChange, maxLength = 2000, children }: { label: string; value: string; onChange: (v: string) => void; maxLength?: number; children?: ReactNode }) {
@@ -20,5 +20,5 @@ export function PencilField({ label, value, onChange, maxLength = 2000, children
 
 /** The same engine handles all Play attempts. Remounting resets simulation only. */
 export function ChallengeCanvas({ exercise, children, playing = true }: { exercise: Exercise; children?: ReactNode; playing?: boolean }) {
-  return <div className="challenge-canvas" aria-label="Mobile challenge canvas"><div className="challenge-canvas-brand" aria-hidden="true"><span>TEDIXHUNT</span><span>✦</span></div>{playing ? <ExerciseRenderer key={exercise.id} exercise={exercise} /> : children}</div>
+  return <ParticipantPreviewShell label="Mobile challenge canvas">{playing ? <ExerciseRenderer key={exercise.id} exercise={exercise} /> : children}</ParticipantPreviewShell>
 }
