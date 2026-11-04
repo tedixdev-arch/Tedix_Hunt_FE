@@ -40,7 +40,7 @@ export const initialFilters: ContentFilters = { category: 'All', grade: 'Mix', m
 /** Mix is a UI selection scope. All constrained fields must match one real association. */
 export function filterContent(items: readonly ContentRecord[], category: ContentCategory, filters: ContentFilters) {
   return items.filter(item => item.category === category &&
-    (!filters.scope || !filters.scope.country || !!item.geography && (!item.geography.country || item.geography.country === filters.scope.country) && (!item.geography.region || item.geography.region === filters.scope.region) && (!item.geography.city || item.geography.city === filters.scope.city)) && (filters.category === 'All' || item.activityCategory === filters.category || item.curriculum.some(c => c.category === filters.category)) &&
+    (!filters.scope || (['country', 'region', 'city'] as const).every(level => !filters.scope![level] || !!item.geography && (!item.geography[level] || item.geography[level] === filters.scope![level]))) && (filters.category === 'All' || item.activityCategory === filters.category || item.curriculum.some(c => c.category === filters.category)) &&
     `${item.exercise.title} ${item.exercise.instructions} ${item.mechanic} ${item.activityCategory ?? ''} ${item.collection.name}`.toLowerCase().includes(filters.query.trim().toLowerCase()) &&
     (filters.grade === 'Mix' && filters.main === 'Mix' && !filters.unit && !filters.lesson ||
       item.curriculum.some(c => (filters.category === 'All' || c.category === filters.category) &&

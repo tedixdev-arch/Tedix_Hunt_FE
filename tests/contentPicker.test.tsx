@@ -4,7 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { ContentPicker } from '../src/features/creator/content/ContentPicker'
 import { ContentSelection } from '../src/features/creator/content/ContentSelection'
-import { ContentLibrary } from '../src/features/creator/content/ContentLibrary'
+import { ContentStudio } from '../src/features/creator/content/ContentStudio'
 import { initialFilters, starterContent, type ContentRecord } from '../src/features/creator/content/catalog'
 import { PersonalChallengeAuthoring } from '../src/features/creator/exercises/PersonalChallengeAuthoring'
 import type { AuthoringDraft } from '../src/features/creator/exercises/experimentDrafts'
@@ -40,7 +40,7 @@ test('picker selects distinct records of the same mechanic, searches instruction
   await click('Try example: Another pair exercise')
   expect(select).toHaveBeenCalledWith(duplicate)
   expect(select.mock.calls[0][0].id).not.toBe(items[0].id)
-  expect(container.textContent).toContain('Category: Unclassified')
+  expect(container.textContent).not.toContain('Unclassified')
   await click('Preview Another pair exercise')
   expect(container.querySelector('dialog')?.textContent).toContain('Different source question')
   await click('Close exercise preview')
@@ -66,29 +66,24 @@ test('Template Predefined uses individual picker and retains publication guard a
   expect(current!.custom!.title).toBe('My independent draft'); expect(current!.custom!.id).toBe(draftId)
   expect(mutate).not.toHaveBeenCalled(); expect(starterContent).toEqual(before)
 })
-test('section switches cancel or discard drafts and never retain a mismatched editor', async () => {
-  await mount(<ContentLibrary />); await click('Create exercise'); await change('Title', 'Unsaved personal title')
+test('section switches retain drafts and never display a mismatched editor', async () => {
+  await mount(<ContentStudio active />); await change('Title', 'Unsaved personal title')
   await click('Edit Card 1')
   const card = container.querySelector('[role="group"][aria-label="Edit Card 1"] textarea')!
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(card, 'Preserved pair card'); card.dispatchEvent(new Event('input', { bubbles: true })) })
-  await click('Done')
-  await click('Complex / LaTeX'); await click('Edit with Preview')
-  expect(container.textContent).toContain('Preserved pair card')
-  expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).toBe('Unsaved personal title')
+  await click('Done'); await click('Complex / LaTeX'); await click('Edit with Preview')
   await click('Team Challenges')
-  expect(button('Personal Challenges').getAttribute('aria-pressed')).toBe('true')
-  expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).toBe('Unsaved personal title')
-  vi.mocked(window.confirm).mockReturnValue(true); await click('Team Challenges')
-  expect(container.querySelector('[aria-label="Library exercise draft"]')).toBeNull()
-  await click('Create exercise')
   expect(container.querySelector('[aria-label="Team Challenge authoring"]')).not.toBeNull()
   expect(container.querySelector('[aria-label="Personal Challenge authoring"]')).toBeNull()
   await click('Navigation Hints')
-  expect(container.querySelector('[aria-label="Library exercise draft"]')).toBeNull(); expect(button('Create exercise')).toBeUndefined()
-  await click('Personal Challenges'); await click('Create exercise')
+  expect(container.querySelector('[aria-label="Library exercise draft"]')).toBeNull()
+  await click('Personal Challenges')
+  expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).toBe('Unsaved personal title')
+  expect(container.textContent).toContain('Preserved pair card')
+  await click('Discard session draft')
+  expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).toBe('Unsaved personal title')
+  vi.mocked(window.confirm).mockReturnValue(true); await click('Discard session draft')
   expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).not.toBe('Unsaved personal title')
-  await change('Title', 'Replacement draft'); await click('Create exercise')
-  expect((container.querySelector('[aria-label="Title"]') as HTMLTextAreaElement).value).not.toBe('Replacement draft')
 })
 test('Mathematics hierarchy is conditional, uses supplied associations and resets descendants', async () => {
   const items: ContentRecord[] = [{ ...starterContent[0], curriculum: [
@@ -164,4 +159,17 @@ test('Create Your Own copies the selected record over a same-mechanic draft only
   await click('Predefined'); await click('Create Your Own') // Mode switching resumes the new draft.
   expect(current!.custom!.id).toBe(copiedId)
   expect(current!.custom!.title).toBe('Independent second edit')
+})
+
+test('Library separates collapsed canonical Starters from approved Available Exercises', async () => {
+  const approved = { ...duplicate, id: 'approved-fixture', collection: { id: 'approved-exercises', name: 'Approved' }, approvalStatus: 'approved' as const }
+  const pending = { ...approved, id: 'pending-fixture', approvalStatus: 'pending' as const, exercise: { ...approved.exercise, title: 'Pending exercise' } }
+  await mount(<ContentPicker libraryView section="Personal Challenges" items={[starterContent[0], approved, pending]} />)
+  expect(container.querySelector('details')?.open).toBe(false)
+  expect(container.textContent).toContain('Starter (1 examples)')
+  expect(container.textContent).toContain('Available Exercises')
+  expect(container.textContent).toContain('1 approved exercises')
+  expect(button('Preview Another pair exercise')).toBeDefined()
+  expect(button('Preview Pending exercise')).toBeUndefined()
+  expect(container.textContent).not.toContain('Unclassified')
 })

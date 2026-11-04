@@ -1,6 +1,6 @@
-import { ContentLibrary } from './content/ContentLibrary'
+import { ContentStudio } from './content/ContentStudio'
 import { UniversalLibrary } from './UniversalLibrary'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { gameplayPresentation } from './CheckpointGameplayEditor'
 import { supportedGameplay } from './checkpointGameplay'
@@ -53,17 +53,20 @@ function MechanicsLibraryDialog({ onClose }: { onClose: () => void }) {
 export function CreatorStudioNavigation() {
   const [params, setParams] = useSearchParams()
   const view = params.get('studio')
+  const [contentVisited, setContentVisited] = useState(view === 'content')
+  useEffect(() => { if (view === 'content') setContentVisited(true) }, [view])
   const open = (view: string) => setParams(current => { const next = new URLSearchParams(current); next.set('studio', view); return next })
   const close = () => setParams(current => { const next = new URLSearchParams(current); next.delete('studio'); return next })
   return <>
-    <div className="mt-5 flex flex-wrap items-center gap-3">
+    <nav aria-label="Creator Studio" className="mt-5 flex gap-2">{['Templates', 'Content'].map(name => <button key={name} type="button" aria-pressed={(view === 'content') === (name === 'Content')} onClick={() => name === 'Content' ? open('content') : close()} className={`min-h-12 rounded-xl border px-5 font-bold ${focus} ${(view === 'content') === (name === 'Content') ? 'border-emerald-700 bg-emerald-600 text-white' : 'border-slate-300 bg-white'}`}>{name}</button>)}</nav>
+    <div hidden={view === 'content'}><div className="mt-5 flex flex-wrap items-center gap-3">
       <button type="button" aria-haspopup="dialog" onClick={() => open('create')} className={`min-h-12 rounded-xl bg-emerald-500 px-5 font-bold ${focus}`}>+ Create Template</button>
-      <button type="button" aria-expanded={view === 'content'} onClick={() => view === 'content' ? close() : open('content')} className={`min-h-12 rounded-xl border border-emerald-700 px-5 font-bold text-emerald-900 ${focus}`}>Content</button>
       <button type="button" aria-expanded={view === 'library'} onClick={() => view === 'library' ? close() : open('library')} className={`min-h-12 rounded-xl px-4 font-bold text-slate-700 underline ${focus}`}>{view === 'library' ? 'Close Universal Library' : 'Browse Universal Library'}</button>
+    </div>
     </div>
     {(view === 'create' || view === 'local') && <TemplateTypeDialog local={view === 'local'} onLocal={() => open('local')} onBack={() => open('create')} onLibrary={() => open('library')} onClose={close} />}
     {view === 'library' && <UniversalLibrary />}
-    {view === 'content' && <ContentLibrary />}
+    {contentVisited && <div hidden={view !== 'content'}><ContentStudio active={view === 'content'} /></div>}
     {view === 'mechanics' && <MechanicsLibraryDialog onClose={close} />}
   </>
 }

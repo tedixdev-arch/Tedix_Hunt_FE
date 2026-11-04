@@ -26,7 +26,7 @@ beforeEach(() => {
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function () { this.removeAttribute('open') } })
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
-afterEach(() => { act(() => root.unmount()); router?.dispose(); container.remove(); vi.unstubAllGlobals() })
+afterEach(() => { act(() => root.unmount()); router?.dispose(); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 async function render(path = '/creator') {
   router = createMemoryRouter([
     { path: '/creator', element: applicationRouter.routes.find(route => route.path === '/creator')!.element },
@@ -36,6 +36,20 @@ async function render(path = '/creator') {
 }
 const button = (label: string) => [...container.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent?.startsWith(label))!
 async function click(label: string) { const target = button(label); target.focus(); await act(async () => target.click()); return target }
+const titleField = () => [...container.querySelectorAll('label')].find(label => label.textContent?.startsWith('Title'))!.querySelector('textarea')!
+async function editTitle(value: string) {
+  await act(async () => {
+    const field = titleField()
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(field, value)
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+function reloadWarns() {
+  const event = new Event('beforeunload', { cancelable: true })
+  window.dispatchEvent(event)
+  return event.defaultPrevented
+}
+
 function noMutations() {
   for (const key of ['create', 'createVersion', 'submit', 'delete', 'createStarterDraft', 'listStarters'] as const) expect(mocks.api[key]).not.toHaveBeenCalled()
 }
@@ -141,32 +155,91 @@ test('Library opens inline on demand and history removes it without authoring mu
   noMutations()
 })
 
-test('Content navigation, categories, curriculum gaps, search and playable preview preserve Template routes', async () => {
+test('Content separates creation and Library with collapsed Starters and green navigation', async () => {
   await render(); await click('Content')
-  expect(router.state.location.search).toBe('?studio=content')
+  expect(button('Content').className).toContain('bg-emerald-600')
+  expect(container.querySelector('[aria-label="Personal Challenge authoring"]')).not.toBeNull()
+  expect(container.querySelector('[aria-label="Content Library"]')).toBeNull()
+  await click('Library')
+  const content = container.querySelector('[aria-label="Content Library"]')!
+  expect(container.querySelector('[aria-label="Personal Challenge authoring"]')).toBeNull()
+  expect(content.querySelector('details')?.open).toBe(false)
+  expect(content.textContent).toContain('Available Exercises')
+  expect([...content.querySelectorAll('legend')].map(n => n.textContent)).toEqual(['Choose Location', 'Filter Content'])
+  expect(content.querySelector('[aria-label="Domain"]')).toBeNull()
   expect(container.querySelectorAll('button[aria-label^="Preview "]')).toHaveLength(15)
   await click('Playable preview')
-  expect(container.querySelector('dialog')?.textContent).toContain('Exercise preview')
   expect(container.querySelector('dialog')?.textContent).toContain('Equivalent expressions')
-  await click('Close')
-  await click('Team Challenges')
+  await click('Close'); await click('Team Challenges')
   expect(container.querySelectorAll('button[aria-label^="Preview "]')).toHaveLength(7)
-  await click('Playable preview'); expect(container.querySelector('dialog')?.textContent).toContain('Word Reconstruction')
-  await click('Close'); await click('Navigation Hints')
+  await click('Navigation Hints')
   expect(container.textContent).toContain('No standalone Starter records')
-  await click('Personal Challenges')
-  const select = container.querySelector('section[aria-label="Content Library"] select') as HTMLSelectElement
-  await act(async () => { select.value = 'Math'; select.dispatchEvent(new Event('change', { bubbles: true })) })
-  expect(container.textContent).toContain('No Starter examples match')
-  await click('Reset filters')
-  const search = container.querySelector('input[type="search"]') as HTMLInputElement
-  await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, 'prime'); search.dispatchEvent(new Event('input', { bubbles: true })) })
-  expect(container.querySelectorAll('button[aria-label^="Preview "]')).toHaveLength(2)
-  await click('Content')
-  expect(container.querySelector('section[aria-label="Content Library"]')).toBeNull()
-  await click('+ Create Template')
+  await click('Templates'); await click('+ Create Template')
   expect(container.querySelector('a[href="/create?category=universal"]')).not.toBeNull()
   noMutations(); expect(library.list).not.toHaveBeenCalled()
+})
+
+test('untouched drafts and editor-view changes do not warn on reload or navigation', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  await render(); await click('Content')
+  expect(reloadWarns()).toBe(false)
+  await click('Complex / LaTeX'); await click('Edit with Preview')
+  await click('Team Challenges'); await click('Step by Step'); await click('Edit with Preview')
+  await click('Library'); await click('Create Content'); await click('Templates'); await click('Content')
+  expect(reloadWarns()).toBe(false)
+  await act(async () => router.navigate('/creator/sign-in'))
+  expect(router.state.location.pathname).toBe('/creator/sign-in')
+  expect(confirm).not.toHaveBeenCalled(); noMutations()
+})
+
+test.each(['Personal Challenges', 'Team Challenges'])('%s edits warn until reverted or discarded, and discard establishes a clean baseline', async category => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  await render(); await click('Content'); await click(category)
+  if (category === 'Team Challenges') await click('Step by Step')
+  const initialTitle = titleField().value
+  await editTitle('Modified session content')
+  expect(reloadWarns()).toBe(true)
+  await act(async () => router.navigate('/creator/sign-in'))
+  expect(confirm).toHaveBeenCalledTimes(1)
+  expect(router.state.location.pathname).toBe('/creator')
+  await editTitle(initialTitle)
+  expect(reloadWarns()).toBe(false)
+  await editTitle('Modified again')
+  await click('Discard session draft') // Cancel preserves both content and dirty state.
+  expect(titleField().value).toBe('Modified again'); expect(reloadWarns()).toBe(true)
+  confirm.mockReturnValue(true); await click('Discard session draft')
+  if (category === 'Team Challenges' && !container.querySelector('[aria-label="Guided Team Challenge editor"]')) await click('Step by Step')
+  expect(titleField().value).toBe(initialTitle)
+  expect(reloadWarns()).toBe(false)
+  // An ordinary editor callback with unchanged content must remain clean after reset.
+  await editTitle(initialTitle)
+  expect(reloadWarns()).toBe(false)
+  confirm.mockClear()
+  await act(async () => router.navigate('/creator/sign-in'))
+  expect(confirm).not.toHaveBeenCalled()
+  expect(router.state.location.pathname).toBe('/creator/sign-in'); noMutations()
+})
+
+test('edited Personal and Team drafts survive all section switches; discarding one keeps the other protected', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  await render(); await click('Content'); await editTitle('Personal work')
+  await click('Team Challenges'); await click('Step by Step'); await editTitle('Team work')
+  await click('Library'); await click('Navigation Hints'); await click('Create Content')
+  await click('Templates'); await click('Content'); await click('Personal Challenges')
+  expect(titleField().value).toBe('Personal work'); expect(reloadWarns()).toBe(true)
+  expect(confirm).not.toHaveBeenCalled()
+  confirm.mockReturnValue(true); await click('Discard session draft')
+  expect(titleField().value).not.toBe('Personal work')
+  expect(reloadWarns()).toBe(true) // Team edits still exist while Personal is clean.
+  await click('Team Challenges'); await click('Step by Step')
+  expect(titleField().value).toBe('Team work')
+  confirm.mockReturnValue(false)
+  await act(async () => router.navigate('/creator/sign-in'))
+  expect(router.state.location.pathname).toBe('/creator')
+  confirm.mockReturnValue(true)
+  await act(async () => router.navigate('/creator/sign-in'))
+  expect(router.state.location.pathname).toBe('/creator/sign-in')
+  expect(reloadWarns()).toBe(false); noMutations()
 })
 
 test('Content deep links retain the existing Creator access guard', async () => {

@@ -34,3 +34,10 @@ test('specific geography excludes unknown applicability and respects unrestricte
   expect(filterContent([universal, regional], 'Personal Challenges', { ...initialFilters, scope })).toHaveLength(2)
   expect(filterContent([regional], 'Personal Challenges', { ...initialFilters, scope: { ...scope, country: 'FR' } })).toEqual([])
 })
+
+test('Universal child scopes include specific supplied regions and cities', () => {
+  const example = { ...starterContent[0], geography: { country: 'RO', region: 'CJ', city: 'city-id' } }
+  expect(filterContent([example], 'Personal Challenges', { ...initialFilters, scope: { country: 'RO', region: '', city: '' } })).toHaveLength(1)
+  expect(filterContent([example], 'Personal Challenges', { ...initialFilters, scope: { country: 'RO', region: 'CJ', city: '' } })).toHaveLength(1)
+  expect(filterContent([example], 'Personal Challenges', { ...initialFilters, scope: { country: 'RO', region: 'Other', city: '' } })).toEqual([])
+})
