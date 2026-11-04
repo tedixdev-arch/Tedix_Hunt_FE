@@ -1,0 +1,27 @@
+{
+  "base": "69351f02dd10798c19d9264ea4b3b27aba4a68fd",
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "nodeTests": {
+    "passed": 271,
+    "failed": 0
+  },
+  "reactTests": {
+    "success": true,
+    "files": 55,
+    "passed": 1063,
+    "failed": 0,
+    "pending": 0
+  },
+  "backendContentLibraryTests": {
+    "passed": 49,
+    "skipped": 0,
+    "database": "disposable PostgreSQL 16"
+  },
+  "realPersistenceBrowser": "passed",
+  "sharedPersonalBrowserScenarios": 90,
+  "creatorStudioBrowser": "passed",
+  "templateContextBrowser": "passed",
+  "challengeAllocationBrowser": "passed",
+  "templateCompletionBrowser": "baseline failure: same Country * selector timeout on branch and unchanged main"
+}

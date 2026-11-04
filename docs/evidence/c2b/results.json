@@ -1,0 +1,126 @@
+{
+  "backend": "merged C2a, local disposable PostgreSQL 16",
+  "results": [
+    {
+      "width": 1440,
+      "realPostgres": true,
+      "created": "fa220216-4fde-46a4-9a6c-3353636d17e1",
+      "revisions": 3,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "realPostgres": true,
+      "created": "e306cdba-b94c-4578-9850-d35e7a8fc661",
+      "revisions": 3,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "realPostgres": true,
+      "created": "292ce397-5244-4811-8e46-c33a6182ca47",
+      "revisions": 3,
+      "overflow": false
+    },
+    {
+      "mechanic": "tap-pair",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "single-choice",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "multiple-choice",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "true-false",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "memory-card",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "number-line",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "match-columns",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "drag-drop",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "fill-blank",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "sequence",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "find-mistake",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "build-problem",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "number-pattern",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "shape-pattern",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "rule-discovery",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "scrambled-word",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "hypothesis",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "assemble-machine",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "clue-synthesis",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "filter-noise",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "distributed-information",
+      "realPostgres": true
+    },
+    {
+      "mechanic": "shared-final-key",
+      "realPostgres": true
+    }
+  ],
+  "ownership": true,
+  "keysetPagination": true,
+  "injectedFailures": [
+    400,
+    401,
+    403,
+    404,
+    413,
+    500,
+    "network"
+  ],
+  "errors": []
+}

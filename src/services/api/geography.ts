@@ -28,6 +28,7 @@ export class GeographyApi {
   cities(countryCode: string, query: string, admin1Code?: string, after?: string): Promise<CityPage> {
     return this.client.get(`/api/geography/cities?${new URLSearchParams({ countryCode, ...(admin1Code ? { admin1Code } : {}), q: query.trim(), limit: '20', ...(after ? { after } : {}) })}`)
   }
+  city(id: string): Promise<GeographicCity> { return this.client.get(`/api/geography/cities/${encodeURIComponent(id)}`) }
   resolveCity(id: string): Promise<GeographicCity> { return this.client.post(`/api/geography/cities/${encodeURIComponent(id)}/resolve`, {}) }
   countries(): Promise<{ countries: Country[] }> { return this.client.get('/api/geography/countries') }
   search(countryCode: string, query: string): Promise<{ localities: Locality[]; providerStatus: 'not_requested' }> {

@@ -1,0 +1,14 @@
+
+> @tedixhunt/api@0.1.0 test
+> vitest run src/routes/creatorContent.integration.test.ts src/domain/contentLibrary.test.ts --maxWorkers=2
+
+
+ RUN  v3.2.7 /workspace/Tedix_Hunt_FE/work/backend
+
+ ✓ src/domain/contentLibrary.test.ts (24 tests) 59ms
+ ✓ src/routes/creatorContent.integration.test.ts (25 tests) 5511ms
+
+ Test Files  2 passed (2)
+      Tests  49 passed (49)
+   Start at  19:56:20
+   Duration  6.75s (transform 2.01s, setup 42ms, collect 982ms, tests 5.57s, environment 1ms, prepare 436ms)
