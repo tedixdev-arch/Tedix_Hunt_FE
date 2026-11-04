@@ -137,6 +137,7 @@ export function CreatorStudioPage() {
     } catch (reason) { setStarterError(creatorTemplateError(reason, 'starter')) }
     finally { creating.current = false; setCreatingStarter(false) }
   }
+  const [studioParams] = useSearchParams()
   const [templates, setTemplates] = useState<CreatorTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -187,6 +188,7 @@ export function CreatorStudioPage() {
     {choosing && <TemplateCreationChooser creating={creatingStarter} error={starterError} onScratch={() => { if (!creating.current) navigate('/create?category=local') }} onStarter={createStarter} onClose={() => setChoosing(false)} onCheckTemplates={() => { setChoosing(false); load() }} />}
     {!choosing && creatingStarter && <p role="status" className="mt-3 text-sm font-bold text-emerald-800">Creating Signal Cluj draft…</p>}
     {!choosing && starterError && <p role="alert" className="mt-3 text-sm text-red-800">{starterError}</p>}
+    <div hidden={studioParams.get('studio') === 'content'}>
     {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">{error}<button type="button" className="ml-3 underline" onClick={load}>Retry</button></div>}
     <h2 id="my-templates" ref={templatesHeading} tabIndex={-1} className="mt-8 text-2xl font-bold">My Templates</h2>
     {deleteTarget && <DeleteTemplateDialog name={deleteTarget.content.displayName} deleting={deleting} error={deleteError} onCancel={() => setDeleteTarget(null)} onConfirm={() => void confirmDelete()} restoreFocus={restoreDeleteFocus} />}
@@ -214,7 +216,7 @@ export function CreatorStudioPage() {
         })}
     </section>
     <details className="mt-8 text-sm text-slate-600"><summary className="min-h-12 cursor-pointer py-3 font-bold">Legacy compatibility</summary><button type="button" aria-haspopup="dialog" onClick={() => setChoosing(true)} className="min-h-12 rounded-xl border border-slate-300 px-4 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Create Legacy Template</button></details>
-    </Shell>
+    </div></Shell>
 }
 
 /** Route identity owns the complete editor state; a new creation path cannot reuse a prior Template. */

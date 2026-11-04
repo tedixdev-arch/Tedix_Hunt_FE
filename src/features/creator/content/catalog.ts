@@ -11,6 +11,7 @@ export interface CurriculumAssociation {
 /** Library metadata is separate from Template-owned exercise persistence. */
 export interface ContentRecord {
   id: string
+  location?: { country: string; region: string; city: string }
   category: ContentCategory
   mechanic: Mechanic
   exercise: Exercise
