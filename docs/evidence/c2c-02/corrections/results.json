@@ -1,0 +1,45 @@
+{
+  "fixtures": "Deterministic canonical catalog and API fixtures; actual Admin shell, preview and decision components. No backend writes.",
+  "results": [
+    {
+      "width": 1440,
+      "geography": [
+        "universal",
+        "country",
+        "region",
+        "city",
+        "fallback"
+      ],
+      "approveHiddenDuringFeedback": true,
+      "cancelRestoresBothDecisions": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "geography": [
+        "universal",
+        "country",
+        "region",
+        "city",
+        "fallback"
+      ],
+      "approveHiddenDuringFeedback": true,
+      "cancelRestoresBothDecisions": true,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "geography": [
+        "universal",
+        "country",
+        "region",
+        "city",
+        "fallback"
+      ],
+      "approveHiddenDuringFeedback": true,
+      "cancelRestoresBothDecisions": true,
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

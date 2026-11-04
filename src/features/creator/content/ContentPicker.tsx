@@ -7,8 +7,8 @@ import type { GeographicCity } from '../../../services/api/geography'
 import { typeName } from '../exercises/catalog'
 
 /** Select individual records for local simulation only; never assigns a library revision. */
-export function ContentPicker({ section, items = starterContent, selectedId, onSelect, libraryView = false, renderDrafts, draftGrades = [] }: {
-  renderDrafts?: (filters: ContentFilters, city: GeographicCity | null) => ReactNode; draftGrades?: string[]; libraryView?: boolean; section: ContentCategory; items?: readonly ContentRecord[]; selectedId?: string; onSelect?: (item: ContentRecord) => void
+export function ContentPicker({ section, items = starterContent, selectedId, onSelect, libraryView = false, compactFilters = false, renderDrafts, draftGrades = [] }: {
+  renderDrafts?: (filters: ContentFilters, city: GeographicCity | null) => ReactNode; draftGrades?: string[]; libraryView?: boolean; compactFilters?: boolean; section: ContentCategory; items?: readonly ContentRecord[]; selectedId?: string; onSelect?: (item: ContentRecord) => void
 }) {
   const [resolvedCity, setResolvedCity] = useState<GeographicCity | null>(null)
   const [filters, setFilters] = useState(initialFilters)
@@ -24,7 +24,7 @@ export function ContentPicker({ section, items = starterContent, selectedId, onS
       {onSelect && <button type="button" className={`${control} mt-2 w-full`} aria-pressed={selectedId === item.id} onClick={() => onSelect(item)}>Try example: {item.exercise.title}</button>}
     </li>)}</ul>
   return <section aria-label="Content exercise picker" className="min-w-0">
-    <ContentSelection onCityResolved={setResolvedCity} draftGrades={draftGrades} filters={filters} onChange={setFilters} items={items.filter(item => item.category === section)} />
+    {compactFilters ? <details className="border-b border-slate-200 pb-3"><summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">Filters</summary><ContentSelection onCityResolved={setResolvedCity} draftGrades={draftGrades} filters={filters} onChange={setFilters} items={items.filter(item => item.category === section)} /></details> : <ContentSelection onCityResolved={setResolvedCity} draftGrades={draftGrades} filters={filters} onChange={setFilters} items={items.filter(item => item.category === section)} />}
     {renderDrafts?.(filters, resolvedCity)}
     {libraryView && <details className="mt-6 rounded-xl border border-slate-200 p-4"><summary className="min-h-11 cursor-pointer font-bold">Starter ({starters.length} examples)</summary><p className="mt-2 text-sm text-slate-600">Canonical repository examples. Unreviewed and separate from approved library exercises.</p>{starters.length ? cards(starters) : <p>No standalone Starter records are available for this category. Navigation settings in Templates are not reusable hint content.</p>}</details>}
     <h3 className="mt-6 text-lg font-bold">{libraryView ? 'Available Exercises' : section}</h3>

@@ -37,7 +37,7 @@ test('conflict retains local edits, canceled reload is safe, confirmed reload ad
  const get=vi.spyOn(creatorContentApi,'get').mockResolvedValue(saved)
  const update=vi.spyOn(creatorContentApi,'update').mockRejectedValue(new ApiError('revision_conflict',409,'conflict'))
  await harness(async({host,click,edit})=>{
-  await click('Library');await act(async()=>host.querySelector<HTMLButtonElement>(`[aria-label="Edit ${saved.exercise.title}"]`)!.click())
+  await click('My Content');await act(async()=>host.querySelector<HTMLButtonElement>(`[aria-label="Edit ${saved.exercise.title}"]`)!.click())
   await edit('Local retained');await click('Save Changes');expect(host.querySelector('[role="alert"]')!.textContent).toContain('Your edits are still here')
   const confirm=vi.spyOn(window,'confirm').mockReturnValue(false)
   await click('Reload saved version');expect(get).toHaveBeenCalledTimes(1);expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!.value).toBe('Local retained')
@@ -55,17 +55,19 @@ test('failed create retains payload and dirty navigation protection',async()=>{
   const confirm=vi.spyOn(window,'confirm').mockReturnValue(false);await act(async()=>{void router.navigate('/away')});expect(confirm).toHaveBeenCalled();expect(router.state.location.pathname).toBe('/')
  })
 })
-test('continuing protected history clones once and preserves local edits if its update fails',async()=>{
- vi.spyOn(creatorContentApi,'list').mockResolvedValue({items:[saved],nextAfter:null})
+test('protected history stays read-only and a failed revision clone retains the saved exercise',async()=>{
+ vi.spyOn(creatorContentApi,'list').mockResolvedValue({items:[{...saved,status:'approved'}],nextAfter:null})
  vi.spyOn(creatorContentApi,'get').mockResolvedValue({...saved,status:'approved'})
- const clone=vi.spyOn(creatorContentApi,'clone').mockResolvedValue({...saved,revisionId:'cloned-draft',version:2})
- const update=vi.spyOn(creatorContentApi,'update').mockRejectedValue(new ApiError('offline',null,'network'))
- await harness(async({host,click,edit})=>{
-  await click('Library');await act(async()=>host.querySelector<HTMLButtonElement>(`[aria-label="Edit ${saved.exercise.title}"]`)!.click())
-  await edit('Retained after clone');await click('Save Changes');expect(clone).toHaveBeenCalledTimes(1)
-  expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!.value).toBe('Retained after clone')
-  update.mockResolvedValue({...saved,revisionId:'next',version:3});await click('Save Changes')
-  expect(clone).toHaveBeenCalledTimes(1);expect(update.mock.calls.at(-1)?.slice(0,2)).toEqual(['content','cloned-draft'])
+ const clone=vi.spyOn(creatorContentApi,'clone').mockRejectedValue(new ApiError('offline',null,'network'))
+ const update=vi.spyOn(creatorContentApi,'update')
+ await harness(async({host,click})=>{
+  await click('My Content');await click(`View ${saved.exercise.title}`)
+  expect(host.querySelector('[aria-label="Edit Title"]')).toBeNull()
+  await click('Create New Revision');expect(clone).toHaveBeenCalledWith(saved.contentId,saved.revisionId)
+  expect(update).not.toHaveBeenCalled();expect(host.textContent).toContain('Approved')
+  clone.mockResolvedValue({...saved,revisionId:'cloned-draft',version:2});await click('Create New Revision')
+  expect(host.querySelector('[aria-label="Edit Title"]')).not.toBeNull()
+  expect(host.textContent).toContain('Save Changes')
  })
 })
 test('saving one mechanic does not mark another retained local variant as saved',async()=>{
@@ -77,6 +79,7 @@ test('saving one mechanic does not mark another retained local variant as saved'
   await click('Add Exercise');expect(host.textContent).toContain('Saved to Library.')
   const confirm=vi.spyOn(window,'confirm').mockReturnValue(false)
   await act(async()=>{void router.navigate('/away')});expect(confirm).toHaveBeenCalled();expect(router.state.location.pathname).toBe('/')
+  const prompts=confirm.mock.calls.length;await click('New Exercise');expect(confirm).toHaveBeenCalledTimes(prompts+1)
   await act(async()=>{select.value='tap-pair';select.dispatchEvent(new Event('change',{bubbles:true}))})
   await click('Edit Title');expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!.value).toBe('Unsaved pair variant')
  })

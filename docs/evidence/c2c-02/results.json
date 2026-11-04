@@ -1,0 +1,458 @@
+{
+  "backend": "a56ae6452f93fa14ba5a7e9c881c063899cb3763",
+  "database": "disposable PostgreSQL 17",
+  "results": [
+    {
+      "width": 1440,
+      "saveSubmitExact": true,
+      "unsavedBlocked": true,
+      "readOnly": true,
+      "approveExact": true,
+      "feedbackRevise": true,
+      "historyImmutable": true
+    },
+    {
+      "width": 390,
+      "saveSubmitExact": true,
+      "unsavedBlocked": true,
+      "readOnly": true,
+      "approveExact": true,
+      "feedbackRevise": true,
+      "historyImmutable": true
+    },
+    {
+      "width": 320,
+      "saveSubmitExact": true,
+      "unsavedBlocked": true,
+      "readOnly": true,
+      "approveExact": true,
+      "feedbackRevise": true,
+      "historyImmutable": true
+    },
+    {
+      "teamPreview": true,
+      "selfReview403": true,
+      "concurrent200and409": true,
+      "oneDecision": true
+    }
+  ],
+  "screenshots": [
+    "creator-draft-1440",
+    "submit-for-approval-1440",
+    "submitted-1440",
+    "admin-queue-1440",
+    "admin-review-1440",
+    "admin-review-actions-1440",
+    "approved-1440",
+    "request-changes-1440",
+    "changes-requested-1440",
+    "revised-draft-1440",
+    "empty-queue-1440",
+    "creator-draft-390",
+    "submit-for-approval-390",
+    "submitted-390",
+    "admin-queue-390",
+    "admin-review-390",
+    "admin-review-actions-390",
+    "approved-390",
+    "request-changes-390",
+    "changes-requested-390",
+    "revised-draft-390",
+    "empty-queue-390",
+    "creator-draft-320",
+    "submit-for-approval-320",
+    "submitted-320",
+    "admin-queue-320",
+    "admin-review-320",
+    "admin-review-actions-320",
+    "approved-320",
+    "request-changes-320",
+    "changes-requested-320",
+    "revised-draft-320",
+    "empty-queue-320",
+    "admin-team-review-320"
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/creator/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/templates/review"
+    },
+    {
+      "method": "GET",
+      "path": "/api/organizer-applications?status=pending"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator-applications?status=pending"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/creator/content/3afbd358-e008-4ade-a867-bd465177820e"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/3afbd358-e008-4ade-a867-bd465177820e/revisions/4f42123f-6801-4a31-b4b9-cd133d1e65d9/submit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review/3afbd358-e008-4ade-a867-bd465177820e/revisions/4f42123f-6801-4a31-b4b9-cd133d1e65d9"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/content/review/3afbd358-e008-4ade-a867-bd465177820e/revisions/4f42123f-6801-4a31-b4b9-cd133d1e65d9/approve"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content?limit=20&view=all"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/3afbd358-e008-4ade-a867-bd465177820e"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/3afbd358-e008-4ade-a867-bd465177820e/revisions"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/creator/content/3afbd358-e008-4ade-a867-bd465177820e"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/3afbd358-e008-4ade-a867-bd465177820e/revisions/f4b16de8-8c11-4f89-b268-fba370586204/submit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review/3afbd358-e008-4ade-a867-bd465177820e/revisions/f4b16de8-8c11-4f89-b268-fba370586204"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/content/review/3afbd358-e008-4ade-a867-bd465177820e/revisions/f4b16de8-8c11-4f89-b268-fba370586204/request-changes"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content?limit=20&view=all"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/3afbd358-e008-4ade-a867-bd465177820e"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/3afbd358-e008-4ade-a867-bd465177820e/revisions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/creator/content/7acc2d36-9201-42aa-9e10-62cdc51be6b9"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/7acc2d36-9201-42aa-9e10-62cdc51be6b9/revisions/ad3cfd67-db04-48a9-9c86-2796c3336303/submit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review/7acc2d36-9201-42aa-9e10-62cdc51be6b9/revisions/ad3cfd67-db04-48a9-9c86-2796c3336303"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/content/review/7acc2d36-9201-42aa-9e10-62cdc51be6b9/revisions/ad3cfd67-db04-48a9-9c86-2796c3336303/approve"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content?limit=20&view=all"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/7acc2d36-9201-42aa-9e10-62cdc51be6b9"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/7acc2d36-9201-42aa-9e10-62cdc51be6b9/revisions"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/creator/content/7acc2d36-9201-42aa-9e10-62cdc51be6b9"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/7acc2d36-9201-42aa-9e10-62cdc51be6b9/revisions/0118c235-241b-4e72-8ae8-b7fe5538bfc8/submit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review/7acc2d36-9201-42aa-9e10-62cdc51be6b9/revisions/0118c235-241b-4e72-8ae8-b7fe5538bfc8"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/content/review/7acc2d36-9201-42aa-9e10-62cdc51be6b9/revisions/0118c235-241b-4e72-8ae8-b7fe5538bfc8/request-changes"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content?limit=20&view=all"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/7acc2d36-9201-42aa-9e10-62cdc51be6b9"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/7acc2d36-9201-42aa-9e10-62cdc51be6b9/revisions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/creator/content/e6d40748-1236-4b27-bda3-2e8322af854c"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/e6d40748-1236-4b27-bda3-2e8322af854c/revisions/7f34bce7-31a4-4183-aee2-e9141323f32c/submit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review/e6d40748-1236-4b27-bda3-2e8322af854c/revisions/7f34bce7-31a4-4183-aee2-e9141323f32c"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/content/review/e6d40748-1236-4b27-bda3-2e8322af854c/revisions/7f34bce7-31a4-4183-aee2-e9141323f32c/approve"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content?limit=20&view=all"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/e6d40748-1236-4b27-bda3-2e8322af854c"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/e6d40748-1236-4b27-bda3-2e8322af854c/revisions"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/creator/content/e6d40748-1236-4b27-bda3-2e8322af854c"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/e6d40748-1236-4b27-bda3-2e8322af854c/revisions/84fa3102-27df-4660-8686-7c8ef1710431/submit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review/e6d40748-1236-4b27-bda3-2e8322af854c/revisions/84fa3102-27df-4660-8686-7c8ef1710431"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/content/review/e6d40748-1236-4b27-bda3-2e8322af854c/revisions/84fa3102-27df-4660-8686-7c8ef1710431/request-changes"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content?limit=20&view=all"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/e6d40748-1236-4b27-bda3-2e8322af854c"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/e6d40748-1236-4b27-bda3-2e8322af854c/revisions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content"
+    },
+    {
+      "method": "POST",
+      "path": "/api/creator/content/488c7a36-d5e6-4b7e-88db-d0bc3937ea57/revisions/4058f329-1cae-48b2-848a-351326ac2cf1/submit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review/488c7a36-d5e6-4b7e-88db-d0bc3937ea57/revisions/4058f329-1cae-48b2-848a-351326ac2cf1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/content/review/488c7a36-d5e6-4b7e-88db-d0bc3937ea57/revisions/4058f329-1cae-48b2-848a-351326ac2cf1/approve"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/content/review?limit=20"
+    }
+  ]
+}

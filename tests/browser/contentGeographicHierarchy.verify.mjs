@@ -26,7 +26,7 @@ const seed=(await api('/api/creator/content?limit=100')).items[0]
 const scopes=[['Universal',{scope:'universal'}],['Romania',{scope:'country',countryCode:'RO'}],['Cluj',{scope:'region',countryCode:'RO',admin1Code:'13'}],['Other region',{scope:'region',countryCode:'RO',admin1Code:'23'}],['Exact city',{scope:'city',countryCode:'RO',geographicId:'683506'}],['Other city',{scope:'city',countryCode:'RO',geographicId:'675810'}]]
 const saved=[], tag=`Hierarchy ${Date.now()} `
 for(const [name,geography] of scopes)saved.push(await api('/api/creator/content',{exercise:{...seed.exercise,title:`${tag}${name}`},category:'Mathematics',curriculum:{subject:'math',grade:'7'},geography}))
-const drafts=()=>page.getByRole('region',{name:'My drafts',exact:true})
+const drafts=()=>page.getByRole('region',{name:'My Content',exact:true})
 const titles=()=>drafts().getByRole('heading',{level:4}).allTextContents()
 const filterCity=async()=>{
  await page.getByLabel('Content country',{exact:true}).selectOption('RO')
@@ -34,7 +34,7 @@ const filterCity=async()=>{
  await page.getByLabel('Find content city',{exact:true}).fill('Cluj')
  await page.getByLabel('Content city',{exact:true}).selectOption('683506')
 }
-await click('View in Library');await page.getByRole('button',{name: `Edit ${tag}Exact city`,exact:true}).waitFor()
+await click('View in Library');await page.getByText('Filters',{exact:true}).click();await page.getByRole('button',{name: `Edit ${tag}Exact city`,exact:true}).waitFor()
 // Resolving a city must not change a restored editor's persisted classifications or create dirty edits.
 await page.getByRole('button',{name: `Edit ${tag}Exact city`,exact:true}).click()
 await page.getByText('Classification & Location',{exact:true}).click()
@@ -44,7 +44,7 @@ assert.equal(await page.getByLabel('Grade',{exact:true}).inputValue(),'7')
 await click('Save Changes');await page.getByText('Saved to Library.',{exact:true}).waitFor()
 const restored=await api(`/api/creator/content/${saved[4].contentId}`)
 assert.deepEqual(restored.geography,saved[4].geography);assert.deepEqual(restored.curriculum,saved[4].curriculum);assert.deepEqual(restored.exercise,saved[4].exercise)
-await click('View in Library');await drafts().getByRole('heading',{name:`${tag}Exact city`,exact:true}).waitFor()
+await click('View in Library');await page.getByText('Filters',{exact:true}).click();await drafts().getByRole('heading',{name:`${tag}Exact city`,exact:true}).waitFor()
 pending=true;await filterCity()
 await page.waitForFunction(()=>document.querySelector('[aria-label="Content city"]')?.value==='683506')
 assert.ok(!(await titles()).includes(`${tag}Cluj`));assert.ok(!(await titles()).includes(`${tag}Other region`))

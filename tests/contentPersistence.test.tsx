@@ -25,14 +25,14 @@ test('reject unsupported categories, grades, Navigation and unresolved specific 
   for (const patch of [{ category: 'Starter' }, { grade: '4' }, { scope: { country: 'Romania', region: '', city: '' } }, { scope: { country: '', region: 'Cluj', city: '' } }, { scope: { country: 'RO', region: '', city: 'Cluj-Napoca' } }]) expect(() => libraryPayload(draft, { ...metadata, ...patch })).toThrow()
   expect(() => libraryPayload({ ...draft, custom: { ...draft.custom, type: 'navigation' as any } }, metadata)).toThrow()
 })
-test('all six API operations use existing authentication, exact revisions and baseRevisionId', async () => {
+test('all seven API operations use existing authentication, exact revisions and baseRevisionId', async () => {
   const calls: { url: string; init?: RequestInit }[] = []
   const session = new LocalSessionStore(); session.saveSession({ accessToken: 'fixture-token' })
   const client = new ApiClient('https://fixture.test', session, async (url, init) => { calls.push({ url: String(url), init }); return new Response('{}', { headers: { 'Content-Type': 'application/json' } }) })
   const api = new CreatorContentApi(client), payload = libraryPayload({ source: 'custom', custom: authorPrototype(prototypes[0]) }, metadata)
-  await api.create(payload); await api.list('cursor'); await api.get('content'); await api.update('content', 'revision', payload); await api.clone('content', 'revision'); await api.revision('content', 'revision')
-  expect(calls.map(c => c.init?.method)).toEqual(['POST', 'GET', 'GET', 'PUT', 'POST', 'GET'])
-  expect(calls[1].url).toContain('limit=20&after=cursor'); expect(calls[5].url).toContain('/content/revisions/revision')
+  await api.create(payload); await api.list('cursor'); await api.get('content'); await api.update('content', 'revision', payload); await api.clone('content', 'revision'); await api.revision('content', 'revision'); await api.submit('content', 'saved/revision')
+  expect(calls.map(c => c.init?.method)).toEqual(['POST', 'GET', 'GET', 'PUT', 'POST', 'GET', 'POST'])
+  expect(calls[1].url).toContain('limit=20&view=all&after=cursor'); expect(calls[5].url).toContain('/content/revisions/revision'); expect(calls[6].url).toContain('/content/revisions/saved%2Frevision/submit'); expect(JSON.parse(String(calls[6].init!.body))).toEqual({})
   expect(JSON.parse(calls[3].init!.body as string)).toEqual({ ...payload, baseRevisionId: 'revision' })
   expect(JSON.parse(calls[4].init!.body as string)).toEqual({ baseRevisionId: 'revision' })
   for (const call of calls) expect(new Headers(call.init?.headers).get('Authorization')).toBe('Bearer fixture-token')
