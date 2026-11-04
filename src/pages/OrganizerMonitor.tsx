@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { OrganizerHeader } from './OrganizerFlow'
 import { OrganizerHuntGeographyInspection } from '../components/OrganizerHuntGeography'
+import { ApiError, huntsApi, type Hunt, type HuntLifecycleAction } from '../services/api'
+import { statusLabels } from './organizerHunts'
+import { lifecycleErrorMessage, monitorControls, primaryActionLabels } from '../features/organizer/monitorLifecycle'
 
 type LiveStatus = 'Live' | 'Paused' | 'Completed'
 type TeamState = 'On track' | 'Needs attention' | 'Demo help alert' | 'Finished'
@@ -34,11 +37,65 @@ const stateStyle: Record<TeamState, string> = {
   Finished: 'bg-sky-100 text-sky-800',
 }
 
+type ServerHuntState =
+  | { phase: 'loading' }
+  | { phase: 'error'; message: string }
+  | { phase: 'ready'; hunt: Hunt }
+
+/** Loads the authoritative Hunt and runs lifecycle transitions through the API. */
+function useServerHunt(huntId: string | undefined, enabled: boolean) {
+  const [state, setState] = useState<ServerHuntState>({ phase: 'loading' })
+  const [pending, setPending] = useState<HuntLifecycleAction | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const generation = useRef(0)
+
+  const load = useCallback(async () => {
+    if (!enabled || !huntId) return
+    const request = ++generation.current
+    setState(current => current.phase === 'ready' ? current : { phase: 'loading' })
+    try {
+      const hunt = await huntsApi.getHunt(huntId)
+      if (request === generation.current) setState({ phase: 'ready', hunt })
+    } catch (error) {
+      if (request !== generation.current) return
+      setState({ phase: 'error', message: error instanceof ApiError && error.status === 404 ? 'This Hunt could not be found.' : 'We couldn’t load the Hunt status.' })
+    }
+  }, [enabled, huntId])
+
+  useEffect(() => { void load(); return () => { generation.current++ } }, [load])
+
+  const run = useCallback(async (action: HuntLifecycleAction) => {
+    if (!huntId || pending) return
+    setPending(action); setActionError(null)
+    try {
+      const hunt = await huntsApi[action](huntId)
+      generation.current++
+      setState({ phase: 'ready', hunt })
+    } catch (error) {
+      setActionError(lifecycleErrorMessage(error))
+      if (error instanceof ApiError && (error.status === 409 || error.status === 422)) void load()
+    } finally {
+      setPending(null)
+    }
+  }, [huntId, load, pending])
+
+  return { state, pending, actionError, run, reload: load }
+}
+
+function formatSchedule(hunt: Hunt) {
+  const parts = [hunt.startDate, hunt.startTime].filter(Boolean).join(', ')
+  return [hunt.name, parts || 'Schedule not set'].join(' · ')
+}
+
 export function OrganizerMonitorPage() {
   const { huntId } = useParams()
   const [searchParams] = useSearchParams()
   const independent = searchParams.get('mode') === 'independent'
   const [status, setStatus] = useState<LiveStatus>('Live')
+  const server = useServerHunt(huntId, !independent)
+  const [confirmEnd, setConfirmEnd] = useState(false)
+  const serverHunt = server.state.phase === 'ready' ? server.state.hunt : null
+  const controls = serverHunt ? monitorControls(serverHunt.status) : { primary: null, canEnd: false }
   const [alertResolved, setAlertResolved] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState(initialTeams[1])
   const [messageSent, setMessageSent] = useState(false)
@@ -53,9 +110,16 @@ export function OrganizerMonitorPage() {
 
         <header className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">{independent ? 'Independent Organizer' : 'Registered Organizer'}</p><span className={`rounded-full px-3 py-1 text-xs font-semibold ${status === 'Live' ? 'bg-emerald-500 text-white' : status === 'Paused' ? 'bg-violet-100 text-violet-800' : 'bg-slate-200 text-slate-700'}`}>{status}</span></div><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Monitor Hunt</h1><p className="mt-2 text-slate-600">Signal: Cluj Napoca · Today, 10:00 · 42 minutes elapsed</p><p className="mt-1 text-xs text-slate-400">Hunt ID: {huntId}</p></div>
-            <div className="flex flex-col gap-2 sm:flex-row"><button className="min-h-12 rounded-xl border border-slate-300 bg-white px-5 font-bold" onClick={()=>setMessageSent(true)} type="button">Message everyone</button><button className={`min-h-12 rounded-xl px-6 font-bold ${status === 'Paused' ? 'bg-emerald-500' : 'bg-slate-950 text-white'}`} onClick={()=>setStatus(current=>current==='Live'?'Paused':'Live')} type="button">{status === 'Paused' ? 'Resume Hunt' : 'Pause Hunt'}</button></div>
+            <div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">{independent ? 'Independent Organizer' : 'Registered Organizer'}</p>{independent
+              ? <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status === 'Live' ? 'bg-emerald-500 text-white' : status === 'Paused' ? 'bg-violet-100 text-violet-800' : 'bg-slate-200 text-slate-700'}`}>{status}</span>
+              : serverHunt && <span className={`rounded-full px-3 py-1 text-xs font-semibold ${serverHunt.status === 'active' ? 'bg-emerald-500 text-white' : serverHunt.status === 'paused' ? 'bg-violet-100 text-violet-800' : 'bg-slate-200 text-slate-700'}`} data-testid="server-hunt-status">{statusLabels[serverHunt.status]}</span>}</div><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Monitor Hunt</h1><p className="mt-2 text-slate-600">{independent ? 'Signal: Cluj Napoca · Today, 10:00 · 42 minutes elapsed' : serverHunt ? formatSchedule(serverHunt) : server.state.phase === 'loading' ? 'Loading Hunt status…' : 'Hunt status unavailable'}</p><p className="mt-1 text-xs text-slate-400">Hunt ID: {huntId}</p></div>
+            <div className="flex flex-col gap-2 sm:flex-row"><button className="min-h-12 rounded-xl border border-slate-300 bg-white px-5 font-bold" onClick={()=>setMessageSent(true)} type="button">Message everyone</button>{independent
+              ? <button className={`min-h-12 rounded-xl px-6 font-bold ${status === 'Paused' ? 'bg-emerald-500' : 'bg-slate-950 text-white'}`} onClick={()=>setStatus(current=>current==='Live'?'Paused':'Live')} type="button">{status === 'Paused' ? 'Resume Hunt' : 'Pause Hunt'}</button>
+              : controls.primary && <button className={`min-h-12 rounded-xl px-6 font-bold disabled:opacity-60 ${controls.primary === 'pause' ? 'bg-slate-950 text-white' : 'bg-emerald-500'}`} disabled={server.pending !== null} onClick={()=>void server.run(controls.primary!)} type="button">{server.pending === controls.primary ? 'Saving…' : primaryActionLabels[controls.primary]}</button>}</div>
           </div>
+          {!independent && server.state.phase === 'error' && <p className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-800" role="alert">{server.state.message}<button className="underline" onClick={()=>void server.reload()} type="button">Retry</button></p>}
+          {!independent && server.actionError && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-800" role="alert">{server.actionError}</p>}
+          {!independent && serverHunt && !controls.primary && !controls.canEnd && <p className="mt-4 rounded-xl bg-slate-100 p-3 text-sm text-slate-600" role="status">{serverHunt.status === 'draft' ? 'This Hunt is still a draft. Publish it from My Hunts before it can be run.' : `This Hunt is ${statusLabels[serverHunt.status].toLowerCase()}. Live controls are no longer available.`}</p>}
           {messageSent && <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-800" role="status">Demo message only — no Participants were notified.</p>}
         </header>
         <p className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><strong>Monitoring prototype — simulated data.</strong> Team activity and HELP/PANIC alerts below are local demo data, not real Participant requests. Dismissing a demo alert does not acknowledge or resolve a real incident. Contact Participants directly through your own contact channels.</p>
@@ -88,7 +152,11 @@ export function OrganizerMonitorPage() {
           <details className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><summary className="cursor-pointer font-bold">Activity history</summary><ol className="mt-4 space-y-3 text-sm">{['10:42 · Demo: Signal Seekers simulated help alert','10:40 · Code Breakers unlocked Checkpoint 5','10:37 · City Sparks became inactive','10:31 · Relay Crew completed FinishPoint','10:00 · Hunt started'].map(event=><li className="border-l-2 border-emerald-300 pl-3" key={event}>{event}</li>)}</ol></details>
         </div>
 
-        <section className="mt-5 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold">Hunt controls</h2><p className="mt-1 text-sm text-slate-500">Use ending controls only when the activity is finished or cannot continue safely.</p></div><button className="min-h-11 rounded-xl border border-red-300 bg-white px-5 text-sm font-bold text-red-700" onClick={()=>setStatus('Completed')} type="button">End Hunt</button></section>
+        <section className="mt-5 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold">Hunt controls</h2><p className="mt-1 text-sm text-slate-500">Use ending controls only when the activity is finished or cannot continue safely.</p></div>{independent
+            ? <button className="min-h-11 rounded-xl border border-red-300 bg-white px-5 text-sm font-bold text-red-700" onClick={()=>setStatus('Completed')} type="button">End Hunt</button>
+            : confirmEnd && controls.canEnd
+              ? <div className="flex flex-col gap-2 sm:flex-row"><button className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-bold" onClick={()=>setConfirmEnd(false)} type="button">Keep running</button><button className="min-h-11 rounded-xl bg-red-700 px-5 text-sm font-bold text-white disabled:opacity-60" disabled={server.pending !== null} onClick={()=>{ setConfirmEnd(false); void server.run('finish') }} type="button">{server.pending === 'finish' ? 'Ending…' : 'Confirm end Hunt'}</button></div>
+              : <button className="min-h-11 rounded-xl border border-red-300 bg-white px-5 text-sm font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={!controls.canEnd || server.pending !== null} onClick={()=>setConfirmEnd(true)} type="button">End Hunt</button>}</section>
       </div>
     </main>
   )

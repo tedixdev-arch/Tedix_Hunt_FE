@@ -290,20 +290,23 @@ test.each([{}, { ...configuration, finishPoint: undefined }, { ...configuration,
 
 test('details screen loads exact Hunt data independently of simulated monitor locations and preserves actions', async () => {
   await render(<MemoryRouter initialEntries={['/organizer/hunts/old-hunt']}><Routes><Route path="/organizer/hunts/:huntId" element={<OrganizerMonitorPage />} /></Routes></MemoryRouter>)
-  expect(mocks.get).toHaveBeenCalledExactlyOnceWith('old-hunt'); expect(mocks.catalog).not.toHaveBeenCalled()
+  // The live-controls header and the geography inspection each read the authoritative Hunt.
+  expect(mocks.get).toHaveBeenCalledTimes(2); expect(mocks.get).toHaveBeenCalledWith('old-hunt'); expect(mocks.catalog).not.toHaveBeenCalled()
   await click('Inspect Hunt geography')
   const preview = container.querySelector('[aria-label="Hunt geography preview"]')!
   expect(preview.textContent).toContain('Snapshot museum'); expect(preview.textContent).not.toContain('Matthias Rex Statue')
-  await click('Pause Hunt'); expect(container.textContent).toContain('Resume Hunt'); noMutation()
+  // A draft cannot be run live, so no lifecycle control is offered.
+  expect(container.textContent).toContain('This Hunt is still a draft'); expect(container.textContent).not.toContain('Pause Hunt'); noMutation()
 })
 
 test('detail geography loading, failure and retry never block existing actions', async () => {
   let reject!: (error: Error) => void
-  mocks.get.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail }))
+  // Child effects run first: the geography inspection's read rejects later; the Monitor header's read resolves as active.
+  mocks.get.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({ ...structuredClone(savedHunt), status: 'active' })
   await render(<MemoryRouter initialEntries={['/organizer/hunts/old-hunt']}><Routes><Route path="/organizer/hunts/:huntId" element={<OrganizerMonitorPage />} /></Routes></MemoryRouter>)
-  expect(container.textContent).toContain('Loading saved Hunt geography'); await click('Pause Hunt')
+  expect(container.textContent).toContain('Loading saved Hunt geography'); expect(container.textContent).toContain('Pause Hunt')
   await act(async () => reject(new Error('Unavailable')))
-  expect(container.textContent).toContain('couldn’t load the saved Hunt geography'); expect(container.textContent).toContain('Resume Hunt')
+  expect(container.textContent).toContain('couldn’t load the saved Hunt geography'); expect(container.textContent).toContain('Pause Hunt')
   await click('Retry geography'); await click('Inspect Hunt geography'); expect(container.textContent).toContain('Snapshot finish'); noMutation()
 })
 
