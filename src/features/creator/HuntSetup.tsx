@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { PrototypeLocationSelector } from '../prototype/PrototypeLocationSelector'
-import { resolveCreatorClujLocality } from '../prototype/clujLocality'
-import type { LocalitySnapshot } from '../../services/api/geography'
+import { resolveCreatorClujLocation } from '../prototype/clujLocality'
+import type { GeographicCity, LocalitySnapshot } from '../../services/api/geography'
 
 export function HuntSetup({ local, savedId, value, onChange, onSelect, beforeChange, onContinue, error }: {
   local: boolean; savedId?: string | null; snapshot?: LocalitySnapshot | null
   value: string | null | undefined; onChange: (id: string | null | undefined) => void
-  onSelect: (place: LocalitySnapshot | null) => void
+  onSelect: (place: LocalitySnapshot | null, geography?: GeographicCity) => void
   beforeChange: (id: string | null | undefined) => boolean
   onSearchPendingChange?: (pending: boolean) => void
   onContinue: () => void; error: string; cityUnavailable?: boolean; onRetryCity?: () => void
@@ -21,9 +21,9 @@ export function HuntSetup({ local, savedId, value, onChange, onSelect, beforeCha
     if (!needsLocality) return
     let active = true
     setResolving(true); setLocationError('')
-    resolveCreatorClujLocality().then(locality => {
+    resolveCreatorClujLocation().then(({ locality, geography }) => {
       if (!active || !beforeChange(locality.id)) return
-      onChange(locality.id); onSelect(locality)
+      onChange(locality.id); onSelect(locality, geography)
     }).catch(() => { if (active) setLocationError('Cluj-Napoca could not be loaded from the location catalog. Retry, or ask an Admin to register it.') })
       .finally(() => { if (active) setResolving(false) })
     return () => { active = false }

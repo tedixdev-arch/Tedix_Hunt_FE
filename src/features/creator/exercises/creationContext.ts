@@ -1,7 +1,7 @@
 import type { CreatorTemplate } from '../../../services/api/creatorTemplates.ts'
 import { hydrateGameplay } from '../checkpointGameplay.ts'
 
-export type PersonalCreationContext = { mode: 'modern' } | { mode: 'legacy' | 'unresolved'; kinds: string[] }
+export type PersonalCreationContext = ({ mode: 'modern' } | { mode: 'legacy' | 'unresolved'; kinds: string[] }) & { poolDefaults?: import('../content/ChallengeAllocation').ExercisePoolDefaults }
 export const modernContext: PersonalCreationContext = { mode: 'modern' }
 /** Category is immutable server classification, not a description of checkpoint contents.
  * Explicit null is the unclassified/Legacy contract. Owner projections currently omit that
