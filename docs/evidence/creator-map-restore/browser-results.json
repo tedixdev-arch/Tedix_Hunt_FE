@@ -1,0 +1,35 @@
+{
+  "controlledMapboxResponses": true,
+  "results": [
+    {
+      "width": 1440,
+      "provisionalCluj": true,
+      "search": true,
+      "placement": true,
+      "dragging": true,
+      "undoRedoConfirmation": true,
+      "satellite": true,
+      "navigationPreservesEditsAndCamera": true,
+      "finishPoint": true,
+      "errorRecovery": true,
+      "invalidSubmissionBlocked": true,
+      "canonicalSelectorAndCenter": true,
+      "savedPositions": true
+    },
+    {
+      "width": 390,
+      "provisionalCluj": true,
+      "search": true,
+      "placement": true,
+      "dragging": true,
+      "undoRedoConfirmation": true,
+      "satellite": true,
+      "navigationPreservesEditsAndCamera": true,
+      "finishPoint": true,
+      "errorRecovery": true,
+      "invalidSubmissionBlocked": true,
+      "canonicalSelectorAndCenter": true,
+      "savedPositions": true
+    }
+  ]
+}
