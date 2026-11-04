@@ -1,0 +1,59 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "modes": [
+        "",
+        "compass",
+        "landmark",
+        "decoded-route",
+        "signal-strength",
+        "none"
+      ],
+      "automatic": true,
+      "immediateUpdates": true,
+      "checkpointValuesRetainedAfterSave": true,
+      "finishDisabled": true,
+      "noOverflow": true,
+      "createNew": true,
+      "challengeRegressions": true
+    },
+    {
+      "width": 390,
+      "modes": [
+        "",
+        "compass",
+        "landmark",
+        "decoded-route",
+        "signal-strength",
+        "none"
+      ],
+      "automatic": true,
+      "immediateUpdates": true,
+      "checkpointValuesRetainedAfterSave": true,
+      "finishDisabled": true,
+      "noOverflow": true,
+      "createNew": true,
+      "challengeRegressions": true
+    },
+    {
+      "width": 320,
+      "modes": [
+        "",
+        "compass",
+        "landmark",
+        "decoded-route",
+        "signal-strength",
+        "none"
+      ],
+      "automatic": true,
+      "immediateUpdates": true,
+      "checkpointValuesRetainedAfterSave": true,
+      "finishDisabled": true,
+      "noOverflow": true,
+      "createNew": true,
+      "challengeRegressions": true
+    }
+  ],
+  "errors": []
+}

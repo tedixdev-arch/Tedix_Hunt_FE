@@ -1,3 +1,4 @@
+import { NavigationPreview } from '../features/creator/NavigationPreview'
 import { templateCategories } from '../features/creator/content/classification'
 import { completionAllowsSave, hasRequiredCompletion, requiredSetupIds, requiredFeatureIds, restoredCompletion, type SaveIntent } from '../features/creator/completion'
 import { HuntSetup } from '../features/creator/HuntSetup'
@@ -25,7 +26,7 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { organizerFeatures, signalNormalCheckpointNames } from '../data/organizerTemplates'
 import { OrganizerHeader } from './OrganizerFlow'
-import { CheckpointGameplayEditor, GameplayScoring, gameplayPresentation } from '../features/creator/CheckpointGameplayEditor'
+import { CheckpointGameplayEditor, GameplayScoring } from '../features/creator/CheckpointGameplayEditor'
 import { createNormalGameplay, hydrateGameplay, serializeGameplay, gameplayValidation, type CheckpointGameplay } from '../features/creator/checkpointGameplay'
 import { FinishPointEditor } from '../features/creator/FinishPointEditor'
 import { finishPointConfiguration, finishPointValidation, type FinishPoint, type FinishPointDraft } from '../features/creator/finishPoint'
@@ -81,7 +82,6 @@ function CheckpointEditor({ context, names, checkpointCount, featureId, gameplay
   const selected = index === checkpointCount ? terminal : gameplay[index]
   const update = (value: CheckpointGameplay) => index === checkpointCount ? onTerminalChange({ ...value, role: 'terminal' }) : onChange(Array.from({ length: Math.max(checkpointCount, gameplay.length) }, (_, number) => number === index ? value : gameplay[number] ?? {}))
   const gameplayField = featureId === 'personal' ? 'kind' : featureId === 'team' ? 'teamKind' : 'navigationMode'
-  const template = gameplayPresentation(gameplayField, selected?.[gameplayField])
   const slotKey = index === checkpointCount ? 'terminal' : String(index)
   return <div className="mt-5">
     <div className="flex gap-2 overflow-x-auto pb-2" aria-label="Checkpoint selector">{checkpointNames.map((name, number) => <button key={`${number}-${name}`} title={featureId === 'personal' ? `${name} · ${personalChallengeStatus(number === checkpointCount ? terminal : gameplay[number], drafts[`kind:${number === checkpointCount ? 'terminal' : number}`])}` : name} aria-label={`Checkpoint ${number + 1}${number === checkpointCount ? ", FinishPoint" : ""}`} disabled={featureId === 'navigation' && number === checkpointCount} type="button" onClick={() => setCheckpoint(number)} className={`grid h-11 min-w-11 shrink-0 whitespace-nowrap place-items-center rounded-full border px-3 text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed ${index === number ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-300 bg-white'}`}>{number === checkpointCount ? 'FinishPoint 🚩' : number + 1}{featureId === 'personal' && <span className="text-xs" aria-hidden="true">{({ 'Challenge assigned': '●', 'No challenge assigned': '○', 'Unsaved changes': '*', 'Challenge incomplete': '!' })[personalChallengeStatus(number === checkpointCount ? terminal : gameplay[number], drafts[`kind:${number === checkpointCount ? 'terminal' : number}`])]}</span>}</button>)}</div>{featureId === 'navigation' && <p className="mt-2 text-sm text-slate-500">The FinishPoint has no next checkpoint.</p>}
@@ -91,7 +91,7 @@ function CheckpointEditor({ context, names, checkpointCount, featureId, gameplay
     <div className="mt-4 flex rounded-xl bg-slate-100 p-1"><button type="button" aria-pressed={source === 'approved'} onClick={() => setSource('approved')} className={`min-h-10 flex-1 rounded-lg text-sm font-bold ${source === 'approved' ? 'bg-white shadow' : ''}`}>Approved component</button><button type="button" aria-pressed={source === 'new'} onClick={() => setSource('new')} className={`min-h-10 flex-1 rounded-lg text-sm font-bold ${source === 'new' ? 'bg-white shadow' : ''}`}>Create new</button></div>
     {source === 'approved' ? <>
       <CheckpointGameplayEditor fields={[gameplayField]} value={selected ?? {}} onChange={update} />
-      <div className="mt-5 grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase text-slate-400">Creator note</p><p className="mt-2 text-sm leading-6">{template.note}</p></div><div className="rounded-xl bg-[#031b14] p-4 text-white" aria-label="Approved Participant preview"><div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-emerald-300"><span>Tedixhunt</span><span>Participant preview</span></div><p className="mt-4 text-xs font-bold uppercase text-emerald-300">{checkpointNames[index]}</p><p className="mt-2 text-xl font-bold">{template.name}</p><p className="mt-2 text-sm text-slate-200">{template.example}</p></div></div>
+      <NavigationPreview value={selected ?? {}} checkpointName={checkpointNames[index]} destinationName={checkpointNames[index + 1]} />
     </> : <PrototypeComponentEditor key={`${featureId}-${index}`} isChallenge={featureId !== 'navigation'} checkpointName={checkpointNames[index]} />}
     </> : <ChallengeAuthoring context={context} key={`${gameplayField}:${index}`} field={gameplayField} value={selected ?? {}} onChange={update} draft={drafts[`${gameplayField}:${index === checkpointCount ? 'terminal' : index}`]} onDraftChange={draft => onDraftsChange({ ...drafts, [`${gameplayField}:${index === checkpointCount ? 'terminal' : index}`]: draft })} />}
 
@@ -102,7 +102,7 @@ function PrototypeComponentEditor({ isChallenge, checkpointName }: { isChallenge
   const [draft, setDraft] = useState({ name: '', instructions: '', format: 'Single choice · up to 3 options', answer: '', difficulty: 'Easy', options: '', hint: '', solution: '' })
   const change = (key: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [key]: value }))
   return <section className="mt-4 space-y-4" aria-label="Prototype component authoring">
-    <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">Prototype-only · not yet persistable. These custom fields are for trying ideas; they are not saved or submitted. Saving keeps the configured approved gameplay. Return to Approved component to change saved gameplay.</p>
+    <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">Prototype-only · not yet persistable. These fields are not saved or submitted and reset when you leave this editor. Saving keeps the approved navigation.</p>
     <div className="grid gap-4 sm:grid-cols-2">
       <label className="text-sm font-bold sm:col-span-2">Component name<input className={field} value={draft.name} onChange={event => change('name', event.target.value)} /></label>
       {isChallenge && <label className="text-sm font-bold sm:col-span-2">Challenge format<select className={field} value={draft.format} onChange={event => change('format', event.target.value)}>{['Single choice · up to 3 options', 'Multiple choice · up to 3 options', 'True / False', 'Match the pairs · up to 3 pairs'].map(format => <option key={format}>{format}</option>)}</select></label>}
@@ -115,7 +115,7 @@ function PrototypeComponentEditor({ isChallenge, checkpointName }: { isChallenge
         <label className="text-sm font-bold">Solution<textarea className={`${field} min-h-20 py-3`} value={draft.solution} onChange={event => change('solution', event.target.value)} /></label>
       </>}
     </div>
-    <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase text-slate-400">Creator note</p><p className="mt-2 text-sm">Custom authoring is a prototype. Draft fields are temporary and reset when you leave this editor.</p></div><div className="rounded-xl bg-[#031b14] p-4 text-white" aria-label="Prototype Participant preview"><p className="text-xs font-bold uppercase text-emerald-300">Participant preview · prototype-only</p><p className="mt-4 text-xs font-bold uppercase text-emerald-300">{checkpointName}</p><p className="mt-2 text-xl font-bold">{draft.name || 'New component'}</p><p className="mt-2 text-sm text-slate-200">{draft.instructions || 'Try participant instructions here.'}</p></div></div>
+    <NavigationPreview value={{}} checkpointName={checkpointName} prototype={draft} />
   </section>
 }
 

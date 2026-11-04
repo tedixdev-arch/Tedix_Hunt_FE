@@ -1,0 +1,11 @@
+
+ RUN  v5.0.3 /workspace/Tedix_Hunt_FE
+
+
+ Test Files  2 passed (2)
+      Tests  49 passed (49)
+   Start at  18:12:17
+   Duration  19.07s (tests 76%, transform 13%, environment 9%, import 2%)
+
+    Isolate  2 workers spawned · ~1.10s startup each (spawn + environment, per file)
+             at least ~1.10s faster with isolate: false — reuses workers across files instead of one per file

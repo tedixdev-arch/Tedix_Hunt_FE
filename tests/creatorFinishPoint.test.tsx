@@ -234,10 +234,10 @@ for (const [featureNumber, gameplayLabel, fieldName, approvedType, challenge] of
     await render(); await verify(); await click(featureNumber)
     expect(container.textContent).toContain('Approved component')
     expect(container.textContent).toContain('Create new')
-    expect(container.textContent).toContain('Creator note')
-    expect(container.querySelector('[aria-label="Approved Participant preview"]')).not.toBeNull()
+    expect(container.textContent).not.toContain('Creator note')
+    expect(container.querySelector('[aria-label="Mobile navigation preview"]')).not.toBeNull()
     await selectGameplay(gameplayLabel, approvedType)
-    const approvedPreview = container.querySelector('[aria-label="Approved Participant preview"]')!.textContent
+    const approvedPreview = container.querySelector('[aria-label="Mobile navigation preview"]')!.textContent
     await click('Create new')
     const authoring = container.querySelector('[aria-label="Prototype component authoring"]')!
     expect(authoring.textContent).toContain('Prototype-only · not yet persistable')
@@ -255,7 +255,7 @@ for (const [featureNumber, gameplayLabel, fieldName, approvedType, challenge] of
       Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, 'Prototype instructions')
       textarea.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    expect(container.querySelector('[aria-label="Prototype Participant preview"]')?.textContent).toContain('Unsupported custom challenge')
+    expect(container.querySelector('[aria-label="Mobile navigation preview"]')?.textContent).toContain('Unsupported custom challenge')
     // Saving from the prototype tab still persists only the explicitly selected supported choice.
     await save()
     const saved = mocks.createVersion.mock.calls[0][1]
@@ -268,7 +268,7 @@ for (const [featureNumber, gameplayLabel, fieldName, approvedType, challenge] of
     expect(JSON.stringify(saved)).not.toContain('Prototype instructions')
     expect(record).toEqual(original)
     await click(featureNumber); await click('Approved component')
-    expect(container.querySelector('[aria-label="Approved Participant preview"]')?.textContent).toBe(approvedPreview)
+    expect(container.querySelector('[aria-label="Mobile navigation preview"]')?.textContent).toBe(approvedPreview)
     await save()
     expect(mocks.createVersion).toHaveBeenCalledTimes(1)
   })
