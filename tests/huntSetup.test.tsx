@@ -36,7 +36,8 @@ function catalogHasCluj() {
 test('Cluj default resolves its canonical locality from the catalog without persisting', async () => {
   catalogHasCluj()
   await render()
-  expect([...container.querySelectorAll('#local-geography select')].map(el => (el as HTMLSelectElement).value)).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
+  expect(container.textContent).toContain('Selected locality:')
+  expect(container.querySelector('[aria-label="Prototype location"]')).toBeNull()
   expect(geo.cities).toHaveBeenCalledWith('RO', 'Cluj-Napoca', undefined, undefined)
   expect(geo.get).toHaveBeenCalledWith(cluj.id)
   expect(geo.cities).toHaveBeenCalledTimes(1)
@@ -95,16 +96,27 @@ test('existing Local saved locality unlocks editing without Continue even if reg
   await render('/create?template=owned'); expect(builder().hidden).toBe(false); expect(builder().disabled).toBe(false); expect(button('Save draft').matches(':disabled')).toBe(false); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
   await change('#template-setup input','Saved draft remains editable'); expect((container.querySelector('#template-setup input') as HTMLInputElement).value).toBe('Saved draft remains editable')
 })
-test('saved Local missing locality stays editable during registry failure but cannot position checkpoints', async () => {
+test('saved Local missing locality keeps provisional positioning available during registry failure', async () => {
   api.get.mockResolvedValue(record()); geo.countries.mockRejectedValue(new Error('offline'))
-  await render('/create?template=owned'); expect(builder().disabled).toBe(false); expect(builder().hidden).toBe(false); expect(button('Save draft').matches(':disabled')).toBe(false); expect(container.querySelector('#checkpoint-positions')).toBeNull()
-  await click('Continue to Template builder'); expect(container.querySelector('#checkpoint-positions')).toBeNull(); expect(builder().disabled).toBe(false)
+  await render('/create?template=owned'); expect(builder().disabled).toBe(false); expect(builder().hidden).toBe(false); expect(button('Save draft').matches(':disabled')).toBe(false); expect(container.querySelector('#checkpoint-positions')).not.toBeNull()
+  await click('Continue to Template builder'); expect(container.querySelector('#checkpoint-positions')).not.toBeNull(); expect(builder().disabled).toBe(false)
+})
+test('unavailable saved camera coordinates use provisional Cluj without rebinding the locality', async () => {
+  const saved = { ...record(), localityId: city.id, localitySnapshot: { ...city, latitude: null, longitude: null } }
+  api.get.mockResolvedValue(saved)
+  await render('/create?template=owned'); await click('Checkpoints & Challenges')
+  expect(map.props.initialLatitude).toBe(46.7712)
+  expect(map.props.initialLongitude).toBe(23.6236)
+  expect(container.textContent).toContain('Provisional Cluj map context only')
+  expect(saved.localityId).toBe(city.id)
+  expect(saved.content.configuration.checkpointPositions).toEqual([])
+  expect(api.createVersion).not.toHaveBeenCalled()
 })
 test('development preset preserves saved locality snapshots and never rebinds a draft', async () => {
   vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
   api.get.mockResolvedValue({ ...record(), localityId: city.id, localitySnapshot: city })
   await render('/create?template=owned')
-  expect(geo.search).not.toHaveBeenCalled(); expect(container.querySelector<HTMLSelectElement>('[aria-label="City"]')!.value).toBe('Cluj-Napoca')
+  expect(geo.search).not.toHaveBeenCalled(); expect(container.textContent).toContain(city.name); expect(container.querySelector('[aria-label="Prototype location"]')).toBeNull()
   await change('#template-setup input', 'Preserved Paris draft'); await click('Save draft'); expect(api.createVersion.mock.calls[0][2]).toBeUndefined()
 })
 

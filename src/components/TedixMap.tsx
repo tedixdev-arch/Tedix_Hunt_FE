@@ -113,6 +113,7 @@ export function TedixMap({
 }: TedixMapProps) {
   const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN?.trim()
   const [mapError, setMapError] = useState('')
+  const [mapAttempt, setMapAttempt] = useState(0)
   const [mapLoading, setMapLoading] = useState(true)
   const [cameraReadyRevision, setCameraReadyRevision] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -144,7 +145,7 @@ export function TedixMap({
     }) } catch { setMapError('Map unavailable. Check browser WebGL support and Mapbox configuration.'); setMapLoading(false); return }
     const failed = () => { setMapError('Map could not load. Check the Mapbox token and network access. Saved stop details remain available.'); setMapLoading(false) }
     const loaded = () => { setMapLoading(false); setMapError('') }
-    const styleLoaded = () => setCameraReadyRevision(value => value + 1)
+    const styleLoaded = () => { setMapError(''); setMapLoading(false); setCameraReadyRevision(value => value + 1) }
     const rememberCamera = () => {
       if (!cameraListener.current) return
       const center = map.getCenter()
@@ -155,6 +156,7 @@ export function TedixMap({
     map.on?.('load', loaded)
     map.on?.('style.load', styleLoaded)
     mapRef.current = map
+    handledCity.current = undefined
     handledFocus.current = undefined
     handledFit.current = 0
     didFitLandmarks.current = false
@@ -171,7 +173,7 @@ export function TedixMap({
       map.remove()
       mapRef.current = null
     }
-  }, [accessToken])
+  }, [accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -260,18 +262,18 @@ export function TedixMap({
       return marker
     })
     return () => markers.forEach(marker => marker.remove())
-  }, [positionPins, onCheckpointSelect, onCheckpointMove, accessToken])
+  }, [positionPins, onCheckpointSelect, onCheckpointMove, accessToken, mapAttempt])
 
   useEffect(() => {
     if (mapRef.current && currentStyle.current !== mapStyle) {
       mapRef.current.setStyle(mapStyle)
       currentStyle.current = mapStyle
     }
-  }, [mapStyle, accessToken])
+  }, [mapStyle, accessToken, mapAttempt])
 
   useEffect(() => {
     if (cameraTarget) mapRef.current?.flyTo({ center: [cameraTarget.longitude, cameraTarget.latitude], zoom: 16 })
-  }, [cameraTarget, accessToken])
+  }, [cameraTarget, accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -285,7 +287,7 @@ export function TedixMap({
     element.onclick = event => event.stopPropagation()
     const marker = new mapboxgl.Marker({ element }).setLngLat([landmarkReference.longitude, landmarkReference.latitude]).addTo(map)
     return () => { marker.remove() }
-  }, [landmarkReference, accessToken])
+  }, [landmarkReference, accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -320,7 +322,7 @@ export function TedixMap({
     arrange()
     map.on('moveend', arrange)
     return () => { map.off('moveend', arrange); markers.forEach(marker => marker.remove()) }
-  }, [landmarkReferences, onLandmarkSelect, accessToken])
+  }, [landmarkReferences, onLandmarkSelect, accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -339,7 +341,7 @@ export function TedixMap({
       if (map.getLayer(id)) map.removeLayer(id)
       if (map.getSource(id)) map.removeSource(id)
     }
-  }, [proposedSequence, accessToken])
+  }, [proposedSequence, accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -347,7 +349,7 @@ export function TedixMap({
     const click = (event: mapboxgl.MapMouseEvent) => { if (Date.now() > suppressClickUntil.current) clickHandler.current?.(event.lngLat.lat, event.lngLat.lng) }
     map.on('click', click)
     return () => { map.off('click', click) }
-  }, [!!onMapClick, accessToken])
+  }, [!!onMapClick, accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -387,7 +389,7 @@ export function TedixMap({
       if (map.getLayer(fillId)) map.removeLayer(fillId)
       if (map.getSource(sourceId)) map.removeSource(sourceId)
     }
-  }, [checkpoints, onCheckpointSelect, onCheckpointMove, accessToken])
+  }, [checkpoints, onCheckpointSelect, onCheckpointMove, accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -421,7 +423,7 @@ export function TedixMap({
       for (const id of [`${sourceId}-line`, `${sourceId}-fill`]) if (map.getLayer(id)) map.removeLayer(id)
       if (map.getSource(sourceId)) map.removeSource(sourceId)
     }
-  }, [finishPoint, finishPointSelected, onFinishPointSelect, onFinishPointMove, accessToken])
+  }, [finishPoint, finishPointSelected, onFinishPointSelect, onFinishPointMove, accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -443,7 +445,7 @@ export function TedixMap({
       if (map.getLayer(id)) map.removeLayer(id)
       if (map.getSource(id)) map.removeSource(id)
     }
-  }, [walkingRoute, accessToken])
+  }, [walkingRoute, accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -465,7 +467,7 @@ export function TedixMap({
       if (map.getLayer(id)) map.removeLayer(id)
       if (map.getSource(id)) map.removeSource(id)
     }
-  }, [routeOverview, accessToken])
+  }, [routeOverview, accessToken, mapAttempt])
 
   useEffect(() => {
     const map = mapRef.current
@@ -478,13 +480,13 @@ export function TedixMap({
     // Keep the northernmost reference clear of the location-search overlay.
     map.fitBounds(bounds, { padding: locationSearch ? { top: 180, bottom: 64, left: 64, right: 64 } : 64, maxZoom: 16, duration: 0 })
     didFitLandmarks.current = true
-  }, [landmarkReferences, fitLandmarkReferences, locationSearch, accessToken])
+  }, [landmarkReferences, fitLandmarkReferences, locationSearch, accessToken, mapAttempt])
 
   return (
     <div className={`relative h-full min-h-[300px] w-full ${positionPins ? 'flex flex-col' : ''} ${className}`}>
       {landmarkReference && <p className="absolute bottom-3 left-3 right-3 z-10 rounded-lg bg-white p-2 text-xs font-bold text-blue-900">R · Landmark reference only: {landmarkReference.name}. Not an arrival location.</p>}
       {accessToken && mapLoading && !mapError && <p role="status" className={`absolute left-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-2 text-sm`}>Loading map…</p>}
-      {mapError && <p role="alert" className={`absolute left-2 right-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-3 text-sm text-red-700`}>{mapError}</p>}
+      {mapError && <p role="alert" className={`absolute left-2 right-2 ${positionPins ? 'bottom-14' : 'top-2'} z-10 rounded-lg bg-white p-3 text-sm text-red-700`}>{mapError}<button type="button" className="ml-3 min-h-11 font-bold underline" onClick={() => { const map = mapRef.current; if (map) { const center = map.getCenter(); initialOptions.current = { center: [center.lng, center.lat], zoom: map.getZoom(), style: mapStyle } } setMapAttempt(value => value + 1) }}>Retry map</button></p>}
       {accessToken && locationSearch && <MapboxLocationSearch compact={!!positionPins} proximity={[initialLongitude, initialLatitude]} inline={false} accessToken={accessToken} locationLabel={positionPins ? undefined : selectedLocationLabel} onSelect={({ center, bbox }) => {
         const map = mapRef.current
         if (!map) throw new Error('Map unavailable. Please try again.')
