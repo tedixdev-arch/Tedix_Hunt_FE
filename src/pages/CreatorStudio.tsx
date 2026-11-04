@@ -1,7 +1,7 @@
 import { templateCategories } from '../features/creator/content/classification'
 import { completionAllowsSave, hasRequiredCompletion, requiredSetupIds, requiredFeatureIds, restoredCompletion, type SaveIntent } from '../features/creator/completion'
 import { HuntSetup } from '../features/creator/HuntSetup'
-import type { LocalitySnapshot } from '../services/api/geography'
+import type { GeographicCity, LocalitySnapshot } from '../services/api/geography'
 import type { MapCamera } from '../components/TedixMap'
 import { personalCreationContext, type PersonalCreationContext } from '../features/creator/exercises/creationContext'
 import { personalChallengeStatus } from '../features/creator/exercises/personalExamples'
@@ -265,6 +265,7 @@ function CreatorTemplateEditor() {
   const [previewContent, setPreviewContent] = useState<CreatorTemplateContent | null>(null)
   const [localValidationAttempted, setLocalValidationAttempted] = useState(false), [validating, setValidating] = useState(false)
   const [validatedLocal, setValidatedLocal] = useState(''), [localityError, setLocalityError] = useState('')
+  const [poolGeography, setPoolGeography] = useState<GeographicCity | null>(null)
   const [selectedCity, setSelectedCity] = useState<LocalitySnapshot | null>(null)
   const [citySearchPending, setCitySearchPending] = useState(false)
   const [setupError, setSetupError] = useState('')
@@ -302,7 +303,8 @@ function CreatorTemplateEditor() {
     document.getElementById('template-setup')?.scrollIntoView({ block: 'start' })
     document.getElementById('template-setup-heading')?.focus()
   }, [setupContinuation])
-  const changeCity = (place: LocalitySnapshot | null) => {
+  const changeCity = (place: LocalitySnapshot | null, geography?: GeographicCity) => {
+    setPoolGeography(geography ?? null)
     setSelectedCity(place); setSetupError('')
     if (place) cityChangeConfirmed.current = false
     const valid = place && Number.isFinite(place.latitude) && Math.abs(place.latitude) <= 90 && Number.isFinite(place.longitude) && Math.abs(place.longitude) <= 180
@@ -318,7 +320,7 @@ function CreatorTemplateEditor() {
     if (accepted) cityChangeConfirmed.current = true
     return accepted
   }
-  const challengeContext = useMemo(() => ({ ...personalCreationContext(persisted), poolDefaults: { category: details.category, location: city } }), [persisted, details.category, city])
+  const challengeContext = useMemo(() => ({ ...personalCreationContext(persisted), poolDefaults: { category: details.category, location: city, geography: poolGeography } }), [persisted, details.category, city, poolGeography])
   const features = organizerFeatures.filter(item => !['positions', 'final'].includes(item.id))
   const feature = features[Math.min(featureIndex, features.length - 1)]
   const advancedIds = new Set(['map', 'results', 'rewards'])

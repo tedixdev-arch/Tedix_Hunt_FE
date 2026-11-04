@@ -1,12 +1,12 @@
-import { useEffect, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import { templateCategories } from './classification'
 import { filterContent, initialFilters, starterContent, type ContentFilters, type ContentRecord } from './catalog'
 import { ContentGeography, universalScope } from './ContentGeography'
 import { changeCurriculum, curriculumOptions, mathematicsLevels } from './curriculum'
 import { control, ExerciseRenderer } from '../exercises/ExerciseRenderer'
-import { geographyApi, type LocalitySnapshot } from '../../../services/api/geography'
+import type { GeographicCity, LocalitySnapshot } from '../../../services/api/geography'
 
-export interface ExercisePoolDefaults { category?: string; location?: LocalitySnapshot | null }
+export interface ExercisePoolDefaults { category?: string; location?: LocalitySnapshot | null; geography?: Pick<GeographicCity, 'localityId' | 'countryCode' | 'geographicId' | 'admin1Code' | 'regionStatus'> | null }
 /** Session-only browsing and simulation; never allocates or persists a library record. */
 export function ChallengeAllocation({ items = starterContent, mechanic = '', defaults }: {
   items?: readonly ContentRecord[]; mechanic?: string; defaults?: ExercisePoolDefaults
@@ -18,21 +18,13 @@ export function ChallengeAllocation({ items = starterContent, mechanic = '', def
   const [filters, setFilters] = useState<ContentFilters>(initialFilters)
   const [locationChoice, setLocationChoice] = useState<string | null>(null)
   const locationMode = locationChoice ?? (defaults?.location ? 'template' : 'universal')
-  const [templateScope, setTemplateScope] = useState<{ id: string; scope: typeof universalScope } | null>(null)
-  const [locationError, setLocationError] = useState(false)
-  const location = defaults?.location
-  useEffect(() => {
-    let live = true; setLocationError(false)
-    if (locationMode !== 'template' || !location) return
-    geographyApi.cities(location.countryCode, location.name).then(page => {
-      const city = page.cities.find(c => c.localityId === location.id && c.regionStatus === 'resolved')
-      if (!live) return
-      if (city) setTemplateScope({ id: location.id, scope: { country: city.countryCode, region: city.admin1Code, city: city.geographicId } })
-      else setLocationError(true)
-    }).catch(() => { if (live) setLocationError(true) })
-    return () => { live = false }
-  }, [locationMode, location?.id, location?.countryCode, location?.name])
-  const scope = locationMode === 'template' ? templateScope && templateScope.id === location?.id ? templateScope.scope : null : locationMode === 'choose' ? filters.scope ?? universalScope : universalScope
+  const location = defaults?.location, geography = defaults?.geography
+  // Locality UUIDs and geographic city IDs are different namespaces. Only reuse
+  // a catalog mapping captured for this exact Template locality; never search by label.
+  const templateScope = location && geography?.localityId === location.id && geography.countryCode === location.countryCode
+    && geography.regionStatus === 'resolved' && geography.geographicId && geography.admin1Code
+    ? { country: geography.countryCode, region: geography.admin1Code, city: geography.geographicId } : null
+  const scope = locationMode === 'template' ? templateScope : locationMode === 'choose' ? filters.scope ?? universalScope : universalScope
   const poolFilters = { ...filters, category: category === 'starter-preset' ? 'All' : category, scope: scope ?? universalScope }
   const personal = items.filter(item => item.category === 'Personal Challenges' && (!mechanic || item.mechanic === mechanic))
   const approved = personal.filter(item => item.approvalStatus === 'approved' && item.revision.kind === 'backend' && item.collection.id !== 'repository-starters')
@@ -57,7 +49,7 @@ export function ChallengeAllocation({ items = starterContent, mechanic = '', def
         <label className="block text-sm font-bold">Geographic applicability<select aria-label="Geographic applicability" className={`${control} mt-1 w-full bg-white`} value={locationMode} onChange={e => { setLocationChoice(e.target.value); reset() }}>
           {location && <option value="template">Template location: {location.name}, {location.countryDisplayName}</option>}<option value="universal">Universal</option><option value="choose">Choose another location</option>
         </select></label>
-        {locationMode === 'template' && <p className="text-xs text-slate-600">Uses {location?.name}, {location?.countryDisplayName} from the Template automatically.{!scope && (locationError ? ' Location catalog details are unavailable; approved previews await those records.' : ' Loading location catalog details…')}</p>}
+        {locationMode === 'template' && <p className="text-xs text-slate-600">Uses {location?.name}, {location?.countryDisplayName} from the Template automatically.{!scope && ' The Template locality is known, but its geographic city mapping is unavailable. Approved previews cannot match this location until that mapping is available. Choose Universal to browse without a geographic restriction.'}</p>}
         {locationMode === 'choose' && <ContentGeography value={filters.scope ?? universalScope} onChange={scope => { setFilters({ ...filters, scope }); reset() }} />}
         {category === 'Mathematics' && <fieldset><legend className="text-sm font-bold">Grade → Main → Unit → Lesson</legend><div className="mt-2 grid gap-3 sm:grid-cols-2">{mathematicsLevels.map(level => {
           const options = curriculumOptions(personal, poolFilters, level.key)

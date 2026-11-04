@@ -9,7 +9,7 @@ import type { AuthoringDraft } from '../../src/features/creator/exercises/experi
 import '../../src/index.css'
 geographyApi.cities = async () => ({ cities: [{ geographicId: 'fixture-city', localityId: 'fixture-locality', countryCode: 'RO', admin1Code: 'CJ', regionStatus: 'resolved' } as any], nextAfter: null })
 const location = { id: 'fixture-locality', countryCode: 'RO', countryDisplayName: 'Romania', name: 'Cluj-Napoca', administrativeContext: 'Cluj', latitude: 46.77, longitude: 23.59 }
-const defaults = { category: 'Mathematics', location }
+const defaults = { category: 'Mathematics', location, geography: { localityId: location.id, geographicId: 'fixture-city', countryCode: 'RO', admin1Code: 'CJ', regionStatus: 'resolved' as const } }
 const approved: ContentRecord = { ...starterContent[0], id: 'fixture-approved', activityCategory: 'Mathematics', approvalStatus: 'approved', revision: { kind: 'backend', id: 'fixture-revision' }, collection: { id: 'fixture-library', name: 'Fixture library' }, geography: { country: 'RO', region: 'CJ', city: 'fixture-city' } }
 function Fixture() {
   const [draft, setDraft] = useState<AuthoringDraft>({ source: 'saved', assignment: 'predefined' })

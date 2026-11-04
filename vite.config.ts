@@ -3,6 +3,15 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // Keep the existing PWA cache budget and validation. Mapbox is the largest
+  // dependency; giving it a separate chunk keeps each precached asset under 3 MiB.
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: { groups: [{ name: 'mapbox', test: /node_modules[\\/]mapbox-gl[\\/]/ }] },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

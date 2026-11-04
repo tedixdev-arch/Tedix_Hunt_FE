@@ -1,5 +1,5 @@
 import { organizerLocalApi, type City, type Country, type Region } from '../../services/api/organizerLocal'
-import { geographyApi, type Locality } from '../../services/api/geography'
+import { geographyApi, type Locality, type GeographicCity } from '../../services/api/geography'
 import { prototypeLocation } from './PrototypeLocationSelector'
 
 /** Labels match the backend catalog case- and accent-insensitively ("Cluj-Napoca" == "Cluj Napoca"). */
@@ -29,7 +29,7 @@ export async function resolveOrganizerClujLocality(): Promise<City> {
 }
 
 /** Resolves the TEMPORARY Cluj default to an active, registered Creator locality (registering it from the catalog if needed). */
-export async function resolveCreatorClujLocality(): Promise<Locality> {
+export async function resolveCreatorClujLocation(): Promise<{ locality: Locality; geography: GeographicCity }> {
   let after: string | undefined
   do {
     const page = await geographyApi.cities(prototypeLocation.countryCode, prototypeLocation.city, undefined, after)
@@ -40,7 +40,7 @@ export async function resolveCreatorClujLocality(): Promise<Locality> {
       if (resolved.geographicId !== city.geographicId || !resolved.localityId || !resolved.registeredActive) throw new Error('location_unavailable')
       const locality = await geographyApi.get(resolved.localityId)
       if (locality.id !== resolved.localityId || !locality.active) throw new Error('location_unavailable')
-      return locality
+      return { locality, geography: { ...city, ...resolved } }
     }
     after = page.nextAfter ?? undefined
   } while (after)

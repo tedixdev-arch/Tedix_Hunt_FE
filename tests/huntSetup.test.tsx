@@ -39,6 +39,7 @@ test('Cluj default resolves its canonical locality from the catalog without pers
   expect([...container.querySelectorAll('#local-geography select')].map(el => (el as HTMLSelectElement).value)).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
   expect(geo.cities).toHaveBeenCalledWith('RO', 'Cluj-Napoca', undefined, undefined)
   expect(geo.get).toHaveBeenCalledWith(cluj.id)
+  expect(geo.cities).toHaveBeenCalledTimes(1)
   await click('Continue to Template builder')
   expect(container.querySelector<HTMLFieldSetElement>('[aria-label="Template builder"]')!.disabled).toBe(false)
   expect(document.activeElement?.id).toBe('template-setup-heading')
@@ -51,6 +52,7 @@ test('new Local draft saves the catalog-resolved Cluj locality, never labels', a
   await render(); await click('Continue to Template builder'); await change('#template-setup input', 'Cluj adventure'); await click('Save draft')
   expect(api.create).toHaveBeenCalledWith(expect.anything(), 'local', cluj.id)
   expect(JSON.stringify(api.create.mock.calls)).not.toContain('localitySnapshot')
+  expect(JSON.stringify(api.create.mock.calls)).not.toContain('geographicId')
 })
 test('missing Cluj catalog entry is reported with a retry and binds nothing', async () => {
   await render()

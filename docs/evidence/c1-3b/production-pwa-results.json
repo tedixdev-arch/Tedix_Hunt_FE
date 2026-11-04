@@ -1,0 +1,18 @@
+{
+  "chunks": [
+    "index-CNEBfQDY.js",
+    "mapbox-Di-i2u-I.js"
+  ],
+  "loaded": [
+    {
+      "url": "http://127.0.0.1:4173/assets/index-CNEBfQDY.js",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4173/assets/mapbox-Di-i2u-I.js",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "precached": true
+}

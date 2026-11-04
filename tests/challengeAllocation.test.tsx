@@ -66,24 +66,31 @@ test('only eligible approved backend records can be selected; pool changes inval
 })
 test('Template category/location inherited automatically with Universal override and no guessed IDs', async () => {
   const location = { id: 'test-locality', name: 'Test city', countryCode: 'RO', countryDisplayName: 'Romania', administrativeContext: 'Test county', latitude: 1, longitude: 2 }
-  vi.spyOn(geographyApi, 'cities').mockResolvedValue({ cities: [{ localityId: location.id, geographicId: 'test-geographic', countryCode: 'RO', admin1Code: 'CJ', regionStatus: 'resolved' } as any], nextAfter: null })
-  const items = [{ ...approved, geography: { country: 'RO', region: 'CJ', city: 'test-geographic' } }]
-  await act(async () => root.render(<ChallengeAllocation items={items} defaults={{ category: 'Mathematics', location }} />))
+  const cities = vi.spyOn(geographyApi, 'cities').mockRejectedValue(new Error('lookup must not be needed'))
+  const get = vi.spyOn(geographyApi, 'get').mockRejectedValue(new Error('lookup must not be needed'))
+  const geography = { localityId: location.id, geographicId: 'test-geographic', countryCode: 'RO', admin1Code: 'CJ', regionStatus: 'resolved' as const }
+  const items = [{ ...approved, geography: { country: 'RO', region: 'CJ', city: 'test-geographic' } }, { ...approved, id: 'other-city', geography: { country: 'RO', region: 'CJ', city: 'different-geographic' } }]
+  await act(async () => root.render(<ChallengeAllocation items={items} defaults={{ category: 'Mathematics', location, geography }} />))
   await click('Refine exercise pool+')
   expect(host.querySelector<HTMLSelectElement>('[aria-label="Allocation category"]')!.value).toBe('Mathematics')
   expect(host.querySelector<HTMLSelectElement>('[aria-label="Geographic applicability"]')!.value).toBe('template')
   expect(host.querySelector('[aria-label="Find content city"]')).toBeNull()
-  expect(geographyApi.cities).toHaveBeenCalledWith('RO', 'Test city')
-  await select('Geographic applicability', 'universal')
+  expect(cities).not.toHaveBeenCalled(); expect(get).not.toHaveBeenCalled()
   expect(host.textContent).toContain('Preview eligible approved exercise')
+  await specific()
+  expect([...host.querySelector<HTMLSelectElement>('[aria-label="Approved exercise"]')!.options].map(o => o.value)).toEqual(['', approved.id])
+  await select('Geographic applicability', 'universal')
+  expect([...host.querySelector<HTMLSelectElement>('[aria-label="Approved exercise"]')!.options].map(o => o.value)).toEqual(['', approved.id, 'other-city'])
 })
-test('unresolved Template location fails closed while allowing Universal and labeled Starter demo', async () => {
-  vi.spyOn(geographyApi, 'cities').mockRejectedValue(new Error('offline'))
+test('missing conversion fails closed even when lookup services are unavailable; Universal and Starter remain available', async () => {
+  const cities = vi.spyOn(geographyApi, 'cities').mockRejectedValue(new Error('offline'))
+  vi.spyOn(geographyApi, 'get').mockRejectedValue(new Error('offline'))
   await act(async () => root.render(<ChallengeAllocation items={[approved, ...starterContent]} defaults={{ category: 'Mathematics', location: { id: 'test', name: 'City', countryCode: 'RO', countryDisplayName: 'Romania', administrativeContext: '', latitude: 1, longitude: 2 } }} />))
   expect(host.textContent).not.toContain('Preview eligible approved exercise')
   await click('Preview Starter demonstration')
   expect(host.textContent).toContain('May not match your pool. No exercise has been allocated.')
-  await click('Refine exercise pool+'); expect(host.textContent).toContain('Location catalog details are unavailable')
+  await click('Refine exercise pool+'); expect(host.textContent).toContain('geographic city mapping is unavailable')
+  expect(cities).not.toHaveBeenCalled()
   await select('Geographic applicability', 'universal'); expect(host.textContent).toContain('Preview eligible approved exercise')
 })
 test('allocation and mechanics preserve saved assignment and scoring', async () => {
@@ -97,4 +104,15 @@ test('allocation and mechanics preserve saved assignment and scoring', async () 
   expect(changed).not.toHaveBeenCalled()
   expect(applyExerciseDrafts([checkpoint], { 'kind:0': current }).checkpoints).toEqual([checkpoint])
   expect(host.querySelector('[aria-label="Content exercise picker"]')).toBeNull()
+})
+
+test('a mapping for another locality or country cannot broaden the inherited pool', async () => {
+  const location = { id: 'locality', name: 'City', countryCode: 'RO', countryDisplayName: 'Romania', administrativeContext: '', latitude: 1, longitude: 2 }
+  for (const geography of [
+    { localityId: 'wrong', countryCode: 'RO', geographicId: 'catalog-city', admin1Code: 'CJ', regionStatus: 'resolved' as const },
+    { localityId: 'locality', countryCode: 'FR', geographicId: 'catalog-city', admin1Code: 'CJ', regionStatus: 'resolved' as const },
+  ]) {
+    await act(async () => root.render(<ChallengeAllocation items={[approved]} defaults={{ category: 'Mathematics', location, geography }} />))
+    expect(host.textContent).not.toContain('Preview eligible approved exercise')
+  }
 })

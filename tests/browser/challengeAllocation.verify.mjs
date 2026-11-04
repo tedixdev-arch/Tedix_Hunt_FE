@@ -58,5 +58,5 @@ try {
     results.push({ width, mechanics: 15, overflow: false, assignmentsPreserved: true, specificFixture: true, honestEmptyState: true })
   }
   assert.deepEqual(errors, [])
-  await fs.writeFile('work/selection-browser/results.json', JSON.stringify({ results, errors }, null, 2))
+  await fs.writeFile('work/selection-browser/results.json', JSON.stringify({ capturedAt: new Date().toISOString(), results, errors }, null, 2))
 } finally { await browser.close() }
