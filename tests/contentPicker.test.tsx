@@ -49,13 +49,14 @@ test('picker selects distinct records of the same mechanic, searches instruction
   expect(button(`Try example: ${items[0].exercise.title}`)).toBeUndefined()
   expect(button('Try example: Another pair exercise')).toBeDefined()
 })
-test('Template Predefined uses individual picker and retains publication guard and custom draft across modes', async () => {
+test('Template Predefined uses compact allocation and retains publication guard and custom draft across modes', async () => {
   let current: AuthoringDraft
   const mutate = vi.fn(), before = structuredClone(starterContent)
   function Harness() { const [draft, setDraft] = useState<AuthoringDraft>({ source: 'saved', assignment: 'predefined' }); current = draft; return <PersonalChallengeAuthoring value={{}} draft={draft} onDraftChange={setDraft} onChange={mutate} /> }
   await mount(<Harness />)
-  expect(container.querySelector('[aria-label="Content exercise picker"]')).not.toBeNull()
-  await click(`Try example: ${starterContent[0].exercise.title}`)
+  expect(container.querySelector('[aria-label="Content exercise picker"]')).toBeNull()
+  expect(container.querySelector('[aria-label="Challenge allocation"]')).not.toBeNull()
+  await change('Personal Challenge', starterContent[0].mechanic)
   expect(current!.exercise).toEqual(starterContent[0].exercise)
   expect(current!.exercise).not.toBe(starterContent[0].exercise)
   expect(button('Apply challenge')).toBeUndefined()
@@ -112,23 +113,25 @@ test('absent curriculum leaves the Mathematics hierarchy visible without invente
   expect(container.textContent).toContain('unavailable levels await the curriculum catalog')
 })
 
-test('Create Your Own copies the selected record over a same-mechanic draft only after confirmation', async () => {
+test('Create Your Own preserves retained selected-record draft compatibility and confirmation', async () => {
   let current: AuthoringDraft
   const mutate = vi.fn(), sourcesBefore = structuredClone(starterContent)
+  let restoreSelection: () => void
   const first = starterContent[0], second = starterContent.find(item => item.id === 'fixture-second-record')!
   expect(first.mechanic).toBe(second.mechanic)
   function Harness() {
     const [draft, setDraft] = useState<AuthoringDraft>({ source: 'saved', assignment: 'predefined' })
     current = draft
+    restoreSelection = () => setDraft({ ...draft, source: 'example', emptySelection: false, copySelectedExample: true, exercise: structuredClone(second.exercise) })
     return <PersonalChallengeAuthoring value={{ checkpoint: 1 }} draft={draft} onDraftChange={setDraft} onChange={mutate} />
   }
   await mount(<Harness />)
-  await click(`Try example: ${first.exercise.title}`); await click('Create Your Own')
+  await change('Personal Challenge', first.mechanic); await click('Create Your Own')
   await change('Title', 'My unsaved first exercise')
   await click('Apply challenge')
   const assigned = structuredClone(current!.appliedCustom!)
   const oldDraft = structuredClone(current!.custom!)
-  await click('Predefined'); await click(`Try example: ${second.exercise.title}`)
+  await click('Predefined'); await act(async () => restoreSelection())
   const beforeCancel = structuredClone(current!)
   const assignedBeforeCopy = applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': current! })
   await click('Create Your Own') // Cancel replacement.

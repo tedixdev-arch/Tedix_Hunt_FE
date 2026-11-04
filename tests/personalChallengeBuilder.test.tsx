@@ -42,18 +42,17 @@ const custom = (type: string) => authorPrototype(prototypes.find(e => e.type ===
 const content = (checkpoints: any[]): any => ({ key: 'test', version: 2, displayName: 'Test', theme: 'City', mission: 'Go', configuration: { normalCheckpointCount: 2 }, scoring: {}, checkpoints })
 const asDraft = (e: Exercise): AuthoringDraft => ({ source: 'custom', assignment: 'custom', custom: e })
 
-for (const preset of personalExamples) test(`${preset.type}: one modern selector, immediate read-only play and independent custom authoring`, async () => {
+for (const preset of personalExamples) test(`${preset.type}: one modern selector, compact allocation and independent custom authoring`, async () => {
   const before = structuredClone(preset)
   await mount(); await choose(preset.type)
   const selector = container.querySelector<HTMLSelectElement>('[aria-label="Personal Challenge"]')!
   expect([...selector.options].map(o => o.value)).toEqual(['', ...personalTypes.map(row => row[0])])
   expect(selector.querySelector('optgroup')).toBeNull()
-  expect(container.querySelector('[aria-label="Mobile challenge canvas"]')).not.toBeNull()
+  expect(container.querySelector('[aria-label="Mobile challenge canvas"]')).toBeNull()
   expect(container.querySelector('textarea')).toBeNull()
   expect(button('Test Challenge')).toBeUndefined(); expect(button('Apply challenge')).toBeUndefined()
   expect(container.querySelector('[aria-label^="Edit "]')).toBeNull()
   expect(state.assignment).toBe('predefined'); expect(state.custom).toBeUndefined()
-  await click('Check answer'); await click('Reset')
   expect(personalExamples.find(e => e.type === preset.type)).toEqual(before)
   expect(applyExerciseDrafts([{ checkpoint: 1 }], { 'kind:0': state }).checkpoints[0].customExercises).toBeUndefined()
   await click('Create Your Own'); expect(state.custom!.type).toBe(preset.type)
