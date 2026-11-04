@@ -4,11 +4,20 @@ import { control } from '../exercises/ExerciseRenderer'
 export interface ContentScope { country: string; region: string; city: string }
 export const universalScope: ContentScope = { country: '', region: '', city: '' }
 /** Applicability only: read existing catalog endpoints; never register or bind a locality. */
-export function ContentGeography({ value, onChange }: { value: ContentScope; onChange: (v: ContentScope) => void }) {
+export function ContentGeography({ value, onChange, onCityResolved }: { value: ContentScope; onChange: (v: ContentScope) => void; onCityResolved?: (city: GeographicCity | null) => void }) {
   const [countries, setCountries] = useState<Country[]>([]), [regions, setRegions] = useState<Region[]>([]), [cities, setCities] = useState<GeographicCity[]>([])
   const [selectedCity, setSelectedCity] = useState<GeographicCity | null>(null)
   const [query, setQuery] = useState(''), [error, setError] = useState(''), [retry, setRetry] = useState(0)
-  useEffect(() => { let live = true; setSelectedCity(null); if (value.city) geographyApi.city(value.city).then(city => { if (live && city.countryCode === value.country) setSelectedCity(city) }).catch(() => { if (live) setError('Saved city details unavailable. The saved location is retained.') }); return () => { live = false } }, [value.city, value.country, retry])
+  useEffect(() => {
+    let live = true
+    setSelectedCity(null); onCityResolved?.(null)
+    if (value.city) geographyApi.city(value.city).then(city => {
+      if (!live) return
+      if (city.geographicId !== value.city || city.countryCode !== value.country) throw new Error('City catalog mismatch')
+      setSelectedCity(city); onCityResolved?.(city)
+    }).catch(() => { if (live) setError('Saved city details unavailable. The saved location is retained.') })
+    return () => { live = false }
+  }, [value.city, value.country, retry, onCityResolved])
   useEffect(() => { let live = true; geographyApi.countries().then(r => { if (live) setCountries(r.countries) }).catch(() => { if (live) setError('Geography unavailable. Universal remains available.') }); return () => { live = false } }, [retry])
   useEffect(() => { let live = true; setRegions([]); setError(''); if (value.country) void (async () => { let after: string | undefined; const all: Region[] = []; do { const page = await geographyApi.regions(value.country, after); all.push(...page.regions.filter(r => r.countryCode === value.country && r.admin1Code && r.admin1Code !== '00')); after = page.nextAfter ?? undefined } while (after && live); if (live) setRegions(all) })().catch(() => { if (live) setError('Regions unavailable. Retry to load current records.') }); return () => { live = false } }, [value.country, retry])
   useEffect(() => { let live = true; setCities([]); if (!value.country || query.trim().length < 2) return; const timer = setTimeout(() => { geographyApi.cities(value.country, query, value.region || undefined).then(page => { if (live) setCities(page.cities.filter(c => c.countryCode === value.country && (!value.region || c.admin1Code === value.region))) }).catch(() => { if (live) setError('Cities unavailable. Retry your search.') }) }, 250); return () => { live = false; clearTimeout(timer) } }, [value.country, value.region, query, retry])

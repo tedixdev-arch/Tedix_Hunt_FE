@@ -23,3 +23,9 @@ No live development or production database writes, migrations, merge or deployme
 - Exact-revision Admin review and approved shared-library discovery/allocation, outside this change.
 
 STOP at the Draft PR for ChatGPT review. Do not merge or deploy.
+
+## Geographic hierarchy review correction
+
+City filtering now uses the existing authoritative city catalog result for region eligibility. Universal and matching-country content remain eligible; region content must match the resolved city region, and city content must match the exact city. Pending, failed, mismatched or incomplete city hierarchy resolution excludes region-scoped records, including when the filter retains a previous region selection. Catalog display data remains separate from persisted classifications and editor dirty state.
+
+[Correction tests and PostgreSQL/browser evidence](evidence/c2b/geographic-hierarchy/README.md): typecheck/build passed, 66 relevant tests passed, and the real disposable PostgreSQL browser regression passed for resolved, pending and failed catalog cases.

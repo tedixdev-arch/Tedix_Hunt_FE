@@ -1,6 +1,7 @@
 import { fromPersistence, toPersistence } from '../exercises/persistenceAdapter.ts'
 import type { AuthoringDraft } from '../exercises/experimentDrafts.ts'
-import { contentCategories, type LibraryContent, type LibraryDraft } from '../../../services/api/creatorContent.ts'
+import { contentCategories, type LibraryContent, type LibraryDraft, type LibraryGeography } from '../../../services/api/creatorContent.ts'
+import type { GeographicCity } from '../../../services/api/geography.ts'
 import type { ContentScope } from './ContentGeography.tsx'
 export interface LibraryMetadata { category: string; grade: string; scope: ContentScope; curriculum?: LibraryDraft['curriculum'] }
 export function libraryPayload(draft: AuthoringDraft, metadata: LibraryMetadata): LibraryDraft {
@@ -19,9 +20,25 @@ export function libraryPayload(draft: AuthoringDraft, metadata: LibraryMetadata)
     geography: city ? { scope: 'city', countryCode: country, geographicId: city } : region ? { scope: 'region', countryCode: country, admin1Code: region } : country ? { scope: 'country', countryCode: country } : { scope: 'universal' } }
 }
 export function libraryEditor(record: LibraryContent): { draft: AuthoringDraft; metadata: LibraryMetadata } {
+  // C2a city envelopes intentionally omit region. Resolve hierarchy separately without changing saved metadata.
   const g = record.geography
   return { draft: { source: 'custom', assignment: 'predefined', custom: fromPersistence(record.exercise) }, metadata: {
     category: record.category ?? '', grade: record.curriculum.grade ?? '', curriculum: record.curriculum,
     scope: { country: g.scope === 'universal' ? '' : g.countryCode, region: g.scope === 'region' ? g.admin1Code : '', city: g.scope === 'city' ? g.geographicId : '' },
   } }
+}
+
+/** City membership comes only from the catalog, never the selector's display or a stale region. */
+export function libraryGeographyMatches(g: LibraryGeography, scope?: ContentScope, city?: GeographicCity | null): boolean {
+  if (!scope || (!scope.country && !scope.region && !scope.city)) return true
+  if (g.scope === 'universal') return true
+  if (!scope.country || g.countryCode !== scope.country) return false
+  if (g.scope === 'country') return true
+  if (scope.city) {
+    if (g.scope === 'city') return g.geographicId === scope.city
+    const resolved = city?.geographicId === scope.city && city.countryCode === scope.country && city.regionStatus === 'resolved' && !!city.admin1Code && city.admin1Code !== '00'
+    return !!resolved && g.admin1Code === city!.admin1Code
+  }
+  if (!scope.region) return true
+  return g.scope === 'region' && g.admin1Code === scope.region
 }
