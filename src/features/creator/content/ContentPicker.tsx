@@ -14,8 +14,7 @@ export function ContentPicker({ section, items = starterContent, selectedId, onS
   const [filters, setFilters] = useState(initialFilters)
   const [preview, setPreview] = useState<ContentRecord | null>(null)
   const starters = items.filter(item => item.collection.id === 'repository-starters' && item.category === section)
-  const available = items.filter(item => item.collection.id !== 'repository-starters' && item.approvalStatus === 'approved')
-  const visible = filterContent(libraryView ? available : items, section, filters)
+  const visible = filterContent(items, section, filters)
   const cards = (records: readonly ContentRecord[]) => <ul className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{records.map(item => <li key={item.id} className="flex min-w-0 flex-col rounded-xl border border-slate-200 p-4">
       <h4 className="font-bold">{item.exercise.title}</h4><p className="mt-1 text-sm text-slate-600">{typeName(item.mechanic)}</p>
       {item.activityCategory && <p className="mt-2 text-xs text-slate-600">Category: {item.activityCategory}</p>}
@@ -27,9 +26,10 @@ export function ContentPicker({ section, items = starterContent, selectedId, onS
     {compactFilters ? <details className="border-b border-slate-200 pb-3"><summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">Filters</summary><ContentSelection onCityResolved={setResolvedCity} draftGrades={draftGrades} filters={filters} onChange={setFilters} items={items.filter(item => item.category === section)} /></details> : <ContentSelection onCityResolved={setResolvedCity} draftGrades={draftGrades} filters={filters} onChange={setFilters} items={items.filter(item => item.category === section)} />}
     {renderDrafts?.(filters, resolvedCity)}
     {libraryView && <details className="mt-6 rounded-xl border border-slate-200 p-4"><summary className="min-h-11 cursor-pointer font-bold">Starter ({starters.length} examples)</summary><p className="mt-2 text-sm text-slate-600">Canonical repository examples. Unreviewed and separate from approved library exercises.</p>{starters.length ? cards(starters) : <p>No standalone Starter records are available for this category. Navigation settings in Templates are not reusable hint content.</p>}</details>}
-    <h3 className="mt-6 text-lg font-bold">{libraryView ? 'Available Exercises' : section}</h3>
-    <p role="status" className="mt-1 text-sm text-slate-600">{visible.length} {libraryView ? 'approved exercises' : `Starter ${visible.length === 1 ? 'example' : 'examples'}`}</p>
-    {visible.length ? cards(visible) : <p className="mt-4 rounded-xl bg-slate-50 p-5">{libraryView ? available.length ? 'No approved library exercises match these filters.' : 'No approved exercise feed is connected; Starter examples remain available above.' : !items.some(item => item.category === section) ? 'No standalone Starter records are available for this category. Navigation settings in Templates are not reusable hint content.' : 'No Starter examples match these filters. Reset filters to browse examples.'}</p>}
+    {!libraryView && <><h3 className="mt-6 text-lg font-bold">{section}</h3>
+    <p role="status" className="mt-1 text-sm text-slate-600">{visible.length} {`Starter ${visible.length === 1 ? 'example' : 'examples'}`}</p>
+    {visible.length ? cards(visible) : <p className="mt-4 rounded-xl bg-slate-50 p-5">{!items.some(item => item.category === section) ? 'No standalone Starter records are available for this category. Navigation settings in Templates are not reusable hint content.' : 'No Starter examples match these filters. Reset filters to browse examples.'}</p>}
+    </>}
     {preview && <ExercisePreview key={preview.id} exercise={preview.exercise} onClose={() => setPreview(null)} />}
   </section>
 }

@@ -168,15 +168,15 @@ test('Create Your Own preserves retained selected-record draft compatibility and
   expect(current!.custom!.title).toBe('Independent second edit')
 })
 
-test('Library separates collapsed canonical Starters from approved Available Exercises', async () => {
+test('Library keeps collapsed Starters separate from the server discovery view', async () => {
   const approved = { ...duplicate, id: 'approved-fixture', collection: { id: 'approved-exercises', name: 'Approved' }, approvalStatus: 'approved' as const }
   const pending = { ...approved, id: 'pending-fixture', approvalStatus: 'pending' as const, exercise: { ...approved.exercise, title: 'Pending exercise' } }
   await mount(<ContentPicker libraryView section="Personal Challenges" items={[starterContent[0], approved, pending]} />)
   expect(container.querySelector('details')?.open).toBe(false)
   expect(container.textContent).toContain('Starter (1 examples)')
-  expect(container.textContent).toContain('Available Exercises')
-  expect(container.textContent).toContain('1 approved exercises')
-  expect(button('Preview Another pair exercise')).toBeDefined()
+  expect(container.textContent).not.toContain('Available Exercises')
+  expect(container.textContent).not.toContain('1 approved exercises')
+  expect(button('Preview Another pair exercise')).toBeUndefined()
   expect(button('Preview Pending exercise')).toBeUndefined()
   expect(container.textContent).not.toContain('Unclassified')
 })

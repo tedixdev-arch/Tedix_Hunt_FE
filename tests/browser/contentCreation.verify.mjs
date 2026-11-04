@@ -49,7 +49,7 @@ for (const width of [1440, 390, 320]) {
   assert.equal(await page.getByRole('button', { name: 'Add Exercise', exact: true }).count(), 0)
   await page.getByLabel('Content type').selectOption('Personal Challenges')
   assert.equal(await page.getByLabel('Title', { exact: true }).inputValue(), 'Retained exercise')
-  await page.getByRole('button', { name: 'My Content', exact: true }).click()
+  await page.getByRole('button', { name: 'Library', exact: true }).click()
   const starter = page.locator('details').filter({ has: page.locator('summary', { hasText: /^Starter/ }) })
   assert.equal(await starter.getAttribute('open'), null); await shot('library')
   await page.goto(url + '?template=1'); await page.getByRole('button', { name: 'Create Your Own', exact: true }).click()

@@ -35,7 +35,7 @@ export const starterContent: readonly ContentRecord[] = [
   ...records(personalExamples, 'Personal Challenges', 'personalExamples.ts'),
   ...records(teamExamples, 'Team Challenges', 'teamExamples.ts'),
 ]
-export interface ContentFilters { scope?: { country: string; region: string; city: string }; category: string; grade: string; main: string; unit: string; lesson: string; query: string }
+export interface ContentFilters { mechanic?: string; scope?: { country: string; region: string; city: string }; category: string; grade: string; main: string; unit: string; lesson: string; query: string }
 export const initialFilters: ContentFilters = { category: 'All', grade: 'Mix', main: 'Mix', unit: '', lesson: '', query: '' }
 /** Mix is a UI selection scope. All constrained fields must match one real association. */
 export function filterContent(items: readonly ContentRecord[], category: ContentCategory, filters: ContentFilters) {

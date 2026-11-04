@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ApprovedExercises } from './ApprovedExercises'
 import { ContentPicker } from './ContentPicker'
 import { starterContent, type ContentCategory, type ContentRecord, type ContentFilters } from './catalog'
 import { creatorContentApi, contentError, type LibraryContent } from '../../../services/api/creatorContent'
@@ -11,7 +12,7 @@ import { ContentFeedback, contentStatus } from './ContentReviewPreview'
 import { control } from '../exercises/ExerciseRenderer'
 
 /** Own current heads and protected examples are independent collections. */
-export function ContentLibrary({ items = starterContent, category = 'Personal Challenges', onEdit, onRevise, focusId }: { items?: readonly ContentRecord[]; category?: ContentCategory; onEdit?: (id: string) => void | Promise<void>; onRevise?: (id: string, revision: string) => void | Promise<void>; focusId?: string }) {
+function MyContentLibrary({ items = starterContent, category = 'Personal Challenges', onEdit, onRevise, focusId }: { items?: readonly ContentRecord[]; category?: ContentCategory; onEdit?: (id: string) => void | Promise<void>; onRevise?: (id: string, revision: string) => void | Promise<void>; focusId?: string }) {
   const [records, setRecords] = useState<LibraryContent[]>([]), [after, setAfter] = useState<string | null>(null)
   const [loading, setLoading] = useState(true), [error, setError] = useState(''), [preview, setPreview] = useState<Exercise | null>(null)
   const alive = useRef(false), busy = useRef(false)
@@ -59,4 +60,12 @@ export function ContentLibrary({ items = starterContent, category = 'Personal Ch
     </section>} />
     {preview && <ExercisePreview exercise={preview} onClose={() => setPreview(null)} />}
   </section>
+}
+
+export function ContentLibrary(props: Parameters<typeof MyContentLibrary>[0]) {
+  const [view, setView] = useState<'own' | 'approved'>('own')
+  return <div className="min-w-0">
+    <div aria-label="Library views" className="mt-4 flex gap-2">{(['own', 'approved'] as const).map(key => <button type="button" key={key} disabled={key === 'approved' && props.category === 'Navigation Hints'} aria-pressed={(props.category === 'Navigation Hints' ? 'own' : view) === key} className={`${control} ${view === key ? 'border-emerald-600 bg-emerald-50 text-emerald-900' : ''}`} onClick={() => setView(key)}>{key === 'own' ? 'My Content' : 'Approved Exercises'}</button>)}</div>
+    {view === 'own' || props.category === 'Navigation Hints' ? <MyContentLibrary {...props} /> : <ApprovedExercises key={props.category} classification={props.category === 'Team Challenges' ? 'team' : 'personal'} />}
+  </div>
 }

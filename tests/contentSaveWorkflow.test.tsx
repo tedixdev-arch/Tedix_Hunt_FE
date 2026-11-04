@@ -37,7 +37,7 @@ test('conflict retains local edits, canceled reload is safe, confirmed reload ad
  const get=vi.spyOn(creatorContentApi,'get').mockResolvedValue(saved)
  const update=vi.spyOn(creatorContentApi,'update').mockRejectedValue(new ApiError('revision_conflict',409,'conflict'))
  await harness(async({host,click,edit})=>{
-  await click('My Content');await act(async()=>host.querySelector<HTMLButtonElement>(`[aria-label="Edit ${saved.exercise.title}"]`)!.click())
+  await click('Library');await act(async()=>host.querySelector<HTMLButtonElement>(`[aria-label="Edit ${saved.exercise.title}"]`)!.click())
   await edit('Local retained');await click('Save Changes');expect(host.querySelector('[role="alert"]')!.textContent).toContain('Your edits are still here')
   const confirm=vi.spyOn(window,'confirm').mockReturnValue(false)
   await click('Reload saved version');expect(get).toHaveBeenCalledTimes(1);expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Title"]')!.value).toBe('Local retained')
@@ -61,7 +61,7 @@ test('protected history stays read-only and a failed revision clone retains the 
  const clone=vi.spyOn(creatorContentApi,'clone').mockRejectedValue(new ApiError('offline',null,'network'))
  const update=vi.spyOn(creatorContentApi,'update')
  await harness(async({host,click})=>{
-  await click('My Content');await click(`View ${saved.exercise.title}`)
+  await click('Library');await click(`View ${saved.exercise.title}`)
   expect(host.querySelector('[aria-label="Edit Title"]')).toBeNull()
   await click('Create New Revision');expect(clone).toHaveBeenCalledWith(saved.contentId,saved.revisionId)
   expect(update).not.toHaveBeenCalled();expect(host.textContent).toContain('Approved')

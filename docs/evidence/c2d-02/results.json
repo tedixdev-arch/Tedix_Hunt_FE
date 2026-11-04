@@ -1,0 +1,984 @@
+{
+  "backend": "92970d6 (merged #120)",
+  "database": "disposable PostgreSQL 17",
+  "results": [
+    {
+      "width": 1440,
+      "overflow": false,
+      "realBackend": true,
+      "exactApprovedRevisionDespiteNewDraft": true
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "realBackend": true,
+      "exactApprovedRevisionDespiteNewDraft": true
+    },
+    {
+      "width": 320,
+      "overflow": false,
+      "realBackend": true,
+      "exactApprovedRevisionDespiteNewDraft": true
+    }
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/creator/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content?limit=20&view=all"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&after=%5Bopaque%5D"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&category=Mathematics"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&category=Mathematics&grade=7"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&type=single-choice&category=Mathematics&grade=7"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved/8650635c-8f7f-433b-9e40-99510de301ec/revisions/71dcfd43-ee70-45a8-8ae3-eeffd369c091"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&countryCode=RO"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&countryCode=RO&admin1Code=13"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities?countryCode=RO&admin1Code=13&q=Cluj&limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&countryCode=RO&geographicId=683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&q=unfindable-exercise-xyz"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=team"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved/ca6ac5c8-d081-41f2-bd25-bd0e82d94290/revisions/0d871e2e-eda6-45d5-9dc7-bdbbeeb0cb19"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content?limit=20&view=all"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&after=%5Bopaque%5D"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&category=Mathematics"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&category=Mathematics&grade=7"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&type=single-choice&category=Mathematics&grade=7"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved/8650635c-8f7f-433b-9e40-99510de301ec/revisions/71dcfd43-ee70-45a8-8ae3-eeffd369c091"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&countryCode=RO"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&countryCode=RO&admin1Code=13"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities?countryCode=RO&admin1Code=13&q=Cluj&limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&countryCode=RO&geographicId=683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&q=unfindable-exercise-xyz"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=team"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved/ca6ac5c8-d081-41f2-bd25-bd0e82d94290/revisions/0d871e2e-eda6-45d5-9dc7-bdbbeeb0cb19"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content?limit=20&view=all"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&after=%5Bopaque%5D"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&category=Mathematics"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&category=Mathematics&grade=7"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&type=single-choice&category=Mathematics&grade=7"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved/8650635c-8f7f-433b-9e40-99510de301ec/revisions/71dcfd43-ee70-45a8-8ae3-eeffd369c091"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&countryCode=RO"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&countryCode=RO&admin1Code=13"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities?countryCode=RO&admin1Code=13&q=Cluj&limit=20"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&countryCode=RO&geographicId=683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal&q=unfindable-exercise-xyz"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=personal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/675810"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/cities/683506"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved?limit=20&classification=team"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/geography/regions?countryCode=RO&limit=50"
+    },
+    {
+      "method": "GET",
+      "path": "/api/creator/content/approved/ca6ac5c8-d081-41f2-bd25-bd0e82d94290/revisions/0d871e2e-eda6-45d5-9dc7-bdbbeeb0cb19"
+    }
+  ],
+  "additionalEvidence": {
+    "loadMoreControlWidths": [
+      1440,
+      390,
+      320
+    ],
+    "screenshots": 36,
+    "inspection": "All 36 new UI captures visually inspected; detached-main 320px Library inspected for comparison."
+  }
+}

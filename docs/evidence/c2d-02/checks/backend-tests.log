@@ -1,0 +1,17 @@
+
+> @tedixhunt/api@0.1.0 test
+> vitest run src/routes/approvedContent.integration.test.ts src/routes/creatorContent.integration.test.ts src/domain/approvedContent.test.ts src/domain/contentLibrary.test.ts src/db/contentReview.integration.test.ts --maxWorkers=1
+
+
+ RUN  v3.2.7 /workspace/Tedix_Hunt_FE/work/backend
+
+ ✓ src/routes/creatorContent.integration.test.ts (35 tests) 1807ms
+ ✓ src/routes/approvedContent.integration.test.ts (31 tests) 1557ms
+ ✓ src/db/contentReview.integration.test.ts (1 test) 312ms
+ ✓ src/domain/contentLibrary.test.ts (24 tests) 12ms
+
+ Test Files  4 passed (4)
+      Tests  91 passed (91)
+   Start at  22:45:14
+   Duration  4.53s (transform 568ms, setup 17ms, collect 274ms, tests 3.69s, environment 1ms, prepare 174ms)
+
