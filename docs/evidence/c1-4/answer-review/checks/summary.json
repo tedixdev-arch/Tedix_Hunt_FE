@@ -1,0 +1,18 @@
+{
+  "previousPRHead": "eae6c698e5692b5b75c41d449e83baf15cc9e984",
+  "typecheck": "passed",
+  "build": "passed; existing chunk warning",
+  "nodeTests": 43,
+  "vitestTests": 1025,
+  "vitestFiles": 53,
+  "newAnswerInvarianceTests": 30,
+  "answerBrowserScenarios": 90,
+  "closedScreenshots": 90,
+  "openedScreenshots": 90,
+  "representativeTryScreenshots": 15,
+  "personalBrowserScenarios": 12,
+  "extendedPersonalBrowserScenarios": 48,
+  "browser": "Chromium, 1440/390/320px, Content and Template",
+  "backend": "mocked APIs; no live writes",
+  "mergeOrDeploy": "none"
+}

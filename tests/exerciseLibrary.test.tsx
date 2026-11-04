@@ -171,12 +171,12 @@ function AuthoringHarness({ field = 'kind' }: { field?: 'kind' | 'teamKind' }) {
 test('custom copy, inline testing and toggling preserve independent editor state', async () => {
   const before = structuredClone(prototypes)
   await render(<AuthoringHarness />); await click('Create Your Own')
-  await input(container.querySelector('textarea')!, 'Unsaved title')
+  await click('Edit Title'); await input(container.querySelector('textarea')!, 'Unsaved title')
   await click('Apply challenge'); expect(container.textContent).toContain('Submission blocked')
   await click('Try challenge'); expect(container.querySelector('[aria-label="Mobile challenge canvas"]')?.textContent).toContain('Unsaved title')
-  await click('Edit'); expect(container.querySelector('textarea')?.value).toBe('Unsaved title')
+  await click('Edit'); await click('Edit Title'); expect(container.querySelector('textarea')?.value).toBe('Unsaved title')
   await click('Predefined'); expect(container.textContent).toContain('Submission blocked')
-  await click('Create Your Own'); expect(container.querySelector('textarea')?.value).toBe('Unsaved title')
+  await click('Create Your Own'); await click('Edit Title'); expect(container.querySelector('textarea')?.value).toBe('Unsaved title')
   expect(prototypes).toEqual(before)
 })
 test('Predefined selection is read-only and custom copies never mutate shared examples', async () => {
@@ -212,12 +212,12 @@ test('supported saved payloads including FinishPoint round-trip without migratio
 
 test('viewing Predefined retains custom content and only explicit actions change assignment', async () => {
   await render(<AuthoringHarness />); await click('Create Your Own')
-  await input(container.querySelector('textarea')!, 'Retained experiment')
+  await click('Edit Title'); await input(container.querySelector('textarea')!, 'Retained experiment')
   expect(container.textContent).toContain('Supported submission')
   await click('Apply challenge'); await click('Predefined'); expect(container.textContent).toContain('Submission blocked')
   await input(container.querySelector('[aria-label="Personal Challenge"]')!, ''); await click('Remove challenge'); expect(container.textContent).toContain('Supported submission')
-  await click('Create Your Own'); expect(container.querySelector('textarea')?.value).toBe('Retained experiment')
-  await click('Discard changes'); await click('Create Your Own'); expect(container.querySelector('textarea')?.value).not.toBe('Retained experiment')
+  await click('Create Your Own'); await click('Edit Title'); expect(container.querySelector('textarea')?.value).toBe('Retained experiment')
+  await click('Discard changes'); await click('Create Your Own'); await click('Edit Title'); expect(container.querySelector('textarea')?.value).not.toBe('Retained experiment')
 })
 test('discard targets a single checkpoint/classification slot and includes retained inactive examples', () => {
   const e = independentExercise(prototypes[0])

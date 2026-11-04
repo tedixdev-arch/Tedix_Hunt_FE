@@ -1,6 +1,5 @@
 import { ChallengeAllocation } from '../content/ChallengeAllocation'
-import { FormulaField, FormulaScope } from './FormulaEditor'
-import { MathFieldPreview } from './MathText'
+import { FormulaScope } from './FormulaEditor'
 import { PredefinedChallengeContent } from './PredefinedChallengeContent'
 import { gameplayPresentation } from '../CheckpointGameplayEditor'
 import { CheckpointStoryPreview } from '../CheckpointStoryPreview'
@@ -11,7 +10,7 @@ import { exampleFor } from './personalExamples'
 import type { AuthoringDraft } from './experimentDrafts'
 import { savedExercise } from './savedExercises'
 import { control } from './ExerciseRenderer'
-import { PersonalMechanicEditor, friendlyIssues, originalVisualMechanics } from './PersonalMechanicEditor'
+import { PersonalMechanicEditor, friendlyIssues } from './PersonalMechanicEditor'
 import { modernContext, type PersonalCreationContext } from './creationContext'
 
 type Props = { standalone?: boolean; value: CheckpointGameplay; context?: PersonalCreationContext; draft?: AuthoringDraft; onChange: (cp: CheckpointGameplay) => void; onDraftChange: (d: AuthoringDraft) => void }
@@ -79,7 +78,6 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
     {exampleMode && draft.copySelectedExample && draft.custom && <button type="button" className={control} onClick={() => changeView({ source: 'custom', emptySelection: false })}>Resume previous draft</button>}
     {!existingMode && !customMode && exampleMode && saved && <button type="button" className={control} onClick={() => changeView({ source: 'saved', emptySelection: false })}>View saved challenge</button>}
     {customMode && active ? <section aria-label={`${active.type} content editor`} className="space-y-4">
-      <div className="space-y-3">{(originalVisualMechanics.includes(active.type) ? ['title', 'instructions'] as const : []).map(key => <FormulaField key={key} label={key === 'title' ? 'Title' : 'Instructions / Question'} value={active[key]} maxLength={key === 'title' ? 200 : 4000} onChange={value => update({ ...active, [key]: value })}><label className="block text-sm font-bold">{key === 'title' ? 'Title' : 'Instructions / Question'}<textarea aria-label={key === 'title' ? 'Title' : 'Instructions / Question'} required aria-invalid={!active[key].trim()} maxLength={key === 'title' ? 200 : 4000} className={`${control} mt-2 w-full`} value={active[key]} onChange={e => update({ ...active, [key]: e.target.value })} /><MathFieldPreview value={active[key]} /></label></FormulaField>)}</div>
       <PersonalMechanicEditor key={active.id} exercise={active} onChange={update} />
     </section> : active && (existingMode || !exampleMode) ? <>{!existingMode && !customMode && !standalone ? <details className="rounded-xl border border-slate-200 p-3"><summary className="min-h-11 cursor-pointer text-sm font-bold">View saved challenge</summary><PredefinedChallengeContent key={active.id} exercise={active} /></details> : <PredefinedChallengeContent key={active.id} exercise={active} />}{errors.length > 0 && <p role="alert" className="text-sm text-red-800">{friendlyIssues(errors).join(' ')} Saved content is preserved.</p>}</> : existingMode || customMode || standalone ? <p className="text-sm text-slate-600">Choose a Personal Challenge to begin.</p> : null}
     {!standalone && (existingMode || customMode || draft.emptySelection || draft.assignment === 'custom') && !(exampleMode && !draft.emptySelection) && (active || draft.emptySelection) && <button type="button" className={`${control} w-full bg-emerald-500 px-5 font-bold`} disabled={errors.length > 0} onClick={apply}>{draft.emptySelection ? 'Remove challenge' : 'Apply challenge'}</button>}

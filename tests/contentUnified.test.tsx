@@ -38,7 +38,11 @@ test('classification is optional, unavailable curriculum stays visible, preparat
   const router = createMemoryRouter([{ path: '/', element: <ContentStudio active /> }, { path: '/away', element: <p>Away</p> }])
   const click = async (text: string) => { await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === text)!.click()) }
   const change = async (label: string, value: string) => {
-    const field = host.querySelector(`[aria-label="${label}"]`) as HTMLSelectElement | HTMLTextAreaElement
+    if (!host.querySelector(`[aria-label="${label}"]`)) {
+    const pencil = [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.getAttribute('aria-label') === `Edit ${label}`)
+    if (pencil) await act(async () => pencil.click())
+  }
+  const field = host.querySelector(`[aria-label="${label}"]`) as HTMLSelectElement | HTMLTextAreaElement
     await act(async () => {
       Object.getOwnPropertyDescriptor(field instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLTextAreaElement.prototype, 'value')!.set!.call(field, value)
       field.dispatchEvent(new Event(field instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }))

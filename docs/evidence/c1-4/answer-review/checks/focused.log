@@ -1,0 +1,9 @@
+
+ RUN  v5.0.3 /workspace/Tedix_Hunt_FE
+
+
+ Test Files  1 passed (1)
+      Tests  62 passed (62)
+   Start at  19:01:03
+   Duration  7.55s (tests 77%, environment 12%, transform 9%, import 2%)
+
