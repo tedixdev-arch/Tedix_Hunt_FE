@@ -184,7 +184,7 @@ export function CreatorStudioPage() {
     if (!deleteTrigger.current?.isConnected && (document.activeElement === document.body || document.activeElement === templatesHeading.current)) templatesHeading.current?.focus()
   }
   useEffect(() => { void load(); return () => { ++loadSequence.current } }, [])
-  return <Shell><h1 className="text-4xl font-bold">Creator Studio</h1><p className="mt-3 text-slate-600">Create and manage Hunt templates.</p>
+  return <Shell><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Creator Studio</h1><p hidden={studioParams.get('studio') === 'content'} className="mt-3 text-slate-600">Create and manage Hunt templates.</p>
     <CreatorStudioNavigation />
     {choosing && <TemplateCreationChooser creating={creatingStarter} error={starterError} onScratch={() => { if (!creating.current) navigate('/create?category=local') }} onStarter={createStarter} onClose={() => setChoosing(false)} onCheckTemplates={() => { setChoosing(false); load() }} />}
     {!choosing && creatingStarter && <p role="status" className="mt-3 text-sm font-bold text-emerald-800">Creating Signal Cluj draft…</p>}

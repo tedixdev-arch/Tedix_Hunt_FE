@@ -1,0 +1,21 @@
+/* Presentation only; keep the shared authoring engine and its preview intact. */
+.content-studio label { font-weight: 500; }
+.content-studio label > input:not([type="checkbox"]):not([type="radio"]),
+.content-studio label > select,
+.content-studio label > textarea { display: block; width: 100%; margin-left: 0; margin-top: 8px; font-weight: 400; }
+.content-studio input,
+.content-studio select,
+.content-studio textarea { min-width: 0; border-radius: 10px; }
+.content-studio textarea { padding-block: 12px; }
+.content-studio [aria-label='Library exercise draft'] > section { margin-top: 0; }
+.content-studio [aria-label='Library exercise draft'] > section > section > .space-y-3 { margin-bottom: 24px; }
+
+/* Content-only preview and editing controls. Template keeps the shared defaults. */
+.content-studio .challenge-canvas { max-width: 340px; box-shadow: none; }
+.content-studio .challenge-mode { width: max-content; max-width: 100%; margin-inline: auto; padding: 4px; border-color: #d4ddd8; border-radius: 12px; background: #f1f5f3; }
+.content-studio .challenge-mode button { flex: 0 1 auto; white-space: nowrap; min-width: 0; min-height: 44px; padding: 8px 12px; font-weight: 500; }
+.content-studio .challenge-mode button[aria-pressed=true] { box-shadow: none; }
+@media(max-width:375px) {
+  .content-studio .challenge-mode { flex-wrap: nowrap; }
+  .content-studio .challenge-mode button { padding-inline: 8px; font-size: 13px; }
+}

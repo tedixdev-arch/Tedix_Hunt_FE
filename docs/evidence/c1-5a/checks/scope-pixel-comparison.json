@@ -1,0 +1,122 @@
+[
+  {
+    "width": 1440,
+    "state": "default",
+    "reference": "PR before scope correction",
+    "identical": true,
+    "size": [
+      1440,
+      1947
+    ]
+  },
+  {
+    "width": 1440,
+    "state": "team",
+    "reference": "PR before scope correction",
+    "identical": true,
+    "size": [
+      1440,
+      1767
+    ]
+  },
+  {
+    "width": 1440,
+    "state": "template-preview",
+    "reference": "main",
+    "identical": true,
+    "size": [
+      1440,
+      1507
+    ]
+  },
+  {
+    "width": 1440,
+    "state": "template-latex",
+    "reference": "main",
+    "identical": true,
+    "size": [
+      1440,
+      1388
+    ]
+  },
+  {
+    "width": 390,
+    "state": "default",
+    "reference": "PR before scope correction",
+    "identical": true,
+    "size": [
+      390,
+      2029
+    ]
+  },
+  {
+    "width": 390,
+    "state": "team",
+    "reference": "PR before scope correction",
+    "identical": true,
+    "size": [
+      390,
+      1781
+    ]
+  },
+  {
+    "width": 390,
+    "state": "template-preview",
+    "reference": "main",
+    "identical": true,
+    "size": [
+      390,
+      1601
+    ]
+  },
+  {
+    "width": 390,
+    "state": "template-latex",
+    "reference": "main",
+    "identical": true,
+    "size": [
+      390,
+      1644
+    ]
+  },
+  {
+    "width": 320,
+    "state": "default",
+    "reference": "PR before scope correction",
+    "identical": true,
+    "size": [
+      320,
+      2089
+    ]
+  },
+  {
+    "width": 320,
+    "state": "team",
+    "reference": "PR before scope correction",
+    "identical": true,
+    "size": [
+      320,
+      1873
+    ]
+  },
+  {
+    "width": 320,
+    "state": "template-preview",
+    "reference": "main",
+    "identical": true,
+    "size": [
+      320,
+      1673
+    ]
+  },
+  {
+    "width": 320,
+    "state": "template-latex",
+    "reference": "main",
+    "identical": true,
+    "size": [
+      320,
+      1712
+    ]
+  }
+]
