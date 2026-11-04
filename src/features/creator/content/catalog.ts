@@ -1,3 +1,4 @@
+import type { ActivityCategory } from './classification'
 import { personalExamples } from '../exercises/personalExamples'
 import { teamExamples } from '../exercises/teamExamples'
 import type { Exercise, Mechanic } from '../exercises/catalog'
@@ -5,13 +6,15 @@ import type { Exercise, Mechanic } from '../exercises/catalog'
 export const categories = ['Personal Challenges', 'Team Challenges', 'Navigation Hints'] as const
 export type ContentCategory = typeof categories[number]
 export interface CurriculumAssociation {
-  domain: 'Math'; grade: number; main: 'Algebra' | 'Geometry'
+  category: ActivityCategory; grade: number; main: 'Algebra' | 'Geometry'
   unitId?: string; lessonId?: string
 }
 /** Library metadata is separate from Template-owned exercise persistence. */
 export interface ContentRecord {
   id: string
   category: ContentCategory
+  geography?: { country: string; region: string; city: string }
+  activityCategory?: ActivityCategory
   mechanic: Mechanic
   exercise: Exercise
   curriculum: readonly CurriculumAssociation[]
@@ -32,14 +35,15 @@ export const starterContent: readonly ContentRecord[] = [
   ...records(personalExamples, 'Personal Challenges', 'personalExamples.ts'),
   ...records(teamExamples, 'Team Challenges', 'teamExamples.ts'),
 ]
-export interface ContentFilters { domain: string; grade: string; main: string; unit: string; lesson: string; query: string }
-export const initialFilters: ContentFilters = { domain: 'Mix', grade: 'Mix', main: 'Mix', unit: '', lesson: '', query: '' }
+export interface ContentFilters { scope?: { country: string; region: string; city: string }; category: string; grade: string; main: string; unit: string; lesson: string; query: string }
+export const initialFilters: ContentFilters = { category: 'All', grade: 'Mix', main: 'Mix', unit: '', lesson: '', query: '' }
 /** Mix is a UI selection scope. All constrained fields must match one real association. */
 export function filterContent(items: readonly ContentRecord[], category: ContentCategory, filters: ContentFilters) {
   return items.filter(item => item.category === category &&
+    (!filters.scope || !filters.scope.country || !!item.geography && (!item.geography.country || item.geography.country === filters.scope.country) && (!item.geography.region || item.geography.region === filters.scope.region) && (!item.geography.city || item.geography.city === filters.scope.city)) && (filters.category === 'All' || item.activityCategory === filters.category || item.curriculum.some(c => c.category === filters.category)) &&
     `${item.exercise.title} ${item.mechanic}`.toLowerCase().includes(filters.query.trim().toLowerCase()) &&
-    (filters.domain === 'Mix' && filters.grade === 'Mix' && filters.main === 'Mix' && !filters.unit && !filters.lesson ||
-      item.curriculum.some(c => (filters.domain === 'Mix' || c.domain === filters.domain) &&
+    (filters.grade === 'Mix' && filters.main === 'Mix' && !filters.unit && !filters.lesson ||
+      item.curriculum.some(c => (filters.category === 'All' || c.category === filters.category) &&
         (filters.grade === 'Mix' || String(c.grade) === filters.grade) && (filters.main === 'Mix' || c.main === filters.main) &&
         (!filters.unit || c.unitId === filters.unit) && (!filters.lesson || c.lessonId === filters.lesson))))
 }

@@ -1,0 +1,43 @@
+import { chromium } from 'playwright'
+import assert from 'node:assert/strict'
+import { mkdir } from 'node:fs/promises'
+const dir = 'docs/content-unified/screenshots'
+await mkdir(dir, { recursive: true })
+const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', args: ['--no-sandbox'] })
+const page = await browser.newPage()
+const url = 'http://127.0.0.1:5173/tests/browser/contentUnified.html'
+for (const width of [1440, 390, 320]) {
+  await page.setViewportSize({ width, height: 900 }); await page.goto(url)
+  await page.getByRole('heading', { name: 'Content', exact: true }).waitFor()
+  for (const label of ['Content country', 'Content region', 'Content city']) assert.equal(await page.getByLabel(label).inputValue(), '')
+  await page.screenshot({ path: `${dir}/content-${width}.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Create exercise', exact: true }).click()
+  await page.getByRole('button', { name: 'Edit with Preview', exact: true }).waitFor()
+  assert.equal(await page.getByRole('button', { name: 'Edit with Preview', exact: true }).getAttribute('aria-pressed'), 'true')
+  await page.getByRole('button', { name: 'Complex / LaTeX', exact: true }).click()
+  await page.getByRole('button', { name: 'Edit with Preview', exact: true }).click()
+  assert.equal(await page.getByRole('button', { name: 'Apply challenge', exact: true }).count(), 0)
+  await page.screenshot({ path: `${dir}/personal-editor-${width}.png`, fullPage: true })
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `personal overflow ${width}`)
+  page.once('dialog', dialog => dialog.dismiss()); await page.getByRole('link', { name: 'Leave Content' }).click()
+  assert.equal(await page.getByRole('heading', { name: 'Content', exact: true }).count(), 1)
+  page.once('dialog', dialog => dialog.accept()); await page.getByRole('button', { name: 'Close and discard draft' }).click()
+  await page.getByLabel('Content category').selectOption('Mathematics')
+  assert.equal(await page.getByRole('button', { name: /Preview / }).count(), 0)
+  assert.equal(await page.getByRole('combobox', { name: 'Grade', exact: true }).count(), 0)
+  await page.getByRole('button', { name: 'Reset filters' }).click()
+  await page.getByLabel('Content country').selectOption('RO'); await page.getByLabel('Content region').selectOption('fixture-region')
+  await page.getByLabel('Find content city').fill('Fi'); await page.getByLabel('Content city', { exact: true }).selectOption('fixture-city')
+  await page.getByLabel('Content country').selectOption('FR')
+  assert.equal(await page.getByLabel('Content region').inputValue(), ''); assert.equal(await page.getByLabel('Content city', { exact: true }).inputValue(), '')
+  await page.getByRole('button', { name: 'Reset filters' }).click()
+  await page.getByRole('button', { name: /^Preview / }).first().click()
+  await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Team Challenges', exact: true }).click()
+  await page.getByRole('button', { name: 'Create exercise', exact: true }).click()
+  assert.equal(await page.getByRole('button', { name: 'View saved challenge', exact: true }).count(), 0)
+  await page.screenshot({ path: `${dir}/team-editor-${width}.png`, fullPage: true })
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `team overflow ${width}`)
+}
+await browser.close()
+console.log('Content, Personal and Team editor checks passed at 1440, 390 and 320px.')
