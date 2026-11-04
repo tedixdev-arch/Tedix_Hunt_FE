@@ -1,0 +1,20 @@
+{
+  "backend": "merged C2a with disposable PostgreSQL 16",
+  "catalog": "read-only authoritative catalog endpoints with isolated fixture rows",
+  "eligible": [
+    "Hierarchy 1793823648581 Cluj",
+    "Hierarchy 1793823648581 Exact city",
+    "Hierarchy 1793823648581 Romania",
+    "Hierarchy 1793823648581 Universal"
+  ],
+  "unresolved": [
+    "Hierarchy 1793823648581 Exact city",
+    "Hierarchy 1793823648581 Romania",
+    "Hierarchy 1793823648581 Universal"
+  ],
+  "restoredClassifications": true,
+  "pendingResolutionExcludesRegions": true,
+  "starterPreserved": true,
+  "catalogFailure": "503 injected only for GET city; all content persists in PostgreSQL",
+  "errors": []
+}
