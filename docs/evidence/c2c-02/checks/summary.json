@@ -1,0 +1,25 @@
+{
+  "feMain": "c1dae953d11ea33b243c3e8de2b282d678cd5d7a",
+  "beMain": "a56ae6452f93fa14ba5a7e9c881c063899cb3763",
+  "nodeTests": 271,
+  "reactTests": 1104,
+  "typecheck": "passed",
+  "build": "passed",
+  "backendPostgresTests": 60,
+  "postgres": "disposable PostgreSQL 17",
+  "workflowViewports": [
+    1440,
+    390,
+    320
+  ],
+  "workflowScreenshots": 34,
+  "baselineScreenshots": 9,
+  "visualInspection": "all 43 inspected",
+  "creatorBrowser": "passed",
+  "adminReadableInspection": "passed",
+  "sharedPersonalEditorScenarios": 90,
+  "c2bPersistence": "passed for 15 Personal and 7 Team mechanics",
+  "adminGovernance": "same Universal exact-name selector failure on unchanged main and branch",
+  "merged": false,
+  "deployed": false
+}

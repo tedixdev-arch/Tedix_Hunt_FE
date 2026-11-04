@@ -14,6 +14,7 @@ const navigationGroups = [
     {id:'custom-requests',label:'Custom Hunt Requests',path:'/admin/custom-requests',icon:'document'},
   ]},
   {label:'Content',items:[
+    {id:'content-review',label:'Content Review',path:'/admin/content-review',icon:'document'},
     {id:'templates',label:'Template Reviews',path:'/admin/templates',icon:'document'},
     {id:'rewards',label:'Reward Inventory',path:'/admin/rewards',icon:'gift'},
   ]},
