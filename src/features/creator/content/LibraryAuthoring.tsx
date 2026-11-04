@@ -19,9 +19,9 @@ export function LibraryAuthoring({ team, draft, metadata, onDraftChange, onDisca
   }
   return <section aria-label="Library exercise draft">
     {team ? <TeamChallengeAuthoring standalone value={{}} onChange={() => {}} draft={draft} onDraftChange={onDraftChange} legacy={null} /> : <PersonalChallengeAuthoring standalone value={{}} onChange={() => {}} draft={draft} onDraftChange={onDraftChange} />}
-    <button type="button" className={`${control} mt-4 w-full bg-emerald-500 font-bold`} onClick={prepare}>Add Exercise</button>
+    <button type="button" className={`${control} mt-6 w-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700`} onClick={prepare}>Add Exercise</button>
     {result?.snapshot === snapshot && <p role={result.issues.length ? 'alert' : 'status'} className="mt-3 text-sm">{result.issues.length ? result.issues.join(' ') : 'Exercise prepared for this session. Not saved to Library.'}</p>}
     <p className="mt-2 text-xs text-slate-600">Unsaved session drafts are kept while switching sections. Leaving or reloading loses them.</p>
-    <button type="button" className={`${control} mt-4`} onClick={() => { if (window.confirm('Discard this unsaved session draft and its mechanic variants?')) onDiscard() }}>Discard session draft</button>
+    <button type="button" className={`${control} mt-2 border-transparent px-0 text-sm text-slate-500 underline underline-offset-4`} onClick={() => { if (window.confirm('Discard this unsaved session draft and its mechanic variants?')) onDiscard() }}>Discard session draft</button>
   </section>
 }
