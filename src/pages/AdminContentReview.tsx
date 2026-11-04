@@ -90,7 +90,7 @@ export function ContentReviewWorkspace({ reviewerId }: { reviewerId?: string }) 
         <ContentReviewPreview key={record.revisionId} record={record} />
         <section aria-label="Review decision" className="min-w-0 self-start space-y-3 lg:sticky lg:top-4">
           {selfReview && <p className="text-sm text-slate-600">Another Admin must review your exercise.</p>}
-          <button type="button" disabled={pending || selfReview} className={`${control} w-full bg-emerald-600 font-semibold text-white`} onClick={() => void decide('approve')}>Approve</button>
+          {!commentOpen && <button type="button" disabled={pending || selfReview} className={`${control} w-full bg-emerald-600 font-semibold text-white`} onClick={() => void decide('approve')}>Approve</button>}
           {!commentOpen ? <button type="button" disabled={pending || selfReview} className={`${control} w-full`} onClick={() => { setCommentOpen(true); setError('') }}>Request Changes</button> : <form className="space-y-3" onSubmit={event => { event.preventDefault(); void decide('request-changes') }}>
             <label className="block text-sm font-medium">Feedback<textarea autoFocus aria-label="Review comment" maxLength={1000} disabled={pending} className={`${control} mt-2 min-h-28 w-full`} value={comment} onChange={event => setComment(event.target.value)} placeholder="What should the Creator change?" /></label>
             <button type="submit" disabled={pending || selfReview} className={`${control} w-full`}>Send Request</button>

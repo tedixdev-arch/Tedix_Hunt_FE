@@ -47,3 +47,7 @@ One FE run during concurrent browser QA exceeded the existing 5-second timeout i
 [Visual evidence, logs and reproduction](evidence/c2c-02/README.md).
 
 All migrations and data writes in verification target disposable local PostgreSQL only. Backend source, exercise schemas, Template assets/allocation, participant gameplay/scoring, maps/routes, Organizer workflows and Legacy Templates are unchanged. No live database writes, merge or deployment. Stop at the Draft PR for ChatGPT review.
+
+## Pre-merge UX corrections
+
+Exact geographic applicability now resolves country, region and city names from the authoritative catalog with identifier-preserving fallbacks. Approve is hidden during Request Changes; Cancel restores both decisions. [Correction verification and 21 inspected screenshots](evidence/c2c-02/corrections/README.md). Relevant tests (34), typecheck and production build passed.
