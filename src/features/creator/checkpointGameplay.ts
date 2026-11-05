@@ -4,6 +4,7 @@ import type { CreatorTemplateContent } from '../../services/api/creatorTemplates
 
 export type GameplayField = 'kind' | 'teamKind' | 'navigationMode'
 export interface CheckpointGameplay extends Record<string, unknown> {
+  libraryAllocations?: Partial<Record<import('./content/templateAllocation').AllocationSlot, import('./content/templateAllocation').LibraryAllocation>>
   customExercises?: CustomSlots
   role?: 'normal' | 'terminal'
   checkpoint?: number

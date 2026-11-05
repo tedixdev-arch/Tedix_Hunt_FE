@@ -1,3 +1,5 @@
+import { selectAllocation } from '../content/templateAllocation'
+import { ChallengeAllocation } from '../content/ChallengeAllocation'
 import type { CheckpointGameplay } from '../checkpointGameplay'
 import type { PersonalCreationContext } from './creationContext'
 import { modernContext } from './creationContext'
@@ -17,6 +19,7 @@ export function TeamChallengeAuthoring({ standalone = false, value, onChange, co
   const change = (patch: Partial<AuthoringDraft>) => onDraftChange({ ...draft, ...patch })
   if (context.mode === 'unresolved' && !draft.contextChoice) return <section className="mt-4 space-y-3" aria-label="Team Challenge authoring"><p>Template type information is unavailable. Saved Team Challenges are preserved. Choose an editor for this session.</p><button type="button" className={control} onClick={() => change({ contextChoice: 'compatibility' })}>Edit existing challenges</button><button type="button" className={control} onClick={() => change({ contextChoice: 'modern' })}>Use modern challenge editor</button></section>
   const customMode = draft.source === 'custom'
+  const libraryMode = !standalone && !customMode
   const saved = savedExercise({ ...value, customExercises: undefined }, 'teamKind')
   const active = draft.emptySelection ? undefined : customMode ? draft.custom : draft.source === 'example' ? draft.exercise : saved
   const create = (type: string) => {
@@ -28,28 +31,36 @@ export function TeamChallengeAuthoring({ standalone = false, value, onChange, co
   const errors = active ? validateExercise(active) : []
   const apply = () => {
     if (errors.length) return
-    if ((draft.assignment === 'custom' || saved) && !window.confirm('Replace this Team Challenge? Custom drafts stay in this session until discarded.')) return
-    if (draft.emptySelection) { const next = { ...value }; delete next.teamKind; onChange(next); change({ assignment: 'predefined' }); return }
+    if ((draft.assignment === 'custom' || saved || value.libraryAllocations?.team) && !window.confirm('Replace this Team Challenge? Custom drafts stay in this session until discarded.')) return
+    if (draft.emptySelection) { const next = selectAllocation(value, 'team'); delete next.teamKind; onChange(next); change({ assignment: 'predefined' }); return }
     if (customMode && active) change({ assignment: 'custom', appliedCustom: active })
     else if (draft.source === 'saved') change({ assignment: 'predefined' })
   }
   return <section className="mt-4 min-w-0 space-y-4" aria-label="Team Challenge authoring">
     {context.mode === 'unresolved' && <button type="button" className={control} onClick={() => change({ contextChoice: undefined })}>Choose editor</button>}
-    <label className="block text-sm font-bold">{standalone ? 'Exercise type' : 'Team Challenge'}<select aria-label="Team Challenge" className={`${control} mt-2 w-full bg-white`} value={active && (customMode || draft.source === 'example') ? active.type : ''} onChange={event => {
+    <label className="block text-sm font-bold">{standalone ? 'Exercise type' : 'Team Challenge'}<select aria-label="Team Challenge" className={`${control} mt-2 w-full bg-white`} value={customMode ? active?.type ?? '' : draft.libraryMechanic ?? (value.libraryAllocations?.team && 'type' in value.libraryAllocations.team ? value.libraryAllocations.team.type : draft.source === 'example' ? active?.type ?? '' : '')} onChange={event => {
       const type = event.target.value
       if (!type) change({ emptySelection: true })
       else if (customMode) create(type)
-      else change({ source: 'example', emptySelection: false, exercise: structuredClone(teamExample(type)) })
+      else {
+        const allocation = value.libraryAllocations?.team
+        if (allocation) onChange(selectAllocation(value, 'team', allocation.mode === 'random' ? { mode: 'random', filters: { ...('filters' in allocation ? allocation.filters : {}), type } } : { mode: 'specific', contentId: '', revisionId: '' }))
+        change({ libraryMechanic: type, source: 'example', emptySelection: false, exercise: structuredClone(teamExample(type)) })
+      }
     }}><option value="">{saved && draft.source === 'saved' && !draft.emptySelection ? 'Saved assignment (preserved)' : 'No challenge (optional)'}</option>{Object.entries(teamMechanics).map(([type, label]) => <option key={type} value={type}>{label}</option>)}</select></label>
-    {!standalone && <div className="challenge-mode">{['Predefined', 'Create Your Own'].map((label, i) => <button type="button" key={label} aria-pressed={customMode === !!i} onClick={() => i ? draft.custom && (draft.source === 'saved' || !active || draft.custom.type === active.type) ? change({ source: 'custom', emptySelection: false }) : create(active?.type ?? 'scrambled-word') : change({ source: 'example', emptySelection: false, exercise: structuredClone(teamExample(active?.type ?? 'scrambled-word')) })}>{label}</button>)}</div>}
-    {!standalone && <p className="text-sm text-slate-600">{customMode ? 'Changes belong to this Template. Apply your challenge, then Save draft.' : 'Try a read-only example, then choose Create Your Own to adapt it.'} Creator simulation only; custom challenges cannot be published in live Hunts yet.</p>}
-    {active && customMode ? <TeamMechanicEditor key={active.id} exercise={active} onChange={update} /> : active?.authored ? <TeamChallengeCanvas key={active.id} exercise={active} /> : active ? <div className="challenge-canvas"><ExerciseRenderer key={active.id} exercise={active} /></div> : <p>Choose a Team Challenge to begin.</p>}
+    {!standalone && <div className="challenge-mode">{['Predefined', 'Create Your Own'].map((label, i) => <button type="button" key={label} aria-pressed={customMode === !!i} onClick={() => i ? draft.custom && (draft.source === 'saved' || !active || draft.custom.type === active.type) ? change({ source: 'custom', emptySelection: false }) : create(active?.type ?? 'scrambled-word') : change({ libraryMechanic: draft.libraryMechanic ?? (value.libraryAllocations?.team && 'type' in value.libraryAllocations.team ? value.libraryAllocations.team.type : undefined), source: 'example', emptySelection: false, exercise: structuredClone(teamExample(active?.type ?? 'scrambled-word')) })}>{label}</button>)}</div>}
+    {libraryMode && <ChallengeAllocation mechanic={draft.libraryMechanic ?? active?.type ?? (value.libraryAllocations?.team && 'type' in value.libraryAllocations.team ? value.libraryAllocations.team.type : undefined)} slot="team" value={value} onChange={onChange} defaults={context.poolDefaults} preview={draft.libraryPreview} onPreview={libraryPreview => change({ assignment: 'predefined', emptySelection: false, libraryMechanic: libraryPreview.type, libraryPreview })} onSelect={() => {
+      if (draft.assignment === 'custom' && !window.confirm('Replace this custom Team Challenge with approved Content? Your custom draft stays in this session.')) return false
+      change({ assignment: 'predefined', emptySelection: false, libraryMechanic: draft.libraryMechanic ?? active?.type ?? (value.libraryAllocations?.team && 'type' in value.libraryAllocations.team ? value.libraryAllocations.team.type : undefined) }); return true
+    }} />}
+    {!libraryMode && !standalone && <p className="text-sm text-slate-600">{customMode ? 'Changes belong to this Template. Apply your challenge, then Save draft.' : 'Try a read-only example, then choose Create Your Own to adapt it.'} Creator simulation only; custom challenges cannot be published in live Hunts yet.</p>}
+    {!libraryMode && (active && customMode ? <TeamMechanicEditor key={active.id} exercise={active} onChange={update} /> : active?.authored ? <TeamChallengeCanvas key={active.id} exercise={active} /> : active ? <div className="challenge-canvas"><ExerciseRenderer key={active.id} exercise={active} /></div> : <p>Choose a Team Challenge to begin.</p>)}
     {!standalone && (saved || draft.custom) && draft.source !== 'saved' && <button type="button" className={control} onClick={() => change({ source: 'saved', emptySelection: false })}>View saved challenge</button>}
-    {!standalone && (customMode && active || draft.emptySelection || draft.source === 'saved') && <button type="button" className={`${control} w-full bg-emerald-500 font-bold`} disabled={errors.length > 0} onClick={apply}>{draft.emptySelection ? 'Remove Team Challenge' : 'Apply challenge'}</button>}
-    {!standalone && <p role="status" aria-label="Selected exercise assignment" className="text-sm text-slate-600">{draft.assignment === 'custom' ? 'Custom Team Challenge assigned' : value.teamKind ? 'Saved Team Challenge assigned' : 'No Team Challenge assigned'}</p>}
+    {(!libraryMode || !value.libraryAllocations?.team) && !standalone && (customMode && active || draft.emptySelection || draft.source === 'saved') && <button type="button" className={`${control} w-full bg-emerald-500 font-bold`} disabled={errors.length > 0} onClick={apply}>{draft.emptySelection ? 'Remove Team Challenge' : 'Apply challenge'}</button>}
+    {!standalone && (!libraryMode || draft.custom) && <p role="status" aria-label="Selected exercise assignment" className="text-sm text-slate-600">{draft.assignment === 'custom' ? 'Custom Team Challenge assigned' : value.teamKind ? 'Saved Team Challenge assigned' : 'No Team Challenge assigned'}</p>}
     {!standalone && draft.custom && <button type="button" className={control} onClick={() => {
       if (!window.confirm('Discard custom Team Challenge changes and return to the saved assignment?')) return
-      const persisted = value.customExercises?.team
+      const persisted = value.libraryAllocations?.team ? undefined : value.customExercises?.team
       onDraftChange(persisted ? { contextChoice: draft.contextChoice, source: 'custom', assignment: 'custom', custom: fromPersistence(persisted) } : { contextChoice: draft.contextChoice, source: 'saved', assignment: 'predefined' })
     }}>Discard changes</button>}
   </section>

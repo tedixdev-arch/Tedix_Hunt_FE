@@ -47,6 +47,8 @@ export function personalChallengeStatus(cp: CheckpointGameplay | undefined, draf
       return JSON.stringify(content) === JSON.stringify(saved) ? 'Challenge assigned' : 'Unsaved changes'
     } catch { return 'Challenge incomplete' }
   }
+  const allocation = cp?.libraryAllocations?.personal
+  if (allocation) return 'version' in allocation ? 'Challenge assigned' : allocation.mode === 'specific' && !allocation.contentId ? 'Challenge incomplete' : 'Unsaved changes'
   if (draft?.custom) return 'Unsaved changes'
   return cp?.kind || cp?.customExercises?.personal ? 'Challenge assigned' : 'No challenge assigned'
 }

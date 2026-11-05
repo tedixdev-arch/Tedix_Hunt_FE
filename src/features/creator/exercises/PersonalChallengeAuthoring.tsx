@@ -1,3 +1,4 @@
+import { selectAllocation } from '../content/templateAllocation'
 import { ChallengeAllocation } from '../content/ChallengeAllocation'
 import { FormulaScope } from './FormulaEditor'
 import { PredefinedChallengeContent } from './PredefinedChallengeContent'
@@ -21,6 +22,11 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
   const customMode = draft.source === 'custom', exampleMode = draft.source === 'example', existingMode = context.mode === 'legacy' || context.mode === 'unresolved' && draft.contextChoice === 'compatibility'
   const saved = savedExercise({ ...value, customExercises: undefined }, 'kind')
   const active = draft.emptySelection ? undefined : customMode ? draft.custom : exampleMode ? draft.exercise : savedExercise({ ...value, kind: existingMode ? draft.legacyKind ?? value.kind : value.kind, customExercises: undefined }, 'kind')
+  const libraryMode = !standalone && !existingMode && !customMode
+  const selectLibrary = () => {
+    if (draft.assignment === 'custom' && !window.confirm('Replace this checkpoint’s custom challenge with approved Content? Your custom draft stays in this session.')) return false
+    onDraftChange({ ...draft, assignment: 'predefined', emptySelection: false, libraryMechanic: draft.libraryMechanic ?? draft.exercise?.type ?? (value.libraryAllocations?.personal && 'type' in value.libraryAllocations.personal ? value.libraryAllocations.personal.type : 'tap-pair') }); return true
+  }
   const errors = active ? validateExercise(active) : []
   const changeView = (patch: Partial<AuthoringDraft>) => onDraftChange({ ...draft, ...patch })
   const create = (type: string) => {
@@ -35,9 +41,9 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
     // Catalog examples have no publication-safe predefined wire representation. Fail closed.
     if (exampleMode && !draft.emptySelection || errors.length || !active && !draft.emptySelection) return
     const changed = draft.emptySelection ? !!saved || draft.assignment === 'custom' : customMode ? draft.assignment !== 'custom' || !!(draft.appliedCustom && draft.appliedCustom.id !== active?.id) : draft.assignment !== 'predefined' || draft.legacyKind !== undefined && draft.legacyKind !== value.kind
-    if (changed && (draft.assignment === 'custom' || saved) && !window.confirm('Replace this checkpoint’s challenge? Your custom drafts will be kept until you discard them.')) return
+    if (changed && (draft.assignment === 'custom' || saved || value.libraryAllocations?.personal) && !window.confirm('Replace this checkpoint’s challenge? Your custom drafts will be kept until you discard them.')) return
     if (customMode && active) { onDraftChange({ ...draft, assignment: 'custom', appliedCustom: active }); return }
-    const next = { ...value }
+    const next = draft.emptySelection ? selectAllocation(value, 'personal') : { ...value }
     if (draft.emptySelection) delete next.kind
     else if (existingMode && draft.legacyKind !== undefined) { if (draft.legacyKind) next.kind = draft.legacyKind; else delete next.kind }
     onChange(next); onDraftChange({ ...draft, assignment: 'predefined' })
@@ -48,7 +54,12 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
     if (!type) { changeView({ emptySelection: true }); return }
     if (existingMode) { changeView({ source: 'saved', emptySelection: false, legacyKind: type }); return }
     if (customMode) create(type)
-    else changeView({ source: 'example', emptySelection: false, copySelectedExample: true, exercise: structuredClone(exampleFor(type)) })
+    else {
+      const allocation = value.libraryAllocations?.personal
+      if (allocation && !selectLibrary()) return
+      if (allocation) onChange(selectAllocation(value, 'personal', allocation.mode === 'random' ? { mode: 'random', filters: { ...('filters' in allocation ? allocation.filters : {}), type } } : { mode: 'specific', contentId: '', revisionId: '' }))
+      changeView({ ...(allocation ? { assignment: 'predefined' as const } : {}), libraryMechanic: type, source: 'example', emptySelection: false, copySelectedExample: true, exercise: structuredClone(exampleFor(type)) })
+    }
   }
   const openCustom = () => {
     if (exampleMode && draft.copySelectedExample && active) { create(active.type); return }
@@ -56,6 +67,7 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
     else create(active?.type ?? 'tap-pair')
   }
   const openPredefined = () => changeView({
+    libraryMechanic: draft.libraryMechanic ?? (value.libraryAllocations?.personal && 'type' in value.libraryAllocations.personal ? value.libraryAllocations.personal.type : undefined),
     source: !existingMode && (draft.custom || draft.exercise) ? 'example' : 'saved',
     ...(!existingMode && (draft.custom || draft.exercise) ? { exercise: draft.exercise ?? structuredClone(exampleFor(draft.custom!.type)) } : {}),
     emptySelection: false,
@@ -70,21 +82,21 @@ function PersonalChallengeAuthoringContent({ standalone = false, value, context 
     {!standalone && <div className="flex rounded-xl bg-slate-100 p-1">{['Predefined', 'Create Your Own'].map((name, index) => <button type="button" key={name} className={`${control} min-w-0 flex-1 ${customMode === !!index ? 'bg-white font-bold shadow' : 'border-transparent bg-transparent'}`} aria-pressed={customMode === !!index} onClick={() => index ? openCustom() : openPredefined()}>{name}</button>)}</div>}
 
     {existingMode && !customMode && <CheckpointStoryPreview friendly value={value} />}
-    <section aria-label="Checkpoint gameplay"><label className="block text-sm font-bold">{standalone ? 'Exercise type' : 'Personal Challenge'}<select aria-label="Personal Challenge" className={`${control} mt-2 w-full bg-white`} value={draft.emptySelection ? '' : existingMode ? draft.legacyKind ?? value.kind ?? '' : customMode ? draft.custom?.type ?? '' : exampleMode ? draft.exercise?.type ?? 'tap-pair' : 'tap-pair'} onChange={e => select(e.target.value)}>
+    <section aria-label="Checkpoint gameplay"><label className="block text-sm font-bold">{standalone ? 'Exercise type' : 'Personal Challenge'}<select aria-label="Personal Challenge" className={`${control} mt-2 w-full bg-white`} value={draft.emptySelection ? '' : existingMode ? draft.legacyKind ?? value.kind ?? '' : customMode ? draft.custom?.type ?? '' : draft.libraryMechanic ?? (exampleMode ? draft.exercise?.type ?? 'tap-pair' : value.libraryAllocations?.personal && 'type' in value.libraryAllocations.personal ? value.libraryAllocations.personal.type : 'tap-pair')} onChange={e => select(e.target.value)}>
       <option value="">No challenge (optional)</option>{existingMode ? legacyKinds.map(kind => <option key={kind} value={kind}>{gameplayPresentation('kind', kind).name}</option>) : personalTypes.map(([type, label]) => <option key={type} value={type}>{label}</option>)}
     </select></label></section>
-    {!standalone && !existingMode && !customMode && <ChallengeAllocation key={`${context.poolDefaults?.category ?? ""}:${context.poolDefaults?.location?.id ?? ""}`} mechanic={draft.emptySelection ? "" : draft.exercise?.type ?? "tap-pair"} defaults={context.poolDefaults} />}
+    {libraryMode && <ChallengeAllocation mechanic={draft.emptySelection ? undefined : draft.libraryMechanic ?? draft.exercise?.type ?? (value.libraryAllocations?.personal && 'type' in value.libraryAllocations.personal ? value.libraryAllocations.personal.type : 'tap-pair')} value={value} onChange={onChange} defaults={context.poolDefaults} usedPersonalIds={context.usedPersonalIds} preview={draft.libraryPreview} onPreview={libraryPreview => onDraftChange({ ...draft, assignment: 'predefined', emptySelection: false, libraryMechanic: libraryPreview.type, libraryPreview })} onSelect={selectLibrary} />}
     {!standalone && customMode && <p role="note" className="text-sm text-slate-600">Save your own challenge for review. These challenges are not available in published Hunts yet.</p>}
     {exampleMode && draft.copySelectedExample && draft.custom && <button type="button" className={control} onClick={() => changeView({ source: 'custom', emptySelection: false })}>Resume previous draft</button>}
     {!existingMode && !customMode && exampleMode && saved && <button type="button" className={control} onClick={() => changeView({ source: 'saved', emptySelection: false })}>View saved challenge</button>}
     {customMode && active ? <section aria-label={`${active.type} content editor`} className="space-y-4">
       <PersonalMechanicEditor key={active.id} exercise={active} onChange={update} />
-    </section> : active && (existingMode || !exampleMode) ? <>{!existingMode && !customMode && !standalone ? <details className="rounded-xl border border-slate-200 p-3"><summary className="min-h-11 cursor-pointer text-sm font-bold">View saved challenge</summary><PredefinedChallengeContent key={active.id} exercise={active} /></details> : <PredefinedChallengeContent key={active.id} exercise={active} />}{errors.length > 0 && <p role="alert" className="text-sm text-red-800">{friendlyIssues(errors).join(' ')} Saved content is preserved.</p>}</> : existingMode || customMode || standalone ? <p className="text-sm text-slate-600">Choose a Personal Challenge to begin.</p> : null}
-    {!standalone && (existingMode || customMode || draft.emptySelection || draft.assignment === 'custom') && !(exampleMode && !draft.emptySelection) && (active || draft.emptySelection) && <button type="button" className={`${control} w-full bg-emerald-500 px-5 font-bold`} disabled={errors.length > 0} onClick={apply}>{draft.emptySelection ? 'Remove challenge' : 'Apply challenge'}</button>}
-    {!standalone && <p role="status" aria-label="Selected exercise assignment" className="text-sm text-slate-600">{draft.assignment === 'custom' || value.kind ? draft.assignment === 'custom' ? 'Custom challenge assigned' : 'Current challenge assigned' : 'No challenge assigned'}{draft.custom && ' · Save draft to keep your changes'}</p>}
+    </section> : (!libraryMode || !value.libraryAllocations?.personal) && active && (existingMode || !exampleMode) ? <>{!existingMode && !customMode && !standalone ? <details className="rounded-xl border border-slate-200 p-3"><summary className="min-h-11 cursor-pointer text-sm font-bold">View saved challenge</summary><PredefinedChallengeContent key={active.id} exercise={active} /></details> : <PredefinedChallengeContent key={active.id} exercise={active} />}{errors.length > 0 && <p role="alert" className="text-sm text-red-800">{friendlyIssues(errors).join(' ')} Saved content is preserved.</p>}</> : existingMode || customMode || standalone ? <p className="text-sm text-slate-600">Choose a Personal Challenge to begin.</p> : null}
+    {(!libraryMode || !value.libraryAllocations?.personal) && !standalone && (existingMode || customMode || draft.emptySelection || draft.assignment === 'custom') && !(exampleMode && !draft.emptySelection) && (active || draft.emptySelection) && <button type="button" className={`${control} w-full bg-emerald-500 px-5 font-bold`} disabled={errors.length > 0} onClick={apply}>{draft.emptySelection ? 'Remove challenge' : 'Apply challenge'}</button>}
+    {!standalone && (!libraryMode || draft.custom) && <p role="status" aria-label="Selected exercise assignment" className="text-sm text-slate-600">{draft.assignment === 'custom' || value.kind ? draft.assignment === 'custom' ? 'Custom challenge assigned' : 'Current challenge assigned' : 'No challenge assigned'}{draft.custom && ' · Save draft to keep your changes'}</p>}
     {!standalone && draft.custom && <button type="button" className={`${control} text-slate-600`} onClick={() => {
       if (!window.confirm('Discard your changes and restore this checkpoint’s saved challenge?')) return
-      const persisted = value.customExercises?.personal
+      const persisted = value.libraryAllocations?.personal ? undefined : value.customExercises?.personal
       onDraftChange(persisted ? { contextChoice: draft.contextChoice, source: 'custom', assignment: 'custom', custom: fromPersistence(persisted) } : { contextChoice: draft.contextChoice, source: 'saved', assignment: 'predefined' })
     }}>Discard changes</button>}
   </section>

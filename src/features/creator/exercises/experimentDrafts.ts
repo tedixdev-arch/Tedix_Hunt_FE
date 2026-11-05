@@ -9,6 +9,8 @@ export interface AuthoringDraft {
   contextChoice?: 'modern' | 'compatibility'
   emptySelection?: boolean
   legacyKind?: string
+  libraryMechanic?: string
+  libraryPreview?: import('../../../services/api/creatorContent').ApprovedDetail
   exercise?: Exercise
   /** Explicit example selection must be copied, rather than resuming a mechanic draft. */
   copySelectedExample?: boolean
