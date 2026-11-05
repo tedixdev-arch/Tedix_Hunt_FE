@@ -21,7 +21,7 @@ beforeEach(() => {
   vi.spyOn(huntOptionsApi, 'listHuntOptions').mockResolvedValue(options)
   vi.spyOn(rewardOptionsApi, 'getOptions').mockResolvedValue({ providers: [{ key: 'tedix_inventory', label: 'Tedix inventory' }], kinds: [{ key: 'physical', label: 'Physical' }], virtualCategories: [], specialAwardDefinitions: [] })
   vi.spyOn(huntRewardsApi, 'list').mockResolvedValue({ leaderboard: [], specialAwards: [] })
-  vi.spyOn(organizerLocalApi, 'page').mockImplementation(async kind => ({ items: (kind === 'countries' ? [{ countryCode: 'RO', displayName: 'Romania' }] : kind === 'regions' ? [{ regionId: 'RO:admin1:13', countryCode: 'RO', label: 'Cluj' }] : kind === 'cities' ? [{ localityId: local.localityId, countryCode: 'RO', name: 'Cluj-Napoca', regionId: 'RO:admin1:13', countryDisplayName: 'Romania', regionDisplayName: 'Cluj' }] : [local]) as never[], nextCursor: null }))
+  vi.spyOn(organizerLocalApi, 'page').mockImplementation(async kind => ({ items: (kind === 'countries' ? [{ countryCode: 'RO', displayName: 'Romania' }] : kind === 'regions' ? [{ regionId: 'RO:admin1:13', countryCode: 'RO', label: 'Cluj' }] : kind === 'cities' ? [{ geographicId: '681290', localityId: local.localityId, countryCode: 'RO', name: 'Cluj-Napoca', regionId: 'RO:admin1:13', countryDisplayName: 'Romania', regionDisplayName: 'Cluj' }] : [local]) as never[], nextCursor: null }))
   vi.spyOn(organizerLocalApi, 'preview').mockResolvedValue({ ...local, configuration: { checkpointPositions: [] } })
   vi.spyOn(huntsApi, 'createDraft').mockImplementation(async input => { saved = { ...saved, ...input }; return saved })
   vi.spyOn(organizerLocalApi, 'select').mockImplementation(async () => {
@@ -40,12 +40,13 @@ async function mount(url = '/organizer/hunts/new/setup') {
 function button(label: string) { const element = [...container.querySelectorAll('button')].find(item => item.textContent === label); expect(element, label).toBeDefined(); return element! }
 async function click(label: string) { await act(async () => button(label).click()) }
 
-test('Cluj default resolves its canonical locality through the catalog and lists its approved Hunts', async () => {
+const selectedText = () => [...container.querySelectorAll('select')].map(el => el.selectedOptions[0]?.text)
+test('catalog lists preselect the Cluj pilot location and list its approved Hunts', async () => {
   await mount()
-  expect([...container.querySelectorAll('select')].map(el => el.value)).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
-  expect(organizerLocalApi.page).toHaveBeenCalledWith('countries', {}, undefined)
-  expect(organizerLocalApi.page).toHaveBeenCalledWith('regions', { countryCode: 'RO' }, undefined)
-  expect(organizerLocalApi.page).toHaveBeenCalledWith('cities', { countryCode: 'RO', regionId: 'RO:admin1:13' }, undefined)
+  expect(selectedText()).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('countries', {})
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('regions', { countryCode: 'RO' })
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('cities', { countryCode: 'RO', regionId: 'RO:admin1:13' })
   await click('Choose Hunt')
   expect(container.textContent).toContain('Choose your adventure')
   expect(organizerLocalApi.page).toHaveBeenCalledWith('templates', { countryCode: 'RO', localityId: local.localityId })
@@ -54,12 +55,26 @@ test('Cluj default resolves its canonical locality through the catalog and lists
   expect(organizerLocalApi.select).not.toHaveBeenCalled()
   await click('Back'); expect(button('Choose Hunt').disabled).toBe(false)
 })
-test('a missing Cluj catalog entry blocks Choose Hunt with a retry', async () => {
+test('Cluj on a later catalog page is still preselected (full country imports span several pages)', async () => {
+  const original = vi.mocked(organizerLocalApi.page).getMockImplementation()!
+  const filler = (kind: string) => Array.from({ length: 20 }, (_, i) => kind === 'regions'
+    ? { regionId: `RO:admin1:${String(i).padStart(2, '0')}`, countryCode: 'RO', label: `County ${i}` }
+    : { geographicId: `9${i}`, localityId: null, countryCode: 'RO', name: `Town ${i}`, regionId: 'RO:admin1:13' })
+  vi.mocked(organizerLocalApi.page).mockImplementation(async (kind, filters, cursor) => kind === 'regions' || kind === 'cities'
+    ? cursor ? original(kind, filters) : { items: filler(kind) as never[], nextCursor: 'page-2' }
+    : original(kind, filters, cursor))
+  await mount()
+  expect(selectedText()).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('regions', { countryCode: 'RO' }, 'page-2')
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('cities', { countryCode: 'RO', regionId: 'RO:admin1:13' }, 'page-2')
+  expect(button('Choose Hunt').disabled).toBe(false)
+  expect(container.textContent).not.toContain('Show more')
+})
+test('an empty catalog says so and blocks Choose Hunt', async () => {
   vi.mocked(organizerLocalApi.page).mockImplementation(async () => ({ items: [], nextCursor: null }))
   await mount()
-  expect(container.textContent).toContain('not available in the location catalog')
+  expect(container.textContent).toContain('No countries are available yet')
   expect(button('Choose Hunt').disabled).toBe(true)
-  expect(button('Retry location')).toBeTruthy()
 })
 test('event metadata outage cannot block Location or Choose Hunt', async () => {
   vi.mocked(huntOptionsApi.listHuntOptions).mockRejectedValue(new ApiError('offline', null, 'network'))

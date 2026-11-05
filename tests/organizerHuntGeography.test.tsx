@@ -15,6 +15,7 @@ vi.mock('../src/services/api', async importOriginal => ({
   huntTemplatesApi: { listHuntTemplates: mocks.catalog, getApprovedGeography: mocks.geography }, huntOptionsApi: { listHuntOptions: mocks.options },
   organizationsApi: { listAccessible: mocks.organizations }, huntRewardsApi: { list: mocks.rewards },
 }))
+vi.mock('../src/services/api/organizerLocal', () => ({ organizerLocalApi: { page: async () => ({ items: [], nextCursor: null }) } }))
 vi.mock('mapbox-gl', () => ({ default: {
   Map: class {
     handlers = new Map<string, Set<(...args: any[]) => void>>()

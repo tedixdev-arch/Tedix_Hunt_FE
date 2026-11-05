@@ -4,11 +4,15 @@ import { LocalityProposals } from './LocalityProposals'
 
 const control = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal disabled:opacity-50'
 const failure = 'Geography could not be loaded. Retry to check current records. Your saved locality is unchanged.'
-export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, onSelect, beforeChange, onSearchPendingChange }: {
+const label_ = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s-]+/g, '').toLowerCase()
+export interface GeographicPreset { countryCode: string; region: string; city: string }
+export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, onSelect, beforeChange, onSearchPendingChange, preset }: {
   savedId?: string | null; snapshot?: LocalitySnapshot | null; value: string | null | undefined
-  onChange: (id: string | null | undefined) => void; onSelect: (place: LocalitySnapshot | null) => void
+  onChange: (id: string | null | undefined) => void; onSelect: (place: LocalitySnapshot | null, geography?: GeographicCity) => void
   onSearchPendingChange?: (pending: boolean) => void
   beforeChange: (id: string | null | undefined) => boolean
+  /** Fills Country, Region and City for a new draft through the normal selection path; any edit cancels it. */
+  preset?: GeographicPreset
 }) {
   const [loadingCountries, setLoadingCountries] = useState(true)
   const [current, setCurrent] = useState<Locality | null>(null)
@@ -20,7 +24,23 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
   const [incomplete, setIncomplete] = useState(false), [searched, setSearched] = useState(false), [retry, setRetry] = useState(0)
   const searchPending = useRef(false)
   const intent = useRef(0), search = useRef(0), edited = useRef(false)
+  const presetActive = useRef(!!preset && !savedId && !value)
   useEffect(() => { edited.current = false }, [savedId, snapshot])
+  useEffect(() => {
+    if (presetActive.current && !country && countries.some(c => c.code === preset!.countryCode)) setCountry(preset!.countryCode)
+  }, [countries])
+  useEffect(() => {
+    // Wait for the finished region list; the loader clears it to [] before each request.
+    if (!presetActive.current || region || country !== preset!.countryCode || loadingRegions) return
+    const match = regions.find(r => label_(r.displayName) === label_(preset!.region))
+    if (match) { setRegion(match.admin1Code); setQuery(preset!.city) } else presetActive.current = false
+  }, [regions, loadingRegions])
+  useEffect(() => {
+    if (!presetActive.current || !searched || selected) return
+    presetActive.current = false
+    const match = cities.find(c => label_(c.name) === label_(preset!.city))
+    if (match) void choose(match)
+  }, [cities, searched])
   useEffect(() => {
     let live = true
     setLoadingCountries(true)
@@ -95,12 +115,14 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
     finally { if (version === search.current) setLoadingCities(false) }
   }
   function reset(apply: () => void) {
+    presetActive.current = false
     if (!beforeChange(null)) return
     edited.current = true; ++intent.current; ++search.current; setBusy(false); setError(''); setNotice(''); setSelected(null); setQuery(''); setCities([]); setNext(null)
     searchPending.current = false; onSearchPendingChange?.(false)
     apply(); onChange(null); onSelect(null)
   }
   function editSearch(text: string) {
+    presetActive.current = false
     // Search intent is transient: never turn typing into a persisted clear or reuse a prior binding.
     const hasBinding = selected || value || (value === undefined && savedId)
     if (!searchPending.current && hasBinding && !beforeChange(null)) {
@@ -128,7 +150,7 @@ export function CreatorGeographicSelector({ savedId, snapshot, value, onChange, 
       if (version !== intent.current) return
       if (locality.id !== resolved.localityId || locality.countryCode !== country || !locality.active) throw new Error('Unavailable locality')
       if (!beforeChange(locality.id)) return
-      setSelected(city); setQuery(city.name); searchPending.current = false; onSearchPendingChange?.(false); setNotice(''); onChange(locality.id); onSelect(locality)
+      setSelected(city); setQuery(city.name); searchPending.current = false; onSearchPendingChange?.(false); setNotice(''); onChange(locality.id); onSelect(locality, { ...city, ...resolved })
     } catch { if (version === intent.current) setError(failure) }
     finally { if (version === intent.current) setBusy(false) }
   }

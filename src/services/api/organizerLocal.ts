@@ -2,7 +2,8 @@ import { apiClient } from './client.ts'
 import type { Hunt } from './hunts.ts'
 export interface Country { countryCode: string; displayName: string }
 export interface Region { regionId: string; countryCode: string; label: string }
-export interface City { localityId: string; countryCode: string; name: string; regionId: string; regionDisplayName: string | null; countryDisplayName: string; attribution: string }
+/** Catalog city; localityId is null until an Admin registers the city as a locality. */
+export interface City { geographicId: string; localityId: string | null; countryCode: string; name: string; regionId: string; regionDisplayName: string | null; countryDisplayName: string; attribution: string }
 export interface LocalHunt { templateId: string; key: string; version: number; displayName: string; theme: string; localityId: string }
 export interface LocalPreview extends LocalHunt { configuration: Record<string, unknown> }
 export interface Selection { templateId: string; version: number; countryCode: string; localityId: string }
