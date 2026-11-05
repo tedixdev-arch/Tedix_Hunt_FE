@@ -8,7 +8,7 @@ export function hydrateExerciseDrafts(content: CreatorTemplateContent): Authorin
   const drafts: AuthoringDrafts = {}
   for (const cp of content.checkpoints as CheckpointGameplay[]) for (const [field, slot] of [['kind', 'personal'], ['teamKind', 'team']] as const) {
     const e = cp.customExercises?.[slot]
-    if (e) drafts[`${field}:${cp.role === 'terminal' ? 'terminal' : Number(cp.checkpoint ?? cp.checkpointNumber) - 1}`] = { source: 'custom', custom: fromPersistence(e), assignment: 'custom' }
+    if (e && !cp.libraryAllocations?.[slot]) drafts[`${field}:${cp.role === 'terminal' ? 'terminal' : Number(cp.checkpoint ?? cp.checkpointNumber) - 1}`] = { source: 'custom', custom: fromPersistence(e), assignment: 'custom' }
   }
   return drafts
 }
@@ -20,6 +20,7 @@ export function applyExerciseDrafts(checkpoints: unknown[], drafts: AuthoringDra
     const selected = selectedAssignment(draft) === 'custom' ? draft.appliedCustom ?? draft.custom : undefined
     if (!cp) { if (selected) errors.push(`${experimentLabel(key)}: checkpoint was removed. Discard its exercise or restore the checkpoint count.`); continue }
     if (selectedAssignment(draft) === 'predefined') {
+      if (cp.libraryAllocations?.[slot]) continue
       if (cp.customExercises) { delete cp.customExercises[slot]; if (!Object.keys(cp.customExercises).length) delete cp.customExercises }
       continue
     }
@@ -27,6 +28,7 @@ export function applyExerciseDrafts(checkpoints: unknown[], drafts: AuthoringDra
     try {
       const converted = toPersistence(selected.authored ? selected : authorPrototype(selected))
       if (converted.classification !== slot) throw new Error('Exercise classification does not match this slot.')
+      if (cp.libraryAllocations) { delete cp.libraryAllocations[slot]; if (!Object.keys(cp.libraryAllocations).length) delete cp.libraryAllocations }
       cp.customExercises = { ...cp.customExercises, [slot]: converted }
     } catch (error) { errors.push(`${experimentLabel(key)}: ${error instanceof Error ? error.message : 'Invalid exercise content'}`) }
   }

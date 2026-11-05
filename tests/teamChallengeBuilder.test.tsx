@@ -31,11 +31,12 @@ for (const example of teamExamples) test(`${example.type}: seven modern choices,
   await mount(); await choose(example.type)
   expect([...container.querySelector<HTMLSelectElement>('[aria-label="Team Challenge"]')!.options].map(o => o.value)).toEqual(['', ...Object.keys(teamMechanics)])
   expect(container.querySelector('textarea')).toBeNull(); expect(button('Test Challenge')).toBeUndefined()
-  expect(container.querySelector('[aria-label="Mobile challenge canvas"]')).toBeTruthy()
-  await click('Check team answer'); await click('Reset simulation')
+  expect(container.querySelector('[aria-label="Mobile challenge canvas"]')).toBeNull() // No approved revision has been selected.
+  expect(container.querySelector('[aria-label="Challenge allocation"]')).toBeTruthy()
   expect(example).toEqual(before); expect(state.assignment).toBe('predefined')
   await click('Create Your Own'); expect(state.custom!.id).not.toBe(example.id)
   expect(button('Edit with Preview').getAttribute('aria-pressed')).toBe('true')
+  await click('Check team answer'); await click('Reset simulation')
   await click('Edit Title'); await input(container.querySelector('[role="group"][aria-label="Edit Title"] textarea')!, 'Our mission')
   expect(container.querySelector('[aria-label="Mobile challenge canvas"]')!.textContent).toContain('Our mission')
   await click('Step by Step'); expect(container.textContent).toContain('Step 1 of 5')
@@ -90,7 +91,7 @@ for (const example of teamExamples.filter(e => !['distributed-information', 'sha
 test('authoritative Legacy and unresolved contexts retain compatibility without ID inference', async () => {
   await mount(undefined, { mode: 'legacy', kinds: [] }); expect(button('Try challenge')).toBeDefined(); expect(button('Edit with Preview')).toBeUndefined()
   await act(async () => root.unmount()); root = createRoot(container)
-  await mount(undefined, { mode: 'unresolved', kinds: [] }); expect(container.querySelector('select')).toBeNull(); await click('Use modern challenge editor'); await choose('distributed-information'); expect(container.querySelector('[aria-label="Player perspective"]')).toBeTruthy()
+  await mount(undefined, { mode: 'unresolved', kinds: [] }); expect(container.querySelector('select')).toBeNull(); await click('Use modern challenge editor'); await choose('distributed-information'); expect(container.querySelector('[aria-label="Challenge allocation"]')).toBeTruthy(); await click('Create Your Own'); expect(container.querySelector('[aria-label="Player perspective"]')).toBeTruthy()
 })
 
 test('mode and mechanic switches retain unapplied drafts and selected ownership; terminal round trip', async () => {

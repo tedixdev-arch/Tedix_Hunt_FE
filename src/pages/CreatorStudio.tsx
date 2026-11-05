@@ -1,3 +1,4 @@
+import { reconcileAllocationCheckpoint } from '../features/creator/content/templateAllocation'
 import { NavigationPreview } from '../features/creator/NavigationPreview'
 import { templateCategories } from '../features/creator/content/classification'
 import { completionAllowsSave, hasRequiredCompletion, requiredSetupIds, requiredFeatureIds, restoredCompletion, type SaveIntent } from '../features/creator/completion'
@@ -35,7 +36,7 @@ import { ParticipantPreview } from '../features/creator/ParticipantPreview.tsx'
 import { WalkingRouteInspection } from '../features/creator/WalkingRouteValidation'
 import { buildGeographyConfiguration, createCheckpointDrafts, isGeographyComplete, resizeCheckpointDrafts } from '../features/creator/checkpointGeography'
 import { creatorTemplatesApi, type CreatorTemplate, type CreatorTemplateContent, type StarterTemplate } from '../services/api/creatorTemplates'
-import { creatorTemplateError, hydratePersistedGeography, normalizeTemplateKey, persistCreatorTemplate, templateContentEqual } from '../features/creator/templatePersistence'
+import { confirmAllocatedTemplate, creatorTemplateError, hydratePersistedGeography, normalizeTemplateKey, persistCreatorTemplate, templateContentEqual } from '../features/creator/templatePersistence'
 
 const field = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold outline-none focus:border-emerald-500'
 const checkpointFeatures = new Set(['personal', 'team', 'navigation'])
@@ -93,7 +94,7 @@ function CheckpointEditor({ context, names, checkpointCount, featureId, gameplay
       <CheckpointGameplayEditor fields={[gameplayField]} value={selected ?? {}} onChange={update} />
       <NavigationPreview value={selected ?? {}} checkpointName={checkpointNames[index]} destinationName={checkpointNames[index + 1]} />
     </> : <PrototypeComponentEditor key={`${featureId}-${index}`} isChallenge={featureId !== 'navigation'} checkpointName={checkpointNames[index]} />}
-    </> : <ChallengeAuthoring context={context} key={`${gameplayField}:${index}`} field={gameplayField} value={selected ?? {}} onChange={update} draft={drafts[`${gameplayField}:${index === checkpointCount ? 'terminal' : index}`]} onDraftChange={draft => onDraftsChange({ ...drafts, [`${gameplayField}:${index === checkpointCount ? 'terminal' : index}`]: draft })} />}
+    </> : <ChallengeAuthoring context={{ ...context, usedPersonalIds: [...gameplay.filter((_, number) => number !== index), ...(index === checkpointCount ? [] : terminal ? [terminal] : [])].flatMap(cp => { const a = cp.libraryAllocations?.personal; return a && 'contentId' in a && a.contentId ? [a.contentId] : [] }) }} key={`${gameplayField}:${index}`} field={gameplayField} value={selected ?? {}} onChange={update} draft={drafts[`${gameplayField}:${index === checkpointCount ? 'terminal' : index}`]} onDraftChange={draft => onDraftsChange({ ...drafts, [`${gameplayField}:${index === checkpointCount ? 'terminal' : index}`]: draft })} />}
 
   </div>
 }
@@ -321,7 +322,7 @@ function CreatorTemplateEditor() {
     if (accepted) cityChangeConfirmed.current = true
     return accepted
   }
-  const challengeContext = useMemo(() => ({ ...personalCreationContext(persisted), poolDefaults: { category: details.category, location: city, geography: poolGeography } }), [persisted, details.category, city, poolGeography])
+  const challengeContext = useMemo(() => ({ ...personalCreationContext(persisted), poolDefaults: { category: details.category, grade: (templateConfiguration as { grade?: unknown }).grade, classification: universal ? 'universal' as const : local ? 'local' as const : null, location: city, geography: poolGeography } }), [persisted, details.category, (templateConfiguration as { grade?: unknown }).grade, universal, local, city, poolGeography])
   const features = organizerFeatures.filter(item => !['positions', 'final'].includes(item.id))
   const feature = features[Math.min(featureIndex, features.length - 1)]
   const advancedIds = new Set(['map', 'results', 'rewards'])
@@ -371,7 +372,7 @@ function CreatorTemplateEditor() {
   }
   const workingSnapshot = JSON.stringify([creatorTemplateContent, challengeDrafts, localityChange])
   const workingSnapshotRef = useRef(workingSnapshot); workingSnapshotRef.current = workingSnapshot
-  const unsaved = localityChange !== undefined || challengeSubmissionBlocked || (!persisted ? experiments.length > 0 : !templateContentEqual(creatorTemplateContent, persisted.content))
+  const unsaved = localityChange !== undefined || challengeSubmissionBlocked || (!persisted ? experiments.length > 0 || creatorTemplateContent.checkpoints.some(cp => !!(cp as CheckpointGameplay).libraryAllocations) : !templateContentEqual(creatorTemplateContent, persisted.content))
   const sessionOnlyWork = experiments.some(([, draft]) => selectedAssignment(draft) === 'predefined' || Object.keys(draft.customByType ?? {}).some(type => type !== draft.custom?.type))
   useEffect(() => {
     if (!unsaved && !sessionOnlyWork) return
@@ -450,6 +451,7 @@ function CreatorTemplateEditor() {
     if (exerciseAssignments.errors.length) { setSaveError(exerciseAssignments.errors.join('\n')); return }
     const sentSnapshot = workingSnapshot
     const sentDrafts = structuredClone(challengeDrafts)
+    const sentContent = structuredClone(creatorTemplateContent)
     const sequence = readSequence.current
     mutationLock.current = true
     setSaving(true); setSaveError(''); setSaveNotice('')
@@ -461,7 +463,8 @@ function CreatorTemplateEditor() {
         if (latest.status !== 'draft' && !canReviseTemplate(latest)) { setConflict(true); setSaveError('This version is submitted and cannot be edited. Reopen its current state.'); return }
       }
       // Immutable versions are created only on an explicit save or completion action, never per keystroke.
-      const saved = await persistCreatorTemplate(creatorTemplatesApi, creatorTemplateContent, persisted, universal ? 'universal' : local ? 'local' : undefined, local ? localityChange : undefined)
+      const response = await persistCreatorTemplate(creatorTemplatesApi, creatorTemplateContent, persisted, universal ? 'universal' : local ? 'local' : undefined, local ? localityChange : undefined)
+      const saved = await confirmAllocatedTemplate(creatorTemplatesApi, sentContent, response)
       if (sequence !== readSequence.current) return
       // Backend status, key, version and content are authoritative after every persistence response.
       const acknowledgedDrafts = reconcileExerciseDrafts(challengeDraftsRef.current, sentDrafts, saved.content)
@@ -478,7 +481,10 @@ function CreatorTemplateEditor() {
         // Keep all newer local fields. Only rebase same-slot persisted custom metadata.
         const rebase = (cp: CheckpointGameplay) => {
           const server = (saved.content.checkpoints as CheckpointGameplay[]).find(row => cp.role === 'terminal' ? row.role === 'terminal' : row.role !== 'terminal' && row.checkpoint === cp.checkpoint)
-          return server?.customExercises ? { ...cp, customExercises: structuredClone(server.customExercises) } : cp
+          const sent = (sentContent.checkpoints as CheckpointGameplay[]).find(row => cp.role === 'terminal' ? row.role === 'terminal' : row.role !== 'terminal' && row.checkpoint === cp.checkpoint)
+          const rebased = reconcileAllocationCheckpoint(cp, sent, server)
+          if (cp.libraryAllocations || sent?.libraryAllocations) return rebased
+          return server?.customExercises ? { ...rebased, customExercises: structuredClone(server.customExercises) } : rebased
         }
         setNormalGameplay(current => current.map(rebase)); setTerminalGameplay(current => current ? rebase(current) : current)
       }
@@ -590,7 +596,8 @@ function CreatorTemplateEditor() {
       {step === 3 && <div className="sm:col-span-2"><p>Template status is read-only. Review status and version information in Review &amp; Submit.</p><button type="button" className="min-h-12 font-bold underline" onClick={() => openSection('review')}>Review Template status</button></div>}
     </div><div className="mt-6 flex justify-between border-t border-slate-100 pt-5"><button type="button" disabled={step === 0} onClick={() => setStep(step - 1)} className="min-h-12 rounded-xl border border-slate-300 px-5 font-bold disabled:opacity-40">Previous</button><button type="button" onClick={saveStep} className="min-h-12 rounded-xl bg-emerald-500 px-6 font-bold">{step === steps.length - 1 ? 'Complete Template Setup' : 'Continue'}</button></div></article></div></section>
 
-    <section id="creator-checkpoints" hidden={section !== 'checkpoints' && section !== 'advanced'} className="mt-8">{experiments.length > 0 && <details className="mb-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-700"><summary className="min-h-11 cursor-pointer font-bold">Challenge drafts ({experiments.length})</summary><p>{persistenceExplanation}</p><ul className="mt-3 space-y-2">{experiments.map(([key, draft]) => <li key={key} className="flex flex-wrap items-center justify-between gap-2"><span>{experimentLabel(key)} · {selectedAssignment(draft) === 'predefined' ? 'predefined selected; custom retained' : 'custom selected'}</span><button type="button" className="min-h-11 font-bold underline" aria-label={`Discard unsaved draft: ${experimentLabel(key)}`} onClick={() => discardSlotDraft(key)}>Discard unsaved draft</button></li>)}</ul>{challengeSubmissionBlocked && <p className="mt-3 font-bold">{submissionExplanation}</p>}</details>}<div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase text-emerald-700">Block 2</p><h2 className="mt-2 text-2xl font-bold">{section === 'advanced' ? 'Advanced' : 'Checkpoints & Challenges'}</h2><p className="mt-1 text-sm text-slate-500">Build the approved defaults checkpoint by checkpoint. Acknowledgements are session reminders. Reopened Templates restore historical acknowledgements; validation still checks their content.</p></div><Progress done={featureDone.size} total={features.length} /></div>{saveError && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">{saveError} {classified ? 'Your working content is kept. Review the message before saving again.' : 'Your working content is still here; save from Review & Submit.'}</div>}<div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]"><nav aria-label="Hunt Features" className="grid gap-2 lg:block lg:space-y-2">{features.map((item, index) => <button hidden={advancedIds.has(item.id) !== (section === 'advanced')} key={item.id} type="button" aria-current={featureIndex === index ? 'true' : undefined} onClick={() => selectFeature(index)} className={`flex min-h-12 min-w-0 items-center justify-between rounded-xl border bg-white px-4 text-left text-sm font-bold lg:w-full ${featureIndex === index ? 'border-emerald-500 bg-emerald-50' : ''}`}><span><span className="mr-2 text-slate-400">{index + 1}.</span>{item.id === 'rewards' ? 'Special Awards' : item.name}</span>{featureDone.has(item.id) && <span className="text-emerald-600">✓</span>}</button>)}</nav><div className="min-w-0">{features.map((feature, index) => {
+    {saveError && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">{saveError} {classified ? 'Your working content is kept. Review the message before saving again.' : 'Your working content is still here; save from Review & Submit.'}</div>}
+    <section id="creator-checkpoints" hidden={section !== 'checkpoints' && section !== 'advanced'} className="mt-8">{experiments.length > 0 && <details className="mb-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-700"><summary className="min-h-11 cursor-pointer font-bold">Challenge drafts ({experiments.length})</summary><p>{persistenceExplanation}</p><ul className="mt-3 space-y-2">{experiments.map(([key, draft]) => <li key={key} className="flex flex-wrap items-center justify-between gap-2"><span>{experimentLabel(key)} · {selectedAssignment(draft) === 'predefined' ? 'predefined selected; custom retained' : 'custom selected'}</span><button type="button" className="min-h-11 font-bold underline" aria-label={`Discard unsaved draft: ${experimentLabel(key)}`} onClick={() => discardSlotDraft(key)}>Discard unsaved draft</button></li>)}</ul>{challengeSubmissionBlocked && <p className="mt-3 font-bold">{submissionExplanation}</p>}</details>}<div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase text-emerald-700">Block 2</p><h2 className="mt-2 text-2xl font-bold">{section === 'advanced' ? 'Advanced' : 'Checkpoints & Challenges'}</h2><p className="mt-1 text-sm text-slate-500">Build the approved defaults checkpoint by checkpoint. Acknowledgements are session reminders. Reopened Templates restore historical acknowledgements; validation still checks their content.</p></div><Progress done={featureDone.size} total={features.length} /></div><div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]"><nav aria-label="Hunt Features" className="grid gap-2 lg:block lg:space-y-2">{features.map((item, index) => <button hidden={advancedIds.has(item.id) !== (section === 'advanced')} key={item.id} type="button" aria-current={featureIndex === index ? 'true' : undefined} onClick={() => selectFeature(index)} className={`flex min-h-12 min-w-0 items-center justify-between rounded-xl border bg-white px-4 text-left text-sm font-bold lg:w-full ${featureIndex === index ? 'border-emerald-500 bg-emerald-50' : ''}`}><span><span className="mr-2 text-slate-400">{index + 1}.</span>{item.id === 'rewards' ? 'Special Awards' : item.name}</span>{featureDone.has(item.id) && <span className="text-emerald-600">✓</span>}</button>)}</nav><div className="min-w-0">{features.map((feature, index) => {
       if (!visitedFeatures.has(index)) return null
       const template = feature.templates[selections[feature.id] ?? 0] ?? feature.templates[0]
       const mode = componentModes[feature.id] ?? 'existing'

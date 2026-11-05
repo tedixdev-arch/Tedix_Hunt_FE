@@ -1,0 +1,47 @@
+{
+  "backend": "a0826e8 (merged #121)",
+  "database": "disposable PostgreSQL 17",
+  "results": [
+    {
+      "width": 1440,
+      "realBackendSaveReload": true,
+      "specificExactRevision": true,
+      "randomResolvedOnSave": true,
+      "explicitReroll": true,
+      "unrelatedSaveKeepsPins": true,
+      "personalDuplicateDisabled": true,
+      "poolErrorsPreserveRetry": true,
+      "terminalPersonalTeam": true,
+      "localEligibility": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "realBackendSaveReload": true,
+      "specificExactRevision": true,
+      "randomResolvedOnSave": true,
+      "explicitReroll": true,
+      "unrelatedSaveKeepsPins": true,
+      "personalDuplicateDisabled": true,
+      "poolErrorsPreserveRetry": true,
+      "terminalPersonalTeam": true,
+      "localEligibility": true,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "realBackendSaveReload": true,
+      "specificExactRevision": true,
+      "randomResolvedOnSave": true,
+      "explicitReroll": true,
+      "unrelatedSaveKeepsPins": true,
+      "personalDuplicateDisabled": true,
+      "poolErrorsPreserveRetry": true,
+      "terminalPersonalTeam": true,
+      "localEligibility": true,
+      "overflow": false
+    }
+  ],
+  "browserErrors": [],
+  "realVersionSaves": 39
+}

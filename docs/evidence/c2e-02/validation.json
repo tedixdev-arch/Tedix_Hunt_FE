@@ -1,0 +1,57 @@
+{
+  "frontend": {
+    "nodeEntries": 43,
+    "vitestFiles": 60,
+    "vitestTests": 1182,
+    "skipped": 0,
+    "typecheck": "passed",
+    "productionBuild": "passed"
+  },
+  "backend": {
+    "commit": "a0826e8",
+    "database": "disposable PostgreSQL 17",
+    "allocation": 49,
+    "approvedDiscovery": 31,
+    "creatorContent": 35,
+    "customExercises": 34
+  },
+  "browser": {
+    "allocation": {
+      "widths": [
+        1440,
+        390,
+        320
+      ],
+      "realBackend": true,
+      "versionSaveRequests": 39,
+      "screenshots": 90,
+      "errors": []
+    },
+    "approvedLibrary": {
+      "realBackend": true,
+      "widths": [
+        1440,
+        390,
+        320
+      ],
+      "screenshots": 36,
+      "result": "passed"
+    },
+    "adminReview": {
+      "fixtureOnly": true,
+      "screenshots": 21,
+      "result": "passed"
+    },
+    "creatorStudioAndTemplateContext": {
+      "fixtureOnly": true,
+      "widths": [
+        1440,
+        768,
+        390,
+        320
+      ],
+      "result": "passed",
+      "mutationRequests": []
+    }
+  }
+}
