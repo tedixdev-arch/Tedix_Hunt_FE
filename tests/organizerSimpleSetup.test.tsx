@@ -91,10 +91,12 @@ test('saved Local draft resumes with exact server identity and preserves event s
   expect(organizerLocalApi.page).toHaveBeenCalledWith('templates', { countryCode: 'RO', localityId: local.localityId })
   expect(huntsApi.createDraft).not.toHaveBeenCalled()
 })
-test('legacy draft and independent mode keep existing builder', async () => {
+test('the removed ?mode=independent query no longer opens the local-only builder', async () => {
+  // Independent Organizers now sign in through email verification and use the same API-backed setup.
   await mount('/organizer/hunts/new/setup?mode=independent')
-  expect(container.textContent).toContain('General Setup')
-  expect(organizerLocalApi.page).not.toHaveBeenCalled()
+  expect(container.textContent).not.toContain('General Setup')
+  expect(container.textContent).not.toContain('Independent Organizer persistence is not connected yet')
+  expect(organizerLocalApi.page).toHaveBeenCalled()
 })
 
 test('legacy draft keeps the existing builder', async () => {
