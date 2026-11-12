@@ -57,10 +57,9 @@ function RequireAdmin({ children }: { children: ReactNode }) {
   return children
 }
 
-function RequireOrganizer({ children, allowIndependent = false, allowAdmin = false }: { children: ReactNode; allowIndependent?: boolean; allowAdmin?: boolean }) {
+function RequireOrganizer({ children, allowAdmin = false }: { children: ReactNode; allowAdmin?: boolean }) {
   const { user, isBootstrapping } = useAuth()
   const location = useLocation()
-  if (allowIndependent && new URLSearchParams(location.search).get('mode') === 'independent') return children
   if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
   if (!user) return <Navigate replace state={{ from: location.pathname }} to="/organizer/registered" />
   if (!canAccessOrganizer(user) && !(allowAdmin && canAccessAdmin(user))) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-bold">Organizer access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Organizer access.</p></div></main>
@@ -150,11 +149,11 @@ export const router = createHashRouter([
   },
   {
     path: '/organizer/hunts/new',
-    element: <RequireOrganizer allowIndependent><OrganizerSetupChoicePage /></RequireOrganizer>,
+    element: <RequireOrganizer><OrganizerSetupChoicePage /></RequireOrganizer>,
   },
   {
     path: '/organizer/hunts/new/setup',
-    element: <RequireOrganizer allowIndependent><OrganizerSetup /></RequireOrganizer>,
+    element: <RequireOrganizer><OrganizerSetup /></RequireOrganizer>,
   },
   {
     path: '/organizer/hunts/:huntId/setup',

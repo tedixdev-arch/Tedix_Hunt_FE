@@ -7,13 +7,13 @@ import { ApiError } from '../src/services/api/client'
 import { CustomHuntEditorPage } from '../src/pages/CustomHuntEditor'
 import type { Hunt } from '../src/services/api/hunts'
 
-const mocks = vi.hoisted(() => ({ maps: [] as any[], markers: [] as any[], geography: vi.fn(), get: vi.fn(), catalog: vi.fn(), options: vi.fn(), organizations: vi.fn(), rewards: vi.fn(), create: vi.fn(), update: vi.fn(), publish: vi.fn(), access: vi.fn() }))
+const mocks = vi.hoisted(() => ({ maps: [] as any[], markers: [] as any[], geography: vi.fn(), get: vi.fn(), catalog: vi.fn(), options: vi.fn(), organizations: vi.fn(), rewards: vi.fn(), rewardOptions: vi.fn(), create: vi.fn(), update: vi.fn(), publish: vi.fn(), access: vi.fn() }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <header>Organizer workspace</header> }))
 vi.mock('../src/services/api', async importOriginal => ({
   ...await importOriginal<any>(),
   huntsApi: { getHunt: mocks.get, createDraft: mocks.create, updateDraft: mocks.update, publish: mocks.publish, createOrGetAccess: mocks.access },
   huntTemplatesApi: { listHuntTemplates: mocks.catalog, getApprovedGeography: mocks.geography }, huntOptionsApi: { listHuntOptions: mocks.options },
-  organizationsApi: { listAccessible: mocks.organizations }, huntRewardsApi: { list: mocks.rewards },
+  organizationsApi: { listAccessible: mocks.organizations }, huntRewardsApi: { list: mocks.rewards }, rewardOptionsApi: { getOptions: mocks.rewardOptions },
 }))
 vi.mock('../src/services/api/organizerLocal', () => ({ organizerLocalApi: { page: async () => ({ items: [], nextCursor: null }) } }))
 vi.mock('mapbox-gl', () => ({ default: {
@@ -58,7 +58,7 @@ beforeEach(() => {
   vi.clearAllMocks(); mocks.maps.length = 0; mocks.markers.length = 0
   mocks.get.mockReset().mockResolvedValue(structuredClone(savedHunt)); mocks.catalog.mockReset().mockResolvedValue(catalog)
   mocks.geography.mockReset().mockImplementation(async (key: string) => ({ key, version: catalog.find(item => item.key === key)!.version, configuration: structuredClone(configuration) }))
-  mocks.options.mockResolvedValue(options); mocks.organizations.mockResolvedValue([{ id: 'org', name: 'School' }]); mocks.rewards.mockResolvedValue({ leaderboard: [], specialAwards: [] })
+  mocks.options.mockResolvedValue(options); mocks.organizations.mockResolvedValue([{ id: 'org', name: 'School' }]); mocks.rewards.mockResolvedValue({ leaderboard: [], specialAwards: [] }); mocks.rewardOptions.mockResolvedValue({ providers: [{ key: 'tedix_inventory', label: 'Tedix inventory' }], kinds: [{ key: 'physical', label: 'Physical' }], virtualCategories: [], specialAwardDefinitions: [] })
   mocks.publish.mockReset().mockResolvedValue({ ...savedHunt, status: 'published' })
   vi.stubEnv('VITE_DEPLOYMENT_ENVIRONMENT', 'development'); vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-dev.anainfo.ai')
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-token')
@@ -354,4 +354,13 @@ test('development Organizer retains saved geographic data without replacing it w
   await editor()
   const citySelect = [...container.querySelectorAll('label')].find(item => item.firstChild?.textContent === 'City')!.querySelector('select')!
   expect([...citySelect.options].map(option => option.text)).toEqual(['Paris']); expect(citySelect.value).toBe('Paris'); noMutation()
+})
+
+test('saved-draft editor only shows API-backed sections (no simulated features or fixed share link)', async () => {
+  await editor()
+  const text = container.textContent ?? ''
+  for (const removed of ['Map simulation', 'Hunt Features', 'Check every checkpoint on the map', 'Challenge source', 'SIGNAL26', 'Independent Organizer', 'Locked · Review first', 'Prototype configuration']) expect(text).not.toContain(removed)
+  expect(container.querySelector('#rewards-title')?.textContent).toBe('Rewards')
+  expect(mocks.rewards).toHaveBeenCalledWith('old-hunt'); expect(mocks.rewardOptions).toHaveBeenCalled()
+  noMutation(); expect(fetch).not.toHaveBeenCalled()
 })
