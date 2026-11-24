@@ -2,103 +2,115 @@ import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { CreatorGeographicSelector } from '../src/features/creator/CreatorGeographicSelector'
-const api = vi.hoisted(() => ({ countries: vi.fn(), regions: vi.fn(), cities: vi.fn(), resolveCity: vi.fn(), get: vi.fn() }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: api }))
-const locality = { id: '11111111-1111-4111-8111-111111111111', name: 'Cluj-Napoca', countryCode: 'RO', countryDisplayName: 'Romania', administrativeContext: 'Not a region identity', latitude: 46.77, longitude: 23.59, active: true }
-const city = { ...locality, geographicId: '681290', admin1Code: '13', regionDisplayName: 'Cluj', regionStatus: 'resolved', localityId: locality.id, registeredActive: true, nextAction: 'bind_locality' }
+const api = vi.hoisted(() => ({ countries: vi.fn(), regions: vi.fn(), browse: vi.fn(), resolveCity: vi.fn(), get: vi.fn() }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: api }))
+const locality = { id: '11111111-1111-4111-8111-111111111111', name: 'Cluj-Napoca', countryCode: 'RO', countryDisplayName: 'Romania', administrativeContext: 'Not a region identity', latitude: 46.77, longitude: 23.59, active: true, geographicId: '681290', admin1Code: '13', regionDisplayName: 'Cluj' }
+const city = { ...locality, geographicId: '681290', admin1Code: '13', regionDisplayName: 'Cluj', regionStatus: 'resolved', localityId: locality.id, registeredActive: true, registrationState: 'registered', nextAction: 'bind_locality', source: 'geonames' }
+const turda = { ...city, geographicId: '665444', name: 'Turda', localityId: null, registeredActive: false, registrationState: 'not_linked', nextAction: 'resolve_city' }
+/** Selecting a city without a Locality links or creates one automatically (no Admin registration). */
+const turdaResolved = { ...turda, localityId: '44444444-4444-4444-8444-444444444444', registeredActive: true, registrationState: 'registered', nextAction: 'bind_locality' }
+const inactive = { ...city, registeredActive: false, registrationState: 'registered_inactive', nextAction: 'unavailable' }
+const manual = { ...city, geographicId: null, name: 'Added Hamlet', localityId: '33333333-3333-4333-8333-333333333333', source: 'registry' }
 const guard = vi.fn(() => true)
 let root: Root, container: HTMLDivElement
 beforeEach(() => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks()
   guard.mockReset().mockReturnValue(true)
-  vi.useFakeTimers(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks()
   api.countries.mockResolvedValue({ countries: [{ code: 'RO', displayName: 'Romania' }, { code: 'US', displayName: 'United States' }] })
-  api.regions.mockImplementation(async countryCode => ({ regions: [{ countryCode, admin1Code: '13', displayName: 'Cluj' }, { countryCode, admin1Code: '01', displayName: 'Alba' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null }))
-  api.cities.mockResolvedValue({ cities: [city], nextAfter: null }); api.resolveCity.mockResolvedValue(city); api.get.mockResolvedValue(locality)
+  api.regions.mockImplementation(async (countryCode: string) => ({ regions: [{ countryCode, admin1Code: '13', displayName: 'Cluj', labelStatus: 'resolved' }, { countryCode, admin1Code: '01', displayName: 'Alba', labelStatus: 'resolved' }], regionLabel: countryCode === 'RO' ? 'County' : 'State', metadataStatus: 'ready', nextAfter: null }))
+  api.browse.mockResolvedValue({ cities: [turda, city], registryLocalities: [], nextAfter: null })
+  api.resolveCity.mockResolvedValue(city); api.get.mockResolvedValue(locality)
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
-afterEach(() => { act(() => root.unmount()); container.remove(); vi.useRealTimers(); vi.unstubAllGlobals() })
+afterEach(() => { act(() => root.unmount()); container.remove(); vi.unstubAllGlobals() })
 function Harness({ saved = false }: { saved?: boolean }) { const [value, setValue] = useState<string | null | undefined>(); const [pending, setPending] = useState(false); return <><CreatorGeographicSelector savedId={saved ? locality.id : null} snapshot={saved ? locality : null} value={value} onChange={setValue} beforeChange={guard} onSearchPendingChange={setPending} onSelect={() => {}} /><output>{value === undefined ? 'kept' : value ?? 'cleared'}</output><output data-pending>{String(pending)}</output></> }
 async function render(saved = false) { await act(async () => root.render(<Harness saved={saved} />)) }
-async function change(label: string, value: string) { await act(async () => { const node = container.querySelector(`[aria-label="${label} *"]`)!; Object.getOwnPropertyDescriptor(node.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype, 'value')!.set!.call(node, value); node.dispatchEvent(new Event(node.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })) }) }
-async function tick() { await act(async () => { await vi.advanceTimersByTimeAsync(300) }) }
+const field = (label: string) => container.querySelector(`[aria-label="${label}"]`) as HTMLSelectElement | HTMLInputElement
+async function change(label: string, value: string) { await act(async () => { const node = field(label); Object.getOwnPropertyDescriptor(node.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype, 'value')!.set!.call(node, value); node.dispatchEvent(new Event(node.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })) }) }
 async function click(text: string) { await act(async () => [...container.querySelectorAll('button')].find(b => b.textContent!.includes(text))!.click()) }
-async function find() { await render(); await change('Country', 'RO'); await change('Region', '13'); await change('City', 'Cluj'); await tick() }
+const options = (label: string) => [...field(label).querySelectorAll('option')].map(o => o.textContent)
+async function region() { await render(); await change('Country *', 'RO'); await change('Region *', '13') }
 const output = () => container.querySelector('output')!.textContent
 
-test('Romania → Cluj → Cluj-Napoca binds canonical UUID only after explicit selection', async () => {
-  await find(); expect(container.textContent).toContain('County *'); expect(api.cities).toHaveBeenCalledWith('RO', 'Cluj', '13', undefined); expect(api.resolveCity).not.toHaveBeenCalled(); expect(output()).toBe('cleared')
-  await click('Cluj-Napoca · Cluj'); expect(api.resolveCity).toHaveBeenCalledWith('681290'); expect(output()).toBe(locality.id)
+test('Country → County → City dropdowns; canonical UUID binds only after an explicit city choice', async () => {
+  await region()
+  expect(container.textContent).toContain('County/Region *'); expect(api.browse).toHaveBeenCalledWith('RO', '13', undefined); expect(api.resolveCity).not.toHaveBeenCalled(); expect(output()).toBe('cleared')
+  // Alphabetical plain names; registration state is explained below the field, not inside options.
+  expect(options('City *')).toEqual(['Choose City', 'Cluj-Napoca', 'Turda'])
+  await change('City *', '681290'); expect(api.resolveCity).toHaveBeenCalledWith('681290'); expect(output()).toBe(locality.id); expect(container.textContent).toContain('Selected city: Cluj-Napoca')
   expect(container.querySelector('a[href="https://creativecommons.org/licenses/by/4.0/"]')).not.toBeNull()
 })
-test('country and county changes clear selection and dependent search', async () => {
-  await find(); await click('Cluj-Napoca · Cluj'); await change('Region', '01'); expect(output()).toBe('cleared'); expect(container.querySelector('input')!.value).toBe('')
-  await change('Country', 'US'); expect((container.querySelector('[aria-label="Region *"]') as HTMLSelectElement).value).toBe(''); expect(container.querySelector('input')!.disabled).toBe(true); expect(container.textContent).toContain('State / Region *')
+test('any listed city can be used: a city without a Locality binds after selection, with no registration message', async () => {
+  api.resolveCity.mockResolvedValue(turdaResolved); api.get.mockResolvedValue({ ...locality, id: turdaResolved.localityId, name: 'Turda', geographicId: '665444' })
+  await region(); await change('City *', '665444')
+  expect(api.resolveCity).toHaveBeenCalledWith('665444'); expect(output()).toBe(turdaResolved.localityId)
+  expect(container.textContent).toContain('Selected city: Turda'); expect(container.textContent).not.toMatch(/registration|registered|Admin/i)
 })
-test('debounce, short query and empty results', async () => {
-  api.cities.mockResolvedValue({ cities: [], nextAfter: null }); await render(); await change('Country', 'RO'); await change('Region', '13'); await change('City', 'C'); await tick(); expect(api.cities).not.toHaveBeenCalled()
-  await change('City', 'Cl'); await change('City', 'Cluj'); await tick(); expect(api.cities).toHaveBeenCalledTimes(1); expect(container.textContent).toContain('No cities match')
+test('only a Locality switched off in the registry is unavailable', async () => {
+  api.resolveCity.mockResolvedValue(inactive); await region(); await change('City *', '681290')
+  expect(container.textContent).toContain('This place is currently unavailable. Choose another city.'); expect(output()).toBe('cleared')
+  expect(container.textContent).not.toMatch(/Admin/)
 })
-test('late city results cannot replace newer search or country', async () => {
+test('a manual Locality from an approved proposal is listed in its region and binds without catalog resolve', async () => {
+  api.browse.mockResolvedValue({ cities: [city], registryLocalities: [manual], nextAfter: null }); api.get.mockResolvedValue({ ...locality, id: manual.localityId, name: 'Added Hamlet', geographicId: null })
+  await region(); expect(options('City *')).toContain('Added Hamlet')
+  await change('City *', `registry:${manual.localityId}`); expect(api.resolveCity).not.toHaveBeenCalled(); expect(api.get).toHaveBeenCalledWith(manual.localityId); expect(output()).toBe(manual.localityId)
+})
+test('country and county changes clear the selection; the County/Region label is the same for every country', async () => {
+  await region(); await change('City *', '681290'); await change('Region *', '01'); expect(output()).toBe('cleared'); expect(field('City *').value).toBe('')
+  await change('Country *', 'US'); expect(field('Region *').value).toBe(''); expect(field('City *').disabled).toBe(true); expect(container.textContent).toContain('County/Region *'); expect(container.textContent).not.toContain('State *')
+})
+test('guard refusal keeps the current binding', async () => {
+  await region(); await change('City *', '681290'); guard.mockReturnValue(false); await change('Region *', '01')
+  expect(output()).toBe(locality.id); expect(field('Region *').value).toBe('13')
+})
+test('late resolve cannot bind after the county changes', async () => {
   let done!: (result: unknown) => void
-  api.cities.mockReturnValueOnce(new Promise(resolve => { done = resolve })); await find(); await change('City', 'Alba'); await tick(); await change('Country', 'US')
-  await act(async () => done({ cities: [city], nextAfter: null })); expect(container.querySelectorAll('li')).toHaveLength(0)
+  api.resolveCity.mockReturnValue(new Promise(resolve => { done = resolve })); await region(); await change('City *', '681290'); expect(container.querySelector('[data-pending]')!.textContent).toBe('true')
+  await change('Region *', '01'); await act(async () => done(city)); expect(output()).toBe('cleared'); expect(container.querySelector('[data-pending]')!.textContent).toBe('false')
 })
-test('late resolve cannot bind after county changes', async () => {
+test('late cities from a previous region are ignored', async () => {
   let done!: (result: unknown) => void
-  api.resolveCity.mockReturnValue(new Promise(resolve => { done = resolve })); await find(); await click('Cluj-Napoca · Cluj'); await change('Region', '01'); await act(async () => done(city)); expect(output()).toBe('cleared')
+  api.browse.mockReturnValueOnce(new Promise(resolve => { done = resolve })); await region(); api.browse.mockResolvedValue({ cities: [], nextAfter: null }); await change('Region *', '01')
+  await act(async () => done({ cities: [city], nextAfter: null })); expect(options('City *')).toEqual(['Choose City'])
 })
-test('late regions from previous country are ignored', async () => {
+test('late regions from a previous country are ignored', async () => {
   let done!: (result: unknown) => void
-  api.regions.mockReturnValueOnce(new Promise(resolve => { done = resolve })); await render(); await change('Country', 'RO'); await change('Country', 'US')
-  await act(async () => done({ regions: [{ countryCode: 'RO', admin1Code: '99', displayName: 'Old' }], nextAfter: null, metadataStatus: 'ready', regionLabel: 'County' })); expect(container.textContent).not.toContain('Old'); expect(container.textContent).toContain('State / Region')
+  api.regions.mockReturnValueOnce(new Promise(resolve => { done = resolve })); await render(); await change('Country *', 'RO'); await change('Country *', 'US')
+  await act(async () => done({ regions: [{ countryCode: 'RO', admin1Code: '99', displayName: 'Old' }], nextAfter: null, metadataStatus: 'ready', regionLabel: 'County' })); expect(container.textContent).not.toContain('Old')
 })
-test.each(['ready', 'incomplete'])('empty region metadata %s is explicit', async metadataStatus => {
-  api.regions.mockResolvedValue({ regions: [], regionLabel: 'County', metadataStatus, nextAfter: null }); await render(); await change('Country', 'RO'); expect(container.textContent).toContain('No regions available'); expect(container.textContent.includes('Region metadata is incomplete')).toBe(metadataStatus === 'incomplete'); expect(container.querySelector('input')!.disabled).toBe(true)
+test('every page of a region is loaded and manual Localities from the first page are merged', async () => {
+  api.browse.mockResolvedValueOnce({ cities: [city], registryLocalities: [manual], nextAfter: '681290' }).mockResolvedValueOnce({ cities: [turda], registryLocalities: [], nextAfter: null })
+  await region(); expect(api.browse).toHaveBeenLastCalledWith('RO', '13', '681290'); expect(options('City *')).toEqual(['Choose City', 'Added Hamlet', 'Cluj-Napoca', 'Turda'])
 })
-test('unregistered city never binds or registers silently', async () => {
-  api.resolveCity.mockResolvedValue({ geographicId: city.geographicId, localityId: null, registrationState: 'registration_required', nextAction: 'request_registration' }); await find(); await click('Cluj-Napoca · Cluj'); expect(output()).toBe('cleared'); expect(container.textContent).toContain('requires Admin registration or reconciliation'); expect(api.get).not.toHaveBeenCalled()
+test('the unspecified region and code-only regions are offered; empty region metadata is explicit', async () => {
+  api.regions.mockResolvedValue({ regions: [{ countryCode: 'RO', admin1Code: 'unspecified', displayName: 'Other (region not specified)', labelStatus: 'unspecified' }, { countryCode: 'RO', admin1Code: '13', displayName: 'Cluj', labelStatus: 'resolved' }], regionLabel: 'County', metadataStatus: 'ready', nextAfter: null })
+  await render(); await change('Country *', 'RO'); expect(options('Region *')).toEqual(['Choose County/Region', 'Cluj', 'Other (region not specified)'])
+  api.regions.mockResolvedValue({ regions: [], regionLabel: 'County', metadataStatus: 'ready', nextAfter: null }); await change('Country *', 'US'); expect(container.textContent).toContain('No regions available')
 })
-test('saved draft recovers authoritative region by exact canonical UUID without writes', async () => {
-  await render(true); expect(output()).toBe('kept'); expect((container.querySelector('[aria-label="Region *"]') as HTMLSelectElement).value).toBe('13'); expect(container.querySelector('input')!.value).toBe('Cluj-Napoca'); expect(api.resolveCity).not.toHaveBeenCalled(); expect(container.textContent).toContain('Not a region identity')
+test('saved draft restores country, region and city from the canonical Locality without writes', async () => {
+  await render(true); expect(output()).toBe('kept'); expect(field('Region *').value).toBe('13'); expect(field('City *').value).toBe('681290'); expect(api.resolveCity).not.toHaveBeenCalled(); expect(container.textContent).toContain('Not a region identity')
 })
-test('same name with different UUID cannot recover a saved region', async () => {
-  api.cities.mockResolvedValue({ cities: [{ ...city, localityId: 'different' }], nextAfter: null }); await render(true); expect(output()).toBe('kept'); expect(container.textContent).toContain('region unresolved'); expect((container.querySelector('[aria-label="Region *"]') as HTMLSelectElement).value).toBe('')
+test('a saved Locality not found in its region keeps the saved binding and says so', async () => {
+  api.browse.mockResolvedValue({ cities: [{ ...city, localityId: 'different' }], nextAfter: null }); await render(true)
+  expect(output()).toBe('kept'); expect(container.textContent).toContain('region unresolved'); expect(field('City *').value).toBe('')
 })
-test('unspecified saved region preserves locality and snapshot', async () => {
-  api.cities.mockResolvedValue({ cities: [{ ...city, regionStatus: 'unspecified', admin1Code: '00', regionDisplayName: null }], nextAfter: null }); await render(true); expect(output()).toBe('kept'); expect(container.textContent).toContain('region unresolved'); expect(container.querySelector('input')!.disabled).toBe(true)
+test('Keep saved locality restores omission semantics after a change', async () => {
+  api.resolveCity.mockResolvedValue(inactive); await render(true); await change('City *', '681290'); expect(output()).toBe('cleared'); await click('Keep saved locality'); expect(output()).toBe('kept')
 })
-test('region and city pagination use returned cursors', async () => {
-  api.regions.mockResolvedValueOnce({ regions: [], regionLabel: 'County', metadataStatus: 'ready', nextAfter: '12' }).mockResolvedValueOnce({ regions: [{ countryCode: 'RO', admin1Code: '13', displayName: 'Cluj' }], regionLabel: 'County', metadataStatus: 'ready', nextAfter: null })
-  api.cities.mockResolvedValueOnce({ cities: [city], nextAfter: '681290' }).mockResolvedValueOnce({ cities: [{ ...city, geographicId: '681291', name: 'Cluj Other' }], nextAfter: null }); await find(); expect(api.regions).toHaveBeenCalledWith('RO', '12'); await click('More cities'); expect(api.cities).toHaveBeenLastCalledWith('RO', 'Cluj', '13', '681290'); expect(container.querySelectorAll('li')).toHaveLength(2)
+test('API error retry preserves the current country and region', async () => {
+  api.browse.mockRejectedValueOnce(new Error('offline')); await region(); expect(container.querySelector('[role="alert"]')).not.toBeNull()
+  await click('Retry geography'); expect(api.browse).toHaveBeenLastCalledWith('RO', '13', undefined); expect(options('City *')).toContain('Cluj-Napoca')
 })
-test('API error retry preserves the current country and region intent', async () => {
-  api.cities.mockRejectedValueOnce(new Error('offline')); await find(); expect(container.querySelector('[role="alert"]')).not.toBeNull(); await click('Retry geography'); await tick(); expect(api.cities).toHaveBeenLastCalledWith('RO', 'Cluj', '13', undefined); expect(container.querySelectorAll('li')).toHaveLength(1)
+test('long city lists stay one plain dropdown without a separate filter or search box', async () => {
+  const many = Array.from({ length: 35 }, (_, i) => ({ ...turda, geographicId: String(1000 + i), name: `Town ${i}` }))
+  api.browse.mockResolvedValue({ cities: [city, ...many], nextAfter: null }); await region()
+  expect(options('City *')).toHaveLength(37); expect(container.querySelector('input[aria-label="Filter cities"]')).toBeNull()
+  expect(field('City *').tagName).toBe('SELECT')
+})
+test('a new selector preselects nothing', async () => {
+  await render(); expect(field('Country *').value).toBe(''); expect(options('Country *')[0]).toBe('Choose Country'); expect(field('Region *').disabled).toBe(true); expect(field('City *').disabled).toBe(true)
 })
 test('desktop row and mobile stacking use responsive grid classes', async () => {
   await render(); const grid = container.querySelector('.grid')!; expect(grid.classList.contains('grid-cols-1')).toBe(true); expect(grid.classList.contains('sm:grid-cols-3')).toBe(true); expect(grid.querySelectorAll('label')).toHaveLength(3)
-})
-
-
-test('editing selected Cluj invalidates selection without clearing binding intent; new city requires explicit selection', async () => {
-  await find(); await click('Cluj-Napoca · Cluj')
-  await change('City', 'Turda'); expect(output()).toBe(locality.id); expect(container.querySelector('[data-pending]')!.textContent).toBe('true'); expect(container.textContent).not.toContain('Selected city: Cluj-Napoca')
-  const turda = { ...city, geographicId: '665444', name: 'Turda', localityId: '22222222-2222-4222-8222-222222222222' }
-  api.cities.mockResolvedValue({ cities: [turda], nextAfter: null }); await tick(); expect(output()).toBe(locality.id)
-  api.resolveCity.mockResolvedValue(turda); api.get.mockResolvedValue({ ...locality, id: turda.localityId, name: 'Turda' })
-  await click('Turda · Cluj'); expect(output()).toBe(turda.localityId); expect(container.querySelector('[data-pending]')!.textContent).toBe('false'); expect(container.querySelector('input')!.value).toBe('Turda')
-})
-test.each([false, true])('cancelled search edit restores selected display and binding (saved=%s)', async saved => {
-  if (saved) await render(true)
-  else { await find(); await click('Cluj-Napoca · Cluj') }
-  guard.mockReturnValue(false); await change('City', 'Turda')
-  expect(guard).toHaveBeenLastCalledWith(null); expect(container.querySelector('input')!.value).toBe('Cluj-Napoca'); expect(container.textContent).toContain('Selected city: Cluj-Napoca'); expect(output()).toBe(saved ? 'kept' : locality.id); expect(container.querySelector('[data-pending]')!.textContent).toBe('false')
-})
-test('reopened saved draft typing keeps omission semantics and saved snapshot; Keep saved restores display', async () => {
-  await render(true); await change('City', 'Turda'); expect(output()).toBe('kept'); expect(container.textContent).toContain('Saved locality: Cluj-Napoca'); expect(container.querySelector('[data-pending]')!.textContent).toBe('true')
-  await click('Keep saved locality'); expect(output()).toBe('kept'); expect(container.querySelector('input')!.value).toBe('Cluj-Napoca'); expect(container.querySelector('[data-pending]')!.textContent).toBe('false')
-})
-test('editing while a city resolve is pending prevents that response from restoring the old binding', async () => {
-  let done!: (result: unknown) => void
-  await find(); api.resolveCity.mockReturnValue(new Promise(resolve => { done = resolve })); await click('Cluj-Napoca · Cluj')
-  await change('City', 'Turda'); await act(async () => done(city)); expect(output()).toBe('cleared'); expect(container.querySelector('[data-pending]')!.textContent).toBe('true'); expect(container.textContent).not.toContain('Selected city: Cluj-Napoca')
 })

@@ -1,6 +1,7 @@
 import { ApiError } from '../../services/api/client.ts'
 import type { AdminTemplateReview } from '../../services/api/adminTemplateReviews.ts'
-export const reviewCategories = ['Universal', 'Local', 'Locality proposals', 'Legacy'] as const
+// Locality proposals moved to Admin → Locations (/admin/locations); they are not Template reviews.
+export const reviewCategories = ['Universal', 'Local', 'Legacy'] as const
 export type ReviewCategory = typeof reviewCategories[number]
 export function reviewCategory(review: AdminTemplateReview): ReviewCategory {
   return review.category === 'universal' ? 'Universal' : review.category === 'local' ? 'Local' : 'Legacy'

@@ -5,7 +5,7 @@ import { expect, test, vi } from 'vitest'
 import { ContentStudio } from '../src/features/creator/content/ContentStudio'
 import { creatorContentApi } from '../src/services/api/creatorContent'
 import { starterContent } from '../src/features/creator/content/catalog'
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }) } }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: { countries: async () => ({ countries: [] }) } }))
 test('standalone editor reuses preview and LaTeX without assignment or source mutation', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const before = structuredClone(starterContent)

@@ -5,7 +5,7 @@ import { LocalityProposalReview } from '../src/features/admin/LocalityProposalRe
 import { ApiError } from '../src/services/api/client'
 const api = vi.hoisted(() => ({ list: vi.fn(), decide: vi.fn(), search: vi.fn(), userId: 'admin' }))
 vi.mock('../src/services/api/adminLocalityProposals', () => ({ adminLocalityProposalsApi: api }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { search: api.search } }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: { search: api.search } }))
 vi.mock('../src/app/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: api.userId, roles: ['admin', 'creator'] } }) }))
 let root: Root, container: HTMLDivElement
 const proposal = { id: 'proposal', creatorUserId: 'creator', status: 'pending', countryCode: 'RO', name: 'Independent town', administrativeContext: 'North county', latitude: 46, longitude: 23, explanation: 'Missing independently documented locality', evidenceReference: 'Independent gazetteer, volume 2 page 30', createdAt: '2026-10-30', reviewerUserId: null, decisionReason: null, decidedAt: null, localityId: null }

@@ -16,6 +16,7 @@ const navigationGroups = [
   {label:'Content',items:[
     {id:'content-review',label:'Content Review',path:'/admin/content-review',icon:'document'},
     {id:'templates',label:'Template Reviews',path:'/admin/templates',icon:'document'},
+    {id:'locations',label:'Locations',path:'/admin/locations',icon:'map'},
     {id:'rewards',label:'Reward Inventory',path:'/admin/rewards',icon:'gift'},
   ]},
   {label:'People',items:[
