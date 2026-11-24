@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AdminShell } from './AdminConsole'
 import { adminOperationsApi, type AdminAlert, type AdminDashboard, type AdminHunt, type CustomHuntRequest, type CustomRequestStatus } from '../services/api/operations'
+import { adminUsersApi, type ProfessionalUser } from '../services/api/adminUsers'
+import { ApiError } from '../services/api/client'
 
 const card = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'
 const statusStyle: Record<string, string> = { active: 'bg-emerald-100 text-emerald-800', paused: 'bg-violet-100 text-violet-800', published: 'bg-sky-100 text-sky-800', finished: 'bg-slate-200 text-slate-700', cancelled: 'bg-rose-100 text-rose-800', draft: 'bg-slate-100 text-slate-600' }
@@ -82,26 +84,98 @@ export function AdminAlertsPage() {
   </section></AdminShell>
 }
 
-const requestLabels: Record<CustomRequestStatus, string> = { new: 'New', in_review: 'In review', closed: 'Closed' }
+export const requestLabels: Record<CustomRequestStatus, string> = {
+  new: 'New', in_review: 'In review', assigned: 'Assigned to Creator', in_progress: 'Creator building', completed: 'Done', rejected: 'Rejected', closed: 'Closed',
+}
+const requestStyle: Record<CustomRequestStatus, string> = {
+  new: 'bg-sky-100 text-sky-800', in_review: 'bg-violet-100 text-violet-800', assigned: 'bg-amber-100 text-amber-900', in_progress: 'bg-amber-100 text-amber-900',
+  completed: 'bg-emerald-100 text-emerald-800', rejected: 'bg-rose-100 text-rose-800', closed: 'bg-slate-200 text-slate-700',
+}
+const templateLabels: Record<string, string> = { draft: 'draft', submitted: 'submitted for review', changes_requested: 'changes requested', approved: 'approved' }
+const requestErrors: Record<string, string> = {
+  organization_required: 'This request is not linked to an organization, so the finished Hunt could not be made exclusive. Ask the Organizer to resubmit while signed in.',
+  request_finalized: 'This request is already finished.', request_assigned: 'Assigned requests can only be closed or rejected.',
+  template_in_progress: 'Another Creator already linked a template to this request.', creator_not_found: 'That Creator is not active.',
+}
+const open = (status: CustomRequestStatus) => ['new', 'in_review', 'assigned', 'in_progress'].includes(status)
+
+/** Admin side of the custom Hunt workflow: review, assign a Creator, track the template, reject with a note. */
 export function AdminCustomRequestsPage() {
   const load = useCallback(() => adminOperationsApi.customRequests().then(r => r.requests), [])
   const { data, error, reload } = useLoad<CustomHuntRequest[]>(load)
-  const [notes, setNotes] = useState<Record<string, string>>({})
+  const [creators, setCreators] = useState<ProfessionalUser[]>([])
+  useEffect(() => { adminUsersApi.listUsers('creator').then(list => setCreators(list.filter(u => !u.isBlocked && u.status !== 'blocked' && u.activationState !== 'pending'))).catch(() => setCreators([])) }, [])
+  const [drafts, setDrafts] = useState<Record<string, { adminNote?: string; organizerNote?: string; creator?: string; rejecting?: boolean }>>({})
   const [busy, setBusy] = useState('')
-  async function update(id: string, change: { status?: CustomRequestStatus; adminNote?: string | null }) {
-    setBusy(id); try { await adminOperationsApi.updateCustomRequest(id, change) } finally { setBusy(''); reload() }
+  const [failure, setFailure] = useState<Record<string, string>>({})
+  const draft = (id: string) => drafts[id] ?? {}
+  const edit = (id: string, change: Partial<{ adminNote: string; organizerNote: string; creator: string; rejecting: boolean }>) => setDrafts(d => ({ ...d, [id]: { ...d[id], ...change } }))
+  async function act(id: string, work: () => Promise<unknown>, reset?: Array<'adminNote' | 'organizerNote' | 'creator' | 'rejecting'>) {
+    setBusy(id); setFailure(f => ({ ...f, [id]: '' }))
+    try {
+      await work()
+      if (reset) setDrafts(d => { const next = { ...d[id] }; reset.forEach(k => delete next[k]); return { ...d, [id]: next } })
+      reload()
+    } catch (caught) {
+      const code = caught instanceof ApiError && caught.details && typeof caught.details === 'object' && 'error' in caught.details ? String(caught.details.error) : ''
+      setFailure(f => ({ ...f, [id]: requestErrors[code] ?? "We couldn't save this change. Please retry." }))
+    } finally { setBusy('') }
   }
+  const field = 'min-h-10 flex-1 rounded-lg border border-slate-300 px-3 text-sm'
+  const button = 'min-h-10 rounded-lg border border-slate-300 px-4 text-sm font-bold disabled:opacity-50'
   return <AdminShell active="custom-requests"><section className={`${card} mt-6`}>
-    <h2 className="text-2xl font-bold">Custom Hunt requests</h2><p className="mt-1 text-slate-600">Requests submitted through “Ask for a custom Hunt”. Reply to the contact by email; email is not sent from the platform yet.</p>
+    <h2 className="text-2xl font-bold">Custom Hunt requests</h2>
+    <p className="mt-1 text-slate-600">Review a request, assign it to a Creator, then approve the template they build in Template review. Approval makes the Hunt available only to the requesting organization and emails the Organizer.</p>
     <State error={error} loading={!data} onRetry={reload} />
     {data && (data.length === 0 ? <p className="mt-5 text-slate-600">No requests yet.</p> :
-      <ul className="mt-5 grid gap-4">{data.map(r => <li key={r.id} className="rounded-xl border border-slate-200 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{r.contactName}{r.organizationName ? ` · ${r.organizationName}` : ''}</p><a className="text-sm text-emerald-700 underline" href={`mailto:${r.contactEmail}`}>{r.contactEmail}</a>
-          <p className="mt-1 text-xs text-slate-500">{when(r.createdAt)}{r.city ? ` · ${r.city}` : ''}{r.preferredDate ? ` · preferred ${r.preferredDate}` : ''}{r.participantCount ? ` · ${r.participantCount} participants` : ''}</p></div>
-          <label className="text-sm font-bold">Status<select className="ml-2 min-h-10 rounded-lg border border-slate-300 px-2" disabled={busy === r.id} value={r.status} onChange={e => void update(r.id, { status: e.target.value as CustomRequestStatus })}>{Object.entries(requestLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label></div>
-        <p className="mt-3 whitespace-pre-wrap text-sm">{r.details}</p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row"><input aria-label="Internal note" className="min-h-10 flex-1 rounded-lg border border-slate-300 px-3 text-sm" maxLength={2000} placeholder="Internal note" value={notes[r.id] ?? r.adminNote ?? ''} onChange={e => setNotes(n => ({ ...n, [r.id]: e.target.value }))} />
-          <button className="min-h-10 rounded-lg border border-slate-300 px-4 text-sm font-bold disabled:opacity-50" disabled={busy === r.id || (notes[r.id] ?? r.adminNote ?? '') === (r.adminNote ?? '')} type="button" onClick={() => void update(r.id, { adminNote: notes[r.id] ?? '' })}>Save note</button></div>
-      </li>)}</ul>)}
+      <ul className="mt-5 grid gap-4">{data.map(r => {
+        const d = draft(r.id), locked = busy === r.id
+        const adminNote = d.adminNote ?? r.adminNote ?? '', organizerNote = d.organizerNote ?? r.organizerNote ?? ''
+        const creator = d.creator ?? r.assignedCreator?.id ?? ''
+        return <li key={r.id} className="rounded-xl border border-slate-200 p-4" aria-label={`Request from ${r.contactName}`}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div><p className="font-bold">{r.contactName}{r.organizationName ? ` · ${r.organizationName}` : ''}</p>
+              <a className="text-sm text-emerald-700 underline" href={`mailto:${r.contactEmail}`}>{r.contactEmail}</a>
+              <p className="mt-1 text-xs text-slate-500">{when(r.createdAt)}{r.city ? ` · ${r.city}` : ''}{r.preferredDate ? ` · preferred ${r.preferredDate}` : ''}{r.participantCount ? ` · ${r.participantCount} participants` : ''}</p>
+              {!r.organizationId && <p className="mt-1 text-xs font-semibold text-amber-800">No organization linked — this request cannot be assigned.</p>}</div>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${requestStyle[r.status]}`}>{requestLabels[r.status]}</span>
+          </div>
+          <p className="mt-3 whitespace-pre-wrap text-sm">{r.details}</p>
+
+          {(r.assignedCreator || r.template) && <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">
+            {r.assignedCreator && <p>Creator: <strong>{r.assignedCreator.name || r.assignedCreator.email}</strong>{r.assignedCreator.name ? ` (${r.assignedCreator.email})` : ''}</p>}
+            {r.template ? <p className="mt-1">Template: <strong>{r.template.displayName ?? r.template.key}</strong> · {templateLabels[r.template.status] ?? r.template.status}
+              {r.template.status === 'submitted' && <> · <Link className="font-bold text-emerald-700 underline" to={`/admin/reviews/${encodeURIComponent(r.template.key)}`}>Review and approve</Link></>}</p>
+              : r.assignedCreator && <p className="mt-1 text-slate-600">Waiting for the Creator to link a template.</p>}
+          </div>}
+
+          {open(r.status) && <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="flex flex-1 items-center gap-2 text-sm font-bold">Creator
+              <select aria-label="Assign Creator" className={field} disabled={locked || !r.organizationId} value={creator} onChange={e => edit(r.id, { creator: e.target.value })}>
+                <option value="">Choose a Creator</option>{creators.map(c => <option key={c.id} value={c.id}>{c.name || c.email}{c.name && c.email ? ` (${c.email})` : ''}</option>)}
+              </select></label>
+            <button className="min-h-10 rounded-lg bg-slate-950 px-4 text-sm font-bold text-white disabled:opacity-50" type="button"
+              disabled={locked || !creator || creator === r.assignedCreator?.id || !r.organizationId}
+              onClick={() => void act(r.id, () => adminOperationsApi.assignCustomRequest(r.id, creator), ['creator'])}>{r.assignedCreator ? 'Reassign' : 'Assign'}</button>
+            {r.status === 'new' && <button className={button} type="button" disabled={locked} onClick={() => void act(r.id, () => adminOperationsApi.updateCustomRequest(r.id, { status: 'in_review' }))}>Mark in review</button>}
+          </div>}
+
+          <div className="mt-3 grid gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row"><input aria-label="Note for the Organizer" className={field} maxLength={2000} placeholder="Note for the Organizer (shown on their request)" value={organizerNote} onChange={e => edit(r.id, { organizerNote: e.target.value })} />
+              <button className={button} disabled={locked || organizerNote === (r.organizerNote ?? '')} type="button" onClick={() => void act(r.id, () => adminOperationsApi.updateCustomRequest(r.id, { organizerNote }), ['organizerNote'])}>Save note</button></div>
+            <div className="flex flex-col gap-2 sm:flex-row"><input aria-label="Internal note" className={field} maxLength={2000} placeholder="Internal note (Admins only)" value={adminNote} onChange={e => edit(r.id, { adminNote: e.target.value })} />
+              <button className={button} disabled={locked || adminNote === (r.adminNote ?? '')} type="button" onClick={() => void act(r.id, () => adminOperationsApi.updateCustomRequest(r.id, { adminNote }), ['adminNote'])}>Save internal note</button></div>
+          </div>
+
+          {open(r.status) && (d.rejecting
+            ? <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3"><p className="text-sm font-bold text-rose-900">Reject this request? The Organizer is emailed with the note above.</p>
+              <div className="mt-2 flex flex-wrap gap-2"><button className="min-h-10 rounded-lg bg-rose-700 px-4 text-sm font-bold text-white disabled:opacity-50" type="button" disabled={locked || !organizerNote.trim()}
+                onClick={() => void act(r.id, () => adminOperationsApi.rejectCustomRequest(r.id, organizerNote.trim()), ['organizerNote', 'rejecting'])}>Reject and notify</button>
+                <button className={button} type="button" onClick={() => edit(r.id, { rejecting: false })}>Cancel</button></div>
+              {!organizerNote.trim() && <p className="mt-2 text-xs text-rose-900">Write a note for the Organizer first.</p>}</div>
+            : <button className="mt-3 min-h-10 text-sm font-bold text-rose-700 underline" type="button" disabled={locked} onClick={() => edit(r.id, { rejecting: true })}>Reject request…</button>)}
+          {failure[r.id] && <p role="alert" className="mt-2 text-sm font-semibold text-rose-700">{failure[r.id]}</p>}
+        </li>
+      })}</ul>)}
   </section></AdminShell>
 }

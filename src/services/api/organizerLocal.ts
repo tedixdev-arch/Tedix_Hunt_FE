@@ -12,7 +12,7 @@ export interface City { geographicId: string | null; localityId: string | null; 
 export const cityChoiceKey = (city: Pick<City, 'geographicId' | 'localityId'>) => city.geographicId ?? `registry:${city.localityId}`
 /** Any listed city can be chosen; only a Locality that was switched off in the registry is unavailable. */
 export const cityUsable = (city: Pick<City, 'localityId' | 'registeredActive'>) => !city.localityId || city.registeredActive !== false
-export interface LocalHunt { templateId: string; key: string; version: number; displayName: string; theme: string; localityId: string }
+export interface LocalHunt { templateId: string; key: string; version: number; displayName: string; theme: string; localityId: string; exclusive?: boolean}
 export interface LocalPreview extends LocalHunt { configuration: Record<string, unknown> }
 export interface Selection { templateId: string; version: number; countryCode: string; localityId: string }
 export interface Page<T> { items: T[]; nextCursor: string | null }
