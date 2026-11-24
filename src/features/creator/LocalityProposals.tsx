@@ -9,7 +9,10 @@ function failure(error: unknown) {
   if (error instanceof ApiError) {
     if (error.status === 401) return 'Your session has expired. Please sign in again.'
     if (error.status === 403) return 'Your account cannot access locality proposals.'
-    if (error.status === 400) return 'Check the country, name, administrative context, coordinates and independent evidence. Your input is kept.'
+    const code = (error.details as { error?: string } | undefined)?.error
+    if (code === 'region_required') return 'Choose the county or region above before sending a proposal. Your input is kept.'
+    if (code === 'catalog_city_exists') return 'This place is already in the City list for the chosen county/region. Choose it from the City dropdown instead; a proposal is not needed.'
+    if (error.status === 400) return 'Check the country, county/region, name, administrative context, coordinates and independent evidence. Your input is kept.'
     if (error.status === 409) return 'A duplicate or decision conflict was reported. Refresh your proposals and search the registry before trying again. A pending proposal is still unavailable for selection.'
   }
   return 'The request could not be confirmed. Refresh your proposals before trying again to avoid sending a duplicate.'
@@ -26,7 +29,16 @@ export function proposalValidation(input: LocalityProposalInput): string {
 }
 
 /** Kept inside the existing geography section; proposals never become registry records here. */
-export function LocalityProposals({ country, countries, onRegistryPlace }: { country: string; countries: Country[]; onRegistryPlace: (place: Locality) => void }) {
+/** Region chosen in the location selector; the proposal is filed in that county/region. */
+export interface ProposalRegion { admin1Code: string; displayName: string }
+export function LocalityProposals({ country, countries, region, regionRequired = false, onRegistryPlace }: {
+  country: string; countries: Country[]
+  /** Official county/region selected above, or null when none (or the unspecified group) is selected. */
+  region?: ProposalRegion | null
+  /** True when the country has official regions, so a proposal must name one. */
+  regionRequired?: boolean
+  onRegistryPlace: (place: Locality) => void
+}) {
   const [open, setOpen] = useState(false), [draft, setDraft] = useState(empty)
   const [proposals, setProposals] = useState<LocalityProposal[]>([])
   const [loading, setLoading] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('')
@@ -44,7 +56,9 @@ export function LocalityProposals({ country, countries, onRegistryPlace }: { cou
   useEffect(() => { if (open) void load(); return () => { ++sequence.current } }, [open])
   const send = async () => {
     if (lock.current || uncertain || loading) return
-    const input = { ...draft, countryCode: country, latitude: draft.latitude.trim() ? Number(draft.latitude) : NaN, longitude: draft.longitude.trim() ? Number(draft.longitude) : NaN }
+    const input = { ...draft, countryCode: country, latitude: draft.latitude.trim() ? Number(draft.latitude) : NaN, longitude: draft.longitude.trim() ? Number(draft.longitude) : NaN,
+      ...(region ? { admin1Code: region.admin1Code } : {}) }
+    if (regionRequired && !region) { setError('Choose the county or region above before sending a proposal.'); return }
     const invalid = proposalValidation(input)
     if (invalid) { setError(invalid); return }
     lock.current = true; setBusy(true); setError(''); setNotice('')
@@ -73,22 +87,23 @@ export function LocalityProposals({ country, countries, onRegistryPlace }: { cou
     <button type="button" aria-expanded={open} aria-controls="locality-proposals" className="min-h-12 text-left text-sm font-bold underline" onClick={() => setOpen(value => !value)}>Can't find your locality?</button>
     {open && <div id="locality-proposals" className="min-w-0 space-y-4">
       <h3 className="font-bold">Propose a missing locality</h3>
-      <p className="text-sm text-slate-600">Use independently sourced coordinates and evidence with permission to store them. Do not copy temporary provider results. An Admin reviews the proposal separately.</p>
-      <p className="text-sm font-bold">Country: {countries.find(item => item.code === country)?.displayName ?? 'Choose country above'}</p>
+      <p className="text-sm text-slate-600">Only for a place that is <strong>not in the City list</strong> for its county/region. If the place is in the list, choose it there instead. Use independently sourced coordinates and evidence with permission to store them. Do not copy temporary provider results. An Admin reviews the proposal separately.</p>
+      <p className="text-sm font-bold">Country: {countries.find(item => item.code === country)?.displayName ?? 'Choose Country above'}</p>
+      <p className="text-sm font-bold">County/Region: {region?.displayName ?? (regionRequired ? 'Choose County/Region above' : 'Not specified')}</p>
       <fieldset disabled={busy || loading} className="grid min-w-0 gap-4 sm:grid-cols-2">
         <label className="text-sm font-bold">Locality name<input className={control} maxLength={200} value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} /></label>
-        <label className="text-sm font-bold">Administrative context<input className={control} maxLength={200} placeholder="County or region" value={draft.administrativeContext} onChange={e => setDraft({ ...draft, administrativeContext: e.target.value })} /></label>
+        <label className="text-sm font-bold">Administrative context<input className={control} maxLength={200} placeholder={region?.displayName ?? 'County or region'} value={draft.administrativeContext} onChange={e => setDraft({ ...draft, administrativeContext: e.target.value })} /></label>
         <label className="text-sm font-bold">Latitude<input className={control} type="number" step="any" min={-90} max={90} value={draft.latitude} onChange={e => setDraft({ ...draft, latitude: e.target.value })} /></label>
         <label className="text-sm font-bold">Longitude<input className={control} type="number" step="any" min={-180} max={180} value={draft.longitude} onChange={e => setDraft({ ...draft, longitude: e.target.value })} /></label>
         <label className="text-sm font-bold sm:col-span-2">Why is this locality missing?<textarea className={control} maxLength={1000} value={draft.explanation} onChange={e => setDraft({ ...draft, explanation: e.target.value })} /></label>
         <label className="text-sm font-bold sm:col-span-2">Independent supporting evidence<textarea className={control} maxLength={1000} placeholder="Source URL or citation, edition and entry/page supporting the place and coordinates" value={draft.evidenceReference} onChange={e => setDraft({ ...draft, evidenceReference: e.target.value })} /></label>
       </fieldset>
-      <button type="button" disabled={busy || loading || uncertain || !country} className="min-h-12 rounded-xl bg-emerald-500 px-4 font-bold disabled:opacity-50" onClick={() => void send()}>{busy ? 'Checking…' : 'Send locality proposal'}</button>
+      <button type="button" disabled={busy || loading || uncertain || !country || (regionRequired && !region)} className="min-h-12 rounded-xl bg-emerald-500 px-4 font-bold disabled:opacity-50" onClick={() => void send()}>{busy ? 'Checking…' : 'Send locality proposal'}</button>
       {error && <p role="alert" className="break-words text-sm text-red-800">{error}</p>}{notice && <p role="status" className="text-sm text-emerald-900">{notice}</p>}
       <div className="flex flex-wrap items-center gap-3"><h3 className="font-bold">My locality proposals</h3><button type="button" disabled={busy || loading} className="min-h-12 px-3 text-sm font-bold underline" onClick={() => void load()}>Refresh proposals</button></div>
       {loading ? <p role="status">Loading your proposals…</p> : proposals.length === 0 && <p className="text-sm">No proposals to show.</p>}
       {proposals.map(proposal => <article key={proposal.id} className="min-w-0 break-words rounded-xl border border-slate-200 p-3 text-sm">
-        <h4 className="font-bold">{proposal.name} · {proposal.administrativeContext} · {proposal.countryCode}</h4>
+        <h4 className="font-bold">{proposal.name} · {proposal.regionDisplayName ? `${proposal.regionDisplayName} · ` : ''}{proposal.administrativeContext} · {proposal.countryCode}</h4>
         <p>{proposal.latitude}, {proposal.longitude}</p><p className="mt-2 font-bold">{proposal.status === 'pending' ? 'Pending review — not selectable' : proposal.status === 'approved' ? 'Approved' : 'Rejected'}</p>
         {proposal.decisionReason && <p className="mt-2">Decision: {proposal.decisionReason}</p>}
         {proposal.status === 'approved' && proposal.localityId && <button type="button" disabled={busy} className="min-h-12 font-bold underline" onClick={() => void findApproved(proposal)}>Find approved locality in registry</button>}

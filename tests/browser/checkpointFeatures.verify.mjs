@@ -25,7 +25,7 @@ for (const width of [1440,768,390,320]) {
   assert.equal(await page.locator('[data-checkpoint]').count(),7)
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.querySelector('main').scrollWidth>innerWidth),false)
   await page.locator('#creator-checkpoints').getByRole('button',{name:'Continue',exact:true}).click()
-  await page.getByText('Feature 2 of 7',{exact:true}).waitFor()
+  await page.getByText('Step 2 of 4',{exact:true}).waitFor()
   assert.equal(await page.locator('#checkpoint-positions').isVisible(),false)
   for (const name of ['Personal Challenge','Team Challenge']) {
     await nav.getByRole('button',{name:new RegExp(name)}).click()
@@ -49,7 +49,7 @@ for (const width of [1440,768,390,320]) {
   await page.getByRole('button',{name:'Checkpoint 6',exact:true}).click()
   await page.getByRole('combobox',{name:'Navigation',exact:true}).selectOption('signal-strength')
   await page.getByRole('button',{name:'Previous',exact:true}).last().click()
-  await page.getByText('Feature 3 of 7',{exact:true}).waitFor()
+  await page.getByText('Step 3 of 4',{exact:true}).waitFor()
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.querySelector('main').scrollWidth>innerWidth)
   assert.equal(overflow,false)
   results.push({width,sevenSteps:true,positioningInsideFeatureOne:true,countResizesPositioning:true,continueWithoutVerification:true,terminalChallenges:true,terminalNavigationDisabled:true,checkpointSixNavigation:true,overflow})

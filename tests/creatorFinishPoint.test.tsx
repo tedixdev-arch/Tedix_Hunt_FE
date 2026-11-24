@@ -6,9 +6,10 @@ import { beforeEach, afterEach, test, expect, vi } from 'vitest'
 import { CreatorTemplateEditorPage } from '../src/pages/CreatorStudio'
 import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 
-vi.mock('../src/services/api/geography', () => {
+vi.mock('../src/services/api/geography', async importOriginal => {
+  const actual = await importOriginal<typeof import('../src/services/api/geography')>()
   const city = { id:'11111111-1111-4111-8111-111111111111', countryCode:'FR', countryDisplayName:'France', name:'Paris', administrativeContext:'Île-de-France', latitude:48.8566, longitude:2.3522, active:true }
-  return { geographyApi: { regions: async (countryCode: string) => ({ regions: [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null }), cities: async () => ({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }), resolveCity: async () => ({ geographicId: '123', localityId: city.id, registeredActive: true, nextAction: 'bind_locality' }), countries:async () => ({ countries:[{code:'FR',displayName:'France'}] }), search:async () => ({localities:[city]}), get:async () => city } }
+  return { ...actual, geographyApi: { regions: async (countryCode: string) => ({ regions: [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null }), cities: async () => ({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }), browse: async () => ({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }), resolveCity: async () => ({ geographicId: '123', localityId: city.id, registeredActive: true, nextAction: 'bind_locality' }), countries:async () => ({ countries:[{code:'FR',displayName:'France'}] }), search:async () => ({localities:[city]}), get:async () => city } }
 })
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 
@@ -429,14 +430,24 @@ test('navigation displays a disabled numbered FinishPoint and permits checkpoint
   expect(saved.checkpoints[5].navigationMode).toBe('signal-strength')
   expect(saved.checkpoints[6]).toEqual(record.content.checkpoints[6])
 })
-test.each(['universal', 'local'] as const)('%s creation uses seven confirmation steps; opening alone never completes a feature', async category => {
+test.each(['universal', 'local'] as const)('%s creation: Checkpoints & Challenges (4 steps) then Advanced (3 steps) then Review; opening alone never completes a step', async category => {
   await act(async () => root.render(<MemoryRouter initialEntries={[`/create?category=${category}`]}><CreatorTemplateEditorPage /></MemoryRouter>))
   if (category === 'local') await click('Continue to Template builder')
+  const page = () => container.querySelector('[aria-label="Creator sections"] [aria-current="page"]')?.textContent
+  const cta = (text: string) => [...container.querySelectorAll<HTMLButtonElement>('button')].find(item => !item.closest('article[hidden]') && item.textContent === text)!
   expect(container.textContent).toContain('0 of 7 acknowledged')
-  await currentStep(3); expect(container.textContent).toContain('0 of 7 acknowledged')
-  await click('Continue'); expect(container.textContent).toContain('1 of 7 acknowledged')
-  expect(container.querySelector('[aria-label="Creator sections"] [aria-current="page"]')?.textContent).toBe('Review & Submit')
-  await currentStep(3); expect(container.textContent).toContain('Feature 4 of 7')
+  // The last step's CTA waits until every earlier step of the section is complete.
+  await currentStep(3); expect(container.textContent).toContain('Step 4 of 4'); expect(container.textContent).toContain('0 of 7 acknowledged')
+  expect(cta('Continue to Advanced').disabled).toBe(true); expect(container.textContent).toContain('Complete every Checkpoints & Challenges step to continue.')
+  await currentStep(0)
+  for (const step of [1, 2, 3]) { await click('Continue'); expect(container.textContent).toContain(`Step ${step + 1} of 4`) }
+  expect(cta('Continue to Advanced').disabled).toBe(false)
+  await act(async () => cta('Continue to Advanced').click())
+  expect(container.textContent).toContain('4 of 7 acknowledged'); expect(page()).toBe('Advanced'); expect(container.textContent).toContain('Step 1 of 3')
+  expect(cta('Previous').disabled).toBe(true)
+  await click('Continue'); await click('Continue'); expect(container.textContent).toContain('Step 3 of 3')
+  await act(async () => cta('Continue to Review & Submit').click())
+  expect(container.textContent).toContain('7 of 7 acknowledged'); expect(page()).toBe('Review & Submit')
   expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled()
 })
 
@@ -467,7 +478,7 @@ test.each(['local', undefined] as const)('Feature 1 contains one positioning edi
   await click('FinishPoint location details')
   expect(article.querySelector('[aria-label="FinishPoint placement"]')).not.toBeNull()
   await click(category ? 'Continue' : 'Continue')
-  expect(container.textContent).toContain('Feature 2 of 7')
+  expect(container.textContent).toContain('Step 2 of 4')
   expect(container.querySelector('#checkpoint-positions')?.closest('article')?.hidden).toBe(true)
   expect(mocks.createVersion).not.toHaveBeenCalled()
   expect(mocks.submit).not.toHaveBeenCalled()
@@ -482,7 +493,7 @@ test('Universal Feature 1 has count and preview without geography or a FinishPoi
   expect(container.querySelector('#checkpoint-positions')).toBeNull()
   expect(container.querySelector('[data-position-count]')).toBeNull()
   expect(container.textContent).not.toContain('FinishPoint location details')
-  await click('Continue'); expect(container.textContent).toContain('Feature 2 of 7')
+  await click('Continue'); expect(container.textContent).toContain('Step 2 of 4')
 })
 
 for (const [featureNumber, label, field] of [['3.', 'Personal Challenge', 'kind'], ['4.', 'Team Challenge', 'teamKind']] as const) {
@@ -786,4 +797,21 @@ test('pending formula dialog stays mounted across a section change without apply
   expect(input.value).toBe(String.raw`\frac{x}{2}`)
   expect(record.content).toEqual(before)
   expect(mocks.createVersion).not.toHaveBeenCalled()
+})
+
+test('Team Challenge follows the Personal Challenge layout: checkpoints, status, Predefined | Create Your Own, then the dropdown', async () => {
+  sixCheckpointRecord(); record.category = 'universal'; await render()
+  for (const step of ['3.', '4.']) {
+    await click(step)
+    const article = [...container.querySelectorAll('article')].find(item => !item.hidden && item.querySelector('[aria-label="Checkpoint selector"]'))!
+    const order = (selector: string) => [...article.querySelectorAll('*')].indexOf(article.querySelector(selector)!)
+    const predefined = [...article.querySelectorAll('button')].find(item => item.textContent === 'Predefined')!
+    const all = [...article.querySelectorAll('*')]
+    expect(order('[aria-label="Checkpoint selector"]')).toBeLessThan(order('[aria-label="Challenge status"]'))
+    expect(order('[aria-label="Challenge status"]')).toBeLessThan(all.indexOf(predefined))
+    expect(all.indexOf(predefined)).toBeLessThan(order(`select[aria-label="${step === '3.' ? 'Personal' : 'Team'} Challenge"]`))
+    // Same light toggle styling for both; no dark challenge-mode variant.
+    expect(predefined.closest('.challenge-mode')).toBeNull(); expect(predefined.parentElement!.className).toBe('flex rounded-xl bg-slate-100 p-1')
+    expect(predefined.getAttribute('aria-pressed')).toBe('true'); expect(predefined.className).toContain('bg-white')
+  }
 })

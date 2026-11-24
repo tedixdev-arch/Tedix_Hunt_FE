@@ -11,7 +11,7 @@ import { LocalSessionStore } from '../src/services/api/session'
 import { prototypes } from '../src/features/creator/exercises/catalog'
 import { authorPrototype, toPersistence } from '../src/features/creator/exercises/persistenceAdapter'
 import { teamExample } from '../src/features/creator/exercises/teamExamples'
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }) } }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: { countries: async () => ({ countries: [] }) } }))
 const saved: LibraryContent = { contentId:'content',revisionId:'exact-revision',ownerId:'creator',version:1,status:'draft',createdAt:'2026-01-01',updatedAt:'2026-01-01',category:'Science',curriculum:{},geography:{scope:'universal'},exercise:toPersistence(authorPrototype(prototypes[0])),reviewEvents:[] }
 const item: ContentReviewItem = {contentId:saved.contentId,revisionId:saved.revisionId,version:1,status:'submitted',title:saved.exercise.title,classification:'personal',type:saved.exercise.type,category:'Science',curriculum:{},geographicScope:'universal',countryCode:null,admin1Code:null,geographicId:null,submittedAt:'2026-01-02'}
 async function harness(element:ReactNode,run:(h:{host:HTMLDivElement;click:(name:string)=>Promise<void>;change:(label:string,value:string)=>Promise<void>})=>Promise<void>){

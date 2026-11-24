@@ -18,6 +18,7 @@ import { AdminRewardInventoryPage } from '../pages/AdminConsole'
 import { AdminAlertsPage, AdminCustomRequestsPage, AdminDashboardPage, AdminHuntsPage } from '../pages/AdminOperations'
 import { AdminAuditLogPage, AdminSettingsPage } from '../pages/AdminSettingsAudit'
 import { AdminTemplateReviewDetailPage, AdminTemplateReviewsPage } from '../pages/AdminTemplateReviews'
+import { AdminLocationsPage } from '../pages/AdminLocations'
 import { AdminContentReviewPage } from '../pages/AdminContentReview'
 import { AdminAccountSecurityPage } from '../pages/AdminAccountSecurity'
 import { AdminUsersPage } from '../pages/AdminUsers'
@@ -231,6 +232,10 @@ export const router = createHashRouter([
   {
     path: '/admin/templates',
     element: <RequireAdmin><AdminTemplateReviewsPage /></RequireAdmin>,
+  },
+  {
+    path: '/admin/locations',
+    element: <RequireAdmin><AdminLocationsPage /></RequireAdmin>,
   },
   {
     path: '/admin/hunts',

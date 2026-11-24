@@ -37,18 +37,22 @@ export function exampleContentKey(exercise: Exercise): string | undefined {
   try { return personalExamples.find(example => matchesExampleContent(example.type, exercise))?.type } catch { return undefined }
 }
 
-export function personalChallengeStatus(cp: CheckpointGameplay | undefined, draft?: AuthoringDrafts[string]): string {
+/** Per-checkpoint status for a Personal or Team Challenge slot: assigned, unsaved changes, incomplete or none. */
+export function challengeStatus(cp: CheckpointGameplay | undefined, draft: AuthoringDrafts[string] | undefined, slot: 'personal' | 'team'): string {
   const selected = draft?.assignment === 'custom' ? draft.appliedCustom ?? draft.custom : undefined
   if (selected) {
     try {
       const { id: _id, owner: _owner, ...content } = toPersistence(selected)
-      const savedExercise = cp?.customExercises?.personal
+      const savedExercise = cp?.customExercises?.[slot]
       const { id: _savedId, owner: _savedOwner, ...saved } = savedExercise ? toPersistence(fromPersistence(savedExercise)) : {} as any
       return JSON.stringify(content) === JSON.stringify(saved) ? 'Challenge assigned' : 'Unsaved changes'
     } catch { return 'Challenge incomplete' }
   }
-  const allocation = cp?.libraryAllocations?.personal
+  const allocation = cp?.libraryAllocations?.[slot]
   if (allocation) return 'version' in allocation ? 'Challenge assigned' : allocation.mode === 'specific' && !allocation.contentId ? 'Challenge incomplete' : 'Unsaved changes'
   if (draft?.custom) return 'Unsaved changes'
-  return cp?.kind || cp?.customExercises?.personal ? 'Challenge assigned' : 'No challenge assigned'
+  return (slot === 'personal' ? cp?.kind : cp?.teamKind) || cp?.customExercises?.[slot] ? 'Challenge assigned' : 'No challenge assigned'
+}
+export function personalChallengeStatus(cp: CheckpointGameplay | undefined, draft?: AuthoringDrafts[string]): string {
+  return challengeStatus(cp, draft, 'personal')
 }

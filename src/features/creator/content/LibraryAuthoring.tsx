@@ -11,6 +11,7 @@ import { ContentFeedback, ContentReviewPreview, contentStatus } from './ContentR
 
 /** The Content parent owns retained drafts and navigation protection. */
 export function LibraryAuthoring({ team, draft, metadata, record, reviewed, unsaved, onRevised, onDraftChange, onDiscard, onSaved, onViewLibrary, onReload, onBusy }: {
+
   team: boolean; metadata: LibraryMetadata; draft: AuthoringDraft; record?: LibraryContent; reviewed?: LibraryContent; unsaved: boolean
   onDraftChange: (draft: AuthoringDraft) => void; onDiscard: () => void; onRevised: (record: LibraryContent) => void
   onSaved: (record: LibraryContent, persisted?: boolean) => void; onBusy: (busy: boolean) => void; onViewLibrary: () => void; onReload: () => void

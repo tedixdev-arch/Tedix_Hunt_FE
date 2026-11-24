@@ -5,7 +5,7 @@ import { LocalityProposals, proposalValidation } from '../src/features/creator/L
 import { ApiError } from '../src/services/api/client'
 const api = vi.hoisted(() => ({ mine: vi.fn(), submit: vi.fn(), get: vi.fn() }))
 vi.mock('../src/services/api/localityProposals', () => ({ localityProposalsApi: api }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: api }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: api }))
 const input = { countryCode: 'RO', name: 'Town', administrativeContext: 'County', latitude: 46, longitude: 23, explanation: 'This settlement is missing from the registry.', evidenceReference: 'Independent official gazetteer 2026 entry 123.' }
 const proposal = { ...input, id: 'proposal', status: 'pending', localityId: null, decisionReason: null }
 let root: Root, container: HTMLDivElement, select: ReturnType<typeof vi.fn>
@@ -39,3 +39,12 @@ test.each([401,403])('10 denied refresh clears previously displayed private hist
   api.mine.mockResolvedValueOnce({ proposals: [proposal] }).mockRejectedValue(new ApiError('denied', status, 'http')); await render(); await click("Can't find"); expect(container.textContent).toContain('Pending review'); await click('Refresh proposals'); expect(container.textContent).not.toContain('Pending review'); expect(container.querySelector('[role=alert]')).not.toBeNull()
 })
 test.each([{ latitude: 91 }, { longitude: NaN }, { countryCode: '' }, { evidenceReference: 'short' }, { explanation: 'Mapbox generated coordinates stored here' }])('10 bounded validation rejects invalid or provider-derived input %j', invalid => { expect(proposalValidation({ ...input, ...invalid })).not.toBe('') })
+test('10b proposal is filed in the selected county/region and is refused for places already in the City list', async () => {
+  await act(async () => root.render(<LocalityProposals country="RO" countries={[{ code: 'RO', displayName: 'Romania' }]} region={null} regionRequired onRegistryPlace={select} />))
+  await click("Can't find"); expect(container.textContent).toContain('not in the City list'); expect(container.textContent).toContain('Choose County/Region above')
+  expect([...container.querySelectorAll('button')].find(b => b.textContent!.includes('Send locality'))!.disabled).toBe(true)
+  await act(async () => root.render(<LocalityProposals country="RO" countries={[{ code: 'RO', displayName: 'Romania' }]} region={{ admin1Code: '13', displayName: 'Cluj' }} regionRequired onRegistryPlace={select} />))
+  await fill(); await click('Send locality'); expect(api.submit).toHaveBeenCalledExactlyOnceWith({ ...input, admin1Code: '13' })
+  api.submit.mockRejectedValue(new ApiError('catalog_city_exists', 409, 'http', { error: 'catalog_city_exists' })); await fill(); await click('Send locality')
+  expect(container.textContent).toContain('already in the City list'); expect(select).not.toHaveBeenCalled()
+})

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { LocalGeographySelector } from '../src/features/creator/LocalGeographySelector'
 import { ApiError } from '../src/services/api/client'
 const api = vi.hoisted(() => ({ countries: vi.fn(), search: vi.fn(), get: vi.fn() }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: api }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: api }))
 const place = { id: '11111111-1111-4111-8111-111111111111', name: 'Springfield', administrativeContext: 'North', countryCode: 'RO', countryDisplayName: 'Romania', latitude: 46, longitude: 23, active: true }
 let root: Root, container: HTMLDivElement
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks(); api.countries.mockResolvedValue({ countries: [{ code: 'RO', displayName: 'Romania' }, { code: 'US', displayName: 'United States' }] }); api.search.mockResolvedValue({ localities: [] }); api.get.mockResolvedValue({ ...place, name: 'Registry renamed' }); container = document.createElement('div'); document.body.append(container); root = createRoot(container) })
@@ -29,7 +29,7 @@ test('09 delayed old-country response cannot restore results after country reset
   let resolve!: (v:any) => void; api.search.mockReturnValue(new Promise(done => resolve=done)); await render(); await change('select','RO'); await change('input','Spring'); await change('select','US'); await act(async () => resolve({ localities:[place] })); expect(container.querySelectorAll('li')).toHaveLength(0); expect(container.querySelector('output')!.textContent).toBe('null')
 })
 test('09 empty results and inactive registry remain usable as incomplete drafts without rebinding', async () => {
-  api.get.mockResolvedValue({ ...place,active:false }); await render(true); expect(container.textContent).toContain('Inactive'); expect(container.textContent).not.toContain('Use current registry details'); await change('input','missing'); expect(container.textContent).toContain('No active registered localities'); expect(container.querySelector('output')!.textContent).toBe('omitted')
+  api.get.mockResolvedValue({ ...place,active:false }); await render(true); expect(container.textContent).toContain('Inactive'); expect(container.textContent).not.toContain('Use current registry details'); await change('input','missing'); expect(container.textContent).toContain('No localities match'); expect(container.querySelector('output')!.textContent).toBe('omitted')
 })
 test.each([400,401,403,404,409])('09 registry error %s preserves saved selection', async status => {
   api.get.mockRejectedValue(new ApiError('Failed',status,'http')); await render(true); expect(container.querySelector('[role=alert]')).not.toBeNull(); expect(container.textContent).toContain('Springfield'); expect(container.querySelector('output')!.textContent).toBe('omitted')

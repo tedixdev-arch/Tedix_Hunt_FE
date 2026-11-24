@@ -1,11 +1,18 @@
 import { apiClient } from './client.ts'
 import type { Hunt } from './hunts.ts'
 export interface Country { countryCode: string; displayName: string }
-export interface Region { regionId: string; countryCode: string; label: string }
-/** Catalog city; localityId is null until an Admin registers the city as a locality. */
-export interface City { geographicId: string; localityId: string | null; countryCode: string; name: string; regionId: string; regionDisplayName: string | null; countryDisplayName: string; attribution: string }
-/** exclusive: a custom Hunt built for the caller's organization; nobody else can see it. */
-export interface LocalHunt { templateId: string; key: string; version: number; displayName: string; theme: string; localityId: string; exclusive?: boolean }
+/** levelLabel names the region level for the country (County, State, …). */
+export interface Region { regionId: string; countryCode: string; label: string; labelStatus?: 'resolved' | 'missing_label' | 'unspecified'; levelLabel?: string }
+/**
+ * A city choice. GeoNames cities have a geographicId; localityId stays null until a Creator first uses the city
+ * (no Local Hunts can exist there before that). Manual Localities (approved proposals) have geographicId null and source `registry`.
+ */
+export interface City { geographicId: string | null; localityId: string | null; countryCode: string; name: string; regionId: string; regionDisplayName: string | null; countryDisplayName: string; attribution: string | null; source?: 'geonames' | 'registry'; registeredActive?: boolean }
+/** Stable dropdown key for a City. */
+export const cityChoiceKey = (city: Pick<City, 'geographicId' | 'localityId'>) => city.geographicId ?? `registry:${city.localityId}`
+/** Any listed city can be chosen; only a Locality that was switched off in the registry is unavailable. */
+export const cityUsable = (city: Pick<City, 'localityId' | 'registeredActive'>) => !city.localityId || city.registeredActive !== false
+export interface LocalHunt { templateId: string; key: string; version: number; displayName: string; theme: string; localityId: string; exclusive?: boolean}
 export interface LocalPreview extends LocalHunt { configuration: Record<string, unknown> }
 export interface Selection { templateId: string; version: number; countryCode: string; localityId: string }
 export interface Page<T> { items: T[]; nextCursor: string | null }

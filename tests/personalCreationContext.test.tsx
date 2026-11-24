@@ -11,9 +11,10 @@ import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 
 const api = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
-vi.mock('../src/services/api/geography', () => {
+vi.mock('../src/services/api/geography', async importOriginal => {
+  const actual = await importOriginal<typeof import('../src/services/api/geography')>()
   const city = { id: '11111111-1111-4111-8111-111111111111', countryCode:'FR', countryDisplayName:'France', name:'Paris', administrativeContext:'Île-de-France', latitude:48.8566, longitude:2.3522, active:true }
-  return { geographyApi: { regions: async (countryCode: string) => ({ regions: [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null }), cities: async () => ({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }), resolveCity: async () => ({ geographicId: '123', localityId: city.id, registeredActive: true, nextAction: 'bind_locality' }), countries: async () => ({ countries:[{code:'FR',displayName:'France'}] }), search: async () => ({localities:[city]}), get:async () => city } }
+  return { ...actual, geographyApi: { regions: async (countryCode: string) => ({ regions: [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null }), cities: async () => ({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }), browse: async () => ({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }), resolveCity: async () => ({ geographicId: '123', localityId: city.id, registeredActive: true, nextAction: 'bind_locality' }), countries: async () => ({ countries:[{code:'FR',displayName:'France'}] }), search: async () => ({localities:[city]}), get:async () => city } }
 })
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 vi.mock('../src/features/creator/RouteEditor', () => ({ RouteEditor: (props: any) => <output aria-label="Position names">{props.drafts.map((p: any) => p.name).join('|')}</output> }))
