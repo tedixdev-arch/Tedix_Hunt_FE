@@ -11,7 +11,7 @@ import { ParticipantReadinessPage } from '../pages/ParticipantReadinessPage'
 import { LiveHuntPlayPage } from '../pages/LiveHuntPlay'
 import { IndependentOrganizerPage, OrganizerHuntsPage, OrganizerSignInPage, RegisteredOrganizerSignInPage } from '../pages/OrganizerFlow'
 import { RegisteredOrganizerApplicationPage } from '../pages/RegisteredOrganizerApplicationPage'
-import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
+import { CustomRequestPage, OrganizerCustomRequestsPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
 import { OrganizerSetup } from '../features/organizer/OrganizerSetup'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminRewardInventoryPage } from '../pages/AdminConsole'
@@ -171,6 +171,10 @@ export const router = createHashRouter([
   {
     path: '/organizer/hunts/new/custom-request',
     element: <CustomRequestPage />,
+  },
+  {
+    path: '/organizer/custom-requests',
+    element: <RequireOrganizer><OrganizerCustomRequestsPage /></RequireOrganizer>,
   },
   {
     path: '/organizer/hunts/:huntId',

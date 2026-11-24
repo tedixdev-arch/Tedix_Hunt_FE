@@ -20,6 +20,8 @@ import { ApiError } from '../services/api/client'
 import { TemplateReadContext } from '../features/creator/TemplateReadContext'
 import { DeleteTemplateDialog } from '../features/creator/DeleteTemplateDialog'
 import { CreatorStudioNavigation } from '../features/creator/CreatorStudioNavigation'
+import { CreatorCustomRequests, linkErrorMessage } from '../features/creator/CreatorCustomRequests'
+import { creatorCustomRequestsApi, type CreatorCustomRequest } from '../services/api/operations'
 import { TemplateCreationChooser } from '../features/creator/TemplateCreationChooser'
 import { prefillSignalLandmarks } from '../features/creator/signalLandmarks'
 import { readRouteProposal } from '../features/creator/routeResearch'
@@ -217,6 +219,7 @@ export function CreatorStudioPage() {
           </article>
         })}
     </section>
+    {!loading && <CreatorCustomRequests templates={templates} />}
     <details className="mt-8 text-sm text-slate-600"><summary className="min-h-12 cursor-pointer py-3 font-bold">Legacy compatibility</summary><button type="button" aria-haspopup="dialog" onClick={() => setChoosing(true)} className="min-h-12 rounded-xl border border-slate-300 px-4 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Create Legacy Template</button></details>
     </div></Shell>
 }
@@ -232,6 +235,16 @@ function CreatorTemplateEditor() {
   const [searchParams] = useSearchParams()
   const templateKey = searchParams.get('template')
   const newLocal = !templateKey && searchParams.get('category') !== 'universal'
+  // Building for an assigned custom Hunt request: the new Local draft is linked to it on first save.
+  const customRequestId = newLocal ? searchParams.get('customRequest') : null
+  const [customBrief, setCustomBrief] = useState<CreatorCustomRequest | null>(null)
+  const [customLinkNotice, setCustomLinkNotice] = useState('')
+  useEffect(() => {
+    if (!customRequestId) return
+    let live = true
+    creatorCustomRequestsApi.list().then(list => { if (live) setCustomBrief(list.find(r => r.id === customRequestId) ?? null) }).catch(() => undefined)
+    return () => { live = false }
+  }, [customRequestId])
   const newUniversal = !templateKey && searchParams.get('category') === 'universal'
   const blankNew = newUniversal || newLocal
   const steps = ['Template details', 'Use requirements', 'Mission template & story', 'Template status']
@@ -465,6 +478,10 @@ function CreatorTemplateEditor() {
       // Immutable versions are created only on an explicit save or completion action, never per keystroke.
       const response = await persistCreatorTemplate(creatorTemplatesApi, creatorTemplateContent, persisted, universal ? 'universal' : local ? 'local' : undefined, local ? localityChange : undefined)
       const saved = await confirmAllocatedTemplate(creatorTemplatesApi, sentContent, response)
+      if (!persisted && customRequestId && saved.category === 'local') {
+        try { await creatorCustomRequestsApi.linkTemplate(customRequestId, saved.key); setCustomLinkNotice('Linked to the custom Hunt request. Submit it for Admin review when it is ready.') }
+        catch (reason) { setCustomLinkNotice(`Saved, but not linked to the custom Hunt request: ${linkErrorMessage(reason)} You can link it from Creator Studio.`) }
+      }
       if (sequence !== readSequence.current) return
       // Backend status, key, version and content are authoritative after every persistence response.
       const acknowledgedDrafts = reconcileExerciseDrafts(challengeDraftsRef.current, sentDrafts, saved.content)
@@ -573,7 +590,7 @@ function CreatorTemplateEditor() {
   if (loadingTemplate) return <Shell><p>Loading persisted Creator Template…</p></Shell>
   if (loadError) return <Shell><div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 font-bold text-red-900">{loadError}<Link className="ml-3 underline" to="/creator">Return to Creator Studio</Link></div></Shell>
   if (persisted && persisted.status !== 'draft' && !canReviseTemplate(persisted)) return <Shell><Link className="text-sm font-bold text-slate-500" to="/creator">← Creator Studio</Link><section className={`mt-8 rounded-2xl border p-7 ${persisted.status === 'submitted' ? 'border-emerald-300 bg-emerald-50' : 'border-amber-300 bg-amber-50'}`}><p className="text-xs font-bold uppercase">{persisted.status === 'submitted' ? `Version ${persisted.version} submitted for Admin review` : persisted.status === 'approved' ? `Version ${persisted.version} approved` : 'Changes requested'}</p><h1 className="mt-2 text-3xl font-bold">{persisted.content.displayName}</h1><TemplateReadContext template={persisted} />{local && <LocalGeographySelector savedId={persisted.localityId} snapshot={persisted.localitySnapshot} value={undefined} onChange={() => {}} disabled />}<p className="mt-3">{persisted.status === 'changes_requested' ? 'Admin requested changes. This Template cannot be revised in its current state.' : 'This Template is read-only in its current review stage.'}</p><Link className="mt-6 inline-flex min-h-12 items-center rounded-xl bg-emerald-500 px-5 font-bold" to="/creator">Return to Creator Studio</Link></section></Shell>
-  return <><div hidden={!!previewContent}><Shell><Link className="text-sm font-bold text-slate-500" to="/creator">← Creator Studio</Link><div className="mt-6"><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{universal ? 'Universal Template' : local ? 'Local Template' : 'Template Builder'} · {persisted?.status === 'approved' ? 'Approved · New edits need review' : persisted?.status === 'changes_requested' ? 'Changes requested' : 'Draft'} · Version {persisted?.version ?? 1}</p><h1 className="mt-2 text-4xl font-bold">Build a reusable Hunt</h1><p className="mt-3 max-w-3xl text-slate-600">{universal ? 'Create reusable stories and challenges without a fixed country, locality or route.' : local ? 'Configure your Local draft, then save. Review its real locations and route before independent Admin approval.' : 'Create the complete participant experience and review its fixed route. Organizers receive these defaults in Set the Hunt.'}</p></div>
+  return <><div hidden={!!previewContent}><Shell><Link className="text-sm font-bold text-slate-500" to="/creator">← Creator Studio</Link><div className="mt-6"><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{universal ? 'Universal Template' : local ? 'Local Template' : 'Template Builder'} · {persisted?.status === 'approved' ? 'Approved · New edits need review' : persisted?.status === 'changes_requested' ? 'Changes requested' : 'Draft'} · Version {persisted?.version ?? 1}</p><h1 className="mt-2 text-4xl font-bold">Build a reusable Hunt</h1><p className="mt-3 max-w-3xl text-slate-600">{universal ? 'Create reusable stories and challenges without a fixed country, locality or route.' : local ? 'Configure your Local draft, then save. Review its real locations and route before independent Admin approval.' : 'Create the complete participant experience and review its fixed route. Organizers receive these defaults in Set the Hunt.'}</p></div>{(customRequestId || customLinkNotice) && <section aria-label="Custom Hunt request" className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-950"><p className="font-bold">Custom Hunt request{customBrief?.organizationName ? ` · ${customBrief.organizationName}` : ''}{customBrief?.city ? ` · ${customBrief.city}` : ''}</p>{customBrief && <><p className="mt-1 text-xs">{customBrief.preferredDate ? `Preferred ${customBrief.preferredDate}` : ''}{customBrief.participantCount ? ` · ${customBrief.participantCount} participants` : ''}</p><p className="mt-2 whitespace-pre-wrap">{customBrief.details}</p></>}{customLinkNotice ? <p role="status" className="mt-2 font-bold">{customLinkNotice}</p> : <p className="mt-2">This template will be linked to the request when you first save it.</p>}</section>}
     <div role="navigation" aria-label="Creator sections" className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">{([['setup', 'Template Setup'], ['checkpoints', 'Checkpoints & Challenges'], ['advanced', 'Advanced'], ['review', 'Review & Submit']] as const).map(([id, label]) => <button key={id} type="button" aria-controls={id === 'setup' ? 'creator-setup template-setup' : id === 'advanced' ? 'creator-checkpoints creator-advanced' : `creator-${id}`}  aria-current={section === id ? 'page' : undefined} aria-expanded={id === 'advanced' ? section === 'advanced' : undefined} disabled={id !== 'setup' && !builderAccessible} onClick={() => openSection(id === 'advanced' && section === id ? 'setup' : id)} className={`min-h-12 min-w-0 rounded-xl border px-3 py-2 text-left font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:opacity-40 ${section === id ? 'border-emerald-600 bg-emerald-50' : 'border-slate-300 bg-white'}`}>{label}</button>)}</div>
     <div id="creator-setup" hidden={section !== 'setup'}>
     {classified && <fieldset disabled={saving || submitting || validating} className="min-w-0 border-0 p-0"><HuntSetup local={local} savedId={persisted?.localityId} snapshot={persisted?.localitySnapshot} value={localityChange} onChange={value => { setLocalityChange(value); setLocalityError('') }} onSelect={changeCity} onSearchPendingChange={setCitySearchPending} beforeChange={confirmCityChange} error={setupError || localityError} cityUnavailable={!!city && (!Number.isFinite(city.latitude) || Math.abs(city.latitude) > 90 || !Number.isFinite(city.longitude) || Math.abs(city.longitude) > 180)} onRetryCity={async () => {

@@ -40,14 +40,27 @@ export interface AdminHunt {
   participants: number; finished: number; openAlerts: number
 }
 export interface AdminAlert { id: string; huntId: string; huntName: string; displayName: string; kind: 'help' | 'emergency'; message: string; status: 'open' | 'resolved'; createdAt: string; resolvedAt: string | null }
-export type CustomRequestStatus = 'new' | 'in_review' | 'closed'
-export interface CustomHuntRequest {
-  id: string; contactName: string; contactEmail: string; organizationName: string | null; city: string | null; preferredDate: string | null
-  participantCount: number | null; details: string; status: CustomRequestStatus; adminNote: string | null; createdAt: string; updatedAt: string
+export type CustomRequestStatus = 'new' | 'in_review' | 'assigned' | 'in_progress' | 'completed' | 'rejected' | 'closed'
+/** What the Organizer sees. */
+export type CustomRequestProgress = 'in_work' | 'done' | 'rejected' | 'closed'
+export interface CustomRequestTemplate {
+  key: string; status: 'draft' | 'submitted' | 'changes_requested' | 'approved'; submittedVersion: number | null; approvedVersion: number | null
+  displayName: string | null; locality: { id: string; name: string; administrativeContext: string; countryCode: string; countryDisplayName: string } | null
 }
+interface CustomRequestBase {
+  id: string; organizationId: string | null; organizationName: string | null; city: string | null; preferredDate: string | null
+  participantCount: number | null; details: string; status: CustomRequestStatus; createdAt: string; updatedAt: string; completedAt: string | null
+}
+export interface CustomHuntRequest extends CustomRequestBase {
+  contactName: string; contactEmail: string; adminNote: string | null; organizerNote: string | null; submittedByUserId: string | null
+  assignedCreator: { id: string; name: string | null; email: string } | null; assignedAt: string | null; template: CustomRequestTemplate | null
+}
+/** Creator brief: no contact details or internal notes. */
+export interface CreatorCustomRequest extends CustomRequestBase { assignedAt: string | null; template: CustomRequestTemplate | null }
+export interface OrganizerCustomRequest extends CustomRequestBase { progress: CustomRequestProgress; note: string | null; hunt: CustomRequestTemplate | null }
 export interface CustomHuntRequestInput {
   contactName: string; contactEmail: string; details: string
-  organizationName?: string; city?: string; preferredDate?: string; participantCount?: number
+  organizationId?: string; organizationName?: string; city?: string; preferredDate?: string; participantCount?: number
 }
 
 export type SettingValue = number | boolean | string
@@ -76,12 +89,25 @@ export class AdminOperationsApi {
     return this.client.get<{ events: AuditEvent[]; nextCursor: string | null }>(`/api/admin/audit?${query}`)
   }
   customRequests() { return this.client.get<{ requests: CustomHuntRequest[] }>('/api/admin/custom-hunt-requests') }
-  updateCustomRequest(id: string, change: { status?: CustomRequestStatus; adminNote?: string | null }) {
+  updateCustomRequest(id: string, change: { status?: 'new' | 'in_review' | 'closed'; adminNote?: string | null; organizerNote?: string | null }) {
     return this.client.patch<CustomHuntRequest>(`/api/admin/custom-hunt-requests/${encodeURIComponent(id)}`, change)
+  }
+  assignCustomRequest(id: string, creatorUserId: string) {
+    return this.client.post<CustomHuntRequest>(`/api/admin/custom-hunt-requests/${encodeURIComponent(id)}/assign`, { creatorUserId })
+  }
+  rejectCustomRequest(id: string, organizerNote: string) {
+    return this.client.post<CustomHuntRequest>(`/api/admin/custom-hunt-requests/${encodeURIComponent(id)}/reject`, { organizerNote })
   }
 }
 export const adminOperationsApi = new AdminOperationsApi()
 
 export const customHuntRequestsApi = {
   submit: (input: CustomHuntRequestInput) => apiClient.post<{ id: string; status: string }>('/api/custom-hunt-requests', input, { retryOnUnauthorized: false }),
+  /** Requests the signed-in Organizer submitted or that belong to their organizations. */
+  mine: () => apiClient.get<{ requests: OrganizerCustomRequest[] }>('/api/custom-hunt-requests/mine').then(r => r.requests),
+}
+
+export const creatorCustomRequestsApi = {
+  list: () => apiClient.get<{ requests: CreatorCustomRequest[] }>('/api/creator/custom-requests').then(r => r.requests),
+  linkTemplate: (id: string, key: string) => apiClient.put<CreatorCustomRequest>(`/api/creator/custom-requests/${encodeURIComponent(id)}/template`, { key }),
 }
