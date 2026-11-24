@@ -25,7 +25,8 @@ export function generalSetupProgressFromNavigationState(state: unknown): General
 
 export const newHuntDefaults: GeneralSetupSettings = {
   name: '', date: '2026-09-12', time: '10:00', timezone: 'Europe/Bucharest',
-  country: 'Romania', county: 'Cluj', location: 'Cluj Napoca', language: 'English',
+  // No location is preselected; the Organizer chooses Country, County/Region and City.
+  country: '', county: '', location: '', language: 'English',
   format: 'Team Hunters', duration: '90', contact: 'Ana Pop', participants: '24', teamSize: '4',
   access: 'Invitation-only', difficulty: 'Easy', checkpointOrder: 'Recommended route',
   mission: '', theme: '',

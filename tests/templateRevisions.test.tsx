@@ -7,7 +7,7 @@ import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 import { canReviseTemplate } from '../src/features/creator/templateLifecycle'
 const api = vi.hoisted(() => ({ get: vi.fn(), list: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }), get: async () => ({ id: 'place', countryCode: 'RO', latitude: 46, longitude: 23, active: true }) } }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: { countries: async () => ({ countries: [] }), get: async () => ({ id: 'place', countryCode: 'RO', latitude: 46, longitude: 23, active: true }) } }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: () => <div /> }))
 let root: Root, container: HTMLDivElement, record: CreatorTemplate

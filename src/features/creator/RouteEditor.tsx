@@ -234,7 +234,7 @@ export function RouteEditor({ provisionalCluj = false, active: mapActive = true,
     onConfigurationChange(buildGeographyConfiguration(drafts.length, next.drafts))
   }
   return <section className="position-editor" aria-label="Checkpoint position editor">
-    {provisionalCluj && <p role="status" className="mb-3 text-sm text-amber-900">Provisional Cluj map context only. Select a registered locality in Hunt Setup before saving or submitting Local geography.</p>}
+    {provisionalCluj && <p role="status" className="mb-3 text-sm text-amber-900">Provisional Cluj map context only. Choose a city in Hunt Setup before saving or submitting Local geography.</p>}
     <div className="position-progress"><p>Search to explore, then select a checkpoint and tap the map or drag its pin to position it.</p><span>{verified.size}/{drafts.length} confirmed</span><button type="button" className="min-h-11 rounded-lg px-2 text-sm font-bold" onClick={() => { if (validCity) { setFocusPosition(undefined); setFitPositionsRequest(0); setRecenterCity({ latitude: validCity.latitude, longitude: validCity.longitude, zoom: 12 }) } else showAllPositions() }}>Recenter map</button></div>
     <div className="position-workspace">
       <div className="position-map" data-testid="position-map">

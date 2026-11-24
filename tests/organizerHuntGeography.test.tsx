@@ -334,14 +334,18 @@ test.each(['missing token', 'network failure', 'invalid metrics'])('snapshot %s 
   noMutation()
 })
 
-test('development Organizer preselects Romania and Cluj-Napoca and saves geographic details through existing workflow', async () => {
+test('development Organizer preselects no location and saves the chosen geographic details through existing workflow', async () => {
   vi.stubEnv('MODE', 'development'); vi.stubEnv('VITE_DEVELOPMENT_LOCATION_PRESET', 'cluj')
   mocks.create.mockResolvedValue({ ...savedHunt, id: 'new-hunt' })
   mocks.update.mockImplementation(async (_id, input) => ({ ...savedHunt, id: 'new-hunt', ...input }))
   await editor('/organizer/hunts/new/setup')
   const select = (label: string) => [...container.querySelectorAll('label')].find(item => item.firstChild?.textContent === label)!.querySelector('select')!
-  expect([...select('Country').options].map(option => option.text)).toEqual(['Romania'])
-  expect([...select('City').options].map(option => option.text)).toEqual(['Cluj-Napoca'])
+  expect([...select('Country').options].map(option => option.text)).toEqual(['Choose Country', 'Romania'])
+  expect(select('Country').value).toBe('')
+  const choose = async (label: string, value: string) => { const node = select(label); await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(node, value); node.dispatchEvent(new Event('change', { bubbles: true })) }) }
+  await choose('Country', 'Romania'); await choose('County/Region', 'Cluj')
+  expect([...select('City').options].map(option => option.text)).toEqual(['Choose City', 'Cluj-Napoca'])
+  await choose('City', 'Cluj-Napoca')
   const name = [...container.querySelectorAll('label')].find(item => item.firstChild?.textContent === 'Hunt name')!.querySelector('input')!
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, 'Cluj school adventure'); name.dispatchEvent(new Event('input', { bubbles: true })) })
   await click('Save & continue')

@@ -41,8 +41,17 @@ function button(label: string) { const element = [...container.querySelectorAll(
 async function click(label: string) { await act(async () => button(label).click()) }
 
 const selectedText = () => [...container.querySelectorAll('select')].map(el => el.selectedOptions[0]?.text)
-test('catalog lists preselect the Cluj pilot location and list its approved Hunts', async () => {
+async function pick(index: number, value: string) {
+  const select = container.querySelectorAll('select')[index] as HTMLSelectElement
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(select, value); select.dispatchEvent(new Event('change', { bubbles: true })) })
+}
+/** A new Hunt preselects nothing; the Organizer chooses Country → County/Region → City. */
+async function chooseCluj() { await pick(0, 'RO'); await pick(1, 'RO:admin1:13'); await pick(2, '681290') }
+test('a new Hunt preselects no location; choosing Country → County/Region → City lists its approved Hunts', async () => {
   await mount()
+  expect(selectedText()).toEqual(['Choose Country', 'Choose County/Region', 'Choose City'])
+  expect(button('Choose Hunt').disabled).toBe(true)
+  await chooseCluj()
   expect(selectedText()).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
   expect(organizerLocalApi.page).toHaveBeenCalledWith('countries', {})
   expect(organizerLocalApi.page).toHaveBeenCalledWith('regions', { countryCode: 'RO' })
@@ -55,7 +64,7 @@ test('catalog lists preselect the Cluj pilot location and list its approved Hunt
   expect(organizerLocalApi.select).not.toHaveBeenCalled()
   await click('Back'); expect(button('Choose Hunt').disabled).toBe(false)
 })
-test('Cluj on a later catalog page is still preselected (full country imports span several pages)', async () => {
+test('Cluj on a later catalog page is still listed (full country imports span several pages)', async () => {
   const original = vi.mocked(organizerLocalApi.page).getMockImplementation()!
   const filler = (kind: string) => Array.from({ length: 20 }, (_, i) => kind === 'regions'
     ? { regionId: `RO:admin1:${String(i).padStart(2, '0')}`, countryCode: 'RO', label: `County ${i}` }
@@ -63,12 +72,36 @@ test('Cluj on a later catalog page is still preselected (full country imports sp
   vi.mocked(organizerLocalApi.page).mockImplementation(async (kind, filters, cursor) => kind === 'regions' || kind === 'cities'
     ? cursor ? original(kind, filters) : { items: filler(kind) as never[], nextCursor: 'page-2' }
     : original(kind, filters, cursor))
-  await mount()
+  await mount(); await chooseCluj()
   expect(selectedText()).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
   expect(organizerLocalApi.page).toHaveBeenCalledWith('regions', { countryCode: 'RO' }, 'page-2')
   expect(organizerLocalApi.page).toHaveBeenCalledWith('cities', { countryCode: 'RO', regionId: 'RO:admin1:13' }, 'page-2')
   expect(button('Choose Hunt').disabled).toBe(false)
   expect(container.textContent).not.toContain('Show more')
+})
+test('any listed city can be chosen without registration; options are plain names; one County/Region label', async () => {
+  const original = vi.mocked(organizerLocalApi.page).getMockImplementation()!
+  vi.mocked(organizerLocalApi.page).mockImplementation(async (kind, filters, cursor) => kind === 'regions'
+    ? { items: [{ regionId: 'RO:admin1:13', countryCode: 'RO', label: 'Cluj', levelLabel: 'County' }] as never[], nextCursor: null }
+    : kind === 'cities' ? { items: [
+      { geographicId: '681290', localityId: local.localityId, registeredActive: true, countryCode: 'RO', name: 'Cluj-Napoca', regionId: 'RO:admin1:13', source: 'geonames' },
+      { geographicId: '665444', localityId: null, registeredActive: false, countryCode: 'RO', name: 'Turda', regionId: 'RO:admin1:13', source: 'geonames' },
+      { geographicId: null, localityId: 'manual-1', registeredActive: true, countryCode: 'RO', name: 'Added Hamlet', regionId: 'RO:admin1:13', source: 'registry', attribution: null },
+    ] as never[], nextCursor: null } : original(kind, filters, cursor))
+  await mount(); await pick(0, 'RO'); await pick(1, 'RO:admin1:13')
+  expect(container.textContent).toContain('County/Region')
+  const city = container.querySelectorAll('select')[2] as HTMLSelectElement
+  expect([...city.options].map(o => o.text)).toEqual(['Choose City', 'Added Hamlet', 'Cluj-Napoca', 'Turda'])
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(city, '665444'); city.dispatchEvent(new Event('change', { bubbles: true })) })
+  // No registration warning; a city with no Local Hunts yet simply lists none.
+  expect(container.textContent).not.toMatch(/registration|not registered|Admin/i)
+  expect(button('Choose Hunt').disabled).toBe(false)
+  await click('Choose Hunt')
+  expect(container.textContent).toContain('No approved Local Hunts are available in Turda yet.')
+  expect(organizerLocalApi.page).not.toHaveBeenCalledWith('templates', expect.anything())
+  await click('Back')
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(city, 'registry:manual-1'); city.dispatchEvent(new Event('change', { bubbles: true })) })
+  expect(button('Choose Hunt').disabled).toBe(false)
 })
 test('an empty catalog says so and blocks Choose Hunt', async () => {
   vi.mocked(organizerLocalApi.page).mockImplementation(async () => ({ items: [], nextCursor: null }))
@@ -79,7 +112,7 @@ test('an empty catalog says so and blocks Choose Hunt', async () => {
 test('event metadata outage cannot block Location or Choose Hunt', async () => {
   vi.mocked(huntOptionsApi.listHuntOptions).mockRejectedValue(new ApiError('offline', null, 'network'))
   await mount(); expect(container.querySelector('[role=alert]')).toBeNull()
-  await click('Choose Hunt'); expect(container.textContent).toContain('Choose your adventure')
+  await chooseCluj(); await click('Choose Hunt'); expect(container.textContent).toContain('Choose your adventure')
 })
 test('saved Local draft resumes with exact server identity and preserves event settings', async () => {
   await organizerLocalApi.select(saved.id, selection)

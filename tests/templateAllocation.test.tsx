@@ -18,7 +18,7 @@ import { ApiError } from '../src/services/api/client'
 const api = vi.hoisted(() => ({ approved: vi.fn(), approvedRevision: vi.fn() }))
 const geo = vi.hoisted(() => ({ cities: vi.fn() }))
 vi.mock('../src/services/api/creatorContent', () => ({ creatorContentApi: api }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: geo }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: geo }))
 const exercise = toPersistence(authorPrototype(prototypes.find(e => e.type === 'single-choice')!))
 const approved: ApprovedDetail = { contentId: '11111111-1111-4111-8111-111111111111', revisionId: '22222222-2222-4222-8222-222222222222', version: 2, status: 'approved', classification: 'personal', type: 'single-choice', title: 'Approved question', category: 'Mathematics', curriculum: { grade: '9' }, geography: { scope: 'universal' }, exercise }
 const defaults: ExercisePoolDefaults = { classification: 'universal', category: 'Mathematics', grade: '9' }

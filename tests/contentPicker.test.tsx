@@ -15,7 +15,7 @@ vi.mock('../src/features/creator/content/catalog', async original => {
   const second = { ...source, id: 'fixture-second-record', exercise: { ...structuredClone(source.exercise), id: 'fixture-second-exercise', title: 'Another pair exercise', instructions: 'Different source question' } }
   return { ...catalog, starterContent: [...catalog.starterContent, second] }
 })
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }) } }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: { countries: async () => ({ countries: [] }) } }))
 let container: HTMLDivElement, root: Root, router: ReturnType<typeof createMemoryRouter>
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)

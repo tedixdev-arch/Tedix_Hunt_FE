@@ -10,7 +10,7 @@ import { prototypes, personalTypes, teamNames } from '../src/features/creator/ex
 import { authorPrototype, toPersistence } from '../src/features/creator/exercises/persistenceAdapter'
 import { teamExample } from '../src/features/creator/exercises/teamExamples'
 import { geographyApi } from '../src/services/api/geography'
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: vi.fn(async () => ({ countries: [] })), regions: vi.fn(async () => ({regions:[],nextAfter:null})), city: vi.fn(), cities: vi.fn() } }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: { countries: vi.fn(async () => ({ countries: [] })), regions: vi.fn(async () => ({regions:[],nextAfter:null})), city: vi.fn(), cities: vi.fn(), browse: vi.fn() } }))
 const item: ApprovedContent = { contentId:'other-creators-content', revisionId:'approved-old-revision', version:1,status:'approved',classification:'personal',type:'single-choice',title:'Another Creator’s exercise',category:'Mathematics',curriculum:{grade:'7'},geography:{scope:'universal'} }
 const detail: ApprovedDetail = {...item,exercise:toPersistence(authorPrototype({...prototypes[1],title:item.title}))}
 const deferred = <T,>() => { let resolve!:(v:T)=>void;let reject!:(e:unknown)=>void;const promise=new Promise<T>((r,j)=>{resolve=r;reject=j});return {promise,resolve,reject} }
@@ -72,11 +72,12 @@ test('late pagination cannot append stale rows after a filter change',async()=>{
 test('failed exact city lookup retains selection and blocks discovery until a successful retry',async()=>{
  vi.mocked(geographyApi.countries).mockResolvedValue({countries:[{code:'RO',displayName:'Romania'}]})
  const city={geographicId:'683506',countryCode:'RO',admin1Code:'13',name:'Cluj-Napoca',countryDisplayName:'Romania',regionDisplayName:'Cluj',regionStatus:'resolved'} as never
- vi.mocked(geographyApi.cities).mockResolvedValue({cities:[city]} as never)
+ vi.mocked(geographyApi.regions).mockResolvedValue({regions:[{countryCode:'RO',admin1Code:'13',displayName:'Cluj',labelStatus:'resolved'}],nextAfter:null} as never)
+ vi.mocked(geographyApi.browse).mockResolvedValue({cities:[city],nextAfter:null} as never)
  vi.mocked(geographyApi.city).mockRejectedValueOnce(new Error('offline')).mockResolvedValue(city)
  const list=feed()
  await mount(<ApprovedExercises classification="personal"/>,async({change,click,host})=>{
-  await change('Content country','RO');await change('Find content city','Cluj');await act(async()=>{await new Promise(r=>setTimeout(r,300))})
+  await change('Content country','RO');await change('Content region','13')
   const before=list.mock.calls.length;await change('Content city','683506');expect(list).toHaveBeenCalledTimes(before);expect(host.textContent).toContain('saved location is retained');expect((host.querySelector('[aria-label="Content city"]') as HTMLSelectElement).value).toBe('683506')
   await click('Retry geography');expect(list).toHaveBeenLastCalledWith({classification:'personal',countryCode:'RO',geographicId:'683506'},undefined)
  })

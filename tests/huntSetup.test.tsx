@@ -5,9 +5,10 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { CreatorTemplateEditorPage } from '../src/pages/CreatorStudio'
 const api = vi.hoisted(() => ({ create: vi.fn(), createVersion: vi.fn(), get: vi.fn(), submit: vi.fn() }))
 const map = vi.hoisted(() => ({ props: null as any }))
-const geo = vi.hoisted(() => ({ countries: vi.fn(), search: vi.fn(), get: vi.fn(), regions: vi.fn(), cities: vi.fn(), resolveCity: vi.fn() }))
+const geo = vi.hoisted(() => ({ countries: vi.fn(), search: vi.fn(), get: vi.fn(), regions: vi.fn(), cities: vi.fn(), browse: vi.fn(), resolveCity: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', async original => ({ ...await original<typeof import('../src/services/api/creatorTemplates')>(), creatorTemplatesApi: api }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: geo }))
+// Keep the real list helpers (loadRegionCities, cityKey, …); only the HTTP client is mocked.
+vi.mock('../src/services/api/geography', async original => ({ ...await original<typeof import('../src/services/api/geography')>(), geographyApi: geo }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <div /> }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: (props: any) => { map.props = props; return <div data-testid="actual-route-map" /> } }))
 const city = { id: '11111111-1111-4111-8111-111111111111', name: 'Paris', countryCode: 'FR', countryDisplayName: 'France', administrativeContext: 'Île-de-France', latitude: 48.8566, longitude: 2.3522, active: true }
@@ -17,7 +18,7 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.resetAllMocks(); Element.prototype.scrollIntoView = vi.fn()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
   geo.countries.mockResolvedValue({ countries: [{ code: 'FR', displayName: 'France' }, { code: 'DE', displayName: 'Germany' }] }); geo.search.mockResolvedValue({ localities: [city, city] }); geo.get.mockResolvedValue(city)
-  geo.regions.mockImplementation(async countryCode => ({ regions: [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null })); geo.cities.mockResolvedValue({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }); geo.resolveCity.mockResolvedValue({ geographicId: '123', localityId: city.id, registeredActive: true, nextAction: 'bind_locality' })
+  geo.regions.mockImplementation(async countryCode => ({ regions: [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'State / Region', metadataStatus: 'ready', nextAfter: null })); geo.cities.mockResolvedValue({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }); geo.browse.mockResolvedValue({ cities: [{ ...city, geographicId: '123', admin1Code: '11', regionDisplayName: 'Île-de-France', regionStatus: 'resolved', localityId: city.id }], nextAfter: null }); geo.resolveCity.mockResolvedValue({ geographicId: '123', localityId: city.id, registeredActive: true, nextAction: 'bind_locality' })
   api.create.mockImplementation(async (content, category, localityId) => ({ key: content.key, version: 1, status: 'draft', category, content, localityId, localitySnapshot: localityId ? city : null }))
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
@@ -34,19 +35,27 @@ function catalogHasCluj() {
   geo.countries.mockResolvedValue({ countries: [{ code: 'FR', displayName: 'France' }, { code: 'RO', displayName: 'Romania' }] })
   geo.regions.mockImplementation(async countryCode => ({ regions: countryCode === 'RO' ? [{ countryCode: 'RO', admin1Code: '13', displayName: 'Cluj' }] : [], regionLabel: 'County', metadataStatus: 'ready', nextAfter: null }))
   geo.cities.mockResolvedValue({ cities: [clujCity], nextAfter: null })
+  geo.browse.mockResolvedValue({ cities: [clujCity], nextAfter: null })
   geo.resolveCity.mockResolvedValue(clujCity)
   geo.get.mockResolvedValue(cluj)
 }
 // City search is debounced by 250 ms in the selector.
 const settle = () => act(async () => { await new Promise(done => setTimeout(done, 400)) })
 const selected = () => [...container.querySelectorAll<HTMLSelectElement>('#local-geography select')].map(el => el.selectedOptions[0]?.text)
-test('new Local draft lists catalog countries and preselects the Cluj pilot city through the selector', async () => {
+async function chooseCluj() {
+  await change('#local-geography select[aria-label="Country *"]', 'RO'); await settle()
+  await change('#local-geography select[aria-label="Region *"]', '13'); await settle()
+  await change('#local-geography select[aria-label="City *"]', '681290'); await settle()
+}
+test('new Local draft preselects no location; Country → County/Region → City binds only after an explicit choice', async () => {
   catalogHasCluj()
   await render(); await settle()
-  expect([...container.querySelector<HTMLSelectElement>('#local-geography select')!.options].map(o => o.text)).toEqual(['Choose country', 'France', 'Romania'])
-  expect(selected()).toEqual(['Romania', 'Cluj'])
-  expect(container.querySelector<HTMLInputElement>('#local-geography input[aria-label="City *"]')!.value).toBe('Cluj-Napoca')
-  expect(geo.cities).toHaveBeenCalledWith('RO', 'Cluj-Napoca', '13', undefined)
+  expect([...container.querySelector<HTMLSelectElement>('#local-geography select')!.options].map(o => o.text)).toEqual(['Choose Country', 'France', 'Romania'])
+  expect(selected()).toEqual(['Choose Country', 'Choose County/Region', 'Choose City'])
+  expect(geo.browse).not.toHaveBeenCalled(); expect(geo.resolveCity).not.toHaveBeenCalled()
+  await chooseCluj()
+  expect(selected()).toEqual(['Romania', 'Cluj', 'Cluj-Napoca'])
+  expect(geo.browse).toHaveBeenCalledWith('RO', '13', undefined)
   expect(geo.resolveCity).toHaveBeenCalledWith('681290')
   expect(container.textContent).toContain('Selected city: Cluj-Napoca')
   await click('Continue to Template builder')
@@ -55,16 +64,16 @@ test('new Local draft lists catalog countries and preselects the Cluj pilot city
 })
 test('new Local draft saves the catalog-resolved locality, never labels', async () => {
   catalogHasCluj()
-  await render(); await settle(); await click('Continue to Template builder'); await change('#template-setup input', 'Cluj adventure'); await click('Save draft')
+  await render(); await settle(); await chooseCluj(); await click('Continue to Template builder'); await change('#template-setup input', 'Cluj adventure'); await click('Save draft')
   expect(api.create).toHaveBeenCalledWith(expect.anything(), 'local', cluj.id)
   expect(JSON.stringify(api.create.mock.calls)).not.toContain('localitySnapshot')
 })
-test('choosing another country cancels the Cluj preset and binds nothing until a city is chosen', async () => {
+test('choosing a country resets County/Region and City and binds nothing until a city is chosen', async () => {
   geo.countries.mockResolvedValue({ countries: [{ code: 'FR', displayName: 'France' }, { code: 'RO', displayName: 'Romania' }] })
   geo.regions.mockImplementation(async countryCode => ({ regions: countryCode === 'RO' ? [] : [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'Region', metadataStatus: 'ready', nextAfter: null }))
   await render(); await settle()
   await change('#local-geography select', 'FR'); await settle()
-  expect(selected()).toEqual(['France', 'Choose region'])
+  expect(selected()).toEqual(['France', 'Choose County/Region', 'Choose City'])
   expect(geo.resolveCity).not.toHaveBeenCalled()
 })
 test('saved draft content and canonical locality survive prototype continuation', async () => {
@@ -242,4 +251,21 @@ test.each(['Personal Challenge', 'Team Challenge'])('%s Apply challenge updates 
   expect(container.querySelector('[aria-label="Selected exercise assignment"]')!.textContent).toBe(name === 'Team Challenge' ? 'Custom Team Challenge assigned' : 'Custom challenge assigned · Save draft to keep your changes')
   expect(button('Save draft')).toBeDefined()
   expect(api.create).not.toHaveBeenCalled(); expect(api.createVersion).not.toHaveBeenCalled(); expect(api.submit).not.toHaveBeenCalled()
+})
+
+test('Template Setup ends with Continue to Checkpoints & Challenges, enabled only when every setup step is complete', async () => {
+  await render('/create?category=universal')
+  const stepButton = (label: string) => [...container.querySelectorAll('button')].find(item => item.textContent?.startsWith(label))!
+  await act(async () => stepButton('4. Template status').click())
+  expect(container.textContent).toContain('Step 4 of 4')
+  expect(button('Continue to Checkpoints & Challenges').disabled).toBe(true)
+  expect(container.textContent).toContain('Complete every Template Setup step to continue.')
+  expect(container.textContent).not.toContain('Complete Template Setup')
+  await act(async () => stepButton('1. Template details').click())
+  for (let step = 0; step < 3; step++) await click('Continue')
+  expect(container.textContent).toContain('Step 4 of 4')
+  expect(button('Continue to Checkpoints & Challenges').disabled).toBe(false)
+  await click('Continue to Checkpoints & Challenges')
+  expect(container.querySelector('[aria-label="Creator sections"] [aria-current="page"]')?.textContent).toBe('Checkpoints & Challenges')
+  expect(container.textContent).toContain('Step 1 of 4')
 })

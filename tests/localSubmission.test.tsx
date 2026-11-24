@@ -7,7 +7,7 @@ import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
 import { ApiError } from '../src/services/api/client'
 const api = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), createVersion: vi.fn(), submit: vi.fn(), place: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', () => ({ creatorTemplatesApi: api }))
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }), get: api.place } }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: { countries: async () => ({ countries: [] }), get: api.place } }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => null }))
 vi.mock('../src/components/TedixMap', () => ({ TedixMap: () => <div /> }))
 // Exercise canonical binding persistence independently of the temporary location UI.
@@ -58,7 +58,7 @@ test('12 validation is tied to exact content; unsaved edits never submit or impl
   await click('Save draft'); expect(button('Submit for Approval').disabled).toBe(true); await click('Run template validation'); await click('Submit for Approval'); expect(api.submit).toHaveBeenCalledExactlyOnceWith('owned', 4)
 })
 test.each(['locality_required','locality_unavailable','locality_geography_changed'])('12 backend binding gate %s remains actionable near geography', async error => {
-  await render(); await click('Run template validation'); api.submit.mockRejectedValue(new ApiError(error, 409, 'http', { error })); await click('Submit for Approval'); expect(container.querySelector('#local-geography')?.textContent).toMatch(/(registered locality|unavailable|coordinates changed)/); expect(button('Submit for Approval').disabled).toBe(true)
+  await render(); await click('Run template validation'); api.submit.mockRejectedValue(new ApiError(error, 409, 'http', { error })); await click('Submit for Approval'); expect(container.querySelector('#local-geography')?.textContent).toMatch(/(Choose a city in Hunt Setup|unavailable|coordinates changed)/); expect(button('Submit for Approval').disabled).toBe(true)
 })
 test('12 pending locality selection must be explicitly saved before validation', async () => {
   await render(); await click('Clear locality'); await click('Run template validation'); expect(container.textContent).toContain('Save your locality selection'); expect(button('Submit for Approval').disabled).toBe(true); expect(api.submit).not.toHaveBeenCalled()

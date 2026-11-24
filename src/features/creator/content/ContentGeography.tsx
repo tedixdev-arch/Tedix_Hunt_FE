@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
-import { geographyApi, type Country, type Region, type GeographicCity } from '../../../services/api/geography'
+import { UNSPECIFIED_REGION, geographyApi, loadRegionCities, type Country, type Region, type GeographicCity } from '../../../services/api/geography'
+import { locationLabels as L } from '../../location/locationLabels'
 import { control } from '../exercises/ExerciseRenderer'
 export interface ContentScope { country: string; region: string; city: string }
 export const universalScope: ContentScope = { country: '', region: '', city: '' }
-/** Applicability only: read existing catalog endpoints; never register or bind a locality. */
+/**
+ * Applicability only: Universal by default; a specific Country enables County/Region and City dropdowns.
+ * Reads existing catalog endpoints and never registers or binds a locality.
+ */
 export function ContentGeography({ value, onChange, onCityResolved }: { value: ContentScope; onChange: (v: ContentScope) => void; onCityResolved?: (city: GeographicCity | null) => void }) {
   const [countries, setCountries] = useState<Country[]>([]), [regions, setRegions] = useState<Region[]>([]), [cities, setCities] = useState<GeographicCity[]>([])
   const [selectedCity, setSelectedCity] = useState<GeographicCity | null>(null)
-  const [query, setQuery] = useState(''), [error, setError] = useState(''), [retry, setRetry] = useState(0)
+  const [loadingRegions, setLoadingRegions] = useState(false), [loadingCities, setLoadingCities] = useState(false)
+  const [error, setError] = useState(''), [retry, setRetry] = useState(0)
+  const universal = !value.country
   useEffect(() => {
     let live = true
     setSelectedCity(null); onCityResolved?.(null)
@@ -19,13 +25,46 @@ export function ContentGeography({ value, onChange, onCityResolved }: { value: C
     return () => { live = false }
   }, [value.city, value.country, retry, onCityResolved])
   useEffect(() => { let live = true; geographyApi.countries().then(r => { if (live) setCountries(r.countries) }).catch(() => { if (live) setError('Geography unavailable. Universal remains available.') }); return () => { live = false } }, [retry])
-  useEffect(() => { let live = true; setRegions([]); setError(''); if (value.country) void (async () => { let after: string | undefined; const all: Region[] = []; do { const page = await geographyApi.regions(value.country, after); all.push(...page.regions.filter(r => r.countryCode === value.country && r.admin1Code && r.admin1Code !== '00')); after = page.nextAfter ?? undefined } while (after && live); if (live) setRegions(all) })().catch(() => { if (live) setError('Regions unavailable. Retry to load current records.') }); return () => { live = false } }, [value.country, retry])
-  useEffect(() => { let live = true; setCities([]); if (!value.country || query.trim().length < 2) return; const timer = setTimeout(() => { geographyApi.cities(value.country, query, value.region || undefined).then(page => { if (live) setCities(page.cities.filter(c => c.countryCode === value.country && (!value.region || c.admin1Code === value.region))) }).catch(() => { if (live) setError('Cities unavailable. Retry your search.') }) }, 250); return () => { live = false; clearTimeout(timer) } }, [value.country, value.region, query, retry])
+  useEffect(() => {
+    let live = true
+    setRegions([]); setError(''); setLoadingRegions(!!value.country)
+    if (!value.country) return
+    void (async () => {
+      let after: string | undefined
+      const all: Region[] = []
+      do {
+        const page = await geographyApi.regions(value.country, after)
+        all.push(...page.regions.filter(r => r.countryCode === value.country && r.admin1Code && r.admin1Code !== '00' && r.admin1Code !== UNSPECIFIED_REGION && (r.labelStatus ?? 'resolved') === 'resolved'))
+        after = page.nextAfter ?? undefined
+      } while (after && live)
+      if (live) setRegions(all.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' })))
+    })().catch(() => { if (live) setError('Regions unavailable. Retry to load current records.') }).finally(() => { if (live) setLoadingRegions(false) })
+    return () => { live = false }
+  }, [value.country, retry])
+  useEffect(() => {
+    let live = true
+    setCities([]); setLoadingCities(false)
+    if (!value.country || !value.region) return
+    setLoadingCities(true)
+    // Content scope matches catalog (GeoNames) cities, so manual Localities are not offered here.
+    loadRegionCities(geographyApi, value.country, value.region, () => live)
+      .then(list => { if (live) setCities(list.filter(c => c.geographicId && c.admin1Code === value.region)) })
+      .catch(() => { if (live) setError('Cities unavailable. Retry to load current records.') })
+      .finally(() => { if (live) setLoadingCities(false) })
+    return () => { live = false }
+  }, [value.country, value.region, retry])
+  const shown = cities.find(c => c.geographicId === value.city) ?? selectedCity
+  const select = `${control} mt-2 block w-full`
   return <fieldset className="mb-4 min-w-0"><legend className="text-sm font-medium">Choose Location</legend><div className="mt-4 grid gap-4 sm:grid-cols-3">
-    <label className="block text-sm">Country<select aria-label="Content country" className={`${control} mt-2 block w-full`} value={value.country} onChange={e => { onChange({ country: e.target.value, region: '', city: '' }); setQuery('') }}><option value="">Universal</option>{value.country && !countries.some(c => c.code === value.country) && <option value={value.country}>Saved country</option>}{countries.map(c => <option key={c.code} value={c.code}>{c.displayName}</option>)}</select></label>
-    <label className="block text-sm">County / Region<select aria-label="Content region" className={`${control} mt-2 block w-full`} value={value.region || selectedCity?.admin1Code || ''} disabled={!value.country} onChange={e => { onChange({ ...value, region: e.target.value, city: '' }); setQuery('') }}><option value="">Universal</option>{value.region && !regions.some(r => r.admin1Code === value.region) && <option value={value.region}>Saved region</option>}{regions.map(r => <option key={r.admin1Code} value={r.admin1Code}>{r.displayName}</option>)}</select></label>
-    <label className="block text-sm">City<select aria-label="Content city" className={`${control} mt-2 block w-full`} value={value.city} disabled={!value.country} onChange={e => onChange({ ...value, city: e.target.value })}><option value="">Universal</option>{value.city && !cities.some(c => c.geographicId === value.city) && <option value={value.city}>{selectedCity?.name ?? 'Saved city'}</option>}{cities.map(c => <option key={c.geographicId} value={c.geographicId}>{c.name}</option>)}</select></label>
-  </div>{value.country && <label className="mt-3 block text-sm">Find city<input aria-label="Find content city" className={`${control} mt-2 block w-full`} value={query} onChange={e => { setQuery(e.target.value); onChange({ ...value, city: '' }) }} placeholder="At least 2 characters" /></label>}
-    <p className="mt-2 text-xs text-slate-600">Universal means unrestricted coverage. This does not change the Template or Hunt locality.</p>{error && <p role="alert">{error} <button type="button" onClick={() => { setError(''); setRetry(r => r + 1) }}>Retry geography</button></p>}
+    <label className="block text-sm">{L.country}<select aria-label="Content country" className={select} value={value.country} onChange={e => onChange({ country: e.target.value, region: '', city: '' })}><option value="">{L.universal}</option>{value.country && !countries.some(c => c.code === value.country) && <option value={value.country}>Saved country</option>}{countries.map(c => <option key={c.code} value={c.code}>{c.displayName}</option>)}</select></label>
+    {universal
+      ? <label className="block text-sm">{L.region}<select aria-label="Content region" className={select} value="" disabled><option value="">{L.universal}</option></select></label>
+      : <label className="block text-sm">{L.region}<select aria-label="Content region" className={select} value={value.region || shown?.admin1Code || ''} disabled={loadingRegions} onChange={e => onChange({ ...value, region: e.target.value, city: '' })}><option value="">{loadingRegions ? 'Loading…' : L.chooseRegion}</option>{value.region && !loadingRegions && !regions.some(r => r.admin1Code === value.region) && <option value={value.region}>Saved region</option>}{regions.map(r => <option key={r.admin1Code} value={r.admin1Code}>{r.displayName}</option>)}</select></label>}
+    {universal
+      ? <label className="block text-sm">{L.city}<select aria-label="Content city" className={select} value="" disabled><option value="">{L.universal}</option></select></label>
+      : <label className="block text-sm">{L.city}<select aria-label="Content city" className={select} value={value.city} disabled={!value.region || loadingCities} onChange={e => onChange({ ...value, city: e.target.value })}><option value="">{loadingCities ? 'Loading cities…' : L.chooseCity}</option>{value.city && !cities.some(c => c.geographicId === value.city) && <option value={value.city}>{selectedCity?.name ?? 'Saved city'}</option>}{cities.map(c => <option key={c.geographicId!} value={c.geographicId!}>{c.name}</option>)}</select></label>}
+  </div>
+    {!universal && value.region && !loadingCities && !cities.length && !error && <p role="status" className="mt-2 text-sm">No cities are listed in this county/region.</p>}
+    <p className="mt-2 text-xs text-slate-600">{universal ? 'Universal means unrestricted coverage.' : 'Leave County/Region or City unchosen to apply this content to the whole country or county/region.'} This does not change the Template or Hunt locality.</p>{error && <p role="alert">{error} <button type="button" onClick={() => { setError(''); setRetry(r => r + 1) }}>Retry geography</button></p>}
   </fieldset>
 }

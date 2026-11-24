@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { CreatorTemplateEditorPage } from '../src/pages/CreatorStudio'
 import { ApiError } from '../src/services/api/client'
 import type { CreatorTemplate } from '../src/services/api/creatorTemplates'
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: vi.fn(async () => ({ countries: [] })), get: vi.fn(), search: vi.fn() } }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: { countries: vi.fn(async () => ({ countries: [] })), get: vi.fn(), search: vi.fn() } }))
 const api = vi.hoisted(() => ({ create: vi.fn(), createVersion: vi.fn(), get: vi.fn(), submit: vi.fn() }))
 vi.mock('../src/services/api/creatorTemplates', async original => ({ ...await original<typeof import('../src/services/api/creatorTemplates')>(), creatorTemplatesApi: api }))
 vi.mock('../src/pages/OrganizerFlow', () => ({ OrganizerHeader: () => <div /> }))

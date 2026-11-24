@@ -7,7 +7,7 @@ import { creatorContentApi, type LibraryContent } from '../src/services/api/crea
 import { ApiError } from '../src/services/api/client'
 import { prototypes } from '../src/features/creator/exercises/catalog'
 import { authorPrototype, toPersistence } from '../src/features/creator/exercises/persistenceAdapter'
-vi.mock('../src/services/api/geography', () => ({ geographyApi: { countries: async () => ({ countries: [] }) } }))
+vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: { countries: async () => ({ countries: [] }) } }))
 const saved: LibraryContent = { contentId: 'content', revisionId: 'revision-1', ownerId: 'owner', version: 1, status: 'draft', createdAt: '2026-01-01', updatedAt: '2026-01-01', category: null, curriculum: {}, geography: { scope: 'universal' }, exercise: toPersistence(authorPrototype(prototypes[0])) }
 async function harness(run: (h: { host: HTMLDivElement; router: ReturnType<typeof createMemoryRouter>; click: (s: string) => Promise<void>; edit: (s: string) => Promise<void> }) => Promise<void>) {
  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
