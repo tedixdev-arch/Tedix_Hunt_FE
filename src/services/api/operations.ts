@@ -33,12 +33,6 @@ export interface AdminDashboard {
   templatesInReview: number; approvedTemplates: number; pendingOrganizerApplications: number; pendingCreatorApplications: number
   openAlerts: number; openCustomRequests: number
 }
-export interface AdminHunt {
-  id: string; name: string; status: string; city: string | null; country: string | null; startDate: string | null; startTime: string | null
-  capacity: number | null; createdAt: string; templateName: string | null
-  organization: { id: string; name: string; independent: boolean }
-  participants: number; finished: number; openAlerts: number
-}
 export interface AdminAlert { id: string; huntId: string; huntName: string; displayName: string; kind: 'help' | 'emergency'; message: string; status: 'open' | 'resolved'; createdAt: string; resolvedAt: string | null }
 export type CustomRequestStatus = 'new' | 'in_review' | 'assigned' | 'in_progress' | 'completed' | 'rejected' | 'closed'
 /** What the Organizer sees. */
@@ -79,8 +73,8 @@ export interface AuditEvent {
 export class AdminOperationsApi {
   constructor(private readonly client: ApiClient = apiClient) {}
   dashboard() { return this.client.get<AdminDashboard>('/api/admin/dashboard') }
-  hunts(status?: string) { return this.client.get<{ hunts: AdminHunt[] }>(`/api/admin/hunts${status ? `?status=${encodeURIComponent(status)}` : ''}`) }
-  alerts() { return this.client.get<{ alerts: AdminAlert[] }>('/api/admin/alerts') }
+  /** Help requests, open first; huntId limits them to one Hunt. Hunt lists live in adminHunts.ts. */
+  alerts(huntId?: string) { return this.client.get<{ alerts: AdminAlert[] }>(`/api/admin/alerts${huntId ? `?huntId=${encodeURIComponent(huntId)}` : ''}`) }
   resolveAlert(alert: AdminAlert) { return this.client.post(`/api/hunts/${encodeURIComponent(alert.huntId)}/help-requests/${encodeURIComponent(alert.id)}/resolve`) }
   settings() { return this.client.get<{ settings: PlatformSetting[] }>('/api/admin/settings') }
   updateSettings(values: Record<string, SettingValue>) { return this.client.put<{ changed: string[]; settings: PlatformSetting[] }>('/api/admin/settings', { values }) }
