@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { gameplayApi, gameplayError, type AnswerResult, type CurrentCheckpoint, type LeaderboardEntry, type PlayState } from '../services/api/gameplay'
+import { gameplayApi, gameplayError, type AnswerResult, type CurrentCheckpoint, type CustomExerciseResponse, type LeaderboardEntry, type PlayState } from '../services/api/gameplay'
+import { CustomExercisePlay } from '../features/play/CustomExercisePlay'
 
 /** Live, server-authoritative play. All checking, scoring and progression happen on the API. */
 const button = 'min-h-14 w-full rounded-xl bg-emerald-400 px-5 font-bold text-slate-950 disabled:bg-slate-700 disabled:text-slate-400'
@@ -147,17 +148,21 @@ function Navigate({ state, onArrived }: { state: PlayState; onArrived: (next: Pl
 
 function Challenge({ state, onResult }: { state: PlayState; onResult: (result: AnswerResult) => void }) {
   const current = state.current!
-  const story = current.story!
+  const story = current.story ?? { answerKeys: [] }
   const teamStage = state.stage === 'team'
+  // A custom (Creator or Library) exercise replaces the predefined challenge for its stage.
+  const exercise = teamStage ? current.teamExercise : current.personalExercise
   const [value, setValue] = useState('')
+  const [response, setResponse] = useState<CustomExerciseResponse | null>(null)
   const [feedback, setFeedback] = useState('')
   const [busy, setBusy] = useState(false)
-  useEffect(() => { setValue(''); setFeedback('') }, [current.checkpointId, state.stage])
+  useEffect(() => { setValue(''); setResponse(null); setFeedback('') }, [current.checkpointId, state.stage])
   async function submit() {
     setBusy(true); setFeedback('')
     try {
       const key = story.answerKeys[0] ?? 'x'
-      const result = teamStage ? await gameplayApi.answerTeam(state.huntId, current.checkpointId, value)
+      const result = exercise ? await gameplayApi.answerCustom(state.huntId, current.checkpointId, teamStage ? 'team' : 'personal', response ?? {})
+        : teamStage ? await gameplayApi.answerTeam(state.huntId, current.checkpointId, value)
         : await gameplayApi.answerPersonal(state.huntId, current.checkpointId, { [key]: value })
       if (!result.correct) setFeedback('Not quite. Check your reasoning and try again.')
       onResult(result)
@@ -165,7 +170,12 @@ function Challenge({ state, onResult }: { state: PlayState; onResult: (result: A
   }
   return <section className="flex flex-1 flex-col gap-4">
     <p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-300">{teamStage ? 'Team challenge' : 'Private challenge'} · {current.kind === 'finish' ? 'FinishPoint' : `Checkpoint ${current.ordinal}`}</p>
-    {!teamStage ? <>
+    {exercise ? <>
+      {!teamStage && story.storyObjective && <h1 className="text-3xl font-extrabold tracking-tight">{story.storyObjective}</h1>}
+      {!teamStage && story.storyProblem && <p className="text-slate-300">{story.storyProblem}</p>}
+      {teamStage && current.personalReveal?.personalContribution && <div className="rounded-2xl bg-emerald-400/15 p-4"><p className="text-sm text-emerald-200">You earned</p><p className="text-2xl font-bold">{current.personalReveal.personalContribution}</p></div>}
+      <div className={card}><CustomExercisePlay key={`${current.checkpointId}:${state.stage}`} exercise={exercise} onChange={setResponse} /></div>
+    </> : !teamStage ? <>
       {story.storyObjective && <h1 className="text-3xl font-extrabold tracking-tight">{story.storyObjective}</h1>}
       {story.storyProblem && <p className="text-slate-300">{story.storyProblem}</p>}
       <div className={card}><h2 className="text-xl font-bold">{story.title}</h2><p className="mt-2">{story.prompt}</p><div className="mt-4"><ChallengeVisual current={current} value={value} onChange={setValue} /></div></div>
@@ -179,7 +189,7 @@ function Challenge({ state, onResult }: { state: PlayState; onResult: (result: A
         <div className="mt-4"><TeamInput current={current} value={value} onChange={setValue} /></div></div>
     </>}
     {feedback && <p role="alert" className="text-amber-200">{feedback}</p>}
-    <button className={`${button} mt-auto`} disabled={busy || !value.trim() || state.huntStatus !== 'active'} onClick={() => void submit()}>{busy ? 'Checking…' : 'Submit answer'}</button>
+    <button className={`${button} mt-auto`} disabled={busy || (exercise ? !response : !value.trim()) || state.huntStatus !== 'active'} onClick={() => void submit()}>{busy ? 'Checking…' : 'Submit answer'}</button>
   </section>
 }
 
@@ -203,8 +213,8 @@ export function LiveHuntPlayPage() {
     const gained = result.state.score - (state?.score ?? result.state.score)
     if (result.correct) {
       setCelebration(result.stage === 'personal' && !result.checkpointCompleted
-        ? { title: 'Correct!', text: result.reveal?.successText, points: gained }
-        : { title: result.state.stage === 'finished' ? 'Mission complete!' : 'Checkpoint complete!', text: result.reveal?.storySuccess ?? result.reveal?.successText, points: gained })
+        ? { title: 'Correct!', text: [result.reveal?.successText, result.reveal?.recallCard && `Card: ${result.reveal.recallCard}`].filter(Boolean).join(' · ') || undefined, points: gained }
+        : { title: result.state.stage === 'finished' ? 'Mission complete!' : 'Checkpoint complete!', text: [result.reveal?.storySuccess ?? result.reveal?.successText, result.reveal?.recallCard && `Card: ${result.reveal.recallCard}`].filter(Boolean).join(' · ') || undefined, points: gained })
     }
     setState(result.state)
   }
