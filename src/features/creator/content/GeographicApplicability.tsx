@@ -15,7 +15,8 @@ export async function geographicApplicability(g: LibraryGeography): Promise<stri
       if (city.geographicId !== g.geographicId || city.countryCode !== g.countryCode || !city.name || !city.countryDisplayName) return geographyFallback(g)
       const region = city.regionStatus === 'resolved' && city.regionDisplayName
         ? city.regionDisplayName : `Region ${city.admin1Code || 'unspecified'} (catalog details unavailable)`
-      return `${city.name}, ${region}, ${city.countryDisplayName}`
+      // The official subdivision (county, district, commune…) is shown when the catalog has one.
+      return [city.name, city.subregionDisplayName?.trim(), region, city.countryDisplayName].filter(Boolean).join(', ')
     } catch { return geographyFallback(g) }
   }
   let country = `Country ${g.countryCode} (catalog details unavailable)`

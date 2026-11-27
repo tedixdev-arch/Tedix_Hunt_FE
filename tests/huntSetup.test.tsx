@@ -68,12 +68,12 @@ test('new Local draft saves the catalog-resolved locality, never labels', async 
   expect(api.create).toHaveBeenCalledWith(expect.anything(), 'local', cluj.id)
   expect(JSON.stringify(api.create.mock.calls)).not.toContain('localitySnapshot')
 })
-test('choosing a country resets County/Region and City and binds nothing until a city is chosen', async () => {
+test('choosing a country resets its Region and City and binds nothing until a city is chosen', async () => {
   geo.countries.mockResolvedValue({ countries: [{ code: 'FR', displayName: 'France' }, { code: 'RO', displayName: 'Romania' }] })
   geo.regions.mockImplementation(async countryCode => ({ regions: countryCode === 'RO' ? [] : [{ countryCode, admin1Code: '11', displayName: 'Île-de-France' }], regionLabel: 'Region', metadataStatus: 'ready', nextAfter: null }))
   await render(); await settle()
   await change('#local-geography select', 'FR'); await settle()
-  expect(selected()).toEqual(['France', 'Choose County/Region', 'Choose City'])
+  expect(selected()).toEqual(['France', 'Choose Region', 'Choose City'])
   expect(geo.resolveCity).not.toHaveBeenCalled()
 })
 test('saved draft content and canonical locality survive prototype continuation', async () => {

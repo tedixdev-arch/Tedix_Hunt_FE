@@ -29,9 +29,28 @@ test('lists every catalog country across pages, sorted, then chains regions and 
 
 test('returns null lists when disabled or unavailable so the editor keeps its fallback options', async () => {
   await render({ country: 'Romania', region: 'Cluj', enabled: false })
-  expect(latest).toEqual({ countries: null, regions: null, cities: null })
+  expect(latest).toEqual({ countries: null, regions: null, subregions: [], cities: null, regionLabel: 'County/Region', subregionLabel: 'District/County' })
   expect(page).not.toHaveBeenCalled()
   page.mockRejectedValue(new Error('offline'))
   await render({ country: 'Atlantis', region: '' })
   expect(latest.countries).toBeNull()
+})
+
+test('optional Subregion: country-specific labels, subdivisions listed, and the City list narrowed by the chosen subdivision', async () => {
+  page.mockImplementation(async (kind: string, filters: Record<string, string>) => kind === 'countries' ? { items: [{ countryCode: 'US', displayName: 'United States' }], nextCursor: null }
+    : kind === 'regions' ? { items: [{ regionId: 'US:admin1:TX', label: 'Texas', levelLabel: 'State' }, { regionId: 'US:admin1:DC', label: 'District of Columbia', levelLabel: 'State' }], nextCursor: null }
+    : kind === 'subregions' ? { items: filters.regionId === 'US:admin1:TX' ? [
+        { subregionId: 'US:admin1:TX:unspecified', label: 'Other (not specified)', labelStatus: 'unspecified', levelLabel: 'County' },
+        { subregionId: 'US:admin1:TX:admin2:201', label: 'Harris County', labelStatus: 'resolved', levelLabel: 'County' },
+        { subregionId: 'US:admin1:TX:admin2:113', label: 'Dallas County', labelStatus: 'resolved', levelLabel: 'County' }] : [], nextCursor: null }
+    : { items: filters.subregionId === 'US:admin1:TX:admin2:201' ? [{ name: 'Houston' }] : [{ name: 'Dallas' }, { name: 'Houston' }], nextCursor: null })
+  const probe = (subregion: string, region = 'Texas') => act(async () => root.render(<SubProbe region={region} subregion={subregion} />))
+  function SubProbe({ region, subregion }: { region: string; subregion: string }) { latest = useCatalogLocationOptions('United States', region, true, subregion); return null }
+  await probe('')
+  expect(latest).toMatchObject({ regionLabel: 'State', subregionLabel: 'County', subregions: ['Dallas County', 'Harris County', 'Other (not specified)'], cities: ['Dallas', 'Houston'] })
+  await probe('Harris County')
+  expect(page).toHaveBeenCalledWith('cities', { countryCode: 'US', regionId: 'US:admin1:TX', subregionId: 'US:admin1:TX:admin2:201' }, undefined)
+  expect(latest.cities).toEqual(['Houston'])
+  // A region without official subdivisions has no Subregion level.
+  await probe('', 'District of Columbia'); expect(latest.subregions).toEqual([])
 })

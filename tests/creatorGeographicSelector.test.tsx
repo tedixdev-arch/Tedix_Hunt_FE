@@ -2,7 +2,7 @@ import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { CreatorGeographicSelector } from '../src/features/creator/CreatorGeographicSelector'
-const api = vi.hoisted(() => ({ countries: vi.fn(), regions: vi.fn(), browse: vi.fn(), resolveCity: vi.fn(), get: vi.fn() }))
+const api = vi.hoisted(() => ({ countries: vi.fn(), regions: vi.fn(), subregions: vi.fn(), browse: vi.fn(), resolveCity: vi.fn(), get: vi.fn() }))
 vi.mock('../src/services/api/geography', async importOriginal => ({ ...(await importOriginal<typeof import('../src/services/api/geography')>()), geographyApi: api }))
 const locality = { id: '11111111-1111-4111-8111-111111111111', name: 'Cluj-Napoca', countryCode: 'RO', countryDisplayName: 'Romania', administrativeContext: 'Not a region identity', latitude: 46.77, longitude: 23.59, active: true, geographicId: '681290', admin1Code: '13', regionDisplayName: 'Cluj' }
 const city = { ...locality, geographicId: '681290', admin1Code: '13', regionDisplayName: 'Cluj', regionStatus: 'resolved', localityId: locality.id, registeredActive: true, registrationState: 'registered', nextAction: 'bind_locality', source: 'geonames' }
@@ -19,6 +19,8 @@ beforeEach(() => {
   api.countries.mockResolvedValue({ countries: [{ code: 'RO', displayName: 'Romania' }, { code: 'US', displayName: 'United States' }] })
   api.regions.mockImplementation(async (countryCode: string) => ({ regions: [{ countryCode, admin1Code: '13', displayName: 'Cluj', labelStatus: 'resolved' }, { countryCode, admin1Code: '01', displayName: 'Alba', labelStatus: 'resolved' }], regionLabel: countryCode === 'RO' ? 'County' : 'State', metadataStatus: 'ready', nextAfter: null }))
   api.browse.mockResolvedValue({ cities: [turda, city], registryLocalities: [], nextAfter: null })
+  // Regions without official subdivisions skip the optional Subregion level.
+  api.subregions.mockResolvedValue({ subregions: [], regionLabel: 'County', subregionLabel: 'Commune' })
   api.resolveCity.mockResolvedValue(city); api.get.mockResolvedValue(locality)
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
@@ -34,7 +36,7 @@ const output = () => container.querySelector('output')!.textContent
 
 test('Country → County → City dropdowns; canonical UUID binds only after an explicit city choice', async () => {
   await region()
-  expect(container.textContent).toContain('County/Region *'); expect(api.browse).toHaveBeenCalledWith('RO', '13', undefined); expect(api.resolveCity).not.toHaveBeenCalled(); expect(output()).toBe('cleared')
+  expect(container.textContent).toContain('County *'); expect(api.browse).toHaveBeenCalledWith('RO', '13', undefined); expect(field('Subregion')).toBeNull(); expect(api.resolveCity).not.toHaveBeenCalled(); expect(output()).toBe('cleared')
   // Alphabetical plain names; registration state is explained below the field, not inside options.
   expect(options('City *')).toEqual(['Choose City', 'Cluj-Napoca', 'Turda'])
   await change('City *', '681290'); expect(api.resolveCity).toHaveBeenCalledWith('681290'); expect(output()).toBe(locality.id); expect(container.textContent).toContain('Selected city: Cluj-Napoca')
@@ -56,9 +58,9 @@ test('a manual Locality from an approved proposal is listed in its region and bi
   await region(); expect(options('City *')).toContain('Added Hamlet')
   await change('City *', `registry:${manual.localityId}`); expect(api.resolveCity).not.toHaveBeenCalled(); expect(api.get).toHaveBeenCalledWith(manual.localityId); expect(output()).toBe(manual.localityId)
 })
-test('country and county changes clear the selection; the County/Region label is the same for every country', async () => {
+test('country and county changes clear the selection; each country uses its own region label', async () => {
   await region(); await change('City *', '681290'); await change('Region *', '01'); expect(output()).toBe('cleared'); expect(field('City *').value).toBe('')
-  await change('Country *', 'US'); expect(field('Region *').value).toBe(''); expect(field('City *').disabled).toBe(true); expect(container.textContent).toContain('County/Region *'); expect(container.textContent).not.toContain('State *')
+  await change('Country *', 'US'); expect(field('Region *').value).toBe(''); expect(field('City *').disabled).toBe(true); expect(container.textContent).toContain('State *'); expect(container.textContent).not.toContain('County *')
 })
 test('guard refusal keeps the current binding', async () => {
   await region(); await change('City *', '681290'); guard.mockReturnValue(false); await change('Region *', '01')
@@ -85,7 +87,7 @@ test('every page of a region is loaded and manual Localities from the first page
 })
 test('the unspecified region and code-only regions are offered; empty region metadata is explicit', async () => {
   api.regions.mockResolvedValue({ regions: [{ countryCode: 'RO', admin1Code: 'unspecified', displayName: 'Other (region not specified)', labelStatus: 'unspecified' }, { countryCode: 'RO', admin1Code: '13', displayName: 'Cluj', labelStatus: 'resolved' }], regionLabel: 'County', metadataStatus: 'ready', nextAfter: null })
-  await render(); await change('Country *', 'RO'); expect(options('Region *')).toEqual(['Choose County/Region', 'Cluj', 'Other (region not specified)'])
+  await render(); await change('Country *', 'RO'); expect(options('Region *')).toEqual(['Choose County', 'Cluj', 'Other (region not specified)'])
   api.regions.mockResolvedValue({ regions: [], regionLabel: 'County', metadataStatus: 'ready', nextAfter: null }); await change('Country *', 'US'); expect(container.textContent).toContain('No regions available')
 })
 test('saved draft restores country, region and city from the canonical Locality without writes', async () => {
@@ -113,4 +115,35 @@ test('a new selector preselects nothing', async () => {
 })
 test('desktop row and mobile stacking use responsive grid classes', async () => {
   await render(); const grid = container.querySelector('.grid')!; expect(grid.classList.contains('grid-cols-1')).toBe(true); expect(grid.classList.contains('sm:grid-cols-3')).toBe(true); expect(grid.querySelectorAll('label')).toHaveLength(3)
+})
+
+const communes = { subregions: [
+  { countryCode: 'RO', admin1Code: '13', admin2Code: '54975', displayName: 'Municipiul Cluj-Napoca', labelStatus: 'resolved' },
+  { countryCode: 'RO', admin1Code: '13', admin2Code: '55003', displayName: 'Municipiul Turda', labelStatus: 'resolved' },
+  { countryCode: 'RO', admin1Code: '13', admin2Code: 'unspecified', displayName: 'Other (not specified)', labelStatus: 'unspecified' },
+], regionLabel: 'County', subregionLabel: 'Commune' }
+test('optional Subregion: All of the region by default, a subdivision narrows the cities, changes reset the city', async () => {
+  api.subregions.mockResolvedValue(communes)
+  api.browse.mockImplementation(async (_c: string, _r: string, _a?: string, admin2?: string) => ({ cities: admin2 === '55003' ? [turda] : admin2 ? [] : [turda, city], registryLocalities: [], nextAfter: null }))
+  await region()
+  expect(api.subregions).toHaveBeenCalledWith('RO', '13'); expect(container.textContent).toContain('Commune')
+  expect(options('Subregion')).toEqual(['All of Cluj', 'Municipiul Cluj-Napoca', 'Municipiul Turda', 'Other (not specified)'])
+  expect(field('Subregion').value).toBe(''); expect(options('City *')).toEqual(['Choose City', 'Cluj-Napoca', 'Turda'])
+  await change('City *', '681290'); expect(output()).toBe(locality.id)
+  await change('Subregion', '55003'); expect(output()).toBe('cleared'); expect(api.browse).toHaveBeenLastCalledWith('RO', '13', undefined, '55003'); expect(options('City *')).toEqual(['Choose City', 'Turda'])
+  await change('Subregion', ''); expect(options('City *')).toEqual(['Choose City', 'Cluj-Napoca', 'Turda'])
+  await change('Subregion', '55003'); await change('Region *', '01'); expect(field('Subregion')).toBeNull(); expect(api.browse).toHaveBeenLastCalledWith('RO', '01', undefined)
+  await change('Country *', 'US'); expect(field('Subregion')).toBeNull(); expect(field('Region *').value).toBe('')
+})
+test('the unspecified region has no Subregion level and a failed subregion lookup keeps the whole region usable', async () => {
+  api.subregions.mockRejectedValue(new Error('offline'))
+  await region(); expect(field('Subregion')).toBeNull(); expect(options('City *')).toEqual(['Choose City', 'Cluj-Napoca', 'Turda'])
+  expect(container.querySelector('[role=alert]')).toBeNull()
+  api.subregions.mockClear(); api.regions.mockResolvedValue({ regions: [{ countryCode: 'RO', admin1Code: 'unspecified', displayName: 'Other (region not specified)', labelStatus: 'unspecified' }], regionLabel: 'County', metadataStatus: 'ready', nextAfter: null })
+  await change('Country *', 'US'); await change('Country *', 'RO'); await change('Region *', 'unspecified'); expect(api.subregions).not.toHaveBeenCalled()
+})
+test('a saved draft restores its subdivision from the canonical Locality', async () => {
+  api.subregions.mockResolvedValue(communes); api.get.mockResolvedValue({ ...locality, admin1Code: '13', admin2Code: '54975', subregionDisplayName: 'Municipiul Cluj-Napoca' })
+  await render(true)
+  expect(field('Subregion').value).toBe('54975'); expect(api.browse).toHaveBeenCalledWith('RO', '13', undefined, '54975'); expect(field('City *').value).toBe('681290')
 })
