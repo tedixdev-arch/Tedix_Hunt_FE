@@ -48,3 +48,18 @@ test('10b proposal is filed in the selected county/region and is refused for pla
   api.submit.mockRejectedValue(new ApiError('catalog_city_exists', 409, 'http', { error: 'catalog_city_exists' })); await fill(); await click('Send locality')
   expect(container.textContent).toContain('already in the City list'); expect(select).not.toHaveBeenCalled()
 })
+
+test('10c the proposal uses the country\'s own region label and sends people to the whole region when a subdivision filter hides cities', async () => {
+  const props = { country: 'RO', countries: [{ code: 'RO', displayName: 'Romania' }], regionRequired: true, regionLabel: 'County', onRegistryPlace: select }
+  await act(async () => root.render(<LocalityProposals {...props} region={null} />))
+  await click("Can't find"); expect(container.textContent).toContain('County: Choose County above'); expect(container.textContent).not.toContain('County/Region')
+  await act(async () => root.render(<LocalityProposals {...props} region={{ admin1Code: '13', displayName: 'Cluj' }} subregion={{ label: 'Commune', displayName: 'Comuna Apahida' }} />))
+  expect(container.textContent).toContain('The City list above shows only Comuna Apahida. Choose "All of Cluj"')
+  expect((container.querySelectorAll('input')[1] as HTMLInputElement).placeholder).toBe('Comuna Apahida, Cluj')
+  // Proposals stay at region level: the subdivision is never sent.
+  await fill(); await click('Send locality'); expect(api.submit).toHaveBeenCalledExactlyOnceWith({ ...input, admin1Code: '13' })
+  api.submit.mockRejectedValue(new ApiError('catalog_city_exists', 409, 'http', { error: 'catalog_city_exists' })); await fill(); await click('Send locality')
+  expect(container.querySelector('[role=alert]')!.textContent).toBe('This place is already in the City list for the chosen county. Choose "All of Cluj" and pick it from the City dropdown instead; a proposal is not needed.')
+  await act(async () => root.render(<LocalityProposals {...props} region={{ admin1Code: '13', displayName: 'Cluj' }} />))
+  expect(container.textContent).not.toContain('The City list above shows only')
+})

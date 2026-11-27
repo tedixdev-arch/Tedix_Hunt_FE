@@ -21,7 +21,7 @@ beforeEach(() => {
   vi.spyOn(huntOptionsApi, 'listHuntOptions').mockResolvedValue(options)
   vi.spyOn(rewardOptionsApi, 'getOptions').mockResolvedValue({ providers: [{ key: 'tedix_inventory', label: 'Tedix inventory' }], kinds: [{ key: 'physical', label: 'Physical' }], virtualCategories: [], specialAwardDefinitions: [] })
   vi.spyOn(huntRewardsApi, 'list').mockResolvedValue({ leaderboard: [], specialAwards: [] })
-  vi.spyOn(organizerLocalApi, 'page').mockImplementation(async kind => ({ items: (kind === 'countries' ? [{ countryCode: 'RO', displayName: 'Romania' }] : kind === 'regions' ? [{ regionId: 'RO:admin1:13', countryCode: 'RO', label: 'Cluj' }] : kind === 'cities' ? [{ geographicId: '681290', localityId: local.localityId, countryCode: 'RO', name: 'Cluj-Napoca', regionId: 'RO:admin1:13', countryDisplayName: 'Romania', regionDisplayName: 'Cluj' }] : [local]) as never[], nextCursor: null }))
+  vi.spyOn(organizerLocalApi, 'page').mockImplementation(async kind => ({ items: (kind === 'countries' ? [{ countryCode: 'RO', displayName: 'Romania' }] : kind === 'regions' ? [{ regionId: 'RO:admin1:13', countryCode: 'RO', label: 'Cluj' }] : kind === 'subregions' ? [] : kind === 'cities' ? [{ geographicId: '681290', localityId: local.localityId, countryCode: 'RO', name: 'Cluj-Napoca', regionId: 'RO:admin1:13', countryDisplayName: 'Romania', regionDisplayName: 'Cluj' }] : [local]) as never[], nextCursor: null }))
   vi.spyOn(organizerLocalApi, 'preview').mockResolvedValue({ ...local, configuration: { checkpointPositions: [] } })
   vi.spyOn(huntsApi, 'createDraft').mockImplementation(async input => { saved = { ...saved, ...input }; return saved })
   vi.spyOn(organizerLocalApi, 'select').mockImplementation(async () => {
@@ -79,7 +79,7 @@ test('Cluj on a later catalog page is still listed (full country imports span se
   expect(button('Choose Hunt').disabled).toBe(false)
   expect(container.textContent).not.toContain('Show more')
 })
-test('any listed city can be chosen without registration; options are plain names; one County/Region label', async () => {
+test('any listed city can be chosen without registration; options are plain names; the country\'s own region label', async () => {
   const original = vi.mocked(organizerLocalApi.page).getMockImplementation()!
   vi.mocked(organizerLocalApi.page).mockImplementation(async (kind, filters, cursor) => kind === 'regions'
     ? { items: [{ regionId: 'RO:admin1:13', countryCode: 'RO', label: 'Cluj', levelLabel: 'County' }] as never[], nextCursor: null }
@@ -89,7 +89,7 @@ test('any listed city can be chosen without registration; options are plain name
       { geographicId: null, localityId: 'manual-1', registeredActive: true, countryCode: 'RO', name: 'Added Hamlet', regionId: 'RO:admin1:13', source: 'registry', attribution: null },
     ] as never[], nextCursor: null } : original(kind, filters, cursor))
   await mount(); await pick(0, 'RO'); await pick(1, 'RO:admin1:13')
-  expect(container.textContent).toContain('County/Region')
+  expect(container.textContent).toContain('Choose County'); expect(container.textContent).not.toContain('County/Region')
   const city = container.querySelectorAll('select')[2] as HTMLSelectElement
   expect([...city.options].map(o => o.text)).toEqual(['Choose City', 'Added Hamlet', 'Cluj-Napoca', 'Turda'])
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(city, '665444'); city.dispatchEvent(new Event('change', { bubbles: true })) })
@@ -155,4 +155,29 @@ test.each([false, true])('saved draft creation preserves server identity and eli
     expect(container.textContent).toContain('Your Hunt is created')
     expect(container.querySelector('input[readonly]')?.getAttribute('value')).toContain('REAL-ACCESS')
   }
+})
+test('optional Subregion: All of the region lists every city; a subdivision filters cities by subregionId; region change resets it', async () => {
+  const original = vi.mocked(organizerLocalApi.page).getMockImplementation()!
+  const city = (geographicId: string, name: string, subregionId: string) => ({ geographicId, localityId: null, countryCode: 'US', name, regionId: 'US:admin1:CA', subregionId, countryDisplayName: 'United States', regionDisplayName: 'California', attribution: 'GeoNames (CC BY 4.0)' })
+  const all = [city('5368361', 'Los Angeles', 'US:admin1:CA:admin2:037'), city('5391959', 'San Francisco', 'US:admin1:CA:admin2:075')]
+  vi.mocked(organizerLocalApi.page).mockImplementation(async (kind, filters, cursor) => kind === 'countries' ? { items: [{ countryCode: 'US', displayName: 'United States' }] as never[], nextCursor: null }
+    : kind === 'regions' ? { items: [{ regionId: 'US:admin1:CA', countryCode: 'US', label: 'California', levelLabel: 'State' }, { regionId: 'US:admin1:NV', countryCode: 'US', label: 'Nevada', levelLabel: 'State' }] as never[], nextCursor: null }
+    : kind === 'subregions' ? { items: (filters.regionId === 'US:admin1:CA' ? [
+        { subregionId: 'US:admin1:CA:admin2:075', regionId: 'US:admin1:CA', subregionCode: '075', label: 'San Francisco County', labelStatus: 'resolved', levelLabel: 'County' },
+        { subregionId: 'US:admin1:CA:admin2:037', regionId: 'US:admin1:CA', subregionCode: '037', label: 'Los Angeles County', labelStatus: 'resolved', levelLabel: 'County' }] : []) as never[], nextCursor: null }
+    : kind === 'cities' ? { items: all.filter(item => item.regionId === filters.regionId && (!filters.subregionId || item.subregionId === filters.subregionId)) as never[], nextCursor: null }
+    : original(kind, filters, cursor))
+  await mount(); await pick(0, 'US')
+  expect(selectedText()).toEqual(['United States', 'Choose State', 'Choose City'])
+  await pick(1, 'US:admin1:CA')
+  expect(selectedText()).toEqual(['United States', 'California', 'All of California', 'Choose City'])
+  expect(container.textContent).toContain('County')
+  expect([...container.querySelectorAll('select')[2].querySelectorAll('option')].map(o => o.text)).toEqual(['All of California', 'Los Angeles County', 'San Francisco County'])
+  expect([...container.querySelectorAll('select')[3].querySelectorAll('option')].map(o => o.text)).toEqual(['Choose City', 'Los Angeles', 'San Francisco'])
+  await pick(3, '5368361'); await pick(2, 'US:admin1:CA:admin2:075')
+  expect(organizerLocalApi.page).toHaveBeenCalledWith('cities', { countryCode: 'US', regionId: 'US:admin1:CA', subregionId: 'US:admin1:CA:admin2:075' })
+  expect(selectedText()).toEqual(['United States', 'California', 'San Francisco County', 'Choose City'])
+  expect([...container.querySelectorAll('select')[3].querySelectorAll('option')].map(o => o.text)).toEqual(['Choose City', 'San Francisco'])
+  // A region without official subdivisions has no Subregion dropdown.
+  await pick(1, 'US:admin1:NV'); expect(container.querySelectorAll('select')).toHaveLength(3); expect(selectedText()).toEqual(['United States', 'Nevada', 'Choose City'])
 })
