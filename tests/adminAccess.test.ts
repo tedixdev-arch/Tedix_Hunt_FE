@@ -64,3 +64,13 @@ test('legacy verification redirects, fake 2FA is absent, and Admin logout uses s
   assert.match(consolePage, /<OrganizerHeader logoutTo="\/admin\/sign-in" showProfile\/>/)
   assert.match(provider, /const logout = useCallback\(async \(\) => \{[\s\S]*?setUser\(null\)[\s\S]*?await authApi\.logout\(\)/)
 })
+
+test('Admins get their own Hunt detail route; Organizer Hunt links send Admin-only users there', async () => {
+  const router = await readFile(new URL('../src/routes/router.tsx', import.meta.url), 'utf8')
+  assert.match(router, /path: '\/admin\/hunts\/:huntId',\s*element: <RequireAdmin><AdminHuntDetailPage \/><\/RequireAdmin>/)
+  const route = router.match(/function OrganizerHuntRoute[\s\S]*?\n}\n/)?.[0] ?? ''
+  assert.match(route, /!canAccessOrganizer\(user\) && canAccessAdmin\(user\)\) return <Navigate replace to=\{`\/admin\/hunts\/\$\{encodeURIComponent\(huntId\)}`} \/>/)
+  assert.match(route, /return <RequireOrganizer><OrganizerMonitorPage \/><\/RequireOrganizer>/)
+  // The Organizer monitor no longer admits Admins through the Organizer guard.
+  assert.doesNotMatch(router, /<RequireOrganizer allowAdmin><OrganizerMonitorPage/)
+})

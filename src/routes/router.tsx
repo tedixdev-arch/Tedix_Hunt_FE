@@ -1,4 +1,4 @@
-import { createHashRouter, Navigate, useLocation } from 'react-router-dom'
+import { createHashRouter, Navigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../app/providers/AuthProvider'
 import { TemplateOneExperience } from '../pages/template-one/TemplateOneExperience'
 import { CreatorStudioPage, CreatorTemplateEditorPage } from '../pages/CreatorStudio'
@@ -11,11 +11,12 @@ import { ParticipantReadinessPage } from '../pages/ParticipantReadinessPage'
 import { LiveHuntPlayPage } from '../pages/LiveHuntPlay'
 import { IndependentOrganizerPage, OrganizerHuntsPage, OrganizerSignInPage, RegisteredOrganizerSignInPage } from '../pages/OrganizerFlow'
 import { RegisteredOrganizerApplicationPage } from '../pages/RegisteredOrganizerApplicationPage'
-import { CustomRequestPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
+import { CustomRequestPage, OrganizerCustomRequestsPage, OrganizerSetupChoicePage } from '../pages/OrganizerSetupFlow'
 import { OrganizerSetup } from '../features/organizer/OrganizerSetup'
 import { OrganizerMonitorPage } from '../pages/OrganizerMonitor'
 import { AdminRewardInventoryPage } from '../pages/AdminConsole'
 import { AdminAlertsPage, AdminCustomRequestsPage, AdminDashboardPage, AdminHuntsPage } from '../pages/AdminOperations'
+import { AdminHuntDetailPage } from '../pages/AdminHuntDetail'
 import { AdminAuditLogPage, AdminSettingsPage } from '../pages/AdminSettingsAudit'
 import { AdminTemplateReviewDetailPage, AdminTemplateReviewsPage } from '../pages/AdminTemplateReviews'
 import { AdminLocationsPage } from '../pages/AdminLocations'
@@ -58,14 +59,25 @@ function RequireAdmin({ children }: { children: ReactNode }) {
   return children
 }
 
-function RequireOrganizer({ children, allowIndependent = false, allowAdmin = false }: { children: ReactNode; allowIndependent?: boolean; allowAdmin?: boolean }) {
+function RequireOrganizer({ children, allowIndependent = false }: { children: ReactNode; allowIndependent?: boolean }) {
   const { user, isBootstrapping } = useAuth()
   const location = useLocation()
   if (allowIndependent && new URLSearchParams(location.search).get('mode') === 'independent') return children
   if (isBootstrapping) return <main className="grid min-h-dvh place-items-center bg-slate-950 text-white">Loading…</main>
   if (!user) return <Navigate replace state={{ from: location.pathname }} to="/organizer/registered" />
-  if (!canAccessOrganizer(user) && !(allowAdmin && canAccessAdmin(user))) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-bold">Organizer access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Organizer access.</p></div></main>
+  if (!canAccessOrganizer(user)) return <main className="grid min-h-dvh place-items-center bg-slate-100 px-5 text-center text-slate-950"><div><h1 className="text-2xl font-bold">Organizer access required</h1><p className="mt-3 text-slate-600" role="alert">This account does not have Organizer access.</p></div></main>
   return children
+}
+
+/**
+ * Organizer Hunt monitor. Admins without Organizer access are sent to the Admin Hunt page instead of an
+ * Organizer screen whose APIs would reject them; Organizers keep the existing page and permissions.
+ */
+function OrganizerHuntRoute() {
+  const { user, isBootstrapping } = useAuth()
+  const { huntId = '' } = useParams()
+  if (!isBootstrapping && user && !canAccessOrganizer(user) && canAccessAdmin(user)) return <Navigate replace to={`/admin/hunts/${encodeURIComponent(huntId)}`} />
+  return <RequireOrganizer><OrganizerMonitorPage /></RequireOrganizer>
 }
 
 export const router = createHashRouter([
@@ -174,8 +186,12 @@ export const router = createHashRouter([
     element: <CustomRequestPage />,
   },
   {
+    path: '/organizer/custom-requests',
+    element: <RequireOrganizer><OrganizerCustomRequestsPage /></RequireOrganizer>,
+  },
+  {
     path: '/organizer/hunts/:huntId',
-    element: <RequireOrganizer allowAdmin><OrganizerMonitorPage /></RequireOrganizer>,
+    element: <OrganizerHuntRoute />,
   },
   {
     path: '/creator/sign-in',
@@ -236,6 +252,10 @@ export const router = createHashRouter([
   {
     path: '/admin/hunts',
     element: <RequireAdmin><AdminHuntsPage /></RequireAdmin>,
+  },
+  {
+    path: '/admin/hunts/:huntId',
+    element: <RequireAdmin><AdminHuntDetailPage /></RequireAdmin>,
   },
   {
     path: '/admin/rewards',

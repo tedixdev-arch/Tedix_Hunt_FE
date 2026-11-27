@@ -18,7 +18,17 @@ export interface TeamChallenge {
   teamKind?: string; teamPrompt?: string; teamRule?: string; teamInstruction?: string; personalMask?: string; teamDisplay?: string
   teamOptions: string[]; publicContributions: string[]
 }
-export interface PersonalReveal { successText?: string; personalContribution?: string; personalMask?: string; correctedExpression?: string; mistakeContent?: string | null }
+/**
+ * A Creator or Library exercise as sent to participants: no answers, hints or solutions. `interaction` is the
+ * per-mechanic participant view (docs/Custom_Exercise_Gameplay.md in the backend).
+ */
+export interface CustomExercisePlay {
+  type: string; classification: 'personal' | 'team'; title: string; instructions: string
+  interaction: Record<string, any>
+}
+/** Response for a custom exercise: the shape of its answer, without authoring flags. */
+export type CustomExerciseResponse = Record<string, unknown>
+export interface PersonalReveal { successText?: string; personalContribution?: string; personalMask?: string; correctedExpression?: string; mistakeContent?: string | null; recallCard?: string }
 export interface TeamReveal { storySuccess?: string; teamAnswer: string | null }
 export interface CurrentCheckpoint {
   checkpointId: string; ordinal: number; kind: 'regular' | 'finish'
@@ -26,6 +36,8 @@ export interface CurrentCheckpoint {
   playable: boolean
   story?: PersonalChallenge; personalAttempts?: number
   personalReveal?: PersonalReveal; team?: TeamChallenge; teamAttempts?: number
+  /** Present when the current stage is a custom exercise instead of predefined content. */
+  personalExercise?: CustomExercisePlay; teamExercise?: CustomExercisePlay
 }
 export interface PlayState {
   huntId: string; participantId: string; huntName: string
@@ -58,6 +70,9 @@ export class GameplayApi {
   }
   answerTeam(huntId: string, checkpointId: string, answer: string) {
     return this.client.post<AnswerResult>(`/api/hunts/${encodeURIComponent(huntId)}/checkpoints/${encodeURIComponent(checkpointId)}/answer`, { stage: 'team', answer })
+  }
+  answerCustom(huntId: string, checkpointId: string, stage: 'personal' | 'team', response: CustomExerciseResponse) {
+    return this.client.post<AnswerResult>(`/api/hunts/${encodeURIComponent(huntId)}/checkpoints/${encodeURIComponent(checkpointId)}/answer`, { stage, response })
   }
   requestHelp(huntId: string, kind: 'help' | 'emergency', message: string) {
     return this.client.post(`/api/hunts/${encodeURIComponent(huntId)}/participants/me/help`, { kind, message })

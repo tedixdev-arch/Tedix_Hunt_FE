@@ -97,7 +97,7 @@ function detailText(event: AuditEvent) {
   const entries = Object.entries(event.details).filter(([, v]) => v !== null && v !== '')
   return entries.map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`).join(' · ')
 }
-const targetLink = (event: AuditEvent) => event.targetId && event.targetType === 'hunt' ? `/organizer/hunts/${event.targetId}`
+const targetLink = (event: AuditEvent) => event.targetId && event.targetType === 'hunt' ? `/admin/hunts/${event.targetId}`
   : event.targetId && event.targetType === 'template' ? `/admin/reviews/${event.targetId}` : null
 
 export function AdminAuditLogPage() {

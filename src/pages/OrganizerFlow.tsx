@@ -199,7 +199,7 @@ export function OrganizerHuntsPage() {
       <div className="mx-auto max-w-6xl px-5 py-7 sm:px-8 sm:py-10">
         <div className="gap-6 sm:flex sm:items-end sm:justify-between">
           <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Organizer workspace</p><h1 className="mt-2 text-4xl font-bold tracking-tight">My Hunts</h1><p className="mt-3 text-slate-600">See what needs attention and take the next action.</p></div>
-          <Link className="mt-6 flex min-h-14 items-center justify-center rounded-xl bg-emerald-500 px-6 font-bold text-slate-950 shadow-sm hover:bg-emerald-400 sm:mt-0" to="/organizer/hunts/new">+ Set up a hunt</Link>
+          <div className="mt-6 flex flex-col gap-2 sm:mt-0 sm:items-end"><Link className="flex min-h-14 items-center justify-center rounded-xl bg-emerald-500 px-6 font-bold text-slate-950 shadow-sm hover:bg-emerald-400" to="/organizer/hunts/new">+ Set up a hunt</Link><Link className="text-sm font-bold text-emerald-800 underline" to="/organizer/custom-requests">My custom Hunt requests</Link></div>
         </div>
 
         <section className="mt-7 grid grid-cols-2 gap-3 sm:max-w-lg" aria-label="Hunt summary">
