@@ -56,7 +56,7 @@ export function LocalityProposalReview() {
           setItems(pending); setSelected(pending.find(item => item.id === original.id) ?? null); setReason('')
           const code = (cause.details as { error?: string } | undefined)?.error ?? cause.message
           setError(code === 'locality_duplicate_conflict' ? 'A duplicate locality conflicts with approval. The proposal remains pending. Inspect the possible matches; no records were merged.'
-            : code === 'catalog_city_exists' ? 'This place is already in the GeoNames city list for this county/region, so it must not be created from a proposal. Reject the proposal: Creators and Organizers can choose the listed city directly. The proposal remains pending.'
+            : code === 'catalog_city_exists' ? 'This place is already in the GeoNames city list for this region, so it must not be created from a proposal. Reject the proposal: Creators and Organizers can choose the listed city directly. The proposal remains pending.'
             : 'This proposal changed or was already decided. Inspect the refreshed queue and make a new explicit decision.')
         } catch (refreshError) { setSelected(null); setItems(null); setBlocked(true); setError(reviewError(refreshError)) }
       } else {

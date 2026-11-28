@@ -2,17 +2,18 @@ import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../services/api/client'
 import { geographyApi, type Country, type Locality } from '../../services/api/geography'
 import { localityProposalsApi, type LocalityProposal, type LocalityProposalInput } from '../../services/api/localityProposals'
+import { locationLabels as L } from '../location/locationLabels'
 
 const control = 'mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm'
 const empty = { name: '', administrativeContext: '', latitude: '', longitude: '', explanation: '', evidenceReference: '' }
-function failure(error: unknown) {
+function failure(error: unknown, level = L.region.toLowerCase(), wholeRegion = '') {
   if (error instanceof ApiError) {
     if (error.status === 401) return 'Your session has expired. Please sign in again.'
     if (error.status === 403) return 'Your account cannot access locality proposals.'
     const code = (error.details as { error?: string } | undefined)?.error
-    if (code === 'region_required') return 'Choose the county or region above before sending a proposal. Your input is kept.'
-    if (code === 'catalog_city_exists') return 'This place is already in the City list for the chosen county/region. Choose it from the City dropdown instead; a proposal is not needed.'
-    if (error.status === 400) return 'Check the country, county/region, name, administrative context, coordinates and independent evidence. Your input is kept.'
+    if (code === 'region_required') return `Choose the ${level} above before sending a proposal. Your input is kept.`
+    if (code === 'catalog_city_exists') return `This place is already in the City list for the chosen ${level}. ${wholeRegion ? `Choose "${wholeRegion}" and pick it` : 'Choose it'} from the City dropdown instead; a proposal is not needed.`
+    if (error.status === 400) return `Check the country, ${level}, name, administrative context, coordinates and independent evidence. Your input is kept.`
     if (error.status === 409) return 'A duplicate or decision conflict was reported. Refresh your proposals and search the registry before trying again. A pending proposal is still unavailable for selection.'
   }
   return 'The request could not be confirmed. Refresh your proposals before trying again to avoid sending a duplicate.'
@@ -29,12 +30,20 @@ export function proposalValidation(input: LocalityProposalInput): string {
 }
 
 /** Kept inside the existing geography section; proposals never become registry records here. */
-/** Region chosen in the location selector; the proposal is filed in that county/region. */
+/**
+ * Region chosen in the location selector; the proposal is filed in that region (GeoNames admin1). Proposals stay at
+ * region level: an approved place becomes a manual Locality listed under "All of <region>" and the
+ * "Other (not specified)" subregion group, never under an official subdivision.
+ */
 export interface ProposalRegion { admin1Code: string; displayName: string }
-export function LocalityProposals({ country, countries, region, regionRequired = false, onRegistryPlace }: {
+export function LocalityProposals({ country, countries, region, regionRequired = false, regionLabel = L.region, subregion = null, onRegistryPlace }: {
   country: string; countries: Country[]
-  /** Official county/region selected above, or null when none (or the unspecified group) is selected. */
+  /** Official region selected above, or null when none (or the unspecified group) is selected. */
   region?: ProposalRegion | null
+  /** The country's own name for the region level (County, State, Region…). */
+  regionLabel?: string
+  /** Official subdivision chosen in the optional Subregion filter, if any: the City list above shows only its cities. */
+  subregion?: { label: string; displayName: string } | null
   /** True when the country has official regions, so a proposal must name one. */
   regionRequired?: boolean
   onRegistryPlace: (place: Locality) => void
@@ -44,13 +53,16 @@ export function LocalityProposals({ country, countries, region, regionRequired =
   const [loading, setLoading] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('')
   const [uncertain, setUncertain] = useState(false)
   const lock = useRef(false), sequence = useRef(0)
+  const level = regionLabel.toLowerCase()
+  // A subdivision filter hides the region's other cities: send people to the whole region before proposing.
+  const wholeRegion = subregion && region ? `All of ${region.displayName}` : ''
   const load = async () => {
     const request = ++sequence.current
     setLoading(true); setError('')
     try {
       const result = await localityProposalsApi.mine()
       if (request === sequence.current) { setProposals(result.proposals); setUncertain(false) }
-    } catch (reason) { if (request === sequence.current) { setProposals([]); setError(failure(reason)) } }
+    } catch (reason) { if (request === sequence.current) { setProposals([]); setError(failure(reason, level, wholeRegion)) } }
     finally { if (request === sequence.current) setLoading(false) }
   }
   useEffect(() => { if (open) void load(); return () => { ++sequence.current } }, [open])
@@ -58,7 +70,7 @@ export function LocalityProposals({ country, countries, region, regionRequired =
     if (lock.current || uncertain || loading) return
     const input = { ...draft, countryCode: country, latitude: draft.latitude.trim() ? Number(draft.latitude) : NaN, longitude: draft.longitude.trim() ? Number(draft.longitude) : NaN,
       ...(region ? { admin1Code: region.admin1Code } : {}) }
-    if (regionRequired && !region) { setError('Choose the county or region above before sending a proposal.'); return }
+    if (regionRequired && !region) { setError(`Choose the ${level} above before sending a proposal.`); return }
     const invalid = proposalValidation(input)
     if (invalid) { setError(invalid); return }
     lock.current = true; setBusy(true); setError(''); setNotice('')
@@ -67,7 +79,7 @@ export function LocalityProposals({ country, countries, region, regionRequired =
       setProposals(current => [result, ...current.filter(item => item.id !== result.id)])
       setDraft(empty); setNotice('Proposal sent for independent review. It cannot be selected while pending.')
     } catch (reason) {
-      setError(failure(reason))
+      setError(failure(reason, level, wholeRegion))
       if (!(reason instanceof ApiError) || reason.status === null || reason.status >= 500) setUncertain(true)
       if (reason instanceof ApiError && [401, 403].includes(reason.status ?? 0)) setProposals([])
     } finally { lock.current = false; setBusy(false) }
@@ -87,12 +99,13 @@ export function LocalityProposals({ country, countries, region, regionRequired =
     <button type="button" aria-expanded={open} aria-controls="locality-proposals" className="min-h-12 text-left text-sm font-bold underline" onClick={() => setOpen(value => !value)}>Can't find your locality?</button>
     {open && <div id="locality-proposals" className="min-w-0 space-y-4">
       <h3 className="font-bold">Propose a missing locality</h3>
-      <p className="text-sm text-slate-600">Only for a place that is <strong>not in the City list</strong> for its county/region. If the place is in the list, choose it there instead. Use independently sourced coordinates and evidence with permission to store them. Do not copy temporary provider results. An Admin reviews the proposal separately.</p>
+      <p className="text-sm text-slate-600">Only for a place that is <strong>not in the City list</strong> for its {level}. If the place is in the list, choose it there instead. Use independently sourced coordinates and evidence with permission to store them. Do not copy temporary provider results. An Admin reviews the proposal separately.</p>
       <p className="text-sm font-bold">Country: {countries.find(item => item.code === country)?.displayName ?? 'Choose Country above'}</p>
-      <p className="text-sm font-bold">County/Region: {region?.displayName ?? (regionRequired ? 'Choose County/Region above' : 'Not specified')}</p>
+      <p className="text-sm font-bold">{regionLabel}: {region?.displayName ?? (regionRequired ? `Choose ${regionLabel} above` : 'Not specified')}</p>
+      {wholeRegion && <p role="note" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-950">The City list above shows only {subregion!.displayName}. Choose "{wholeRegion}" and check the full City list before proposing a place.</p>}
       <fieldset disabled={busy || loading} className="grid min-w-0 gap-4 sm:grid-cols-2">
         <label className="text-sm font-bold">Locality name<input className={control} maxLength={200} value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} /></label>
-        <label className="text-sm font-bold">Administrative context<input className={control} maxLength={200} placeholder={region?.displayName ?? 'County or region'} value={draft.administrativeContext} onChange={e => setDraft({ ...draft, administrativeContext: e.target.value })} /></label>
+        <label className="text-sm font-bold">Administrative context<input className={control} maxLength={200} placeholder={[subregion?.displayName, region?.displayName].filter(Boolean).join(', ') || regionLabel} value={draft.administrativeContext} onChange={e => setDraft({ ...draft, administrativeContext: e.target.value })} /></label>
         <label className="text-sm font-bold">Latitude<input className={control} type="number" step="any" min={-90} max={90} value={draft.latitude} onChange={e => setDraft({ ...draft, latitude: e.target.value })} /></label>
         <label className="text-sm font-bold">Longitude<input className={control} type="number" step="any" min={-180} max={180} value={draft.longitude} onChange={e => setDraft({ ...draft, longitude: e.target.value })} /></label>
         <label className="text-sm font-bold sm:col-span-2">Why is this locality missing?<textarea className={control} maxLength={1000} value={draft.explanation} onChange={e => setDraft({ ...draft, explanation: e.target.value })} /></label>

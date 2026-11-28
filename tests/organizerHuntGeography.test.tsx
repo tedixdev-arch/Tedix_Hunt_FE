@@ -15,7 +15,8 @@ vi.mock('../src/services/api', async importOriginal => ({
   huntTemplatesApi: { listHuntTemplates: mocks.catalog, getApprovedGeography: mocks.geography }, huntOptionsApi: { listHuntOptions: mocks.options },
   organizationsApi: { listAccessible: mocks.organizations }, huntRewardsApi: { list: mocks.rewards },
 }))
-vi.mock('../src/services/api/organizerLocal', () => ({ organizerLocalApi: { page: async () => ({ items: [], nextCursor: null }) } }))
+const localPage = vi.hoisted(() => vi.fn())
+vi.mock('../src/services/api/organizerLocal', () => ({ organizerLocalApi: { page: localPage } }))
 vi.mock('mapbox-gl', () => ({ default: {
   Map: class {
     handlers = new Map<string, Set<(...args: any[]) => void>>()
@@ -60,6 +61,7 @@ beforeEach(() => {
   mocks.geography.mockReset().mockImplementation(async (key: string) => ({ key, version: catalog.find(item => item.key === key)!.version, configuration: structuredClone(configuration) }))
   mocks.options.mockResolvedValue(options); mocks.organizations.mockResolvedValue([{ id: 'org', name: 'School' }]); mocks.rewards.mockResolvedValue({ leaderboard: [], specialAwards: [] })
   mocks.publish.mockReset().mockResolvedValue({ ...savedHunt, status: 'published' })
+  localPage.mockReset().mockImplementation(async () => ({ items: [], nextCursor: null }))
   vi.stubEnv('VITE_DEPLOYMENT_ENVIRONMENT', 'development'); vi.stubEnv('VITE_API_BASE_URL', 'https://tedixhunt-be-dev.anainfo.ai')
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-token')
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
@@ -358,4 +360,34 @@ test('development Organizer retains saved geographic data without replacing it w
   await editor()
   const citySelect = [...container.querySelectorAll('label')].find(item => item.firstChild?.textContent === 'City')!.querySelector('select')!
   expect([...citySelect.options].map(option => option.text)).toEqual(['Paris']); expect(citySelect.value).toBe('Paris'); noMutation()
+})
+test('Custom Hunt location: country-specific region label, optional Subregion filter that narrows cities and is never saved', async () => {
+  mocks.create.mockResolvedValue({ ...savedHunt, id: 'new-hunt' })
+  mocks.update.mockImplementation(async (_id, input) => ({ ...savedHunt, id: 'new-hunt', ...input }))
+  localPage.mockImplementation(async (kind: string, filters: Record<string, string>) => ({ nextCursor: null, items:
+    kind === 'countries' ? [{ countryCode: 'US', displayName: 'United States' }]
+    : kind === 'regions' ? [{ regionId: 'US:admin1:TX', label: 'Texas', levelLabel: 'State' }, { regionId: 'US:admin1:DC', label: 'District of Columbia', levelLabel: 'State' }]
+    : kind === 'subregions' ? (filters.regionId === 'US:admin1:TX' ? [{ subregionId: 'US:admin1:TX:admin2:201', label: 'Harris County', labelStatus: 'resolved', levelLabel: 'County' }, { subregionId: 'US:admin1:TX:admin2:113', label: 'Dallas County', labelStatus: 'resolved', levelLabel: 'County' }] : [])
+    : kind === 'cities' ? (filters.subregionId === 'US:admin1:TX:admin2:201' ? [{ name: 'Houston' }] : filters.regionId === 'US:admin1:DC' ? [{ name: 'Washington' }] : [{ name: 'Dallas' }, { name: 'Houston' }])
+    : [] }))
+  await editor('/organizer/hunts/new/setup')
+  const field = (label: string) => [...container.querySelectorAll('label')].find(item => item.firstChild?.textContent === label)?.querySelector('select') ?? null
+  const options = (label: string) => [...field(label)!.options].map(option => option.text)
+  const pick = async (label: string, value: string) => { const node = field(label)!; await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(node, value); node.dispatchEvent(new Event('change', { bubbles: true })) }) }
+  await pick('Country', 'United States')
+  expect(options('State')).toEqual(['Choose State', 'District of Columbia', 'Texas']); expect(field('County')).toBeNull()
+  await pick('State', 'Texas')
+  expect(options('County')).toEqual(['All of Texas', 'Dallas County', 'Harris County']); expect(options('City')).toEqual(['Choose City', 'Dallas', 'Houston'])
+  await pick('City', 'Dallas'); await pick('County', 'Harris County')
+  expect(field('City')!.value).toBe(''); expect(options('City')).toEqual(['Choose City', 'Houston'])
+  await pick('City', 'Houston')
+  // A region without official subdivisions has no Subregion dropdown; changing the region resets the filter.
+  await pick('State', 'District of Columbia'); expect(field('County')).toBeNull(); expect(options('City')).toEqual(['Choose City', 'Washington'])
+  await pick('State', 'Texas'); expect(field('County')!.value).toBe('')
+  await pick('City', 'Houston')
+  const name = [...container.querySelectorAll('label')].find(item => item.firstChild?.textContent === 'Hunt name')!.querySelector('input')!
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, 'Houston adventure'); name.dispatchEvent(new Event('input', { bubbles: true })) })
+  await click('Save & continue')
+  const saved = mocks.update.mock.calls.at(-1)![1]
+  expect(saved).toMatchObject({ country: 'United States', region: 'Texas', city: 'Houston' }); expect(JSON.stringify(saved)).not.toContain('County')
 })
