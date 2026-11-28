@@ -40,7 +40,8 @@ export interface Hunt {
   durationMinutes: number | null;
   capacity: number | null;
   contactName: string | null;
-  format: 'team' | null;
+  /** Set from the Template: 'solo' for Single Hunters, 'team' for Team Hunters. */
+  format: 'solo' | 'team' | null;
   teamSize: number | null;
   accessMode: 'invitation_only' | null;
   difficulty: 'easy' | null;

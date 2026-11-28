@@ -11,7 +11,7 @@ function Harness({ initial }: { initial: Record<string, string> }) {
   const errors = validateTemplateDetails({ age: d.age, duration: d.duration, participants: d.participants, teamSize: d.teamSize, format: d.format }, false)
   const set = (key: string) => (value: string) => setD(current => ({ ...current, [key]: value }))
   return <><AgeRangeField value={d.age} onChange={set('age')} error={errors.age} /><DurationField value={d.duration} onChange={set('duration')} error={errors.duration} />
-    <ParticipantRangeField value={d.participants} onChange={set('participants')} error={errors.participants} /><TeamSizeField format={d.format} value={d.teamSize} onChange={set('teamSize')} error={errors.teamSize} /></>
+    <ParticipantRangeField value={d.participants} onChange={set('participants')} error={errors.participants} /><TeamSizeField format={d.format} participants={d.participants} value={d.teamSize} onChange={set('teamSize')} error={errors.teamSize} /></>
 }
 const start = { age: '12–16', duration: '90', participants: '16–40', teamSize: '4', format: 'Team Hunters' }
 const el = (selector: string) => container.querySelector(selector) as HTMLSelectElement & HTMLInputElement
@@ -40,4 +40,23 @@ test('Single Hunters have no team size', async () => {
   await act(async () => root.render(<Harness initial={{ ...start, format: 'Single Hunters', teamSize: '' }} />))
   expect(container.textContent).toContain('Not applicable: Single Hunters play individually')
   expect(container.querySelector('[aria-label="Minimum team size"]')).toBeNull()
+})
+test('team size choices are generated from the participant range, with a custom range option', async () => {
+  await act(async () => root.render(<Harness initial={{ ...start, teamSize: '3–5' }} />))
+  expect([...el('#template-team-size').options].map(o => o.text)).toEqual(['Choose team size range', '2–3 members', '2–4 members', '3–4 members', '3–5 members',
+    '4–5 members', '4–6 members', '5–6 members', '5–8 members', '6–8 members', '6–10 members', '8–10 members', 'Custom range'])
+  expect(el('#template-team-size').selectedOptions[0].text).toBe('3–5 members')
+  await set('#template-participant-range', '0')
+  // 2–10 participants: no team larger than 10 and no minimum team above 2; 3–5 no longer fits and is replaced.
+  expect([...el('#template-team-size').options].map(o => o.text)).toEqual(['Choose team size range', '2–3 members', '2–4 members', 'Custom range'])
+  expect(latest.teamSize).toBe('2–4'); expect(el('#template-team-size').selectedOptions[0].text).toBe('2–4 members')
+  await set('#template-team-size', '0'); expect(latest.teamSize).toBe('2–3')
+  await set('#template-team-size', 'custom'); expect(el('[aria-label="Maximum team size"]').max).toBe('10')
+})
+test('an empty team size is filled in automatically and impossible participant ranges are explained', async () => {
+  await act(async () => root.render(<Harness initial={{ ...start, teamSize: '' }} />))
+  expect(latest.teamSize).toBe('3–5')
+  await set('#template-participant-range', 'custom')
+  await set('[aria-label="Minimum participant"]', '1'); await set('[aria-label="Maximum participant"]', '6')
+  expect(container.textContent).toContain('Team Hunters need a participant minimum of at least 2')
 })

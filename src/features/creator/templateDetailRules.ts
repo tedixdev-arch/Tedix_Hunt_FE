@@ -31,6 +31,32 @@ export const participantPresets: RangePreset[] = [
 ]
 /** Teams of 2–10; the current pilot plays in teams of 4. */
 export const teamSizeLimits: Range = { min: 2, max: 10 }
+
+/**
+ * Team size ranges that fit a participant range: teams of 2–10, never larger than the participant maximum, and a
+ * minimum team no larger than the participant minimum so at least one full team is always possible.
+ */
+const teamSizeCandidates: Range[] = [[2, 3], [2, 4], [3, 4], [3, 5], [4, 5], [4, 6], [5, 6], [5, 8], [6, 8], [6, 10], [8, 10]]
+  .map(([min, max]) => ({ min, max }))
+export function teamSizeFits(team: Range, participants: Range | null) {
+  return team.min >= teamSizeLimits.min && team.max <= teamSizeLimits.max && team.min <= team.max
+    && (!participants || (team.max <= participants.max && team.min <= participants.min))
+}
+export function teamSizePresetsFor(participantsText: string): RangePreset[] {
+  const participants = parseRange(participantsText)
+  return teamSizeCandidates.filter(range => teamSizeFits(range, participants)).map(range => ({ ...range, label: `${range.min}–${range.max} members` }))
+}
+/** The team size range filled in automatically for a participant range (teams around 4 when possible). */
+export function recommendedTeamSize(participantsText: string): Range | null {
+  const participants = parseRange(participantsText)
+  if (!participants) return null
+  const preferred = [{ min: 3, max: 5 }, { min: 2, max: 4 }, { min: 4, max: 6 }, { min: 2, max: 3 }]
+  const fit = preferred.find(range => teamSizeFits(range, participants))
+  if (fit) return fit
+  const max = Math.min(teamSizeLimits.max, participants.max)
+  const range = { min: teamSizeLimits.min, max }
+  return teamSizeFits(range, participants) ? range : null
+}
 export const formats = ['Team Hunters', 'Single Hunters'] as const
 export const teamsApply = (format: string) => format === 'Team Hunters'
 
@@ -87,6 +113,8 @@ export function validateTemplateDetails(details: DetailValues, complete = true):
   const participants = checkRange('participant range', details.participants, participantLimits, 'participants')
   if (participants) errors.participants = participants
   if (teamsApply(details.format)) {
+    const people0 = parseRange(details.participants)
+    if (!participants && people0 && people0.min < teamSizeLimits.min) { errors.teamSize = `Team Hunters need a participant minimum of at least ${teamSizeLimits.min}.`; return errors }
     const team = checkRange('team size range', details.teamSize, teamSizeLimits, 'members')
     const people = parseRange(details.participants), teams = parseRange(details.teamSize)
     if (team) errors.teamSize = team
