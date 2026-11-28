@@ -21,6 +21,55 @@ export const supportedGameplay = Object.fromEntries(gameplayFields.map(field =>
 
 const isObject = (value: unknown): value is CheckpointGameplay => !!value && typeof value === 'object' && !Array.isArray(value)
 
+/**
+ * Remove all Team Challenge data from checkpoint gameplay.
+ *
+ * Used when a template supports Single Hunters only.
+ * Personal Challenge and Navigation data are preserved.
+ */
+export function removeTeamGameplay(
+  checkpoints: unknown[]
+): CheckpointGameplay[] {
+  return checkpoints.map(checkpoint => {
+    if (!isObject(checkpoint)) {
+      return checkpoint as CheckpointGameplay
+    }
+
+    const next: CheckpointGameplay = { ...checkpoint }
+
+    // Remove flat Team Challenge configuration.
+    delete next.teamKind
+
+    // Remove team Library allocation.
+    if (next.libraryAllocations) {
+      const allocations = { ...next.libraryAllocations }
+
+      delete allocations.team
+
+      if (Object.keys(allocations).length) {
+        next.libraryAllocations = allocations
+      } else {
+        delete next.libraryAllocations
+      }
+    }
+
+    // Remove custom Team Challenge exercise.
+    if (next.customExercises) {
+      const exercises = { ...next.customExercises }
+
+      delete exercises.team
+
+      if (Object.keys(exercises).length) {
+        next.customExercises = exercises
+      } else {
+        delete next.customExercises
+      }
+    }
+
+    return next
+  })
+}
+
 export function createNormalGameplay(count: number, context: 'legacy' | 'modern' = 'modern'): CheckpointGameplay[] {
   return Array.from({ length: count }, (_, index) => {
     const existing = checkpointExercises[index]
@@ -73,6 +122,27 @@ export function serializeGameplay(normal: CheckpointGameplay[], count: number, t
 }
 
 export function gameplayValidation(content: CreatorTemplateContent, submission = false): string {
+  const format = content.configuration.format
+  if (
+    format === 'Single Hunters' &&
+    content.checkpoints.some(checkpoint => {
+      if (!isObject(checkpoint)) return false
+
+      return (
+        checkpoint.teamKind !== undefined ||
+        (
+          isObject(checkpoint.libraryAllocations) &&
+          checkpoint.libraryAllocations.team !== undefined
+        ) ||
+        (
+          isObject(checkpoint.customExercises) &&
+          checkpoint.customExercises.team !== undefined
+        )
+      )
+    })
+  ) {
+    return 'Single Hunters templates cannot contain Team Challenge assignments.'
+  }
   const geographic = content.configuration.normalCheckpointCount !== undefined || content.configuration.checkpointPositions !== undefined
   const entries = content.checkpoints
   if (!geographic && !entries.some(entry => isObject(entry) && entry.role !== undefined)) return ''

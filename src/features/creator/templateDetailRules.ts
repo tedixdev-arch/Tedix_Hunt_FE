@@ -31,8 +31,8 @@ export const participantPresets: RangePreset[] = [
 ]
 /** Teams of 2–10; the current pilot plays in teams of 4. */
 export const teamSizeLimits: Range = { min: 2, max: 10 }
-export const formats = ['Team Hunters', 'Single Hunters', 'Single and Team Hunters'] as const
-export const teamsApply = (format: string) => format !== 'Single Hunters'
+export const formats = ['Team Hunters', 'Single Hunters'] as const
+export const teamsApply = (format: string) => format === 'Team Hunters'
 
 const DASH = /\s*[–—-]\s*/
 /** Reads "12–16", "12-16", "18+" or "4" (a single value means min = max). Returns null for anything else. */

@@ -33,7 +33,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { organizerFeatures, signalNormalCheckpointNames } from '../data/organizerTemplates'
 import { OrganizerHeader } from './OrganizerFlow'
 import { CheckpointGameplayEditor, GameplayScoring } from '../features/creator/CheckpointGameplayEditor'
-import { createNormalGameplay, hydrateGameplay, serializeGameplay, gameplayValidation, type CheckpointGameplay } from '../features/creator/checkpointGameplay'
+import { createNormalGameplay, hydrateGameplay, serializeGameplay, gameplayValidation, removeTeamGameplay, type CheckpointGameplay } from '../features/creator/checkpointGameplay'
 import { FinishPointEditor } from '../features/creator/FinishPointEditor'
 import { finishPointConfiguration, finishPointValidation, type FinishPoint, type FinishPointDraft } from '../features/creator/finishPoint'
 import { RouteEditor } from '../features/creator/RouteEditor'
@@ -341,7 +341,19 @@ function CreatorTemplateEditor() {
     return accepted
   }
   const challengeContext = useMemo(() => ({ ...personalCreationContext(persisted), poolDefaults: { category: details.category, grade: (templateConfiguration as { grade?: unknown }).grade, classification: universal ? 'universal' as const : local ? 'local' as const : null, location: city, geography: poolGeography } }), [persisted, details.category, (templateConfiguration as { grade?: unknown }).grade, universal, local, city, poolGeography])
-  const features = organizerFeatures.filter(item => !['positions', 'final'].includes(item.id))
+  // const features = organizerFeatures.filter(item => !['positions', 'final'].includes(item.id))
+  const features = organizerFeatures.filter(item => {
+    if (['positions', 'final'].includes(item.id)) {
+      return false
+    }
+
+    // Team Challenge is available only for Team Hunters.
+    if (item.id === 'team' && details.format !== 'Team Hunters') {
+      return false
+    }
+
+    return true
+  })
   const feature = features[Math.min(featureIndex, features.length - 1)]
   const advancedIds = new Set(['map', 'results', 'rewards'])
   // Checkpoints & Challenges (4 steps) and Advanced (3 steps); each ends with a CTA to the next section.
@@ -386,8 +398,40 @@ function CreatorTemplateEditor() {
     scoring: { ...(persisted?.content.scoring ?? { model: 'platform' }), ...(Object.keys(selections).length ? { selections } : {}) },
     checkpoints: persisted && !gameplayEdited && ((templateConfiguration.normalCheckpointCount === undefined && templateConfiguration.checkpointPositions === undefined) || persisted.content.checkpoints.every(entry => !!entry && typeof entry === 'object' && ['normal', 'terminal'].includes((entry as CheckpointGameplay).role ?? ''))) && checkpointCount === persisted.content.checkpoints.filter(entry => (entry as CheckpointGameplay).role !== 'terminal').length ? persisted.content.checkpoints : serializeGameplay(normalGameplay, checkpointCount, terminalGameplay, persisted?.content.checkpoints),
   }), [routeResearch, checkpointCount, checkpointDrafts, gameplayEdited, normalGameplay, terminalGameplay, finishPointDraft, finishPointEdited, details, mission, persisted, selections, stableKey, templateConfiguration])
-  const exerciseAssignments = useMemo(() => applyExerciseDrafts(baseTemplateContent.checkpoints, challengeDrafts), [baseTemplateContent, challengeDrafts])
-  const creatorTemplateContent = useMemo<CreatorTemplateContent>(() => ({ ...baseTemplateContent, checkpoints: exerciseAssignments.checkpoints }), [baseTemplateContent, exerciseAssignments])
+  const activeChallengeDrafts = useMemo(() => {
+    if (details.format === 'Team Hunters') {
+      return challengeDrafts
+    }
+
+    return Object.fromEntries(
+      Object.entries(challengeDrafts).filter(
+        ([key]) => !key.startsWith('teamKind:')
+      )
+    )
+  }, [challengeDrafts, details.format])
+
+  const exerciseAssignments = useMemo(() => {
+    const checkpoints = details.format === 'Single Hunters'
+      ? removeTeamGameplay(baseTemplateContent.checkpoints)
+      : baseTemplateContent.checkpoints
+
+    return applyExerciseDrafts(checkpoints, activeChallengeDrafts)
+  }, [
+    baseTemplateContent,
+    activeChallengeDrafts,
+    details.format
+  ])
+  const creatorTemplateContent = useMemo<CreatorTemplateContent>(
+    () => ({
+      ...baseTemplateContent,
+      checkpoints: details.format === 'Single Hunters'
+        ? exerciseAssignments.checkpoints
+        : exerciseAssignments.checkpoints
+    }),
+    [baseTemplateContent, exerciseAssignments, details.format]
+  )
+  // const exerciseAssignments = useMemo(() => applyExerciseDrafts(baseTemplateContent.checkpoints, challengeDrafts), [baseTemplateContent, challengeDrafts])
+  // const creatorTemplateContent = useMemo<CreatorTemplateContent>(() => ({ ...baseTemplateContent, checkpoints: exerciseAssignments.checkpoints }), [baseTemplateContent, exerciseAssignments])
   const challengeSubmissionBlocked = exerciseAssignments.errors.length > 0
   const uncoveredPoints = useMemo(() => classified ? pointsWithoutChallenge(creatorTemplateContent.checkpoints) : [], [classified, creatorTemplateContent])
   if (classified && persisted) {
@@ -639,7 +683,33 @@ function CreatorTemplateEditor() {
     <fieldset aria-label="Template builder" disabled={!builderAccessible} hidden={!builderAccessible} className="min-w-0 border-0 p-0">
     <fieldset disabled={saving || submitting || validating} className="min-w-0 border-0 p-0"><section hidden={section !== 'setup'} id="template-setup" className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase text-emerald-700">Block 1</p><h2 id="template-setup-heading" tabIndex={-1} className="mt-2 text-2xl font-bold">Template Setup</h2><p className="mt-1 text-sm text-slate-500">Event date, local contact and participant access remain Organizer settings.</p></div><Progress done={stepDone.size} total={steps.length} /></div><div className="mt-6 grid gap-5 lg:grid-cols-[250px_1fr]"><nav aria-label="Template Setup" className="grid gap-2 lg:block lg:space-y-2">{steps.map((name, index) => <button key={name} type="button" onClick={() => setStep(index)} className={`flex min-h-12 min-w-0 items-center justify-between rounded-xl border px-4 text-left text-sm font-bold lg:w-full ${step === index ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}><span>{index + 1}. {name}</span>{stepDone.has(index) && <span className="text-emerald-600">✓</span>}</button>)}</nav><article className="min-w-0 rounded-xl border border-slate-200 p-5"><p className="text-xs font-bold uppercase text-emerald-700">Step {step + 1} of {steps.length}</p><h3 className="mt-2 text-xl font-bold">{steps[step]}</h3><div className="mt-5 grid gap-4 sm:grid-cols-2">
       {step === 0 && <><label className="text-sm font-bold sm:col-span-2">Template name<input className={field} value={details.name} onChange={e => setDetails({ ...details, name: e.target.value })} /></label><label className="text-sm font-bold sm:col-span-2">Description<textarea className={`${field} min-h-24 py-3`} value={details.summary} onChange={e => setDetails({ ...details, summary: e.target.value })} /></label><label className="text-sm font-bold">Hunt Category<select className={field} value={details.category} onChange={e => setDetails({ ...details, category: e.target.value })}>{templateCategories.map(category => <option key={category}>{category}</option>)}</select></label><AgeRangeField value={details.age} onChange={age => setDetails(current => ({ ...current, age }))} error={detailErrors.age} /><DurationField value={details.duration} onChange={duration => setDetails(current => ({ ...current, duration }))} error={detailErrors.duration} /><label className="text-sm font-bold">Language<select className={field} value={details.language} onChange={e => setDetails({ ...details, language: e.target.value })}><option>English</option><option>Romanian</option><option>Hungarian</option></select></label><label className="text-sm font-bold sm:col-span-2">Difficulty<select className={field} value={details.difficulty} onChange={e => setDetails({ ...details, difficulty: e.target.value })}><option>Easy</option><option>Medium</option><option>Advanced</option><option>Organizer sets</option></select></label></>}
-      {step === 1 && <><label className="text-sm font-bold sm:col-span-2">Supported format<select className={field} value={details.format} onChange={e => setDetails({ ...details, format: e.target.value })}>{!templateFormats.includes(details.format as typeof templateFormats[number]) && <option value={details.format}>{details.format || 'Choose format'}</option>}{templateFormats.map(item => <option key={item}>{item}</option>)}</select></label><ParticipantRangeField value={details.participants} onChange={participants => setDetails(current => ({ ...current, participants }))} error={detailErrors.participants} /><TeamSizeField format={details.format} value={details.teamSize} onChange={teamSize => setDetails(current => ({ ...current, teamSize }))} error={detailErrors.teamSize} /><label className="text-sm font-bold sm:col-span-2">Environment and accessibility<input className={field} value={details.environment} onChange={e => setDetails({ ...details, environment: e.target.value })} /></label><label className="text-sm font-bold sm:col-span-2">Required equipment<input className={field} value={details.equipment} onChange={e => setDetails({ ...details, equipment: e.target.value })} /></label><div className="rounded-xl bg-slate-50 p-4 text-sm sm:col-span-2"><strong>Platform scoring</strong><p className="mt-1 text-slate-500">Creators define answers and measurable events. All Hunts use Tedixhunt’s common scoring rules.</p></div></>}
+      {step === 1 && <><label className="text-sm font-bold sm:col-span-2">Supported format<select className={field} value={details.format} 
+      // onChange={e => setDetails({ ...details, format: e.target.value })}
+      onChange={e => {
+        const nextFormat = e.target.value
+
+        // If Team Challenge is currently selected, move to Personal
+        // before removing the Team Challenge feature.
+        if (
+          nextFormat === 'Single Hunters' &&
+          features[featureIndex]?.id === 'team'
+        ) {
+          const personalIndex = features.findIndex(
+            item => item.id === 'personal'
+          )
+
+          if (personalIndex >= 0) {
+            setFeatureIndex(personalIndex)
+          }
+        }
+
+        setDetails(current => ({
+          ...current,
+          format: nextFormat
+        }))
+      }}
+      >
+        {!templateFormats.includes(details.format as typeof templateFormats[number]) && <option value={details.format}>{details.format || 'Choose format'}</option>}{templateFormats.map(item => <option key={item}>{item}</option>)}</select></label><ParticipantRangeField value={details.participants} onChange={participants => setDetails(current => ({ ...current, participants }))} error={detailErrors.participants} /><TeamSizeField format={details.format} value={details.teamSize} onChange={teamSize => setDetails(current => ({ ...current, teamSize }))} error={detailErrors.teamSize} /><label className="text-sm font-bold sm:col-span-2">Environment and accessibility<input className={field} value={details.environment} onChange={e => setDetails({ ...details, environment: e.target.value })} /></label><label className="text-sm font-bold sm:col-span-2">Required equipment<input className={field} value={details.equipment} onChange={e => setDetails({ ...details, equipment: e.target.value })} /></label><div className="rounded-xl bg-slate-50 p-4 text-sm sm:col-span-2"><strong>Platform scoring</strong><p className="mt-1 text-slate-500">Creators define answers and measurable events. All Hunts use Tedixhunt’s common scoring rules.</p></div></>}
       {step === 2 && <><label className="text-sm font-bold">Hunt theme<select className={field} value={details.theme} onChange={e => setDetails({ ...details, theme: e.target.value })}>{!['Smart Theme (Signal)', 'City Secrets Theme', 'Ho Ho Theme (Christmas)', 'Scary Theme (Halloween)'].includes(details.theme) && <option>{details.theme}</option>}<option>Smart Theme (Signal)</option><option>City Secrets Theme</option><option>Ho Ho Theme (Christmas)</option><option>Scary Theme (Halloween)</option></select></label>{missionStoryFields(mission).map(([key, text]) => <label key={key} className="text-sm font-bold sm:col-span-2">Mission {key}<textarea className={`${field} min-h-20 py-3`} value={text} onChange={e => setMission(current => editMissionStory(current, key, e.target.value))} /></label>)}<label className="text-sm font-bold sm:col-span-2">Participant briefing<textarea className={`${field} min-h-24 py-3`} value={details.briefing} onChange={e => setDetails({ ...details, briefing: e.target.value })} /></label><div className="rounded-xl bg-[#031b14] p-5 text-white sm:col-span-2"><p className="text-xs font-bold uppercase tracking-widest text-emerald-300">Mission preview</p><h4 className="mt-3 text-2xl font-bold">{missionStoryFields(mission).find(([key]) => key === 'name')?.[1] ?? ''}</h4><p className="mt-2 text-sm text-slate-200">{missionStoryFields(mission).find(([key]) => key === 'briefing')?.[1] ?? details.briefing}</p></div></>}
       {step === 3 && <div className="sm:col-span-2"><p>Template status is read-only. Review status and version information in Review &amp; Submit.</p><button type="button" className="min-h-12 font-bold underline" onClick={() => openSection('review')}>Review Template status</button></div>}
     </div><div className="mt-6 flex justify-between border-t border-slate-100 pt-5"><button type="button" disabled={step === 0} onClick={() => setStep(step - 1)} className="min-h-12 rounded-xl border border-slate-300 px-5 font-bold disabled:opacity-40">Previous</button><button type="button" disabled={step === steps.length - 1 && !setupReadyToLeave} onClick={saveStep} className="min-h-12 rounded-xl bg-emerald-500 px-6 font-bold disabled:bg-slate-300">{step === steps.length - 1 ? 'Continue to Checkpoints & Challenges' : 'Continue'}</button></div>{step === steps.length - 1 && !setupReadyToLeave && <p role="status" className="mt-3 text-right text-sm text-slate-600">{builderAccessible ? 'Complete every Template Setup step to continue.' : 'Choose the location in Hunt Setup and continue to the Template builder first.'}</p>}</article></div></section>
