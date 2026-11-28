@@ -58,7 +58,8 @@ export function recommendedTeamSize(participantsText: string): Range | null {
   return teamSizeFits(range, participants) ? range : null
 }
 export const formats = ['Team Hunters', 'Single Hunters'] as const
-export const teamsApply = (format: string) => format === 'Team Hunters'
+/** Teams apply unless the Template is explicitly Single Hunters (older Templates may have no or a legacy format). */
+export const teamsApply = (format: string) => format !== 'Single Hunters'
 
 const DASH = /\s*[–—-]\s*/
 /** Reads "12–16", "12-16", "18+" or "4" (a single value means min = max). Returns null for anything else. */

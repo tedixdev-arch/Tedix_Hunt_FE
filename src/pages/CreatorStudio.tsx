@@ -347,8 +347,9 @@ function CreatorTemplateEditor() {
       return false
     }
 
-    // Team Challenge is available only for Team Hunters.
-    if (item.id === 'team' && details.format !== 'Team Hunters') {
+    // Team Challenge is hidden only for Single Hunters. Templates saved before the format
+    // field existed have no format and keep their Team Challenge.
+    if (item.id === 'team' && details.format === 'Single Hunters') {
       return false
     }
 
@@ -399,7 +400,7 @@ function CreatorTemplateEditor() {
     checkpoints: persisted && !gameplayEdited && ((templateConfiguration.normalCheckpointCount === undefined && templateConfiguration.checkpointPositions === undefined) || persisted.content.checkpoints.every(entry => !!entry && typeof entry === 'object' && ['normal', 'terminal'].includes((entry as CheckpointGameplay).role ?? ''))) && checkpointCount === persisted.content.checkpoints.filter(entry => (entry as CheckpointGameplay).role !== 'terminal').length ? persisted.content.checkpoints : serializeGameplay(normalGameplay, checkpointCount, terminalGameplay, persisted?.content.checkpoints),
   }), [routeResearch, checkpointCount, checkpointDrafts, gameplayEdited, normalGameplay, terminalGameplay, finishPointDraft, finishPointEdited, details, mission, persisted, selections, stableKey, templateConfiguration])
   const activeChallengeDrafts = useMemo(() => {
-    if (details.format === 'Team Hunters') {
+    if (details.format !== 'Single Hunters') {
       return challengeDrafts
     }
 
