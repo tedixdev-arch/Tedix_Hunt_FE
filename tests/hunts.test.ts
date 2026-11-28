@@ -157,7 +157,9 @@ test('saved pilot settings restore through backend option metadata and null valu
 test('General 2 and 3 map labels to exact backend-key payloads', () => {
   const general2 = general2Input({ ...newHuntDefaults, participants: '31', teamSize: '4' }, pilotOptions);
   const general3 = general3Input(newHuntDefaults, pilotOptions);
-  assert.deepEqual(general2, { capacity: 31, format: 'team', teamSize: 4, accessMode: 'invitation_only' });
+  // The Hunt format is set by the selected Template, so General 2 never sends it.
+  assert.deepEqual(general2, { capacity: 31, teamSize: 4, accessMode: 'invitation_only' });
+  assert.deepEqual(general2Input({ ...newHuntDefaults, participants: '31', teamSize: '4' }, pilotOptions, 'solo'), { capacity: 31, accessMode: 'invitation_only' });
   assert.deepEqual(general3, { difficulty: 'easy', checkpointOrder: 'recommended' });
   assert.equal(typeof general2.capacity, 'number');
   assert.equal(typeof general2.teamSize, 'number');
@@ -176,7 +178,7 @@ test('backend catalog support leaves future prototype choices unavailable', () =
       ...pilotOptions.accessModes, ...pilotOptions.difficulties, ...pilotOptions.checkpointOrders,
     ].some(option => option.label === label), false);
   }
-  assert.throws(() => general2Input({ ...newHuntDefaults, teamSize: '5' }, pilotOptions), /not available/);
+  assert.throws(() => general2Input({ ...newHuntDefaults, teamSize: '5' }, pilotOptions), /Team size must be between 4 and 4/);
   assert.throws(() => general3Input({ ...newHuntDefaults, difficulty: 'Medium' }, pilotOptions), /not available/);
 });
 

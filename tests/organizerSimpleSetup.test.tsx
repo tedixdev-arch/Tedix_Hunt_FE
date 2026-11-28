@@ -181,3 +181,45 @@ test('optional Subregion: All of the region lists every city; a subdivision filt
   // A region without official subdivisions has no Subregion dropdown.
   await pick(1, 'US:admin1:NV'); expect(container.querySelectorAll('select')).toHaveLength(3); expect(selectedText()).toEqual(['United States', 'Nevada', 'Choose City'])
 })
+
+async function setInput(selector: string, value: string) {
+  const input = container.querySelector(selector) as HTMLInputElement
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) })
+}
+async function resumeWithTemplate(configuration: Record<string, unknown>, hunt: Partial<Hunt> = {}) {
+  await organizerLocalApi.select(saved.id, selection)
+  saved = { ...saved, name: 'Saved event', contactName: 'Ana', startDate: '2027-05-01', ...hunt,
+    templateSnapshot: { ...saved.templateSnapshot!, configuration } } as Hunt
+  await mount('/organizer/hunts/hunt-1/setup')
+  expect(container.textContent).toContain('Make it your event')
+}
+test('team size is editable within the template range and participants stay within its participant range', async () => {
+  await resumeWithTemplate({ format: 'Team Hunters', participants: '16–40', teamSize: '3–5' }, { format: 'team', teamSize: 4, capacity: 20 })
+  const team = container.querySelector('[aria-describedby="event-team-hint"]') as HTMLInputElement
+  expect(team.disabled).toBe(false); expect(team.min).toBe('3'); expect(team.max).toBe('5'); expect(team.value).toBe('4')
+  expect(container.textContent).toContain('Members per team: 3–5 for this Hunt.')
+  expect(container.textContent).toContain('This Hunt is designed for 16–40 participants.')
+  await setInput('[aria-describedby="event-team-hint"]', '6')
+  expect(container.textContent).toContain('Teams must have 3–5 members for this Hunt.'); expect(button('Review event').disabled).toBe(true)
+  await setInput('[aria-describedby="event-team-hint"]', '5')
+  await setInput('[aria-describedby="event-capacity-hint"]', '50')
+  expect(container.textContent).toContain('This Hunt is designed for 16–40 participants.'); expect(button('Review event').disabled).toBe(true)
+  await setInput('[aria-describedby="event-capacity-hint"]', '30')
+  expect(button('Review event').disabled).toBe(false)
+  await click('Review event')
+  expect(huntsApi.updateDraft).toHaveBeenLastCalledWith('hunt-1', expect.objectContaining({ capacity: 30, format: 'team', teamSize: 5 }))
+})
+test('Single Hunters templates show no team size and send none', async () => {
+  await resumeWithTemplate({ format: 'Single Hunters', participants: '2–10' }, { format: 'solo', teamSize: null, capacity: 8 })
+  expect(container.querySelector('[aria-describedby="event-team-hint"]')).toBeNull()
+  expect(container.textContent).toContain('Participants play individually')
+  await click('Review event')
+  const input = vi.mocked(huntsApi.updateDraft).mock.calls.at(-1)![1]
+  expect(input).not.toHaveProperty('teamSize'); expect(input).not.toHaveProperty('format')
+  expect(container.textContent).toContain('8 · Single Hunters')
+})
+test('templates without a team size range keep teams of 4', async () => {
+  await resumeWithTemplate({}, { format: 'team', teamSize: 4, capacity: 24 })
+  const team = container.querySelector('[aria-describedby="event-team-hint"]') as HTMLInputElement
+  expect(team.disabled).toBe(true); expect(team.value).toBe('4'); expect(container.textContent).toContain('This Hunt plays in teams of 4.')
+})

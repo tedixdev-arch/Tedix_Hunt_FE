@@ -76,15 +76,17 @@ function keyFor(options: HuntOption[], label: string, field: string): string {
   return option.key;
 }
 
-export function general2Input(settings: GeneralSetupSettings, options: HuntOptions): UpdateDraftInput {
+/**
+ * Participants step. The Hunt format is not sent: the selected Template decides it (Single or Team Hunters), and the
+ * backend checks participants and team size against the Template's ranges. Single Hunters have no team size.
+ */
+export function general2Input(settings: GeneralSetupSettings, options: HuntOptions, savedFormat: Hunt['format'] = null): UpdateDraftInput {
+  const capacity = positiveInteger(settings.participants, 'Participants');
+  const accessMode = keyFor(options.accessModes, settings.access, 'Hunt access') as Hunt['accessMode'];
+  if (savedFormat === 'solo') return { capacity, accessMode };
   const teamSize = positiveInteger(settings.teamSize, 'Team size');
-  if (!options.teamSizes.includes(teamSize)) throw new Error('Team size is not available in the current pilot.');
-  return {
-    capacity: positiveInteger(settings.participants, 'Participants'),
-    format: keyFor(options.formats, settings.format, 'Hunt format') as Hunt['format'],
-    teamSize,
-    accessMode: keyFor(options.accessModes, settings.access, 'Hunt access') as Hunt['accessMode'],
-  };
+  if (!options.teamSizes.includes(teamSize)) throw new Error(`Team size must be between ${Math.min(...options.teamSizes)} and ${Math.max(...options.teamSizes)}.`);
+  return { capacity, teamSize, accessMode };
 }
 
 export function general3Input(settings: GeneralSetupSettings, options: HuntOptions): UpdateDraftInput {

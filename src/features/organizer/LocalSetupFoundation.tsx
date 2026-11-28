@@ -8,6 +8,7 @@ import { levelLabels, locationLabels as L } from '../location/locationLabels'
 import { cityChoiceKey, cityUsable, organizerLocalApi, type City, type Country, type LocalHunt, type LocalPreview, type Region, type Selection, type Subregion } from '../../services/api/organizerLocal'
 import { participantLink, copyParticipantLink, shareParticipantLink } from '../../pages/participantAccess'
 import { parseHuntNotReady } from '../../pages/huntReview'
+import { clamp, participationErrors, rangeLabel, templateParticipation } from './templateParticipation'
 
 /** Catalog labels match case- and accent-insensitively ("Cluj-Napoca" == "Cluj Napoca"). */
 const normalizedLabel = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s-]+/g, '').toLowerCase()
@@ -119,7 +120,7 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
   const independentWorkspace = organizations.find(item => item.id === (hunt?.organizationId ?? organizationId))?.independent === true
   const [accessCode, setAccessCode] = useState(initialHunt?.accessCode ?? '')
   const [linkMessage, setLinkMessage] = useState('')
-  const [event, setEvent] = useState({ name: initialHunt?.name ?? '', startDate: initialHunt?.startDate ?? '', startTime: initialHunt?.startTime?.slice(0, 5) ?? '10:00', timezone: initialHunt?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone, capacity: initialHunt?.capacity ?? 24, durationMinutes: initialHunt?.durationMinutes ?? 120, contactName: initialHunt?.contactName ?? '' })
+  const [event, setEvent] = useState({ name: initialHunt?.name ?? '', startDate: initialHunt?.startDate ?? '', startTime: initialHunt?.startTime?.slice(0, 5) ?? '10:00', timezone: initialHunt?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone, capacity: initialHunt?.capacity ?? 24, teamSize: initialHunt?.teamSize ?? 4, durationMinutes: initialHunt?.durationMinutes ?? 120, contactName: initialHunt?.contactName ?? '' })
   const templates = useChoices<LocalHunt>('templates', { countryCode, localityId: canonicalLocalityId ?? '' }, step === 1 && !!canonicalLocalityId && !!countryCode)
   useEffect(() => {
     let active = true
@@ -165,14 +166,22 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
       }
       current = await organizerLocalApi.select(current.id, selection)
       updateHunt(current)
-      setEvent(value => ({ ...value, name: value.name || current.name }))
+      // The Template sets the format and a valid team size; keep participants inside its range.
+      const chosen = current
+      const rules = templateParticipation(chosen.templateSnapshot)
+      setEvent(value => ({ ...value, name: value.name || chosen.name, capacity: clamp(value.capacity, rules.participants), teamSize: chosen.teamSize ?? value.teamSize }))
       setStep(2)
     })
   }
+  // Format comes from the Template; participants and team size must stay inside its ranges.
+  const participation = templateParticipation(hunt?.templateSnapshot)
+  const singleHunters = participation.format === 'solo'
+  const { capacityError, teamError } = participationErrors(participation, event.capacity, event.teamSize)
   async function review() {
-    if (!hunt || !supported || rewardsEditing) return
+    if (!hunt || !supported || rewardsEditing || capacityError || teamError) return
     await run(async () => {
-      const updated = await huntsApi.updateDraft(hunt.id, { ...event, name: event.name.trim(), country: country?.displayName ?? hunt.country ?? undefined, region: region?.label ?? hunt.region ?? undefined, city: city?.name ?? hunt.city ?? undefined, format: 'team', teamSize: 4, accessMode: 'invitation_only', difficulty: 'easy', checkpointOrder: 'recommended' })
+      const { teamSize, ...details } = event
+      const updated = await huntsApi.updateDraft(hunt.id, { ...details, name: event.name.trim(), country: country?.displayName ?? hunt.country ?? undefined, region: region?.label ?? hunt.region ?? undefined, city: city?.name ?? hunt.city ?? undefined, ...(singleHunters ? {} : { format: 'team' as const, teamSize }), accessMode: 'invitation_only', difficulty: 'easy', checkpointOrder: 'recommended' })
       updateHunt(updated)
       const [latest, savedRewards] = await Promise.all([huntsApi.getHunt(hunt.id), huntRewardsApi.list(hunt.id)])
       updateHunt(latest); setRewards(savedRewards); setStep(3)
@@ -228,12 +237,17 @@ export function LocalSetupFoundation({ initialHunt, onDraftCreated }: { initialH
         <Field label="Local contact"><input className={controlClass} required value={event.contactName} onChange={e => setEvent({ ...event, contactName: e.target.value })} /></Field>
         <Field label="Date"><input className={controlClass} required type="date" value={event.startDate} onChange={e => setEvent({ ...event, startDate: e.target.value })} /></Field>
         <Field label="Start time"><input className={controlClass} required type="time" value={event.startTime} onChange={e => setEvent({ ...event, startTime: e.target.value })} /></Field>
-        <Field label="Participants"><input className={controlClass} required type="number" min={1} max={2147483647} value={event.capacity} onChange={e => setEvent({ ...event, capacity: Number(e.target.value) })} /></Field>
-        <div className="rounded-xl bg-slate-50 p-4"><strong>Teams of 4</strong><p className="mt-2 text-sm">Invitation only. Share a private link after creating your Hunt.</p></div>
+        <Field label="Participants"><input aria-describedby="event-capacity-hint" aria-invalid={!!capacityError} className={controlClass} required type="number" min={participation.participants?.min ?? 1} max={participation.participants?.max ?? 2147483647} value={event.capacity} onChange={e => setEvent({ ...event, capacity: Number(e.target.value) })} />
+          <span id="event-capacity-hint" className="mt-1 block text-xs font-normal text-slate-500">{participation.participants ? `This Hunt is designed for ${rangeLabel(participation.participants)} participants.` : 'Expected number of participants.'}</span>
+          {capacityError && <span role="alert" className="mt-1 block text-sm font-normal text-rose-700">{capacityError}</span>}</Field>
+        {singleHunters ? <div className="rounded-xl bg-slate-50 p-4"><strong>Single Hunters</strong><p className="mt-2 text-sm">Participants play individually. Invitation only: share a private link after creating your Hunt.</p></div>
+          : <Field label="Team size"><input aria-describedby="event-team-hint" aria-invalid={!!teamError} className={controlClass} required type="number" disabled={!participation.teamSize} min={participation.teamSize?.min ?? 4} max={participation.teamSize?.max ?? 4} value={event.teamSize} onChange={e => setEvent({ ...event, teamSize: Number(e.target.value) })} />
+            <span id="event-team-hint" className="mt-1 block text-xs font-normal text-slate-500">{participation.teamSize ? `Members per team: ${rangeLabel(participation.teamSize)} for this Hunt.` : 'This Hunt plays in teams of 4.'} Invitation only.</span>
+            {teamError && <span role="alert" className="mt-1 block text-sm font-normal text-rose-700">{teamError}</span>}</Field>}
         <details className="sm:col-span-2"><summary className="cursor-pointer py-3 font-bold">More options</summary><div className="grid gap-5 sm:grid-cols-2"><Field label="Duration (minutes)"><input className={controlClass} required type="number" min={1} max={2147483647} value={event.durationMinutes} onChange={e => setEvent({ ...event, durationMinutes: Number(e.target.value) })} /></Field><Field label="Time zone"><input className={controlClass} required value={event.timezone} onChange={e => setEvent({ ...event, timezone: e.target.value })} /></Field></div></details>
-      </form>{independentWorkspace ? <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">Rewards are available to Registered Organizers only.</p> : <details className="mt-5"><summary className="cursor-pointer py-3 font-bold">Rewards (optional)</summary><p className="text-sm text-slate-600">Save each allocation to include it in your event.</p><RewardsEditor huntId={hunt.id} huntStatus={hunt.status} teamSize={4} onLoaded={onRewards} onEditingChange={setRewardsEditing} /></details>}
-      <div className="mt-6 flex justify-between gap-3"><button className={secondary} disabled={rewardsEditing} type="button" onClick={changeLocation}>Back</button><button className={primary} form="event-settings" type="submit" disabled={!supported || rewardsEditing}>{busy ? 'Saving…' : 'Review event'}</button></div>{rewardsEditing && <p role="status" className="mt-3 text-sm text-slate-600">Save or cancel your reward changes before continuing.</p>}</>}
-      {step === 3 && hunt && <><h2 className="text-2xl font-bold">Ready for an adventure?</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2">{Object.entries({ Event: hunt.name, Location: [hunt.city, hunt.region, hunt.country].filter(Boolean).join(', '), Hunt: hunt.templateSnapshot?.displayName, Schedule: `${hunt.startDate} · ${hunt.startTime?.slice(0, 5)} (${hunt.timezone})`, Participants: `${hunt.capacity} · Teams of ${hunt.teamSize}`, Access: 'Invitation only', Rewards: independentWorkspace ? 'Not available for Independent Hunts' : rewards ? `${rewards.leaderboard.length} leaderboard rewards · ${rewards.specialAwards.length} special awards` : 'No rewards' }).map(([label, value]) => <div key={label}><dt className="text-sm text-slate-500">{label}</dt><dd className="mt-1 font-bold">{value}</dd></div>)}</dl><div className="mt-6 flex justify-between gap-3"><button className={secondary} type="button" onClick={() => setStep(2)}>Back</button><button className={primary} type="button" disabled={!selection} onClick={() => void create()}>{busy ? 'Creating…' : 'Create Hunt'}</button></div></>}
+      </form>{independentWorkspace ? <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">Rewards are available to Registered Organizers only.</p> : <details className="mt-5"><summary className="cursor-pointer py-3 font-bold">Rewards (optional)</summary><p className="text-sm text-slate-600">Save each allocation to include it in your event.</p><RewardsEditor huntId={hunt.id} huntStatus={hunt.status} teamSize={singleHunters ? 1 : event.teamSize} onLoaded={onRewards} onEditingChange={setRewardsEditing} /></details>}
+      <div className="mt-6 flex justify-between gap-3"><button className={secondary} disabled={rewardsEditing} type="button" onClick={changeLocation}>Back</button><button className={primary} form="event-settings" type="submit" disabled={!supported || rewardsEditing || !!capacityError || !!teamError}>{busy ? 'Saving…' : 'Review event'}</button></div>{rewardsEditing && <p role="status" className="mt-3 text-sm text-slate-600">Save or cancel your reward changes before continuing.</p>}</>}
+      {step === 3 && hunt && <><h2 className="text-2xl font-bold">Ready for an adventure?</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2">{Object.entries({ Event: hunt.name, Location: [hunt.city, hunt.region, hunt.country].filter(Boolean).join(', '), Hunt: hunt.templateSnapshot?.displayName, Schedule: `${hunt.startDate} · ${hunt.startTime?.slice(0, 5)} (${hunt.timezone})`, Participants: hunt.format === 'solo' ? `${hunt.capacity} · Single Hunters` : `${hunt.capacity} · Teams of ${hunt.teamSize}`, Access: 'Invitation only', Rewards: independentWorkspace ? 'Not available for Independent Hunts' : rewards ? `${rewards.leaderboard.length} leaderboard rewards · ${rewards.specialAwards.length} special awards` : 'No rewards' }).map(([label, value]) => <div key={label}><dt className="text-sm text-slate-500">{label}</dt><dd className="mt-1 font-bold">{value}</dd></div>)}</dl><div className="mt-6 flex justify-between gap-3"><button className={secondary} type="button" onClick={() => setStep(2)}>Back</button><button className={primary} type="button" disabled={!selection} onClick={() => void create()}>{busy ? 'Creating…' : 'Create Hunt'}</button></div></>}
       </fieldset>{busy && <p role="status" className="mt-4">Saving your adventure…</p>}
     </>}
     </section>
